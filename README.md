@@ -1,4 +1,4 @@
-# U.S. Catholic Conference of Bishops (USCCB) Data Project
+# United States Conference of Catholic Bishops (USCCB) Data Project
 
 ## Overview
 
