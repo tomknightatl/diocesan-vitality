@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 import os
 import argparse
+from datetime import datetime
 
 # <a href="https://colab.research.google.com/github/tomknightatl/USCCB/blob/main/Build%20Dioceses%20Database.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
 
@@ -90,7 +91,7 @@ def get_soup(url, retries=3, backoff_factor=1.0):
     """
     headers = {
         'User-Agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                       'AppleWebKit/537.36 (KHTML, like Gecko) '
+                       'AppleWebKit/537.36 (KHTML, like Gecko) ' 
                        'Chrome/58.0.3029.110 Safari/537.3'),
         'Accept-Language': 'en-US,en;q=0.9',
         'Accept-Encoding': 'gzip, deflate',
@@ -153,7 +154,8 @@ def extract_dioceses(soup):
         dioceses.append({
             'Name': diocese_name,
             'Address': address,
-            'Website': website_url
+            'Website': website_url,
+            'extracted_at': datetime.now().isoformat() # Add extracted_at timestamp
         })
 
     return dioceses
@@ -222,19 +224,19 @@ try:
     # Method 1: Insert all rows at once (recommended for smaller datasets)
     data_to_insert = dioceses_df.to_dict('records')  # Convert DataFrame to list of dicts
 
-    logging.info(f"\nAttempting to insert {len(data_to_insert)} rows...")
+    logging.info(f"\nAttempting to upsert {len(data_to_insert)} rows...")
     logging.info(f"Sample record: {data_to_insert[0] if data_to_insert else 'No data'}")
 
-    # Insert all data at once
-    result = supabase.table('Dioceses').insert(data_to_insert).execute()
+    # Upsert data, updating 'extracted_at' on conflict of 'Name'
+    result = supabase.table('Dioceses').upsert(data_to_insert, on_conflict='Name').execute()
 
     if result.data:
-        logging.info(f"✅ Successfully inserted {len(result.data)} rows!")
+        logging.info(f"✅ Successfully upserted {len(result.data)} rows!")
     else:
-        logging.error("❌ Insert returned no data")
+        logging.error("❌ Upsert returned no data")
 
 except Exception as e:
-    logging.error(f"❌ Bulk insert failed: {e}")
-    logging.warning("\nTrying row-by-row insert for better error details...")
+    logging.error(f"❌ Bulk upsert failed: {e}")
+    logging.warning("\nTrying row-by-row upsert for better error details...")
 
 

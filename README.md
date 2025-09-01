@@ -212,7 +212,7 @@ python extract_dioceses.py --max_dioceses 5
 This script will:
 - Scrape the USCCB website for all U.S. dioceses
 - Extract names, addresses, and website URLs
-- Store the data in the Supabase `Dioceses` table
+- Store the data in the Supabase `Dioceses` table. If a diocese with the same name already exists, its `extracted_at` timestamp will be updated; otherwise, a new record will be inserted.
 
 **Parameters**:
 - `--max_dioceses`: Optional. Maximum number of dioceses to extract. Defaults to 5. Set to 0 or omit for no limit.
