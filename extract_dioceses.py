@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 import os
 import argparse
-from datetime import datetime
+from datetime import datetime, timezone
 
 # <a href="https://colab.research.google.com/github/tomknightatl/USCCB/blob/main/Build%20Dioceses%20Database.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
 
@@ -155,7 +155,7 @@ def extract_dioceses(soup):
             'Name': diocese_name,
             'Address': address,
             'Website': website_url,
-            'extracted_at': datetime.now().isoformat() # Add extracted_at timestamp
+            'extracted_at': datetime.now(timezone.utc).isoformat() # Add extracted_at timestamp
         })
 
     return dioceses
