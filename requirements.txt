@@ -1,0 +1,11 @@
+supabase
+selenium
+webdriver-manager
+google-generativeai
+google-api-python-client
+tenacity
+pandas
+beautifulsoup4
+requests
+python-dotenv
+jupyter
