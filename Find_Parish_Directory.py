@@ -77,6 +77,7 @@ get_ipython().system('pip install supabase selenium webdriver-manager google-gen
 # Chrome Installation for Google Colab
 
 import os
+from dotenv import load_dotenv
 import subprocess
 
 def ensure_chrome_installed():
@@ -203,9 +204,6 @@ from google.colab import userdata
 import google.generativeai as genai
 from selenium.webdriver.chrome.options import Options
 import os # For os.path.exists logic if adapted
-SUPABASE_URL_FROM_USERDATA = userdata.get('SUPABASE_URL')
-SUPABASE_KEY_FROM_USERDATA = userdata.get('SUPABASE_KEY')
-
 print("--- User Configurable Parameters Cell Initializing ---")
 
 # --- Processing Limit Configuration ---
@@ -219,13 +217,8 @@ else:
     print("Processing will include all dioceses that lack parish directory URLs.")
 
 # --- Supabase Configuration ---
-SUPABASE_URL = None
-SUPABASE_KEY = None
-
-if SUPABASE_URL_FROM_USERDATA:
-    SUPABASE_URL = SUPABASE_URL_FROM_USERDATA
-if SUPABASE_KEY_FROM_USERDATA:
-    SUPABASE_KEY = SUPABASE_KEY_FROM_USERDATA
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY')
 
 if SUPABASE_URL and SUPABASE_KEY:
     print("Supabase URL and Key loaded successfully.")

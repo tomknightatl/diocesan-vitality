@@ -39,7 +39,7 @@ pip install -r requirements.txt
 
 This project uses environment variables to securely store API keys and other sensitive information. You need to create a `.env` file in the root directory of the project.
 
-Create a file named `.env` in `/home/tomk/USCCB/` with the following content, replacing the placeholder values with your actual keys:
+Create a file named `.env` in `/home/tomk/USCCB/` with the following content, replacing the placeholder values with the actual keys, which Tom has saved in the LastPass password named ".env file for USCCB repo" linked to the URL https://github.com:
 
 ```
 SUPABASE_URL="your_supabase_url_here"
