@@ -16,11 +16,11 @@ get_ipython().system('pip install supabase')
 # In[ ]:
 
 
-# Cell for Supabase client initialization using Google Colab secrets
+# Cell for Supabase client initialization
 from supabase import create_client, Client
 from google.colab import userdata
 
-# Access secrets from Google Colab's userdata
+# Access secrets from .env
 try:
     supabase_url = os.getenv('SUPABASE_URL')
     supabase_key = os.getenv('SUPABASE_KEY')
