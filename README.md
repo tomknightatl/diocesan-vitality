@@ -168,35 +168,13 @@ This project uses a virtual environment to manage dependencies and environment v
        *   The code reads these variables using `python-dotenv`.
     *   .gitignore is set to ignore these files.    **Do not commit your `.env` file to version control (e.g., Git).** It contains sensitive information.  
 
-### Running Jupyter Notebooks and Python Scripts
-
-#### Converting Notebooks to Python Scripts
-
-To convert all Jupyter notebooks (`.ipynb`) located in the `notebooks/` directory to Python scripts (`.py`) in the root directory, ensure your virtual environment is activated, then run the following commands:
-
-```bash
-for notebook in notebooks/*.ipynb; do
-  jupyter nbconvert --to script "$notebook" --output-dir . --output-extension .py
-done
-```
-This command will iterate through all `.ipynb` files in the `notebooks/` directory and convert each one into a corresponding `.py` file in the root of your project.
-
-#### Running Python Scripts
+### Running Python Scripts
 
 You can run the Python scripts directly from your terminal:
 
 ```bash
 python YOUR_SCRIPT_NAME.py
 ```
-
-#### Running Jupyter Notebooks
-
-To run the Jupyter notebooks interactively, first ensure your virtual environment is activated, then start the Jupyter server:
-
-```bash
-jupyter notebook
-```
-This will open a browser window where you can navigate to and run the notebooks in the `notebooks/` directory.
 
 ### Chrome Installation for Selenium
 
@@ -241,110 +219,9 @@ This script will:
 
 ### Step 3: Extract Parish Information
 
-#### Option A: Use the Modular Approach (Recommended)
-
-```python
-#!/usr/bin/env python3
-"""
-Main script to extract parish data from U.S. Catholic dioceses
-"""
-
-import os
-import json
-from datetime import datetime
-from dotenv import load_dotenv
-from supabase import create_client
-
-# Import extraction modules
-from parish_extraction_core import (
-    setup_enhanced_driver,
-    PatternDetector,
-    enhanced_safe_upsert_to_supabase,
-    analyze_parish_finder_quality
-)
-from parish_extractors import (
-    ensure_chrome_installed,
-    process_diocese_with_detailed_extraction
-)
-
-# Load environment variables
-load_dotenv()
-
-def main():
-    # Configuration
-    MAX_DIOCESES = 5  # Adjust as needed
-    
-    # Ensure Chrome is installed
-    if not ensure_chrome_installed():
-        print("Chrome installation failed. Please install Chrome manually.")
-        return
-    
-    # Initialize Supabase
-    supabase = create_client(
-        os.getenv('SUPABASE_URL'),
-        os.getenv('SUPABASE_KEY')
-    )
-    
-    # Get dioceses with parish directory URLs
-    response = supabase.table('DiocesesParishDirectory').select(
-        'diocese_url, parish_directory_url'
-    ).not_.is_('parish_directory_url', 'null').limit(MAX_DIOCESES).execute()
-    
-    dioceses = response.data if response.data else []
-    
-    # Get diocese names
-    diocese_urls = [d['diocese_url'] for d in dioceses]
-    names_response = supabase.table('Dioceses').select(
-        'Website, Name'
-    ).in_('Website', diocese_urls).execute()
-    
-    url_to_name = {item['Website']: item['Name'] for item in names_response.data}
-    
-    # Process each diocese
-    driver = setup_enhanced_driver()
-    
-    try:
-        for diocese in dioceses:
-            diocese_info = {
-                'name': url_to_name.get(diocese['diocese_url'], 'Unknown'),
-                'url': diocese['diocese_url'],
-                'parish_directory_url': diocese['parish_directory_url']
-            }
-            
-            print(f"Processing {diocese_info['name']}...")
-            result = process_diocese_with_detailed_extraction(diocese_info, driver)
-            
-            # Save parishes to database
-            if result['parishes_found']:
-                enhanced_safe_upsert_to_supabase(
-                    result['parishes_found'],
-                    diocese_info['name'],
-                    diocese_info['url'],
-                    diocese_info['parish_directory_url'],
-                    supabase
-                )
-    finally:
-        driver.quit()
-
-if __name__ == "__main__":
-    main()
-```
-
-Save this as `extract_parishes.py` and run:
 ```bash
 python extract_parishes.py
 ```
-
-#### Option B: Use the Legacy Script
-
-```bash
-python Extract_Parish_From_Diocese_Directory.py
-```
-
-**Note**: This script is very long and contains debug functions. You'll need to:
-1. Comment out the debug function calls at the end
-2. Remove or comment out Jupyter-specific code (like `!pip install` commands)
-3. Ensure Chrome is installed before running
 
 ### Step 4: Extract Liturgical Information (Optional)
 
