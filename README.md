@@ -115,61 +115,93 @@ The project uses Supabase (PostgreSQL) with the following key tables:
 
 1. **Install Python 3.x** (3.8 or higher recommended)
 
-2. **Install Dependencies**:
-```bash
-pip install supabase selenium webdriver-manager google-generativeai beautifulsoup4 pandas tenacity requests python-dotenv googleapiclient
-```
-
-3. **Install Chrome** (if not already installed):
-```bash
-# For Ubuntu/Debian
-sudo apt-get update
-sudo apt-get install google-chrome-stable
-
-# For macOS
-brew install --cask google-chrome
-
-# For Windows
-# Download from https://www.google.com/chrome/
-```
-
 ### Environment Setup
 
-1. **Create Environment Variables File** (`.env`):
+This project uses a virtual environment to manage dependencies and environment variables to securely store API keys.
+
+1.  **Create and Activate a Virtual Environment**
+
+    It is highly recommended to use a virtual environment to manage project dependencies.
+
+    ```bash
+    # Navigate to the root of your project directory
+    cd /home/tomk/USCCB
+
+    # Create a virtual environment named 'venv'
+    python3 -m venv venv
+
+    # Activate the virtual environment
+    # On macOS/Linux:
+    source venv/bin/activate
+
+    # On Windows:
+    # .\venv\Scripts\activate
+    ```
+
+    Your command prompt should now show `(venv)` indicating the virtual environment is active.
+
+2.  **Install Dependencies**
+
+    With your virtual environment activated, install the required Python packages using `pip`:
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+3.  **Configure Environment Variables**
+
+    This project uses environment variables to securely store API keys and other sensitive information. You need to create a `.env` file in the root directory of the project.
+
+    Create a file named `.env` in `/home/tomk/USCCB/` with the following content, replacing the placeholder values with the actual keys:
+
+    ```
+    SUPABASE_URL="your_supabase_url_here"
+    SUPABASE_KEY="your_supabase_anon_key_here"
+    GENAI_API_KEY_USCCB="your_google_genai_api_key_here"
+    SEARCH_API_KEY_USCCB="your_google_custom_search_api_key_here"
+    SEARCH_CX_USCCB="your_google_custom_search_engine_id_here"
+    ```
+
+    **Important:**
+    *   **Do not commit your `.env` file to version control (e.g., Git).** It contains sensitive information. A `.gitignore` entry for `.env` is usually recommended.
+    *   The notebooks will be modified to read these variables using `python-dotenv`.
+
+### Running Jupyter Notebooks and Python Scripts
+
+#### Converting Notebooks to Python Scripts
+
+To convert all Jupyter notebooks (`.ipynb`) located in the `notebooks/` directory to Python scripts (`.py`) in the root directory, ensure your virtual environment is activated, then run the following commands:
+
 ```bash
-# Create a .env file in your project root
-touch .env
+for notebook in notebooks/*.ipynb; do
+  jupyter nbconvert --to script "$notebook" --output-dir . --output-extension .py
+done
+```
+This command will iterate through all `.ipynb` files in the `notebooks/` directory and convert each one into a corresponding `.py` file in the root of your project.
+
+#### Running Python Scripts
+
+You can run the Python scripts directly from your terminal:
+
+```bash
+python YOUR_SCRIPT_NAME.py
 ```
 
-2. **Add Your Credentials** to `.env`:
-```env
-# Supabase Configuration
-SUPABASE_URL=your_supabase_project_url
-SUPABASE_KEY=your_supabase_anon_key
+#### Running Jupyter Notebooks
 
-# Google AI Configuration
-GENAI_API_KEY_USCCB=your_gemini_api_key
+To run the Jupyter notebooks interactively, first ensure your virtual environment is activated, then start the Jupyter server:
 
-# Google Custom Search (for parish directory discovery)
-SEARCH_API_KEY_USCCB=your_search_api_key
-SEARCH_CX_USCCB=your_search_engine_id
-
-# Optional: GitHub (if using version control)
-GitHubUserforUSCCB=your_github_username
-GitHubPATforUSCCB=your_github_personal_access_token
+```bash
+jupyter notebook
 ```
+This will open a browser window where you can navigate to and run the notebooks in the `notebooks/` directory.
 
-3. **Load Environment Variables** in Python:
-```python
-from dotenv import load_dotenv
-import os
+### Chrome Installation for Selenium
 
-load_dotenv()
+The project uses Selenium for web scraping, which requires a Chrome browser and ChromeDriver. Ensure Chrome is installed on your system. The `webdriver-manager` library will attempt to download the correct ChromeDriver automatically.
 
-# Access variables
-SUPABASE_URL = os.getenv('SUPABASE_URL')
-SUPABASE_KEY = os.getenv('SUPABASE_KEY')
-```
+If you encounter issues with Chrome or ChromeDriver, ensure Chrome is up-to-date and check the `webdriver-manager` documentation for troubleshooting.
+
 
 ## Running the System
 
