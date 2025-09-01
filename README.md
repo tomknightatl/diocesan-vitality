@@ -42,13 +42,23 @@ This project is a comprehensive data collection and analysis system for U.S. Cat
 
 - **`Find_Parish_Directory.ipynb`**: Sophisticated AI-powered system that analyzes diocese websites to locate parish directory pages. Uses Google Gemini AI and custom search APIs with intelligent fallback mechanisms.
 
-- **`Extract_Parish_From_Diocese_Directory.ipynb`**: Advanced parish extraction system featuring:
-  - Pattern-based website detection (eCatholic, SquareSpace, WordPress, etc.)
-  - Specialized extractors for different platform types
-  - JavaScript-aware parsing for interactive parish finders
-  - Detail page navigation for comprehensive data collection
-  - Geographic coordinate extraction
-  - Clergy and service schedule information
+### Parish Extraction Modules
+
+- **`parish_extraction_core.py`**: Core components for parish extraction including:
+  - Data models and enums (DiocesePlatform, ParishListingType, ParishData)
+  - Pattern detection system for website analysis
+  - Base extractor classes and utilities
+  - WebDriver setup functions
+  - Database integration and Supabase utilities
+  - Quality analysis functions
+
+- **`parish_extractors.py`**: Specialized extractor implementations featuring:
+  - Enhanced Diocese Card Extractor with detail page navigation
+  - Parish Finder Extractor for eCatholic sites
+  - Table Extractor for HTML-based listings
+  - Interactive Map Extractor for JavaScript maps
+  - Generic Extractor as intelligent fallback
+  - Main processing function orchestrating extraction
 
 ### Specialized Tools
 
@@ -135,13 +145,19 @@ pip install supabase selenium webdriver-manager google-generativeai beautifulsou
    ```
 
 3. **Extract Parish Details**:
-   ```
-   Run Extract_Parish_From_Diocese_Directory.ipynb
+   ```python
+   # Import the parish extraction modules
+   from parish_extraction_core import setup_enhanced_driver, PatternDetector
+   from parish_extractors import process_diocese_with_detailed_extraction
+   
+   # Set up driver and process dioceses
+   driver = setup_enhanced_driver()
+   result = process_diocese_with_detailed_extraction(diocese_info, driver)
    ```
 
 ### Configuration Options
 
-Each notebook includes configurable parameters:
+Each notebook and module includes configurable parameters:
 - **Processing Limits**: Control the number of dioceses to process
 - **Mock vs Live APIs**: Toggle between test mode and production APIs
 - **Extraction Confidence**: Adjust AI confidence thresholds
