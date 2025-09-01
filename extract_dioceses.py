@@ -196,6 +196,8 @@ args = parse_arguments()
 if args.max_dioceses is not None and args.max_dioceses > 0:
     dioceses = dioceses[:args.max_dioceses]
     logging.info(f"Limiting extraction to {len(dioceses)} dioceses based on --max_dioceses parameter.")
+else:
+    logging.info("Extracting all dioceses (no limit applied).")
 
 
 # In[ ]:
