@@ -178,9 +178,27 @@ python YOUR_SCRIPT_NAME.py
 
 ### Chrome Installation for Selenium
 
-The project uses Selenium for web scraping, which requires a Chrome browser and ChromeDriver. Ensure Chrome is installed on your system. The `webdriver-manager` library will attempt to download the correct ChromeDriver automatically.
+The project uses Selenium for web scraping, which requires a Chrome browser and ChromeDriver.
 
-If you encounter issues with Chrome or ChromeDriver, ensure Chrome is up-to-date and check the `webdriver-manager` documentation for troubleshooting.
+**Important:** You must have Google Chrome installed on your system. While `webdriver-manager` will attempt to download the correct ChromeDriver automatically, it does *not* install Chrome itself.
+
+If you are on Linux and Chrome is not installed, you can typically install it using:
+
+```bash
+sudo apt-get update
+sudo apt-get install google-chrome-stable
+```
+
+For other operating systems, please download and install Chrome from the official website: [https://www.google.com/chrome/](https://www.google.com/chrome/)
+
+**Troubleshooting Chrome Installation Errors:**
+
+If you encounter errors like "Permission denied" or "Chrome not found" when running the Python scripts, it's likely due to Chrome not being installed or the script attempting to install it without sufficient permissions. In such cases:
+
+1.  **Manually install Chrome** using the appropriate method for your operating system (e.g., `sudo apt-get install google-chrome-stable` for Debian/Ubuntu).
+2.  Ensure Chrome is up-to-date.
+3.  Check the `webdriver-manager` documentation for any specific troubleshooting related to ChromeDriver.
+
 
 
 ## Running the System
