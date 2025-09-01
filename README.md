@@ -244,7 +244,7 @@ python extract_parishes.py
 ### Step 4: Extract Liturgical Information (Optional)
 
 ```bash
-python Find_Adoration_and_Reconciliation_information_for_a_Parish.py
+python extract_schedule.py
 ```
 
 This script will:
