@@ -206,13 +206,16 @@ If you encounter errors like "Permission denied" or "Chrome not found" when runn
 ### Step 1: Build Diocese Database
 
 ```bash
-python extract_dioceses.py
+python extract_dioceses.py --max_dioceses 5
 ```
 
 This script will:
 - Scrape the USCCB website for all U.S. dioceses
 - Extract names, addresses, and website URLs
 - Store the data in the Supabase `Dioceses` table
+
+**Parameters**:
+- `--max_dioceses`: Optional. Maximum number of dioceses to extract. Defaults to 5. Set to 0 or omit for no limit.
 
 **Note**: The script contains some Jupyter-specific code (like `get_ipython()`). You may need to comment out or remove these lines when running as a standalone Python script.
 

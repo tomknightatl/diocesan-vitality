@@ -4,6 +4,7 @@
 from dotenv import load_dotenv
 load_dotenv()
 import os
+import argparse
 
 # <a href="https://colab.research.google.com/github/tomknightatl/USCCB/blob/main/Build%20Dioceses%20Database.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
 
@@ -67,6 +68,15 @@ logging.basicConfig(
     ]
 )
 
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="Extract dioceses information from the USCCB website.")
+    parser.add_argument(
+        "--max_dioceses",
+        type=int,
+        default=5,
+        help="Maximum number of dioceses to extract. Set to 0 or None for no limit."
+    )
+    return parser.parse_args()
 
 # In[ ]:
 
@@ -178,6 +188,12 @@ logging.info(f"Extracted information for {len(dioceses)} dioceses.")
 if len(dioceses) == 0:
     logging.warning("No dioceses were extracted. Printing the structure of the page:")
     logging.warning(soup.prettify())
+
+# Apply limit if specified
+args = parse_arguments()
+if args.max_dioceses is not None and args.max_dioceses > 0:
+    dioceses = dioceses[:args.max_dioceses]
+    logging.info(f"Limiting extraction to {len(dioceses)} dioceses based on --max_dioceses parameter.")
 
 
 # In[ ]:
