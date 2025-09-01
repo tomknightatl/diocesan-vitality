@@ -1,15 +1,18 @@
 import sqlite3
 import pandas as pd
 
-def connect_db(db_path):
+def connect_db(db_path: str) -> sqlite3.Connection | None:
     """
-    Connects to the SQLite database at db_path.
+    Establishes a connection to the SQLite database specified by db_path.
 
     Args:
-        db_path (str): The path to the SQLite database file.
+        db_path (str): The absolute path to the SQLite database file.
+                       If the database does not exist, it will be created.
 
     Returns:
-        sqlite3.Connection: The connection object or None if connection fails.
+        sqlite3.Connection: A connection object to the SQLite database if successful.
+        None: If an error occurs during connection (e.g., database file is corrupted,
+              permissions issues).
     """
     try:
         conn = sqlite3.connect(db_path)
@@ -18,15 +21,17 @@ def connect_db(db_path):
         print(f"Error connecting to database {db_path}: {e}")
         return None
 
-def get_db_summary(conn):
+def get_db_summary(conn: sqlite3.Connection) -> str:
     """
-    Gets a summary of the database, including table names and row counts.
+    Generates a summary of the SQLite database, listing all tables and their respective row counts.
 
     Args:
-        conn (sqlite3.Connection): The database connection object.
+        conn (sqlite3.Connection): The active connection object to the SQLite database.
 
     Returns:
-        str: A human-readable string summarizing the database contents.
+        str: A multi-line string providing a human-readable summary of the database.
+             Includes table names and their row counts. Returns an appropriate message
+             if there's no connection, no tables, or an error during query.
     """
     if not conn:
         return "No database connection."
@@ -53,19 +58,23 @@ def get_db_summary(conn):
     except sqlite3.Error as e:
         return f"Error querying sqlite_master: {e}"
 
-def get_table_details(conn, table_name, limit=5):
+def get_table_details(conn: sqlite3.Connection, table_name: str, limit: int = 5) -> pd.DataFrame | tuple[list[tuple], list[str]] | None:
     """
-    Fetches details (a few rows) from a specific table.
+    Fetches a limited number of rows and column details from a specified SQLite table.
 
     Args:
-        conn (sqlite3.Connection): The database connection object.
-        table_name (str): The name of the table to query.
-        limit (int, optional): The maximum number of rows to fetch. Defaults to 5.
+        conn (sqlite3.Connection): The active connection object to the SQLite database.
+        table_name (str): The name of the table from which to fetch details.
+        limit (int, optional): The maximum number of rows to retrieve from the table.
+                               Defaults to 5.
 
     Returns:
-        pandas.DataFrame or tuple: A pandas DataFrame with the table data if pandas is available,
-                                   otherwise a tuple containing a list of tuples (rows)
-                                   and a list of column names. Returns None on error.
+        pandas.DataFrame: If pandas is installed, returns a DataFrame containing the
+                          fetched rows and column names.
+        tuple[list[tuple], list[str]]: If pandas is not installed, returns a tuple where
+                                       the first element is a list of tuples (rows) and
+                                       the second is a list of column names.
+        None: If the database connection is invalid or an error occurs during the query.
     """
     if not conn:
         return None
@@ -86,18 +95,20 @@ def get_table_details(conn, table_name, limit=5):
         print(f"Error fetching details for table {table_name}: {e}")
         return None
 
-def display_database_status(db_path="data.db", show_details=False, tables_to_show=None, limit_details=5):
+def display_database_status(db_path: str = "data.db", show_details: bool = False, tables_to_show: list[str] | None = None, limit_details: int = 5) -> None:
     """
-    Main function to display database status, summary, and optionally table details.
+    Displays the status of an SQLite database, including a summary of tables and
+    optionally detailed content for specific tables.
 
     Args:
-        db_path (str, optional): Path to the database file. Defaults to "data.db".
-        show_details (bool, optional): Whether to show details for tables. Defaults to False.
-        tables_to_show (list, optional): A list of specific table names to show details for.
-                                         If None, and show_details is True, details for all tables are shown.
-                                         Defaults to None.
-        limit_details (int, optional): The number of rows to display for each table's details.
-                                       Defaults to 5.
+        db_path (str, optional): The path to the SQLite database file. Defaults to "data.db".
+        show_details (bool, optional): If True, detailed content (rows) of tables will be displayed.
+                                       Defaults to False.
+        tables_to_show (list[str] | None, optional): A list of table names for which to display details.
+                                                     If None and `show_details` is True, details for all
+                                                     tables in the database will be shown. Defaults to None.
+        limit_details (int, optional): The maximum number of rows to display for each table's details
+                                       when `show_details` is True. Defaults to 5.
     """
     conn = connect_db(db_path)
     if not conn:

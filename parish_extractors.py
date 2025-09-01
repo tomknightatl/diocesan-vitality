@@ -19,9 +19,14 @@ This module contains:
 import time
 import re
 import subprocess
+import logging
 from typing import List, Dict, Optional
 from datetime import datetime
 from urllib.parse import urljoin
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # Web scraping
 from bs4 import BeautifulSoup
@@ -46,30 +51,37 @@ def ensure_chrome_installed():
         # Check if Chrome is already available
         result = subprocess.run(['which', 'google-chrome'], capture_output=True, text=True)
         if result.returncode == 0:
-            print("✅ Chrome is already installed and available.")
+            logger.info("✅ Chrome is already installed and available.")
             return True
 
-        print("🔧 Chrome not found. Installing Chrome for Selenium...")
+        logger.info("🔧 Chrome not found. Installing Chrome for Selenium...")
 
         # Install Chrome
-        import os
-        os.system('apt-get update > /dev/null 2>&1')
-        os.system('wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - > /dev/null 2>&1')
-        os.system('echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list')
-        os.system('apt-get update > /dev/null 2>&1')
-        os.system('apt-get install -y google-chrome-stable > /dev/null 2>&1')
+        # Using subprocess.run for better control and error handling
+        subprocess.run(['apt-get', 'update'], capture_output=True, text=True, check=True)
+        subprocess.run(['wget', '-q', '-O', '-', 'https://dl.google.com/linux/linux_signing_key.pub'], capture_output=True, text=True, check=True)
+        subprocess.run(['apt-key', 'add', '-'], input=subprocess.run(['wget', '-q', '-O', '-', 'https://dl.google.com/linux/linux_signing_key.pub'], capture_output=True, text=True).stdout, capture_output=True, text=True, check=True)
+        subprocess.run(['echo', "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main"], capture_output=True, text=True, check=True)
+        subprocess.run(['sh', '-c', 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list'], capture_output=True, text=True, check=True)
+        subprocess.run(['apt-get', 'update'], capture_output=True, text=True, check=True)
+        subprocess.run(['apt-get', 'install', '-y', 'google-chrome-stable'], capture_output=True, text=True, check=True)
 
         # Verify installation
         result = subprocess.run(['google-chrome', '--version'], capture_output=True, text=True)
         if result.returncode == 0:
-            print(f"✅ Chrome installed successfully: {result.stdout.strip()}")
+            logger.info(f"✅ Chrome installed successfully: {result.stdout.strip()}")
             return True
         else:
-            print("❌ Chrome installation may have failed.")
+            logger.error("❌ Chrome installation may have failed.")
             return False
 
+    except subprocess.CalledProcessError as e:
+        logger.error(f"❌ Error during Chrome installation (subprocess failed): {e}")
+        logger.error(f"Stdout: {e.stdout}")
+        logger.error(f"Stderr: {e.stderr}")
+        return False
     except Exception as e:
-        print(f"❌ Error during Chrome installation: {e}")
+        logger.error(f"❌ Error during Chrome installation: {e}")
         return False
 
 # =============================================================================
@@ -88,15 +100,15 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
         parishes = []
 
         try:
-            print("    📍 Enhanced diocese card layout detected - extracting with detail pages")
+            logger.info("    📍 Enhanced diocese card layout detected - extracting with detail pages")
 
             # Find all parish cards using the specific Salt Lake City structure
             parish_cards = soup.find_all('div', class_='col-lg location')
-            print(f"    📊 Found {len(parish_cards)} parish cards")
+            logger.info(f"    📊 Found {len(parish_cards)} parish cards")
 
             for i, card in enumerate(parish_cards, 1):
                 try:
-                    print(f"    🔄 Processing parish {i}/{len(parish_cards)}")
+                    logger.info(f"    🔄 Processing parish {i}/{len(parish_cards)}")
                     parish_data = self._extract_parish_from_card_with_details(card, url, driver, i)
                     if parish_data:
                         parishes.append(parish_data)
@@ -105,14 +117,14 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
                         else:
                             self.detail_extraction_errors += 1
                 except Exception as e:
-                    print(f"    ⚠️ Error extracting from card {i}: {str(e)[:100]}...")
+                    logger.warning(f"    ⚠️ Error extracting from card {i}: {str(e)[:100]}...")
                     self.detail_extraction_errors += 1
                     continue
 
-            print(f"    📊 Summary: {self.detail_extraction_count} detailed extractions successful, {self.detail_extraction_errors} failed")
+            logger.info(f"    📊 Summary: {self.detail_extraction_count} detailed extractions successful, {self.detail_extraction_errors} failed")
 
         except Exception as e:
-            print(f"    ⚠️ Enhanced diocese card extraction error: {str(e)[:100]}...")
+            logger.error(f"    ⚠️ Enhanced diocese card extraction error: {str(e)[:100]}...")
 
         return parishes
 
@@ -195,16 +207,16 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
                 parish_data.service_times = detailed_info.get('service_times')
                 parish_data.detail_extraction_success = True
                 parish_data.confidence_score = 0.95
-                print(f"      ✅ {name}: Complete details extracted")
+                logger.info(f"      ✅ {name}: Complete details extracted")
             else:
                 parish_data.detail_extraction_success = False
                 parish_data.detail_extraction_error = detailed_info.get('error')
-                print(f"      ⚠️ {name}: Basic info only - {detailed_info.get('error', 'Unknown error')}")
+                logger.warning(f"      ⚠️ {name}: Basic info only - {detailed_info.get('error', 'Unknown error')}")
 
             return parish_data
 
         except Exception as e:
-            print(f"    ⚠️ Error parsing card {card_number}: {str(e)[:50]}...")
+            logger.warning(f"    ⚠️ Error parsing card {card_number}: {str(e)[:50]}...")
             return None
 
     def _extract_details_from_parish_page(self, driver, parish_url: str, parish_name: str) -> Dict:
@@ -214,7 +226,7 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
             return {'success': False, 'error': 'No detail URL available'}
 
         try:
-            print(f"      🔗 Navigating to: {parish_url}")
+            logger.info(f"      🔗 Navigating to: {parish_url}")
 
             # Navigate to the parish detail page
             driver.get(parish_url)
@@ -246,6 +258,11 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
         except Exception as e:
             error_msg = f"Failed to extract details: {str(e)[:100]}"
             print(f"      ❌ {parish_name}: {error_msg}")
+            return {'success': False, 'error': error_msg}
+
+    except Exception as e:
+            error_msg = f"Failed to extract details: {str(e)[:100]}"
+            logger.error(f"      ❌ {parish_name}: {error_msg}")
             return {'success': False, 'error': error_msg}
 
     def _extract_contact_info(self, soup: BeautifulSoup, result: Dict):
@@ -297,7 +314,86 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
                         self._parse_address_components(full_address, result)
 
         except Exception as e:
-            print(f"        ⚠️ Error extracting contact info: {str(e)[:50]}")
+            logger.warning(f"        ⚠️ Error extracting contact info: {str(e)[:50]}")
+
+    def _parse_address_components(self, full_address: str, result: Dict):
+        """Parse full address into street address and zip code"""
+        try:
+            # Extract zip code (5 digits, possibly followed by 4 more)
+            zip_match = re.search(r'\b(\d{5}(?:-\d{4})?)\b', full_address)
+            if zip_match:
+                result['zip_code'] = zip_match.group(1)
+
+            # Extract street address (everything before the first comma, or before city/state)
+            address_parts = full_address.split(',')
+            if len(address_parts) > 0:
+                potential_street = address_parts[0].strip()
+                if re.search(r'\d+', potential_street):
+                    result['street_address'] = potential_street
+
+        except Exception as e:
+            logger.warning(f"        ⚠️ Error parsing address: {str(e)[:30]}")
+
+    def _extract_service_times(self, soup: BeautifulSoup, result: Dict):
+        """Extract service times from parish detail page"""
+        try:
+            service_sections = soup.find_all(['div', 'section'],
+                                           string=re.compile(r'service.*times|mass.*times|masses|schedule', re.I))
+
+            service_headers = soup.find_all(['h3', 'h4'],
+                                          string=re.compile(r'service.*times|mass.*times|masses|schedule', re.I))
+
+            service_lists = []
+            for header in service_headers:
+                next_sibling = header.find_next_sibling(['ul', 'div'])
+                if next_sibling:
+                    service_lists.append(next_sibling)
+
+            all_service_sections = service_sections + service_lists
+
+            for section in all_service_sections:
+                if section:
+                    service_text = section.get_text()
+                    lines = [line.strip() for line in service_text.split('\n') if line.strip()]
+                    schedule_lines = [line for line in lines if len(line) > 10 and
+                                    any(keyword in line.lower() for keyword in
+                                        ['sunday', 'saturday', 'daily', 'mass', 'service', 'am', 'pm'])]
+
+                    if schedule_lines:
+                        result['service_times'] = '; '.join(schedule_lines[:5])
+                        break
+
+        except Exception as e:
+            logger.warning(f"        ⚠️ Error extracting service times: {str(e)[:50]}")
+
+    def _extract_clergy_info(self, soup: BeautifulSoup, result: Dict):
+        """Extract clergy information from parish detail page"""
+        try:
+            clergy_sections = soup.find_all(['div', 'section'], class_=re.compile(r'clergy|pastor|priest', re.I))
+            directory_cards = soup.find_all(['div'], class_=re.compile(r'directory|card', re.I))
+            all_clergy_sections = clergy_sections + directory_cards
+
+            clergy_info = []
+            for section in all_clergy_sections:
+                titles = section.find_all(['h4', 'h5'], class_=re.compile(r'title|name', re.I))
+                for title in titles:
+                    title_text = title.get_text().strip()
+                    if any(clergy_word in title_text.lower() for clergy_word in
+                           ['reverend', 'father', 'pastor', 'deacon', 'rev.', 'fr.', 'dcn.']):
+
+                        role_elem = title.find_next_sibling(['p', 'div'])
+                        role_text = role_elem.get_text().strip() if role_elem else ""
+
+                        if role_text:
+                            clergy_info.append(f"{title_text}: {role_text}")
+                        else:
+                            clergy_info.append(title_text)
+
+            if clergy_info:
+                result['clergy_info'] = '; '.join(clergy_info[:3])
+
+        except Exception as e:
+            logger.warning(f"        ⚠️ Error extracting clergy info: {str(e)[:50]}")
 
     def _parse_address_components(self, full_address: str, result: Dict):
         """Parse full address into street address and zip code"""
@@ -389,7 +485,7 @@ class ParishFinderExtractor(BaseExtractor):
         parishes = []
 
         try:
-            print("    📍 Parish finder interface detected")
+            logger.info("    📍 Parish finder interface detected")
 
             # Try different selectors for parish items
             parish_selectors = [
@@ -405,11 +501,11 @@ class ParishFinderExtractor(BaseExtractor):
                 elements = soup.find_all(class_=lambda x: x and 'site' in x) if selector == "li.site" else soup.select(selector)
                 if elements:
                     parish_elements = elements
-                    print(f"    📊 Found {len(parish_elements)} parish elements using {selector}")
+                    logger.info(f"    📊 Found {len(parish_elements)} parish elements using {selector}")
                     break
 
             if not parish_elements:
-                print("    ⚠️ No parish elements found")
+                logger.warning("    ⚠️ No parish elements found")
                 return parishes
 
             for i, element in enumerate(parish_elements, 1):
@@ -417,18 +513,18 @@ class ParishFinderExtractor(BaseExtractor):
                     parish_data = self._extract_parish_from_finder_element(element, url, i)
                     if parish_data:
                         parishes.append(parish_data)
-                        print(f"      ✅ Extracted: {parish_data.name}")
+                        logger.info(f"      ✅ Extracted: {parish_data.name}")
                     else:
-                        print(f"      ⚠️ Skipped element {i}: No valid parish data")
+                        logger.warning(f"      ⚠️ Skipped element {i}: No valid parish data")
 
                 except Exception as e:
-                    print(f"      ❌ Error processing element {i}: {str(e)[:50]}...")
+                    logger.error(f"      ❌ Error processing element {i}: {str(e)[:50]}...")
                     continue
 
-            print(f"    📊 Successfully extracted {len(parishes)} parishes from parish finder")
+            logger.info(f"    📊 Successfully extracted {len(parishes)} parishes from parish finder")
 
         except Exception as e:
-            print(f"    ❌ Parish finder extraction error: {str(e)[:100]}...")
+            logger.error(f"    ❌ Parish finder extraction error: {str(e)[:100]}...")
 
         return parishes
 
@@ -544,10 +640,10 @@ class ParishFinderExtractor(BaseExtractor):
             )
 
         except Exception as e:
-            print(f"        ⚠️ Error parsing parish element {element_num}: {str(e)[:50]}...")
+            logger.warning(f"        ⚠️ Error parsing parish element {element_num}: {str(e)[:50]}...")
             return None
 
-    def _extract_from_site_info(self, name: str, city: str, site_info, element, base_url: str) -> Optional[ParishData]:
+    def _extract_from_site_info(self, name: str, city: str, site_info, element, base_url: str) -> Optional[ParishData>:
         """Extract detailed information from siteInfo section"""
         try:
             main_section = site_info.find('div', class_='main')
@@ -619,7 +715,7 @@ class ParishFinderExtractor(BaseExtractor):
             )
 
         except Exception as e:
-            print(f"        ⚠️ Error extracting from siteInfo: {str(e)[:50]}...")
+            logger.warning(f"        ⚠️ Error extracting from siteInfo: {str(e)[:50]}...")
             return None
 
 # =============================================================================
@@ -648,7 +744,7 @@ class TableExtractor(BaseExtractor):
                                 parishes.append(parish_data)
 
         except Exception as e:
-            print(f"    ⚠️ Table extraction error: {str(e)[:100]}...")
+            logger.error(f"    ⚠️ Table extraction error: {str(e)[:100]}...")
 
         return parishes
 
@@ -723,13 +819,13 @@ class ImprovedInteractiveMapExtractor(BaseExtractor):
                         EC.presence_of_element_located((By.CSS_SELECTOR, selector))
                     )
                     map_found = True
-                    print(f"    📍 Found map container: {selector}")
+                    logger.info(f"    📍 Found map container: {selector}")
                     break
                 except:
                     continue
 
             if not map_found:
-                print(f"    ℹ️ No map container found, trying direct JS extraction...")
+                logger.info(f"    ℹ️ No map container found, trying direct JS extraction...")
 
             # Method 1: Extract from JavaScript variables
             parishes.extend(self._extract_from_js_variables(driver))
