@@ -152,7 +152,9 @@ This project uses a virtual environment to manage dependencies and environment v
 
     This project uses environment variables to securely store API keys and other sensitive information. You need to create a `.env` file in the root directory of the project.
 
-    Create a file named `.env` in `/home/tomk/USCCB/` with the following content, replacing the placeholder values with the actual keys:
+    Create a file named `.env` in `/home/tomk/USCCB/` 
+    
+    Either (1) copy the contents of the LastPass password ".env file for USCCB repo" and paste that text into the .env file, or (2) Replacing the following placeholder values with the actual keys:
 
     ```
     SUPABASE_URL="your_supabase_url_here"
@@ -163,8 +165,8 @@ This project uses a virtual environment to manage dependencies and environment v
     ```
 
     **Important:**
-    *   **Do not commit your `.env` file to version control (e.g., Git).** It contains sensitive information. A `.gitignore` entry for `.env` is usually recommended.
-    *   The notebooks will be modified to read these variables using `python-dotenv`.
+       *   The code reads these variables using `python-dotenv`.
+    *   .gitignore is set to ignore these files.    **Do not commit your `.env` file to version control (e.g., Git).** It contains sensitive information.  
 
 ### Running Jupyter Notebooks and Python Scripts
 
