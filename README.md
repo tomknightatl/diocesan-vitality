@@ -38,9 +38,9 @@ This project is a comprehensive data collection and analysis system for U.S. Cat
 
 ### Core Data Collection Scripts
 
-- **`Build_Dioceses_Database.py`**: Initial scraping of U.S. dioceses from the USCCB website. Populates the foundational `Dioceses` table with names, addresses, and official websites.
+- **`extract_dioceses.py`**: Initial scraping of U.S. dioceses from the USCCB website. Populates the foundational `Dioceses` table with names, addresses, and official websites.
 
-- **`Find_Parish_Directory.py` / `02_Find_Parish_Directories (older but working).py`**: AI-powered system that analyzes diocese websites to locate parish directory pages. Uses Google Gemini AI and custom search APIs with intelligent fallback mechanisms.
+- **`find_parishes.py` / `02_Find_Parish_Directories (older but working).py`**: AI-powered system that analyzes diocese websites to locate parish directory pages. Uses Google Gemini AI and custom search APIs with intelligent fallback mechanisms.
 
 ### Parish Extraction Modules
 
@@ -206,7 +206,7 @@ If you encounter errors like "Permission denied" or "Chrome not found" when runn
 ### Step 1: Build Diocese Database
 
 ```bash
-python Build_Dioceses_Database.py
+python extract_dioceses.py
 ```
 
 This script will:
@@ -219,7 +219,7 @@ This script will:
 ### Step 2: Find Parish Directories
 
 ```bash
-python Find_Parish_Directory.py
+python find_parishes.py
 # or use the older version if needed:
 python "02_Find_Parish_Directories (older but working).py"
 ```

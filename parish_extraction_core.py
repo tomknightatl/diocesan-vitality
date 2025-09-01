@@ -18,11 +18,16 @@ import os
 import time
 import json
 import re
+import logging
 from datetime import datetime
 from dataclasses import dataclass, asdict
 from enum import Enum
 from typing import List, Dict, Optional, Any
 from urllib.parse import urljoin, urlparse
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # Web scraping
 from bs4 import BeautifulSoup
@@ -313,7 +318,7 @@ class BaseExtractor:
 def setup_enhanced_driver():
     """Set up Chrome WebDriver with options optimized for parish extraction"""
 
-    print("🔧 Setting up enhanced Chrome WebDriver...")
+    logger.info("🔧 Setting up enhanced Chrome WebDriver...")
 
     chrome_options = Options()
     chrome_options.add_argument('--headless')
@@ -338,16 +343,29 @@ def setup_enhanced_driver():
         driver.set_page_load_timeout(30)
         driver.implicitly_wait(5)
 
-        print("✅ Chrome WebDriver initialized successfully")
+        logger.info("✅ Chrome WebDriver initialized successfully")
         return driver
 
     except Exception as e:
-        print(f"❌ Failed to initialize WebDriver: {e}")
+        logger.error(f"❌ Failed to initialize WebDriver: {e}")
         raise
 
 # =============================================================================
 # DATABASE INTEGRATION FUNCTIONS
 # =============================================================================
+
+def _clean_supabase_data(data: Dict) -> Dict:
+    """
+    Removes None values and empty strings from a dictionary,
+    while preserving boolean False and numeric 0 values.
+    """
+    cleaned_data = {}
+    for k, v in data.items():
+        if v is not None and v != "":
+            cleaned_data[k] = v
+        elif isinstance(v, (bool, int, float)):
+            cleaned_data[k] = v
+    return cleaned_data
 
 def prepare_parish_for_supabase(parish_data: ParishData, diocese_name: str, diocese_url: str, parish_directory_url: str) -> Dict:
     """Convert ParishData to format compatible with Supabase schema"""
@@ -380,12 +398,18 @@ def prepare_parish_for_supabase(parish_data: ParishData, diocese_name: str, dioc
         'extracted_at': datetime.now().isoformat()
     }
 
+PARISH_SKIP_TERMS = [
+    'finder', 'contact', 'chancery', 'pastoral center', 'tv mass',
+    'directory', 'search', 'filter', 'map', 'diocese', 'bishop',
+    'office', 'center', 'no parish registration', 'archdiocese'
+]
+
 def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_name: str, diocese_url: str, 
                                      parish_directory_url: str, supabase):
     """Enhanced version of Supabase upsert function with Parish Finder support"""
 
     if not supabase:
-        print("  ❌ Supabase not available")
+        logger.error("  ❌ Supabase not available")
         return False
 
     success_count = 0
@@ -395,37 +419,26 @@ def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_name: s
     for parish in parishes:
         try:
             # Enhanced filtering for non-parish items
-            skip_terms = [
-                'finder', 'contact', 'chancery', 'pastoral center', 'tv mass',
-                'directory', 'search', 'filter', 'map', 'diocese', 'bishop',
-                'office', 'center', 'no parish registration', 'archdiocese'
-            ]
-
-            if any(skip_word in parish.name.lower() for skip_word in skip_terms):
-                print(f"    ⏭️ Skipped: {parish.name} (not a parish)")
+            # Use the constant
+            if any(skip_word in parish.name.lower() for skip_word in PARISH_SKIP_TERMS):
+                logger.info(f"    ⏭️ Skipped: {parish.name} (not a parish)")
                 skipped_count += 1
                 continue
 
             # Must have a meaningful name to proceed
             if not parish.name or len(parish.name.strip()) < 3:
-                print(f"    ⏭️ Skipped: Invalid name for parish")
+                logger.info(f"    ⏭️ Skipped: Invalid name for parish")
                 skipped_count += 1
                 continue
 
             # Convert to schema format
             supabase_data = prepare_parish_for_supabase(parish, diocese_name, diocese_url, parish_directory_url)
 
-            # Remove None values and empty strings, but keep boolean False and numeric 0
-            clean_data = {}
-            for k, v in supabase_data.items():
-                if v is not None and v != "":
-                    clean_data[k] = v
-                elif isinstance(v, (bool, int, float)):
-                    clean_data[k] = v
+            clean_data = _clean_supabase_data(supabase_data)
 
             # Must have a name to proceed
             if not clean_data.get('Name') or len(clean_data.get('Name', '')) < 3:
-                print(f"    ⏭️ Skipped: Invalid name after cleaning")
+                logger.info(f"    ⏭️ Skipped: Invalid name after cleaning")
                 skipped_count += 1
                 continue
 
@@ -433,7 +446,7 @@ def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_name: s
             response = supabase.table('Parishes').insert(clean_data).execute()
 
             if hasattr(response, 'error') and response.error:
-                print(f"    ❌ Database error for {parish.name}: {response.error}")
+                logger.error(f"    ❌ Database error for {parish.name}: {response.error}")
             else:
                 success_count += 1
                 if parish.detail_extraction_success:
@@ -444,8 +457,8 @@ def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_name: s
 
                 # Show confidence and extraction method
                 method_short = parish.extraction_method.replace('_extraction', '').replace('_', ' ')
-                print(f"    ✅ {detail_indicator} Saved: {parish.name}")
-                print(f"        📊 Method: {method_short}, Confidence: {parish.confidence_score:.2f}")
+                logger.info(f"    ✅ {detail_indicator} Saved: {parish.name}")
+                logger.info(f"        📊 Method: {method_short}, Confidence: {parish.confidence_score:.2f}")
 
                 # Show what fields were captured
                 captured_fields = []
@@ -458,15 +471,15 @@ def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_name: s
                 if parish.service_times: captured_fields.append("schedule")
 
                 if captured_fields:
-                    print(f"        📋 Fields: {', '.join(captured_fields)}")
+                    logger.info(f"        📋 Fields: {', '.join(captured_fields)}")
 
         except Exception as e:
-            print(f"    ❌ Error saving {parish.name}: {e}")
+            logger.error(f"    ❌ Error saving {parish.name}: {e}")
 
-    print(f"  📊 Results: {success_count} saved, {skipped_count} skipped, {detail_success_count} with detailed info")
+    logger.info(f"  📊 Results: {success_count} saved, {skipped_count} skipped, {detail_success_count} with detailed info")
     if success_count > 0:
         success_rate = (success_count / (success_count + skipped_count)) * 100
-        print(f"  📈 Success rate: {success_rate:.1f}%")
+        logger.info(f"  📈 Success rate: {success_rate:.1f}%")
 
     return success_count > 0
 

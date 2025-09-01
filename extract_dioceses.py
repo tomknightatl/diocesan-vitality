@@ -7,10 +7,12 @@ import os
 
 # <a href="https://colab.research.google.com/github/tomknightatl/USCCB/blob/main/Build%20Dioceses%20Database.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
 
+import subprocess
+
 # In[ ]:
 
 
-get_ipython().system('pip install supabase')
+subprocess.run(['pip', 'install', 'supabase'], check=True)
 
 
 # In[ ]:
@@ -18,7 +20,6 @@ get_ipython().system('pip install supabase')
 
 # Cell for Supabase client initialization
 from supabase import create_client, Client
-from google.colab import userdata
 
 # Access secrets from .env
 try:
@@ -27,8 +28,6 @@ try:
 
     # Initialize Supabase client
     supabase: Client = create_client(supabase_url, supabase_key)
-    print("✅ Successfully initialized Supabase client using Colab secrets.")
-
     # Optional: Test the connection with a simple query
     # Uncomment the lines below if you want to test the connection
     # try:
@@ -38,13 +37,7 @@ try:
     #     print(f"⚠️  Connection test failed: {test_error}")
 
 except Exception as e:
-    print(f"❌ Error accessing Colab secrets or initializing Supabase client: {e}")
-    print("\n📝 To fix this:")
-    print("1. Click the 🔑 key icon in the left sidebar of Colab")
-    print("2. Add a new secret with name: SUPABASE_URL")
-    print("3. Add another secret with name: SUPABASE_KEY")
-    print("4. Make sure to enable notebook access for both secrets")
-    print("5. Re-run this cell")
+    print(f"❌ Error initializing Supabase client: {e}")
 
     # Set supabase to None so other code can check if initialization was successful
     supabase = None
@@ -165,12 +158,12 @@ url = "https://www.usccb.org/about/bishops-and-dioceses/all-dioceses"
 soup = get_soup(url)
 
 if soup:
-    print("Successfully fetched and parsed the dioceses page.")
+    logging.info("Successfully fetched and parsed the dioceses page.")
     # Print the first 1000 characters of the HTML to check its structure
-    print("First 1000 characters of the HTML:")
-    print(soup.prettify()[:1000])
+    logging.info("First 1000 characters of the HTML:")
+    logging.info(soup.prettify()[:1000])
 else:
-    print("Failed to fetch the dioceses page. Please check your connection or the URL.")
+    logging.error("Failed to fetch the dioceses page. Please check your connection or the URL.")
     exit()
 
 
@@ -180,11 +173,11 @@ else:
 # Cell 5: Extract dioceses information
 
 dioceses = extract_dioceses(soup)
-print(f"Extracted information for {len(dioceses)} dioceses.")
+logging.info(f"Extracted information for {len(dioceses)} dioceses.")
 
 if len(dioceses) == 0:
-    print("No dioceses were extracted. Printing the structure of the page:")
-    print(soup.prettify())
+    logging.warning("No dioceses were extracted. Printing the structure of the page:")
+    logging.warning(soup.prettify())
 
 
 # In[ ]:
@@ -193,38 +186,39 @@ if len(dioceses) == 0:
 # Cell 6: Create a DataFrame and display results
 
 dioceses_df = pd.DataFrame(dioceses)
-print(dioceses_df.head())
+logging.info(dioceses_df.head())
 
 
 # In[ ]:
 
 
 # Debug your DataFrame first
-print("DataFrame info:")
-print("Columns:", dioceses_df.columns.tolist())
-print("Shape:", dioceses_df.shape)
-print("Data types:")
-print(dioceses_df.dtypes)
-print("\nFirst few rows:")
-print(dioceses_df.head())
+logging.info("DataFrame info:")
+logging.info(f"Columns: {dioceses_df.columns.tolist()}")
+logging.info(f"Shape: {dioceses_df.shape}")
+logging.info("Data types:")
+logging.info(dioceses_df.dtypes)
+logging.info("\nFirst few rows:")
+logging.info(dioceses_df.head())
 
 # Convert DataFrame to list of dictionaries (correct format for Supabase)
 try:
     # Method 1: Insert all rows at once (recommended for smaller datasets)
     data_to_insert = dioceses_df.to_dict('records')  # Convert DataFrame to list of dicts
 
-    print(f"\nAttempting to insert {len(data_to_insert)} rows...")
-    print("Sample record:", data_to_insert[0] if data_to_insert else "No data")
+    logging.info(f"\nAttempting to insert {len(data_to_insert)} rows...")
+    logging.info(f"Sample record: {data_to_insert[0] if data_to_insert else 'No data'}")
 
     # Insert all data at once
     result = supabase.table('Dioceses').insert(data_to_insert).execute()
 
     if result.data:
-        print(f"✅ Successfully inserted {len(result.data)} rows!")
+        logging.info(f"✅ Successfully inserted {len(result.data)} rows!")
     else:
-        print("❌ Insert returned no data")
+        logging.error("❌ Insert returned no data")
 
 except Exception as e:
-    print(f"❌ Bulk insert failed: {e}")
-    print("\nTrying row-by-row insert for better error details...")
+    logging.error(f"❌ Bulk insert failed: {e}")
+    logging.warning("\nTrying row-by-row insert for better error details...")
+
 
