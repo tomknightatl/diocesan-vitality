@@ -74,7 +74,7 @@ def parse_arguments():
     parser.add_argument(
         "--max_dioceses",
         type=int,
-        default=5,
+        default=0,
         help="Maximum number of dioceses to extract. Set to 0 or None for no limit."
     )
     return parser.parse_args()
