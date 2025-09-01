@@ -206,7 +206,9 @@ If you encounter errors like "Permission denied" or "Chrome not found" when runn
 ### Step 1: Build Diocese Database
 
 ```bash
-python extract_dioceses.py --max_dioceses 5
+python extract_dioceses.py --max_dioceses 0
+# or simply:
+python extract_dioceses.py
 ```
 
 This script will:
