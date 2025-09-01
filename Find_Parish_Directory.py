@@ -78,6 +78,7 @@ get_ipython().system('pip install supabase selenium webdriver-manager google-gen
 
 import os
 from dotenv import load_dotenv
+load_dotenv()
 import subprocess
 
 def ensure_chrome_installed():
