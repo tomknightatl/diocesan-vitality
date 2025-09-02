@@ -4,7 +4,7 @@ from supabase import create_client, Client
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 # Load environment variables
 load_dotenv()
@@ -42,13 +42,30 @@ def fetch_and_process_table(table_name: str, supabase_client: Client):
             print(f"No relevant date columns found in {table_name} for time-series analysis.")
             return df, None
 
-        # Aggregate data by date
+        # Aggregate data by date with dual granularity
         time_series_data = {}
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=7)
+
         for col in date_cols:
-            # Group by date, count records, and calculate cumulative sum
-            daily_counts = df.set_index(col).resample('D').size().rename('count')
-            cumulative_counts = daily_counts.cumsum()
-            time_series_data[col] = cumulative_counts.reset_index().rename(columns={col: 'date'})
+            df_col = df.dropna(subset=[col]) # Ensure no NaT values
+
+            # Split data into recent and old
+            df_old = df_col[df_col[col] < cutoff_date]
+            df_recent = df_col[df_col[col] >= cutoff_date]
+
+            # Resample old data by day
+            old_counts = df_old.set_index(col).resample('D').size()
+
+            # Resample recent data by hour (using 'h' to avoid deprecation warning)
+            recent_counts = df_recent.set_index(col).resample('h').size()
+
+            # Combine and calculate cumulative sum
+            combined_counts = pd.concat([old_counts, recent_counts]).sort_index()
+            cumulative_counts = combined_counts.cumsum()
+            
+            # Create final DataFrame for plotting
+            df_ts = pd.DataFrame({'date': cumulative_counts.index, 'count': cumulative_counts.values})
+            time_series_data[col] = df_ts
 
         return df, time_series_data
 
