@@ -15,7 +15,7 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://github.com/your-org/your-repo.git # Replace with your repository URL
+        repoURL: https://github.com/tomknightatl/USCCB # Replace with your repository URL
         targetRevision: HEAD
         path: '{{path}}'
       destination:
