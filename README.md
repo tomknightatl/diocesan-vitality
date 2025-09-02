@@ -281,7 +281,7 @@ This script will:
 - `--num_dioceses`: Optional. Maximum number of dioceses to extract from. Defaults to 5. Set to 0 for no limit.
 - `--num_parishes_per_diocese`: Optional. Maximum number of parishes to extract from each diocese. Defaults to 5. Set to 0 for no limit.
 
-### Step 4: Extract Liturgical Information (Optional)
+### Step 4: Extract Liturgical Schedule 
 
 ```bash
 python extract_schedule.py --num_parishes 0

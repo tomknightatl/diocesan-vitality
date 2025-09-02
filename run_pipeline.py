@@ -30,13 +30,13 @@ def main():
     parser.add_argument(
         "--max_dioceses",
         type=int,
-        default=0,
+        default=5,
         help="Max number of dioceses to extract."
     )
     parser.add_argument(
         "--max_parishes_per_diocese",
         type=int,
-        default=0,
+        default=5,
         help="Max parishes to extract per diocese."
     )
     parser.add_argument(

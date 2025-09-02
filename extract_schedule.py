@@ -23,7 +23,7 @@ from supabase import create_client, Client # Added
 # In[ ]:
 
 
- indef main(num_parishes=5):
+def main(num_parishes=5):
     # Cell 2: Command-line arguments and Supabase setup
     load_dotenv() # Load environment variables from .env file
 
