@@ -7,7 +7,7 @@ This guide outlines the steps to build, configure, and deploy the web applicatio
 - Docker installed and running.
 - `kubectl` installed and configured to access your Kubernetes cluster.
 - An account with a container registry (e.g., Docker Hub, Google Container Registry, GitHub Container Registry).
-- An Ingress Controller (like NGINX) running in your cluster.
+- An Ingress Controller (like NGINX) will be deployed as part of the Kubernetes manifests.
 
 > **Note on Docker Permissions:** On Linux, to run `docker` commands without `sudo`, add your user to the `docker` group by running:
 > `sudo usermod -aG docker $USER`
@@ -39,6 +39,12 @@ If you are still encountering issues with Docker permissions or the credential h
     ```sh
     sudo systemctl restart docker
     ```
+
+    # or in Windows Subsystem for Linux (WSL)
+    ```sh
+    sudo service docker start
+    ```
+
 
 3.  **Verify Credential Helper Configuration**:
     Check your Docker configuration file to ensure the `gh` credential helper is correctly set up.
@@ -116,7 +122,7 @@ docker push ghcr.io/tomknightatl/usccb/usccb-backend:latest
 
 ```sh
 # Navigate to the frontend directory
-cd frontend
+cd ../frontend
 
 # Build the Docker image
 docker build -t ghcr.io/tomknightatl/usccb/usccb-frontend:latest .
