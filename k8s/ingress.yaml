@@ -11,7 +11,7 @@ metadata:
 spec:
   rules:
   # IMPORTANT: Replace with your actual domain
-  - host: your-domain.com
+  - host: diocesevitality.org
     http:
       paths:
       - path: /api(/|$)(.*)
