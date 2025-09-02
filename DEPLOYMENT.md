@@ -162,13 +162,13 @@ After reviewing these files, commit and push them to your Git repository if you 
 
 ## Step 4: Deploy with ArgoCD ApplicationSet
 
-Instead of manually creating individual ArgoCD Applications, you will deploy an ArgoCD ApplicationSet. This ApplicationSet will automatically discover and deploy the Kubernetes manifests (Deployments, Services, Ingress, etc.) found in the `k8s/` directory of this repository.
+Instead of manually creating individual ArgoCD Applications, you will deploy an ArgoCD ApplicationSet. This ApplicationSet will automatically create a *single* ArgoCD Application that manages all Kubernetes manifests (Deployments, Services, Ingress, Ingress Controller, etc.) found in the `k8s/` directory of this repository.
 
 1.  **Review the ApplicationSet Manifest**:
-    Examine the `k8s/applicationset.yaml` file. Ensure the `repoURL` within the `generators` and `template.spec.source` sections points to your Git repository where these Kubernetes manifests are stored. If you are using a private repository, ensure ArgoCD has the necessary credentials configured.
+    Examine the `k8s/applicationset.yaml` file. Ensure the `repoURL` within the `template.spec.source` section points to your Git repository where these Kubernetes manifests are stored. If you are using a private repository, ensure ArgoCD has the necessary credentials configured.
 
 2.  **Deploy the ApplicationSet**:
-    Apply the ApplicationSet manifest to your Kubernetes cluster. This will create the ApplicationSet resource in ArgoCD, which will then automatically create and manage the individual ArgoCD Applications for your backend and frontend services.
+    Apply the ApplicationSet manifest to your Kubernetes cluster. This will create the ApplicationSet resource in ArgoCD, which will then automatically create and manage the single ArgoCD Application for your services.
 
     ```sh
     kubectl apply -f k8s/applicationset.yaml

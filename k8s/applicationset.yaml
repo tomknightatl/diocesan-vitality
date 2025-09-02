@@ -5,20 +5,19 @@ metadata:
   namespace: argocd # Assuming ArgoCD is installed in the 'argocd' namespace
 spec:
   generators:
-  - git:
-      repoURL: https://github.com/your-org/your-repo.git # Replace with your repository URL
-      revision: HEAD
-      files:
-      - path: "k8s/*-deployment.yaml" # This will match backend-deployment.yaml and frontend-deployment.yaml
+  - list:
+      elements:
+      - name: usccb-app
+        path: k8s
   template:
     metadata:
-      name: '{{path.basename}}-app' # Generates names like backend-deployment-app, frontend-deployment-app
+      name: '{{name}}'
     spec:
       project: default
       source:
         repoURL: https://github.com/your-org/your-repo.git # Replace with your repository URL
         targetRevision: HEAD
-        path: k8s
+        path: '{{path}}'
       destination:
         server: https://kubernetes.default.svc
         namespace: default
