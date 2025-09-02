@@ -12784,3 +12784,926 @@ Attempting to upsert 5 rows...
 2025-09-01 22:49:17,568 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
 2025-09-01 22:49:18,426 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
 2025-09-01 22:49:39,605 - INFO - HTTP Request: POST https://nzcwtjloonumxpsqzarq.supabase.co/rest/v1/ParishSchedules?on_conflict=url&columns=%22url%22%2C%22parish_name%22%2C%22scraped_at%22%2C%22offers_reconciliation%22%2C%22reconciliation_info%22%2C%22adoration_info%22%2C%22adoration_page%22%2C%22reconciliation_page%22%2C%22offers_adoration%22 "HTTP/2 200 OK"
+2025-09-01 23:04:15,671 - INFO - Starting USCCB data extraction pipeline...
+2025-09-01 23:04:15,672 - INFO - 
+--- Running Diocese Extraction ---
+2025-09-01 23:04:15,672 - INFO - Attempt 1: Fetching URL: https://www.usccb.org/about/bishops-and-dioceses/all-dioceses
+2025-09-01 23:04:15,788 - INFO - Received status code: 200
+2025-09-01 23:04:15,971 - INFO - Successfully fetched and parsed the dioceses page.
+2025-09-01 23:04:15,983 - INFO - Found 196 potential diocese containers
+2025-09-01 23:04:15,984 - INFO - Processing container 1
+2025-09-01 23:04:15,984 - INFO - Diocese name: Archdiocese of Mobile
+2025-09-01 23:04:15,984 - INFO - Address: 400 Government Street, Mobile,AL36602, https://mobarch.org/
+2025-09-01 23:04:15,984 - INFO - Website: https://mobarch.org/
+2025-09-01 23:04:15,984 - INFO - Processing container 2
+2025-09-01 23:04:15,984 - INFO - Diocese name: Diocese of Birmingham
+2025-09-01 23:04:15,984 - INFO - Address: 2121 3rd Avenue North, P.O. Box 12047, Birmingham,AL35202-2047, http://www.bhmdiocese.org/
+2025-09-01 23:04:15,984 - INFO - Website: http://www.bhmdiocese.org/
+2025-09-01 23:04:15,985 - INFO - Processing container 3
+2025-09-01 23:04:15,986 - INFO - Diocese name: Archdiocese of Anchorage-Juneau
+2025-09-01 23:04:15,986 - INFO - Address: 225 Cordova Street, Anchorage,AK99501-2409, http://www.aoaj.org
+2025-09-01 23:04:15,986 - INFO - Website: http://www.aoaj.org
+2025-09-01 23:04:15,987 - INFO - Processing container 4
+2025-09-01 23:04:15,987 - INFO - Diocese name: Diocese of Fairbanks
+2025-09-01 23:04:15,987 - INFO - Address: 1316 Peger Road, Fairbanks,AK99709-5199, https://dioceseoffairbanks.org/
+2025-09-01 23:04:15,988 - INFO - Website: https://dioceseoffairbanks.org/
+2025-09-01 23:04:15,988 - INFO - Processing container 5
+2025-09-01 23:04:15,988 - INFO - Diocese name: Holy Protection of Mary Byzantine Catholic Eparchy of Phoenix
+2025-09-01 23:04:15,988 - INFO - Address: 8105 North 16th Street, Phoenix,AZ85020, https://ephx.org/
+2025-09-01 23:04:15,988 - INFO - Website: https://ephx.org/
+2025-09-01 23:04:15,988 - INFO - Processing container 6
+2025-09-01 23:04:15,988 - INFO - Diocese name: Diocese of Phoenix
+2025-09-01 23:04:15,988 - INFO - Address: 400 East Monroe Street, Phoenix,AZ85004-2336, http://www.diocesephoenix.org/
+2025-09-01 23:04:15,988 - INFO - Website: http://www.diocesephoenix.org/
+2025-09-01 23:04:15,988 - INFO - Processing container 7
+2025-09-01 23:04:15,988 - INFO - Diocese name: Diocese of Tucson
+2025-09-01 23:04:15,989 - INFO - Address: P.O. Box 31, Tucson,AZ85702, http://www.diocesetucson.org/
+2025-09-01 23:04:15,989 - INFO - Website: http://www.diocesetucson.org/
+2025-09-01 23:04:15,989 - INFO - Processing container 8
+2025-09-01 23:04:15,989 - INFO - Diocese name: Diocese of Little Rock
+2025-09-01 23:04:15,989 - INFO - Address: 2500 N. Tyler Street, Little Rock,AR72207, http://www.dolr.org/
+2025-09-01 23:04:15,989 - INFO - Website: http://www.dolr.org/
+2025-09-01 23:04:15,989 - INFO - Processing container 9
+2025-09-01 23:04:15,989 - INFO - Diocese name: Armenian Catholic Eparchy of Our Lady of Nareg in the USA & Canada
+2025-09-01 23:04:15,989 - INFO - Address: 1510 East Mountain St, Glendale,CA91207, http://www.ourladyofnareg.org/
+2025-09-01 23:04:15,989 - INFO - Website: http://www.ourladyofnareg.org/
+2025-09-01 23:04:15,989 - INFO - Processing container 10
+2025-09-01 23:04:15,989 - INFO - Diocese name: Chaldean Catholic Eparchy of St. Peter the Apostle
+2025-09-01 23:04:15,989 - INFO - Address: 1627 Jamacha Way, El Cajon,CA92019, https://www.stpeterdiocese.org/
+2025-09-01 23:04:15,990 - INFO - Website: https://www.stpeterdiocese.org/
+2025-09-01 23:04:15,990 - INFO - Processing container 11
+2025-09-01 23:04:15,990 - INFO - Diocese name: Archdiocese of Los Angeles
+2025-09-01 23:04:15,990 - INFO - Address: 3424 Wilshire Boulevard, Los Angeles,CA90010-2202, https://lacatholics.org/
+2025-09-01 23:04:15,990 - INFO - Website: https://lacatholics.org/
+2025-09-01 23:04:15,990 - INFO - Processing container 12
+2025-09-01 23:04:15,990 - INFO - Diocese name: Archdiocese of San Francisco
+2025-09-01 23:04:15,990 - INFO - Address: One Peter Yorke Way, San Francisco,CA94109, http://www.sfarchdiocese.org/
+2025-09-01 23:04:15,990 - INFO - Website: http://www.sfarchdiocese.org/
+2025-09-01 23:04:15,991 - INFO - Processing container 13
+2025-09-01 23:04:15,991 - INFO - Diocese name: Diocese of Fresno
+2025-09-01 23:04:15,991 - INFO - Address: 1550 North Fresno Street, Fresno,CA93707-3788, https://dioceseoffresno.org/
+2025-09-01 23:04:15,991 - INFO - Website: https://dioceseoffresno.org/
+2025-09-01 23:04:15,991 - INFO - Processing container 14
+2025-09-01 23:04:15,991 - INFO - Diocese name: Diocese of Monterey
+2025-09-01 23:04:15,991 - INFO - Address: 425 Church Street, Monterey,CA93940, http://www.dioceseofmonterey.org/
+2025-09-01 23:04:15,991 - INFO - Website: http://www.dioceseofmonterey.org/
+2025-09-01 23:04:15,991 - INFO - Processing container 15
+2025-09-01 23:04:15,991 - INFO - Diocese name: Diocese of Oakland
+2025-09-01 23:04:15,991 - INFO - Address: 2121 Harrison Street, Suite 100, Oakland,CA94612, http://www.oakdiocese.org/
+2025-09-01 23:04:15,991 - INFO - Website: http://www.oakdiocese.org/
+2025-09-01 23:04:15,991 - INFO - Processing container 16
+2025-09-01 23:04:15,991 - INFO - Diocese name: Diocese of Orange
+2025-09-01 23:04:15,991 - INFO - Address: Pastoral Center, 13280 Chapman Avenue, Garden Grove,CA92840, http://www.rcbo.org/
+2025-09-01 23:04:15,992 - INFO - Website: http://www.rcbo.org/
+2025-09-01 23:04:15,992 - INFO - Processing container 17
+2025-09-01 23:04:15,992 - INFO - Diocese name: Diocese of Sacramento
+2025-09-01 23:04:15,992 - INFO - Address: 2110 Broadway, Sacramento,CA95818, https://www.scd.org/
+2025-09-01 23:04:15,992 - INFO - Website: https://www.scd.org/
+2025-09-01 23:04:15,992 - INFO - Processing container 18
+2025-09-01 23:04:15,992 - INFO - Diocese name: Diocese of San Bernardino
+2025-09-01 23:04:15,992 - INFO - Address: 1201 E. Highland Avenue, San Bernardino,CA92404-5300, http://www.sbdiocese.org/
+2025-09-01 23:04:15,992 - INFO - Website: http://www.sbdiocese.org/
+2025-09-01 23:04:15,992 - INFO - Processing container 19
+2025-09-01 23:04:15,992 - INFO - Diocese name: Diocese of San Diego
+2025-09-01 23:04:15,992 - INFO - Address: P.O. Box 85728, San Diego,CA92186-5728, https://sdcatholic.org/
+2025-09-01 23:04:15,992 - INFO - Website: https://sdcatholic.org/
+2025-09-01 23:04:15,992 - INFO - Processing container 20
+2025-09-01 23:04:15,992 - INFO - Diocese name: Diocese of San Jose
+2025-09-01 23:04:15,992 - INFO - Address: 1150 North 1st Street, Suite 100, San Jose,CA95112-4966, http://www.dsj.org/
+2025-09-01 23:04:15,992 - INFO - Website: http://www.dsj.org/
+2025-09-01 23:04:15,993 - INFO - Processing container 21
+2025-09-01 23:04:15,993 - INFO - Diocese name: Diocese of Santa Rosa
+2025-09-01 23:04:15,993 - INFO - Address: P.O. Box 1297, Santa Rosa,CA95402, https://srdiocese.org/
+2025-09-01 23:04:15,993 - INFO - Website: https://srdiocese.org/
+2025-09-01 23:04:15,993 - INFO - Processing container 22
+2025-09-01 23:04:15,993 - INFO - Diocese name: Diocese of Stockton
+2025-09-01 23:04:15,993 - INFO - Address: 212 N. San Joaquin Street, Stockton,CA95202-2409, http://www.stocktondiocese.org/
+2025-09-01 23:04:15,993 - INFO - Website: http://www.stocktondiocese.org/
+2025-09-01 23:04:15,993 - INFO - Processing container 23
+2025-09-01 23:04:15,993 - INFO - Diocese name: Archdiocese of Denver
+2025-09-01 23:04:15,993 - INFO - Address: 1300 South Steele Street, Denver,CO80210, http://www.archden.org/
+2025-09-01 23:04:15,993 - INFO - Website: http://www.archden.org/
+2025-09-01 23:04:15,993 - INFO - Processing container 24
+2025-09-01 23:04:15,993 - INFO - Diocese name: Diocese of Colorado Springs
+2025-09-01 23:04:15,993 - INFO - Address: Diocesan Pastoral Center, 228 N. Cascade Avenue, Colorado Springs,CO80903, http://www.diocs.org/
+2025-09-01 23:04:15,993 - INFO - Website: http://www.diocs.org/
+2025-09-01 23:04:15,994 - INFO - Processing container 25
+2025-09-01 23:04:15,994 - INFO - Diocese name: Diocese of Pueblo
+2025-09-01 23:04:15,994 - INFO - Address: 101 N. Greenwood Street, Pueblo,CO81003-3164, http://www.dioceseofpueblo.org/
+2025-09-01 23:04:15,994 - INFO - Website: http://www.dioceseofpueblo.org/
+2025-09-01 23:04:15,994 - INFO - Processing container 26
+2025-09-01 23:04:15,994 - INFO - Diocese name: Ukrainian Catholic Eparchy of Stamford
+2025-09-01 23:04:15,994 - INFO - Address: 14 Peveril Road, Stamford,CT06902, http://www.stamforddio.org/
+2025-09-01 23:04:15,994 - INFO - Website: http://www.stamforddio.org/
+2025-09-01 23:04:15,994 - INFO - Processing container 27
+2025-09-01 23:04:15,994 - INFO - Diocese name: Archdiocese of Hartford
+2025-09-01 23:04:15,994 - INFO - Address: 467 Bloomfield Avenue, Bloomfield,CT06002-2999, http://www.archdioceseofhartford.org/
+2025-09-01 23:04:15,994 - INFO - Website: http://www.archdioceseofhartford.org/
+2025-09-01 23:04:15,994 - INFO - Processing container 28
+2025-09-01 23:04:15,994 - INFO - Diocese name: Diocese of Bridgeport
+2025-09-01 23:04:15,994 - INFO - Address: 100 Beard Sawmill Road, Suite 650, Shelton,CT06848, http://www.bridgeportdiocese.com/
+2025-09-01 23:04:15,995 - INFO - Website: http://www.bridgeportdiocese.com/
+2025-09-01 23:04:15,995 - INFO - Processing container 29
+2025-09-01 23:04:15,995 - INFO - Diocese name: Diocese of Norwich
+2025-09-01 23:04:15,995 - INFO - Address: 201 Broadway, Norwich,CT06360, http://www.norwichdiocese.org/
+2025-09-01 23:04:15,995 - INFO - Website: http://www.norwichdiocese.org/
+2025-09-01 23:04:15,995 - INFO - Processing container 30
+2025-09-01 23:04:15,995 - INFO - Diocese name: Diocese of Wilmington
+2025-09-01 23:04:15,995 - INFO - Address: 1925 Delaware Avenue, Wilmington,DE19899, http://www.cdow.org/
+2025-09-01 23:04:15,995 - INFO - Website: http://www.cdow.org/
+2025-09-01 23:04:15,995 - INFO - Processing container 31
+2025-09-01 23:04:15,995 - INFO - Diocese name: Archdiocese of Miami
+2025-09-01 23:04:15,995 - INFO - Address: 9401 Biscayne Boulevard, Miami Shores,FL33138, http://www.miamiarch.org/
+2025-09-01 23:04:15,995 - INFO - Website: http://www.miamiarch.org/
+2025-09-01 23:04:15,995 - INFO - Processing container 32
+2025-09-01 23:04:15,995 - INFO - Diocese name: Diocese of Orlando
+2025-09-01 23:04:15,995 - INFO - Address: P.O. Box 1800, Orlando,FL32802-1800, http://www.orlandodiocese.org/
+2025-09-01 23:04:15,996 - INFO - Website: http://www.orlandodiocese.org/
+2025-09-01 23:04:15,996 - INFO - Processing container 33
+2025-09-01 23:04:15,996 - INFO - Diocese name: Diocese of Palm Beach
+2025-09-01 23:04:15,996 - INFO - Address: 9995 N. Military Trail, Palm Beach Gardens,FL33410, http://www.diocesepb.org/
+2025-09-01 23:04:15,996 - INFO - Website: http://www.diocesepb.org/
+2025-09-01 23:04:15,996 - INFO - Processing container 34
+2025-09-01 23:04:15,996 - INFO - Diocese name: Diocese of Pensacola-Tallahassee
+2025-09-01 23:04:15,996 - INFO - Address: 11 North B Street, Pensacola,FL32502, http://www.ptdiocese.org/
+2025-09-01 23:04:15,996 - INFO - Website: http://www.ptdiocese.org/
+2025-09-01 23:04:15,996 - INFO - Processing container 35
+2025-09-01 23:04:15,996 - INFO - Diocese name: Diocese of St. Augustine
+2025-09-01 23:04:15,996 - INFO - Address: 11625 Old St. Augustine Rd., Jacksonville,FL32258, http://www.dosafl.com/
+2025-09-01 23:04:15,996 - INFO - Website: http://www.dosafl.com/
+2025-09-01 23:04:15,996 - INFO - Processing container 36
+2025-09-01 23:04:15,996 - INFO - Diocese name: Diocese of St. Petersburg
+2025-09-01 23:04:15,996 - INFO - Address: 6363 9th Avenue N., St. Petersburg,FL33710, http://www.dosp.org/
+2025-09-01 23:04:15,996 - INFO - Website: http://www.dosp.org/
+2025-09-01 23:04:15,996 - INFO - Processing container 37
+2025-09-01 23:04:15,997 - INFO - Diocese name: Diocese of Venice
+2025-09-01 23:04:15,997 - INFO - Address: 1000 Pinebrook Road, Venice,FL34285, http://www.dioceseofvenice.org/
+2025-09-01 23:04:15,997 - INFO - Website: http://www.dioceseofvenice.org/
+2025-09-01 23:04:15,997 - INFO - Processing container 38
+2025-09-01 23:04:15,997 - INFO - Diocese name: Archdiocese of Atlanta
+2025-09-01 23:04:15,997 - INFO - Address: 2401 Lake Park Drive, S.E., Smyrna,GA30080, http://www.archatl.com/
+2025-09-01 23:04:15,997 - INFO - Website: http://www.archatl.com/
+2025-09-01 23:04:15,997 - INFO - Processing container 39
+2025-09-01 23:04:15,997 - INFO - Diocese name: Diocese of Savannah
+2025-09-01 23:04:15,997 - INFO - Address: 2170 East Victory Drive, Savannah,GA31404-3918, http://www.diosav.org/
+2025-09-01 23:04:15,997 - INFO - Website: http://www.diosav.org/
+2025-09-01 23:04:15,997 - INFO - Processing container 40
+2025-09-01 23:04:15,997 - INFO - Diocese name: Diocese of Honolulu
+2025-09-01 23:04:15,997 - INFO - Address: 1184 Bishop Street, Honolulu,HI96813, http://www.catholichawaii.org/
+2025-09-01 23:04:15,997 - INFO - Website: http://www.catholichawaii.org/
+2025-09-01 23:04:15,997 - INFO - Processing container 41
+2025-09-01 23:04:15,998 - INFO - Diocese name: Diocese of Boise
+2025-09-01 23:04:15,998 - INFO - Address: 1501 S. Federal Way, Suite 400, Boise,ID83705, http://www.catholicidaho.org/
+2025-09-01 23:04:15,998 - INFO - Website: http://www.catholicidaho.org/
+2025-09-01 23:04:15,998 - INFO - Processing container 42
+2025-09-01 23:04:15,998 - INFO - Diocese name: St. Nicholas of Chicago for Ukrainians
+2025-09-01 23:04:15,998 - INFO - Address: 2245 W. Rice Street, Chicago,IL60622, https://www.chicagougcc.org/
+2025-09-01 23:04:15,998 - INFO - Website: https://www.chicagougcc.org/
+2025-09-01 23:04:15,998 - INFO - Processing container 43
+2025-09-01 23:04:15,998 - INFO - Diocese name: St. Thomas Syro Malabar Diocese of Chicago
+2025-09-01 23:04:15,998 - INFO - Address: 372 South Prairie Avenue, Elmhurst,IL60126-4020, http://www.stthomasdiocese.org/
+2025-09-01 23:04:15,998 - INFO - Website: http://www.stthomasdiocese.org/
+2025-09-01 23:04:15,998 - INFO - Processing container 44
+2025-09-01 23:04:15,998 - INFO - Diocese name: Archdiocese of Chicago
+2025-09-01 23:04:15,998 - INFO - Address: 835 N. Rush Street, Chicago,IL60611-2030, http://www.archchicago.org/
+2025-09-01 23:04:15,998 - INFO - Website: http://www.archchicago.org/
+2025-09-01 23:04:15,998 - INFO - Processing container 45
+2025-09-01 23:04:15,998 - INFO - Diocese name: Diocese of Belleville
+2025-09-01 23:04:15,999 - INFO - Address: 222 South Third Street, Belleville,IL62220, http://www.diobelle.org/
+2025-09-01 23:04:15,999 - INFO - Website: http://www.diobelle.org/
+2025-09-01 23:04:15,999 - INFO - Processing container 46
+2025-09-01 23:04:15,999 - INFO - Diocese name: Diocese of Joliet
+2025-09-01 23:04:15,999 - INFO - Address: Blenchette Catholic Center, 16555 Weber Road, Crest Hill,IL60403, http://www.dioceseofjoliet.org/
+2025-09-01 23:04:15,999 - INFO - Website: http://www.dioceseofjoliet.org/
+2025-09-01 23:04:15,999 - INFO - Processing container 47
+2025-09-01 23:04:15,999 - INFO - Diocese name: Diocese of Peoria
+2025-09-01 23:04:15,999 - INFO - Address: Spalding Pastoral Center, 419 N.E. Madison Avenue, Peoria,IL61603-3719, http://www.cdop.org/
+2025-09-01 23:04:15,999 - INFO - Website: http://www.cdop.org/
+2025-09-01 23:04:15,999 - INFO - Processing container 48
+2025-09-01 23:04:15,999 - INFO - Diocese name: Diocese of Rockford
+2025-09-01 23:04:15,999 - INFO - Address: 555 Coleman Center Drive, P.O. Box 7044, Rockford,IL81108, http://www.rockforddiocese.org/
+2025-09-01 23:04:15,999 - INFO - Website: http://www.rockforddiocese.org/
+2025-09-01 23:04:15,999 - INFO - Processing container 49
+2025-09-01 23:04:15,999 - INFO - Diocese name: Diocese of Springfield in Illinois
+2025-09-01 23:04:15,999 - INFO - Address: 1615  West Washington Street, Springfield,IL62702-4757, http://www.dio.org/
+2025-09-01 23:04:16,000 - INFO - Website: http://www.dio.org/
+2025-09-01 23:04:16,000 - INFO - Processing container 50
+2025-09-01 23:04:16,000 - INFO - Diocese name: Archdiocese of Indianapolis
+2025-09-01 23:04:16,000 - INFO - Address: 1400 N. Meridian Street, Indianopolis,IN46202, http://www.archindy.org/
+2025-09-01 23:04:16,000 - INFO - Website: http://www.archindy.org/
+2025-09-01 23:04:16,000 - INFO - Processing container 51
+2025-09-01 23:04:16,000 - INFO - Diocese name: Diocese of Evansville
+2025-09-01 23:04:16,000 - INFO - Address: 4200 N. Kentucky Avenue, P.O. Box 4169, Evansville,IN47724-0169, https://www.evdio.org/
+2025-09-01 23:04:16,000 - INFO - Website: https://www.evdio.org/
+2025-09-01 23:04:16,000 - INFO - Processing container 52
+2025-09-01 23:04:16,000 - INFO - Diocese name: Diocese of Fort Wayne-South Bend
+2025-09-01 23:04:16,000 - INFO - Address: 915 South Clinton, P.O. Box 390, Fort Wayne,IN46801, http://www.diocesefwsb.org
+2025-09-01 23:04:16,000 - INFO - Website: http://www.diocesefwsb.org
+2025-09-01 23:04:16,000 - INFO - Processing container 53
+2025-09-01 23:04:16,000 - INFO - Diocese name: Diocese of Gary
+2025-09-01 23:04:16,000 - INFO - Address: 9292 Broadway, Merrillville,IN46410, http://www.dcgary.org/
+2025-09-01 23:04:16,000 - INFO - Website: http://www.dcgary.org/
+2025-09-01 23:04:16,000 - INFO - Processing container 54
+2025-09-01 23:04:16,001 - INFO - Diocese name: Diocese of Lafayette in Indiana
+2025-09-01 23:04:16,001 - INFO - Address: P.O. Box 260, Lafayette,IN47902-0260, http://www.dol-in.org/
+2025-09-01 23:04:16,001 - INFO - Website: http://www.dol-in.org/
+2025-09-01 23:04:16,001 - INFO - Processing container 55
+2025-09-01 23:04:16,001 - INFO - Diocese name: Archdiocese of Dubuque
+2025-09-01 23:04:16,001 - INFO - Address: 1229 Mt. Loretta Avenue, Dubuque,IA52003, https://www.dbqarch.org/
+2025-09-01 23:04:16,001 - INFO - Website: https://www.dbqarch.org/
+2025-09-01 23:04:16,002 - INFO - Processing container 56
+2025-09-01 23:04:16,002 - INFO - Diocese name: Diocese of Davenport
+2025-09-01 23:04:16,002 - INFO - Address: 780 W. Central Park Av., Davenport,IA52804-1901, http://www.davenportdiocese.org/
+2025-09-01 23:04:16,002 - INFO - Website: http://www.davenportdiocese.org/
+2025-09-01 23:04:16,002 - INFO - Processing container 57
+2025-09-01 23:04:16,002 - INFO - Diocese name: Diocese of Des Moines
+2025-09-01 23:04:16,002 - INFO - Address: 601 Grand Avenue, Des Moines,IA50309, http://www.dmdiocese.org/
+2025-09-01 23:04:16,002 - INFO - Website: http://www.dmdiocese.org/
+2025-09-01 23:04:16,003 - INFO - Processing container 58
+2025-09-01 23:04:16,003 - INFO - Diocese name: Diocese of Sioux City
+2025-09-01 23:04:16,003 - INFO - Address: P.O. Box 3379, 1821 Jackson Street, Sioux City,IA51102-3379, http://www.scdiocese.org/
+2025-09-01 23:04:16,003 - INFO - Website: http://www.scdiocese.org/
+2025-09-01 23:04:16,003 - INFO - Processing container 59
+2025-09-01 23:04:16,003 - INFO - Diocese name: Archdiocese of Kansas City in Kansas
+2025-09-01 23:04:16,003 - INFO - Address: 12615 Parallel Parkway, Kansas City,KS66109, http://www.archkck.org/
+2025-09-01 23:04:16,003 - INFO - Website: http://www.archkck.org/
+2025-09-01 23:04:16,003 - INFO - Processing container 60
+2025-09-01 23:04:16,003 - INFO - Diocese name: Diocese of Dodge City
+2025-09-01 23:04:16,003 - INFO - Address: P.O. Box 137, Dodge City,KS67801, http://www.dcdiocese.org/
+2025-09-01 23:04:16,004 - INFO - Website: http://www.dcdiocese.org/
+2025-09-01 23:04:16,004 - INFO - Processing container 61
+2025-09-01 23:04:16,004 - INFO - Diocese name: Diocese of Salina
+2025-09-01 23:04:16,004 - INFO - Address: 103 North Ninth Street, Salina,KS67401-2503, http://www.salinadiocese.org/
+2025-09-01 23:04:16,004 - INFO - Website: http://www.salinadiocese.org/
+2025-09-01 23:04:16,004 - INFO - Processing container 62
+2025-09-01 23:04:16,004 - INFO - Diocese name: Diocese of Wichita
+2025-09-01 23:04:16,004 - INFO - Address: 424 N. Broadway, Wichita,KS67202, http://www.catholicdioceseofwichita.org/
+2025-09-01 23:04:16,004 - INFO - Website: http://www.catholicdioceseofwichita.org/
+2025-09-01 23:04:16,004 - INFO - Processing container 63
+2025-09-01 23:04:16,004 - INFO - Diocese name: Archdiocese of Louisville
+2025-09-01 23:04:16,004 - INFO - Address: Pastoral Center, 3940 Poplar Level Road, Louisville,KY40213-1463, http://www.archlou.org/
+2025-09-01 23:04:16,004 - INFO - Website: http://www.archlou.org/
+2025-09-01 23:04:16,004 - INFO - Processing container 64
+2025-09-01 23:04:16,004 - INFO - Diocese name: Diocese of Covington
+2025-09-01 23:04:16,005 - INFO - Address: 1125 Madison Avenue, Covington,KY41011-3115, http://www.covingtondiocese.org/
+2025-09-01 23:04:16,005 - INFO - Website: http://www.covingtondiocese.org/
+2025-09-01 23:04:16,005 - INFO - Processing container 65
+2025-09-01 23:04:16,005 - INFO - Diocese name: Diocese of Lexington
+2025-09-01 23:04:16,005 - INFO - Address: 1310 W. Main Street, Lexington,KY40508-2048, http://www.cdlex.org/
+2025-09-01 23:04:16,005 - INFO - Website: http://www.cdlex.org/
+2025-09-01 23:04:16,005 - INFO - Processing container 66
+2025-09-01 23:04:16,005 - INFO - Diocese name: Diocese of Owensboro
+2025-09-01 23:04:16,005 - INFO - Address: 600 Locust Street, Owensboro,KY42301, http://www.rcdok.org/
+2025-09-01 23:04:16,005 - INFO - Website: http://www.rcdok.org/
+2025-09-01 23:04:16,005 - INFO - Processing container 67
+2025-09-01 23:04:16,005 - INFO - Diocese name: Archdiocese of New Orleans
+2025-09-01 23:04:16,005 - INFO - Address: 7887 Walmsley Avenue, New Orleans,LA70125, http://www.arch-no.org/
+2025-09-01 23:04:16,006 - INFO - Website: http://www.arch-no.org/
+2025-09-01 23:04:16,006 - INFO - Processing container 68
+2025-09-01 23:04:16,006 - INFO - Diocese name: Diocese of Alexandria
+2025-09-01 23:04:16,006 - INFO - Address: St. Joseph Catholic Ctr., 4400 Coliseum Boulevard, Alexandria,LA71303-3513, http://www.diocesealex.org/
+2025-09-01 23:04:16,006 - INFO - Website: http://www.diocesealex.org/
+2025-09-01 23:04:16,006 - INFO - Processing container 69
+2025-09-01 23:04:16,006 - INFO - Diocese name: Diocese of Baton Rouge
+2025-09-01 23:04:16,006 - INFO - Address: P.O. Box 2028, Baton Rouge,LA70821-2028, http://www.diobr.org/
+2025-09-01 23:04:16,007 - INFO - Website: http://www.diobr.org/
+2025-09-01 23:04:16,007 - INFO - Processing container 70
+2025-09-01 23:04:16,007 - INFO - Diocese name: Diocese of Houma-Thibodaux
+2025-09-01 23:04:16,007 - INFO - Address: 2779 Highway 311, Schriever,LA70395, http://www.htdiocese.org/
+2025-09-01 23:04:16,007 - INFO - Website: http://www.htdiocese.org/
+2025-09-01 23:04:16,007 - INFO - Processing container 71
+2025-09-01 23:04:16,007 - INFO - Diocese name: Diocese of Lafayette in Louisiana
+2025-09-01 23:04:16,007 - INFO - Address: 1408 Carmel Drive, Lafayette,LA70501-5215, http://www.diolaf.org/
+2025-09-01 23:04:16,008 - INFO - Website: http://www.diolaf.org/
+2025-09-01 23:04:16,008 - INFO - Processing container 72
+2025-09-01 23:04:16,008 - INFO - Diocese name: Diocese of Lake Charles
+2025-09-01 23:04:16,008 - INFO - Address: 414 Iris Street, Lake Charles,LA70601-5234, http://www.lcdiocese.org/
+2025-09-01 23:04:16,008 - INFO - Website: http://www.lcdiocese.org/
+2025-09-01 23:04:16,008 - INFO - Processing container 73
+2025-09-01 23:04:16,008 - INFO - Diocese name: Diocese of Shreveport
+2025-09-01 23:04:16,008 - INFO - Address: 3500 Fairfield Avenue, Shreveport,LA71104, http://www.dioshpt.org/
+2025-09-01 23:04:16,008 - INFO - Website: http://www.dioshpt.org/
+2025-09-01 23:04:16,008 - INFO - Processing container 74
+2025-09-01 23:04:16,008 - INFO - Diocese name: Diocese of Portland in Maine
+2025-09-01 23:04:16,009 - INFO - Address: 510 Ocean Avenue, Portland,ME04103-4936, http://www.portlanddiocese.net/
+2025-09-01 23:04:16,009 - INFO - Website: http://www.portlanddiocese.net/
+2025-09-01 23:04:16,009 - INFO - Processing container 75
+2025-09-01 23:04:16,009 - INFO - Diocese name: Archdiocese of Baltimore
+2025-09-01 23:04:16,009 - INFO - Address: 320 Cathedral Street, Baltimore,MD21201, http://www.archbalt.org/
+2025-09-01 23:04:16,009 - INFO - Website: http://www.archbalt.org/
+2025-09-01 23:04:16,009 - INFO - Processing container 76
+2025-09-01 23:04:16,009 - INFO - Diocese name: Eparchy of Newton
+2025-09-01 23:04:16,009 - INFO - Address: 3 VFW Parkway, Roslindale,MA02131, https://www.melkite.org/
+2025-09-01 23:04:16,009 - INFO - Website: https://www.melkite.org/
+2025-09-01 23:04:16,009 - INFO - Processing container 77
+2025-09-01 23:04:16,009 - INFO - Diocese name: Archdiocese of Boston
+2025-09-01 23:04:16,010 - INFO - Address: 66 Brooks Drive, Braintree,MA02184-3839, http://www.bostoncatholic.org
+2025-09-01 23:04:16,010 - INFO - Website: http://www.bostoncatholic.org
+2025-09-01 23:04:16,010 - INFO - Processing container 78
+2025-09-01 23:04:16,010 - INFO - Diocese name: Diocese of Fall River
+2025-09-01 23:04:16,010 - INFO - Address: 450 Highland Avenue, Fall River,MA02720, http://www.fallriverdiocese.org/
+2025-09-01 23:04:16,010 - INFO - Website: http://www.fallriverdiocese.org/
+2025-09-01 23:04:16,010 - INFO - Processing container 79
+2025-09-01 23:04:16,010 - INFO - Diocese name: Diocese of Springfield, Massachusetts
+2025-09-01 23:04:16,010 - INFO - Address: P.O. Box 1730, Springfield,MA01102, http://www.diospringfield.org/
+2025-09-01 23:04:16,010 - INFO - Website: http://www.diospringfield.org/
+2025-09-01 23:04:16,010 - INFO - Processing container 80
+2025-09-01 23:04:16,010 - INFO - Diocese name: Diocese of Worcester
+2025-09-01 23:04:16,011 - INFO - Address: 49 Elm Street, Worcester,MA01609, http://www.worcesterdiocese.org/
+2025-09-01 23:04:16,011 - INFO - Website: http://www.worcesterdiocese.org/
+2025-09-01 23:04:16,011 - INFO - Processing container 81
+2025-09-01 23:04:16,011 - INFO - Diocese name: Chaldean Eparchy of Saint Thomas the Apostle
+2025-09-01 23:04:16,011 - INFO - Address: 25603 Berg Road, Southfield,MI48076, https://chaldeanchurch.org/
+2025-09-01 23:04:16,011 - INFO - Website: https://chaldeanchurch.org/
+2025-09-01 23:04:16,011 - INFO - Processing container 82
+2025-09-01 23:04:16,011 - INFO - Diocese name: Syriac Catholic Diocese of Our Lady of Deliverance in the United States
+2025-09-01 23:04:16,011 - INFO - Address: 25600 Drake Road, Farmington Hills,MI48335, http://www.syriaccatholic.us/
+2025-09-01 23:04:16,011 - INFO - Website: http://www.syriaccatholic.us/
+2025-09-01 23:04:16,011 - INFO - Processing container 83
+2025-09-01 23:04:16,011 - INFO - Diocese name: Archdiocese of Detroit
+2025-09-01 23:04:16,011 - INFO - Address: 12 State Street, Detroit,MI48226-1823, https://www.aod.org/
+2025-09-01 23:04:16,012 - INFO - Website: https://www.aod.org/
+2025-09-01 23:04:16,012 - INFO - Processing container 84
+2025-09-01 23:04:16,012 - INFO - Diocese name: Diocese of Gaylord
+2025-09-01 23:04:16,012 - INFO - Address: 611 W. North Street, Gaylord,MI49735, http://www.dioceseofgaylord.org/
+2025-09-01 23:04:16,012 - INFO - Website: http://www.dioceseofgaylord.org/
+2025-09-01 23:04:16,012 - INFO - Processing container 85
+2025-09-01 23:04:16,012 - INFO - Diocese name: Diocese of Grand Rapids
+2025-09-01 23:04:16,012 - INFO - Address: 360 Division Avenue S., Grand Rapids,MI49503, https://grdiocese.org/
+2025-09-01 23:04:16,012 - INFO - Website: https://grdiocese.org/
+2025-09-01 23:04:16,012 - INFO - Processing container 86
+2025-09-01 23:04:16,012 - INFO - Diocese name: Diocese of Kalamazoo
+2025-09-01 23:04:16,012 - INFO - Address: 215 N. Westnedge Avenue, Kalamazoo,MI49007, http://www.dioceseofkalamazoo.org/
+2025-09-01 23:04:16,013 - INFO - Website: http://www.dioceseofkalamazoo.org/
+2025-09-01 23:04:16,013 - INFO - Processing container 87
+2025-09-01 23:04:16,013 - INFO - Diocese name: Diocese of Lansing
+2025-09-01 23:04:16,013 - INFO - Address: 228 N. Walnut Street, Lansing,MI48933, http://www.dioceseoflansing.org/
+2025-09-01 23:04:16,013 - INFO - Website: http://www.dioceseoflansing.org/
+2025-09-01 23:04:16,013 - INFO - Processing container 88
+2025-09-01 23:04:16,013 - INFO - Diocese name: Diocese of Marquette
+2025-09-01 23:04:16,013 - INFO - Address: 1004 Harbor Hills Drive, Marquette,MI49855, http://www.dioceseofmarquette.org/
+2025-09-01 23:04:16,013 - INFO - Website: http://www.dioceseofmarquette.org/
+2025-09-01 23:04:16,013 - INFO - Processing container 89
+2025-09-01 23:04:16,013 - INFO - Diocese name: Diocese of Saginaw
+2025-09-01 23:04:16,013 - INFO - Address: 5800 Weiss Street, Saginaw,MI48603-2799, http://www.saginaw.org/
+2025-09-01 23:04:16,013 - INFO - Website: http://www.saginaw.org/
+2025-09-01 23:04:16,014 - INFO - Processing container 90
+2025-09-01 23:04:16,014 - INFO - Diocese name: Archdiocese of St. Paul and Minneapolis
+2025-09-01 23:04:16,014 - INFO - Address: 777 Forest Street, Saint Paul,MN55106-3857, http://www.archspm.org/
+2025-09-01 23:04:16,014 - INFO - Website: http://www.archspm.org/
+2025-09-01 23:04:16,014 - INFO - Processing container 91
+2025-09-01 23:04:16,014 - INFO - Diocese name: Diocese of Crookston
+2025-09-01 23:04:16,015 - INFO - Address: 620 Summit Avenue N., Crookston,MN56716, http://www.crookston.org/
+2025-09-01 23:04:16,015 - INFO - Website: http://www.crookston.org/
+2025-09-01 23:04:16,015 - INFO - Processing container 92
+2025-09-01 23:04:16,015 - INFO - Diocese name: Diocese of Duluth
+2025-09-01 23:04:16,016 - INFO - Address: 2830 E. Fourth Street, Duluth,MN55812, http://www.dioceseduluth.org/
+2025-09-01 23:04:16,016 - INFO - Website: http://www.dioceseduluth.org/
+2025-09-01 23:04:16,016 - INFO - Processing container 93
+2025-09-01 23:04:16,016 - INFO - Diocese name: Diocese of New Ulm
+2025-09-01 23:04:16,016 - INFO - Address: 1400 6th Street North, New Ulm,MN56073-2099, http://www.dnu.org/
+2025-09-01 23:04:16,016 - INFO - Website: http://www.dnu.org/
+2025-09-01 23:04:16,016 - INFO - Processing container 94
+2025-09-01 23:04:16,016 - INFO - Diocese name: Diocese of St. Cloud
+2025-09-01 23:04:16,016 - INFO - Address: P.O. Box 1248, St. Cloud,MN56302, http://www.stcdio.org/
+2025-09-01 23:04:16,016 - INFO - Website: http://www.stcdio.org/
+2025-09-01 23:04:16,016 - INFO - Processing container 95
+2025-09-01 23:04:16,017 - INFO - Diocese name: Diocese of Winona-Rochester
+2025-09-01 23:04:16,017 - INFO - Address: 55 W. Sanborn, P.O. Box 588, Winona,MN55987, http://www.dow.org/
+2025-09-01 23:04:16,017 - INFO - Website: http://www.dow.org/
+2025-09-01 23:04:16,017 - INFO - Processing container 96
+2025-09-01 23:04:16,017 - INFO - Diocese name: Diocese of Biloxi
+2025-09-01 23:04:16,017 - INFO - Address: 1790 Popps Ferry Road, Biloxi,MS39532, http://www.biloxidiocese.org
+2025-09-01 23:04:16,017 - INFO - Website: http://www.biloxidiocese.org
+2025-09-01 23:04:16,017 - INFO - Processing container 97
+2025-09-01 23:04:16,017 - INFO - Diocese name: Diocese of Jackson
+2025-09-01 23:04:16,017 - INFO - Address: 237 East Amite, P.O. Box 2248, Jackson,MS39225, http://www.jacksondiocese.org/
+2025-09-01 23:04:16,018 - INFO - Website: http://www.jacksondiocese.org/
+2025-09-01 23:04:16,018 - INFO - Processing container 98
+2025-09-01 23:04:16,018 - INFO - Diocese name: Maronite Eparchy of Our Lady of Lebanon
+2025-09-01 23:04:16,018 - INFO - Address: 1021 S. 10th Street, St. Louis,MO63104, http://www.eparchy.org/
+2025-09-01 23:04:16,018 - INFO - Website: http://www.eparchy.org/
+2025-09-01 23:04:16,018 - INFO - Processing container 99
+2025-09-01 23:04:16,018 - INFO - Diocese name: Archdiocese of St. Louis
+2025-09-01 23:04:16,019 - INFO - Address: 20 Archbishop May Drive, St. Louis,MO63119-5738, http://www.archstl.org/
+2025-09-01 23:04:16,019 - INFO - Website: http://www.archstl.org/
+2025-09-01 23:04:16,019 - INFO - Processing container 100
+2025-09-01 23:04:16,019 - INFO - Diocese name: Diocese of Jefferson City
+2025-09-01 23:04:16,019 - INFO - Address: 2207 West Main Street, P.O. Box 104900, Jefferson City,MO65110-4900, http://www.diojeffcity.org/
+2025-09-01 23:04:16,019 - INFO - Website: http://www.diojeffcity.org/
+2025-09-01 23:04:16,019 - INFO - Processing container 101
+2025-09-01 23:04:16,020 - INFO - Diocese name: Diocese of Kansas City-St. Joseph
+2025-09-01 23:04:16,020 - INFO - Address: Post Office Box 419037, Kansas City,MO64141-6037, https://kcsjcatholic.org/
+2025-09-01 23:04:16,020 - INFO - Website: https://kcsjcatholic.org/
+2025-09-01 23:04:16,020 - INFO - Processing container 102
+2025-09-01 23:04:16,020 - INFO - Diocese name: Diocese of Springfield-Cape Girardeau
+2025-09-01 23:04:16,020 - INFO - Address: 601 S. Jefferson Avenue, Springfield,MO65806, http://www.dioscg.org/
+2025-09-01 23:04:16,020 - INFO - Website: http://www.dioscg.org/
+2025-09-01 23:04:16,021 - INFO - Processing container 103
+2025-09-01 23:04:16,021 - INFO - Diocese name: Diocese of Great Falls-Billings
+2025-09-01 23:04:16,021 - INFO - Address: P.O. Box 1399, Great Falls,MT59403-1399, http://diocesegfb.org/
+2025-09-01 23:04:16,021 - INFO - Website: http://diocesegfb.org/
+2025-09-01 23:04:16,021 - INFO - Processing container 104
+2025-09-01 23:04:16,021 - INFO - Diocese name: Diocese of Helena
+2025-09-01 23:04:16,021 - INFO - Address: P.O. Box 1729, Helena,MT59624, http://www.diocesehelena.org/
+2025-09-01 23:04:16,021 - INFO - Website: http://www.diocesehelena.org/
+2025-09-01 23:04:16,021 - INFO - Processing container 105
+2025-09-01 23:04:16,021 - INFO - Diocese name: Archdiocese of Omaha
+2025-09-01 23:04:16,021 - INFO - Address: 2222 N. 111th Street, Omaha,NE68164-3817, http://www.archomaha.org/
+2025-09-01 23:04:16,022 - INFO - Website: http://www.archomaha.org/
+2025-09-01 23:04:16,022 - INFO - Processing container 106
+2025-09-01 23:04:16,022 - INFO - Diocese name: Diocese of Grand Island
+2025-09-01 23:04:16,022 - INFO - Address: 2708 Old Fair Road, Grand Island,NE68803-5221, http://www.gidiocese.org/
+2025-09-01 23:04:16,022 - INFO - Website: http://www.gidiocese.org/
+2025-09-01 23:04:16,022 - INFO - Processing container 107
+2025-09-01 23:04:16,022 - INFO - Diocese name: Diocese of Lincoln
+2025-09-01 23:04:16,022 - INFO - Address: 3400 Sheridan Boulevard, Lincoln,NE68506, http://www.dioceseoflincoln.org/
+2025-09-01 23:04:16,022 - INFO - Website: http://www.dioceseoflincoln.org/
+2025-09-01 23:04:16,022 - INFO - Processing container 108
+2025-09-01 23:04:16,022 - INFO - Diocese name: Archdiocese of Las Vegas
+2025-09-01 23:04:16,022 - INFO - Address: 336 Cathedral Way, Las Vegas,NV89109-0716, https://lvcatholic.org/
+2025-09-01 23:04:16,023 - INFO - Website: https://lvcatholic.org/
+2025-09-01 23:04:16,023 - INFO - Processing container 109
+2025-09-01 23:04:16,023 - INFO - Diocese name: Diocese of Reno
+2025-09-01 23:04:16,023 - INFO - Address: 290 S. Arlington Avenue, #200, Reno,NV89501-1713, http://www.dioceseofreno.org/
+2025-09-01 23:04:16,023 - INFO - Website: http://www.dioceseofreno.org/
+2025-09-01 23:04:16,023 - INFO - Processing container 110
+2025-09-01 23:04:16,023 - INFO - Diocese name: Diocese of Manchester
+2025-09-01 23:04:16,023 - INFO - Address: 153 Ash Street, Manchester,NH03104-4348, http://www.catholicnh.org/
+2025-09-01 23:04:16,023 - INFO - Website: http://www.catholicnh.org/
+2025-09-01 23:04:16,023 - INFO - Processing container 111
+2025-09-01 23:04:16,023 - INFO - Diocese name: Byzantine Catholic Eparchy of Passaic
+2025-09-01 23:04:16,023 - INFO - Address: 445 Lackawanna Av. West, West Paterson,NJ07424, http://www.eparchyofpassaic.com/
+2025-09-01 23:04:16,024 - INFO - Website: http://www.eparchyofpassaic.com/
+2025-09-01 23:04:16,024 - INFO - Processing container 112
+2025-09-01 23:04:16,024 - INFO - Diocese name: Archdiocese of Newark
+2025-09-01 23:04:16,024 - INFO - Address: 171 Clifton Avenue, Newark,NJ07104-0500, https://rcan.org/
+2025-09-01 23:04:16,024 - INFO - Website: https://rcan.org/
+2025-09-01 23:04:16,024 - INFO - Processing container 113
+2025-09-01 23:04:16,024 - INFO - Diocese name: Diocese of Camden
+2025-09-01 23:04:16,024 - INFO - Address: 631 Market Street, Camden,NJ08102, http://www.camdendiocese.org/
+2025-09-01 23:04:16,024 - INFO - Website: http://www.camdendiocese.org/
+2025-09-01 23:04:16,024 - INFO - Processing container 114
+2025-09-01 23:04:16,024 - INFO - Diocese name: Diocese of Metuchen
+2025-09-01 23:04:16,024 - INFO - Address: P.O. Box 191, Metuchen,NJ08840-0191, http://www.diometuchen.org/
+2025-09-01 23:04:16,024 - INFO - Website: http://www.diometuchen.org/
+2025-09-01 23:04:16,025 - INFO - Processing container 115
+2025-09-01 23:04:16,025 - INFO - Diocese name: Diocese of Paterson
+2025-09-01 23:04:16,025 - INFO - Address: 777 Valley Road, Clifton,NJ07013, http://www.patersondiocese.org/
+2025-09-01 23:04:16,025 - INFO - Website: http://www.patersondiocese.org/
+2025-09-01 23:04:16,025 - INFO - Processing container 116
+2025-09-01 23:04:16,025 - INFO - Diocese name: Diocese of Trenton
+2025-09-01 23:04:16,025 - INFO - Address: P.O. Box 5147, Trenton,NJ08638, http://www.dioceseoftrenton.org/
+2025-09-01 23:04:16,025 - INFO - Website: http://www.dioceseoftrenton.org/
+2025-09-01 23:04:16,025 - INFO - Processing container 117
+2025-09-01 23:04:16,025 - INFO - Diocese name: Archdiocese of Santa Fe
+2025-09-01 23:04:16,025 - INFO - Address: 4000 St. Joseph's Pl. NW, Albuquerque,NM87120-1741, https://archdiosf.org/
+2025-09-01 23:04:16,025 - INFO - Website: https://archdiosf.org/
+2025-09-01 23:04:16,025 - INFO - Processing container 118
+2025-09-01 23:04:16,025 - INFO - Diocese name: Diocese of Gallup
+2025-09-01 23:04:16,026 - INFO - Address: P.O. Box 1338, Gallup,NM87305, http://www.dioceseofgallup.org/
+2025-09-01 23:04:16,026 - INFO - Website: http://www.dioceseofgallup.org/
+2025-09-01 23:04:16,026 - INFO - Processing container 119
+2025-09-01 23:04:16,026 - INFO - Diocese name: Diocese of Las Cruces
+2025-09-01 23:04:16,026 - INFO - Address: 1280 Med Park Drive, Las Cruces,NM88005, http://www.rcdlc.org
+2025-09-01 23:04:16,026 - INFO - Website: http://www.rcdlc.org
+2025-09-01 23:04:16,026 - INFO - Processing container 120
+2025-09-01 23:04:16,026 - INFO - Diocese name: Eparchy of St. Maron of Brooklyn
+2025-09-01 23:04:16,026 - INFO - Address: 109 Remsen Street, Brooklyn,NY11201, http://www.stmaron.org/
+2025-09-01 23:04:16,026 - INFO - Website: http://www.stmaron.org/
+2025-09-01 23:04:16,026 - INFO - Processing container 121
+2025-09-01 23:04:16,026 - INFO - Diocese name: Syro-Malankara Catholic Eparchy in the USA
+2025-09-01 23:04:16,026 - INFO - Address: Exarchial Chancery, 1500 De Paul Street, Elmont,NY11003, http://syromalankarausa.org/
+2025-09-01 23:04:16,027 - INFO - Website: http://syromalankarausa.org/
+2025-09-01 23:04:16,027 - INFO - Processing container 122
+2025-09-01 23:04:16,027 - INFO - Diocese name: Archdiocese of New York
+2025-09-01 23:04:16,027 - INFO - Address: 1011 First Avenue, New  York,NY10022, http://www.archny.org/
+2025-09-01 23:04:16,027 - INFO - Website: http://www.archny.org/
+2025-09-01 23:04:16,027 - INFO - Processing container 123
+2025-09-01 23:04:16,027 - INFO - Diocese name: Diocese of Albany
+2025-09-01 23:04:16,027 - INFO - Address: Pastoral Center, 40 North Main Avenue, Albany,NY12203, http://www.rcda.org/
+2025-09-01 23:04:16,027 - INFO - Website: http://www.rcda.org/
+2025-09-01 23:04:16,027 - INFO - Processing container 124
+2025-09-01 23:04:16,027 - INFO - Diocese name: Diocese of Brooklyn
+2025-09-01 23:04:16,028 - INFO - Address: Chancery Office, 310 Prospect Park West, Brooklyn,NY11215, http://www.dioceseofbrooklyn.org/
+2025-09-01 23:04:16,028 - INFO - Website: http://www.dioceseofbrooklyn.org/
+2025-09-01 23:04:16,028 - INFO - Processing container 125
+2025-09-01 23:04:16,028 - INFO - Diocese name: Diocese of Buffalo
+2025-09-01 23:04:16,028 - INFO - Address: 795 Main Street, Buffalo,NY14203, http://www.buffalodiocese.org/
+2025-09-01 23:04:16,028 - INFO - Website: http://www.buffalodiocese.org/
+2025-09-01 23:04:16,028 - INFO - Processing container 126
+2025-09-01 23:04:16,028 - INFO - Diocese name: Diocese of Ogdensburg
+2025-09-01 23:04:16,028 - INFO - Address: P.O. Box 369, 622 Washington Street, Ogdensburg,NY13669, https://www.rcdony.org/
+2025-09-01 23:04:16,028 - INFO - Website: https://www.rcdony.org/
+2025-09-01 23:04:16,028 - INFO - Processing container 127
+2025-09-01 23:04:16,028 - INFO - Diocese name: Diocese of Rochester
+2025-09-01 23:04:16,028 - INFO - Address: 1150 Buffalo Road, Rochester,NY14624, http://www.dor.org/
+2025-09-01 23:04:16,029 - INFO - Website: http://www.dor.org/
+2025-09-01 23:04:16,029 - INFO - Processing container 128
+2025-09-01 23:04:16,029 - INFO - Diocese name: Diocese of Rockville Centre
+2025-09-01 23:04:16,029 - INFO - Address: 50 North Park Avenue, P.O. Box 9023, Rockville Centre,NY11571-9023, http://www.drvc.org/
+2025-09-01 23:04:16,029 - INFO - Website: http://www.drvc.org/
+2025-09-01 23:04:16,029 - INFO - Processing container 129
+2025-09-01 23:04:16,029 - INFO - Diocese name: Diocese of Syracuse
+2025-09-01 23:04:16,029 - INFO - Address: 240 East Onondaga Street, Syracuse,NY13201, http://www.syracusediocese.org/
+2025-09-01 23:04:16,029 - INFO - Website: http://www.syracusediocese.org/
+2025-09-01 23:04:16,029 - INFO - Processing container 130
+2025-09-01 23:04:16,029 - INFO - Diocese name: Diocese of Charlotte
+2025-09-01 23:04:16,029 - INFO - Address: 1123 South Church Street, Charlotte,NC28203, http://www.charlottediocese.org/
+2025-09-01 23:04:16,029 - INFO - Website: http://www.charlottediocese.org/
+2025-09-01 23:04:16,029 - INFO - Processing container 131
+2025-09-01 23:04:16,030 - INFO - Diocese name: Diocese of Raleigh
+2025-09-01 23:04:16,030 - INFO - Address: 7200 Stonehenge Drive, Raleigh,NC27613, http://www.dioceseofraleigh.org/
+2025-09-01 23:04:16,030 - INFO - Website: http://www.dioceseofraleigh.org/
+2025-09-01 23:04:16,030 - INFO - Processing container 132
+2025-09-01 23:04:16,030 - INFO - Diocese name: Diocese of Bismarck
+2025-09-01 23:04:16,030 - INFO - Address: The Chancery, P.O. Box 1575, Bismarck,ND58502-1575, http://www.bismarckdiocese.com/
+2025-09-01 23:04:16,030 - INFO - Website: http://www.bismarckdiocese.com/
+2025-09-01 23:04:16,030 - INFO - Processing container 133
+2025-09-01 23:04:16,030 - INFO - Diocese name: Diocese of Fargo
+2025-09-01 23:04:16,030 - INFO - Address: 5201 Bishops Boulevard, Suite A, Fargo,ND58104-7605, http://www.fargodiocese.org/
+2025-09-01 23:04:16,030 - INFO - Website: http://www.fargodiocese.org/
+2025-09-01 23:04:16,030 - INFO - Processing container 134
+2025-09-01 23:04:16,030 - INFO - Diocese name: Eparchy of Parma
+2025-09-01 23:04:16,031 - INFO - Address: 5000 Rockside Road, Suite 310, Independence,OH44134, http://www.parma.org/
+2025-09-01 23:04:16,031 - INFO - Website: http://www.parma.org/
+2025-09-01 23:04:16,031 - INFO - Processing container 135
+2025-09-01 23:04:16,031 - INFO - Diocese name: Eparchy of St. George in Canton for the Romanians
+2025-09-01 23:04:16,031 - INFO - Address: 1121 44th Street NE, Canton,OH44131, http://www.romaniancatholic.org/
+2025-09-01 23:04:16,031 - INFO - Website: http://www.romaniancatholic.org/
+2025-09-01 23:04:16,031 - INFO - Processing container 136
+2025-09-01 23:04:16,031 - INFO - Diocese name: Ukrainian Catholic Eparchy of St. Josaphat-Parma, OH
+2025-09-01 23:04:16,031 - INFO - Address: P.O. Box 347180, Parma,OH44134-7180, http://www.stjosaphateparchy.com/
+2025-09-01 23:04:16,031 - INFO - Website: http://www.stjosaphateparchy.com/
+2025-09-01 23:04:16,031 - INFO - Processing container 137
+2025-09-01 23:04:16,031 - INFO - Diocese name: Archdiocese of Cincinnati
+2025-09-01 23:04:16,031 - INFO - Address: 100 East Eighth Street, Cincinnati,OH45202, http://www.catholiccincinnati.org/
+2025-09-01 23:04:16,032 - INFO - Website: http://www.catholiccincinnati.org/
+2025-09-01 23:04:16,032 - INFO - Processing container 138
+2025-09-01 23:04:16,032 - INFO - Diocese name: Diocese of Cleveland
+2025-09-01 23:04:16,032 - INFO - Address: 1404 East Ninth Street, Cleveland,OH44114, http://www.dioceseofcleveland.org/
+2025-09-01 23:04:16,032 - INFO - Website: http://www.dioceseofcleveland.org/
+2025-09-01 23:04:16,032 - INFO - Processing container 139
+2025-09-01 23:04:16,032 - INFO - Diocese name: Diocese of Columbus
+2025-09-01 23:04:16,032 - INFO - Address: 197 E. Gay Street, Columbus,OH43215, http://www.colsdioc.org/
+2025-09-01 23:04:16,032 - INFO - Website: http://www.colsdioc.org/
+2025-09-01 23:04:16,032 - INFO - Processing container 140
+2025-09-01 23:04:16,032 - INFO - Diocese name: Diocese of Steubenville
+2025-09-01 23:04:16,032 - INFO - Address: 422 Washington Street, P.O. Box 969, Steubenville,OH43952, http://www.diosteub.org/
+2025-09-01 23:04:16,033 - INFO - Website: http://www.diosteub.org/
+2025-09-01 23:04:16,033 - INFO - Processing container 141
+2025-09-01 23:04:16,033 - INFO - Diocese name: Diocese of Toledo
+2025-09-01 23:04:16,033 - INFO - Address: 1933 Spielbusch Avenue, Toledo,OH43604, http://www.toledodiocese.org/
+2025-09-01 23:04:16,033 - INFO - Website: http://www.toledodiocese.org/
+2025-09-01 23:04:16,033 - INFO - Processing container 142
+2025-09-01 23:04:16,033 - INFO - Diocese name: Diocese of Youngstown
+2025-09-01 23:04:16,033 - INFO - Address: 144 W. Wood Street, Youngstown,OH44503, http://www.doy.org/
+2025-09-01 23:04:16,033 - INFO - Website: http://www.doy.org/
+2025-09-01 23:04:16,033 - INFO - Processing container 143
+2025-09-01 23:04:16,033 - INFO - Diocese name: Archdiocese of Oklahoma City
+2025-09-01 23:04:16,033 - INFO - Address: 7501 N.W. Expressway, Oklahoma City,OK73132, http://www.archokc.org/
+2025-09-01 23:04:16,033 - INFO - Website: http://www.archokc.org/
+2025-09-01 23:04:16,034 - INFO - Processing container 144
+2025-09-01 23:04:16,034 - INFO - Diocese name: Diocese of Tulsa
+2025-09-01 23:04:16,034 - INFO - Address: P.O. Box 690240, Tulsa,OK74169-0240, http://www.dioceseoftulsa.org/
+2025-09-01 23:04:16,034 - INFO - Website: http://www.dioceseoftulsa.org/
+2025-09-01 23:04:16,034 - INFO - Processing container 145
+2025-09-01 23:04:16,034 - INFO - Diocese name: Archdiocese of Portland in Oregon
+2025-09-01 23:04:16,034 - INFO - Address: 2838 East Burnside Street, Portland,OR97214-1895, http://www.archdpdx.org/
+2025-09-01 23:04:16,034 - INFO - Website: http://www.archdpdx.org/
+2025-09-01 23:04:16,034 - INFO - Processing container 146
+2025-09-01 23:04:16,034 - INFO - Diocese name: Diocese of Baker
+2025-09-01 23:04:16,035 - INFO - Address: 641 SW Umatilla Avenue, Redmond,OR97756, http://dioceseofbaker.org/
+2025-09-01 23:04:16,035 - INFO - Website: http://dioceseofbaker.org/
+2025-09-01 23:04:16,035 - INFO - Processing container 147
+2025-09-01 23:04:16,035 - INFO - Diocese name: Byzantine Catholic Archeparchy of Pittsburgh
+2025-09-01 23:04:16,035 - INFO - Address: 66 Riverview Avenue, Pittsburgh,PA15214, http://www.archeparchy.org/
+2025-09-01 23:04:16,036 - INFO - Website: http://www.archeparchy.org/
+2025-09-01 23:04:16,036 - INFO - Processing container 148
+2025-09-01 23:04:16,036 - INFO - Diocese name: Ukrainian Catholic Archeparchy of Philadelphia
+2025-09-01 23:04:16,036 - INFO - Address: 810 N. Franklin Street, Philadelphia,PA19123-2005, http://www.ukrarcheparchy.us/
+2025-09-01 23:04:16,036 - INFO - Website: http://www.ukrarcheparchy.us/
+2025-09-01 23:04:16,036 - INFO - Processing container 149
+2025-09-01 23:04:16,036 - INFO - Diocese name: Archdiocese of Philadelphia
+2025-09-01 23:04:16,036 - INFO - Address: 222 North 17th Street, Philadelphia,PA19103-1299, http://www.archphila.org/
+2025-09-01 23:04:16,036 - INFO - Website: http://www.archphila.org/
+2025-09-01 23:04:16,036 - INFO - Processing container 150
+2025-09-01 23:04:16,036 - INFO - Diocese name: Diocese of Allentown
+2025-09-01 23:04:16,036 - INFO - Address: P.O. Box F, Allentown,PA18105-1538, http://www.allentowndiocese.org/
+2025-09-01 23:04:16,037 - INFO - Website: http://www.allentowndiocese.org/
+2025-09-01 23:04:16,037 - INFO - Processing container 151
+2025-09-01 23:04:16,037 - INFO - Diocese name: Diocese of Altoona-Johnstown
+2025-09-01 23:04:16,037 - INFO - Address: 2713 West Chestnut Avenue, Altoona,PA16601, http://www.ajdiocese.org/
+2025-09-01 23:04:16,037 - INFO - Website: http://www.ajdiocese.org/
+2025-09-01 23:04:16,037 - INFO - Processing container 152
+2025-09-01 23:04:16,037 - INFO - Diocese name: Diocese of Erie
+2025-09-01 23:04:16,037 - INFO - Address: P.O. Box 10397, Erie,PA16514-0397, http://www.eriercd.org/
+2025-09-01 23:04:16,037 - INFO - Website: http://www.eriercd.org/
+2025-09-01 23:04:16,037 - INFO - Processing container 153
+2025-09-01 23:04:16,037 - INFO - Diocese name: Diocese of Greensburg
+2025-09-01 23:04:16,037 - INFO - Address: 723 East Pittsburgh St., Greensburg,PA15601, http://www.dioceseofgreensburg.org/
+2025-09-01 23:04:16,038 - INFO - Website: http://www.dioceseofgreensburg.org/
+2025-09-01 23:04:16,038 - INFO - Processing container 154
+2025-09-01 23:04:16,038 - INFO - Diocese name: Diocese of Harrisburg
+2025-09-01 23:04:16,038 - INFO - Address: 4800 Union Deposti Road, Harrisburg,PA17111, http://www.hbgdiocese.org/
+2025-09-01 23:04:16,038 - INFO - Website: http://www.hbgdiocese.org/
+2025-09-01 23:04:16,038 - INFO - Processing container 155
+2025-09-01 23:04:16,038 - INFO - Diocese name: Diocese of Pittsburgh
+2025-09-01 23:04:16,038 - INFO - Address: 2900 Noblestown Road, Pittsburgh,PA15205, http://www.diopitt.org/
+2025-09-01 23:04:16,038 - INFO - Website: http://www.diopitt.org/
+2025-09-01 23:04:16,038 - INFO - Processing container 156
+2025-09-01 23:04:16,038 - INFO - Diocese name: Diocese of Scranton
+2025-09-01 23:04:16,038 - INFO - Address: 300 Wyoming Avenue, Scranton,PA18503, http://www.dioceseofscranton.org/
+2025-09-01 23:04:16,039 - INFO - Website: http://www.dioceseofscranton.org/
+2025-09-01 23:04:16,039 - INFO - Processing container 157
+2025-09-01 23:04:16,039 - INFO - Diocese name: Diocese of Providence
+2025-09-01 23:04:16,039 - INFO - Address: One Cathedral Square, Providence,RI02903, http://www.dioceseofprovidence.org/
+2025-09-01 23:04:16,039 - INFO - Website: http://www.dioceseofprovidence.org/
+2025-09-01 23:04:16,039 - INFO - Processing container 158
+2025-09-01 23:04:16,039 - INFO - Diocese name: Diocese of Charleston
+2025-09-01 23:04:16,039 - INFO - Address: 901 Orange Grove Road, Charleston,SC29407, https://charlestondiocese.org/
+2025-09-01 23:04:16,039 - INFO - Website: https://charlestondiocese.org/
+2025-09-01 23:04:16,039 - INFO - Processing container 159
+2025-09-01 23:04:16,039 - INFO - Diocese name: Diocese of Rapid City
+2025-09-01 23:04:16,039 - INFO - Address: 606 Cathedral Drive, Rapid City,SD57701-5407, http://www.rapidcitydiocese.org/
+2025-09-01 23:04:16,039 - INFO - Website: http://www.rapidcitydiocese.org/
+2025-09-01 23:04:16,040 - INFO - Processing container 160
+2025-09-01 23:04:16,040 - INFO - Diocese name: Diocese of Sioux Falls
+2025-09-01 23:04:16,040 - INFO - Address: 523 N. Duluth Avenue, Sioux Falls,SD57104, https://sfcatholic.org/
+2025-09-01 23:04:16,040 - INFO - Website: https://sfcatholic.org/
+2025-09-01 23:04:16,040 - INFO - Processing container 161
+2025-09-01 23:04:16,040 - INFO - Diocese name: Diocese of Knoxville
+2025-09-01 23:04:16,040 - INFO - Address: 805 S. Northshore Drive, Knoxville,TN37919, http://www.dioknox.org/
+2025-09-01 23:04:16,040 - INFO - Website: http://www.dioknox.org/
+2025-09-01 23:04:16,040 - INFO - Processing container 162
+2025-09-01 23:04:16,040 - INFO - Diocese name: Diocese of Memphis
+2025-09-01 23:04:16,040 - INFO - Address: 5825 Shelby Oaks Drive, Memphis,TN38134-7316, http://www.cdom.org/
+2025-09-01 23:04:16,040 - INFO - Website: http://www.cdom.org/
+2025-09-01 23:04:16,040 - INFO - Processing container 163
+2025-09-01 23:04:16,041 - INFO - Diocese name: Diocese of Nashville
+2025-09-01 23:04:16,041 - INFO - Address: 2800 McGavock Pike, Nashville,TN37214-1402, http://www.dioceseofnashville.com/
+2025-09-01 23:04:16,041 - INFO - Website: http://www.dioceseofnashville.com/
+2025-09-01 23:04:16,041 - INFO - Processing container 164
+2025-09-01 23:04:16,041 - INFO - Diocese name: Archdiocese of Galveston-Houston
+2025-09-01 23:04:16,041 - INFO - Address: 1700 San Jacinto, Houston,TX77001-0907, http://www.archgh.org
+2025-09-01 23:04:16,041 - INFO - Website: http://www.archgh.org
+2025-09-01 23:04:16,041 - INFO - Processing container 165
+2025-09-01 23:04:16,041 - INFO - Diocese name: Archdiocese of San Antonio
+2025-09-01 23:04:16,041 - INFO - Address: 2718 West Woodlawn Avenue, San Antonio,TX78228-5124, http://www.archsa.org/
+2025-09-01 23:04:16,041 - INFO - Website: http://www.archsa.org/
+2025-09-01 23:04:16,041 - INFO - Processing container 166
+2025-09-01 23:04:16,042 - INFO - Diocese name: Diocese of Amarillo
+2025-09-01 23:04:16,042 - INFO - Address: P.O. Box 5644, Amarillo,TX79117, http://www.amarillodiocese.org/
+2025-09-01 23:04:16,042 - INFO - Website: http://www.amarillodiocese.org/
+2025-09-01 23:04:16,042 - INFO - Processing container 167
+2025-09-01 23:04:16,042 - INFO - Diocese name: Diocese of Austin
+2025-09-01 23:04:16,042 - INFO - Address: 6225 Highway 290 East, Austin,TX78723-1025, http://www.austindiocese.org
+2025-09-01 23:04:16,042 - INFO - Website: http://www.austindiocese.org
+2025-09-01 23:04:16,042 - INFO - Processing container 168
+2025-09-01 23:04:16,042 - INFO - Diocese name: Diocese of Beaumont
+2025-09-01 23:04:16,042 - INFO - Address: 710 Archie Street, Beaumont,TX77701, http://www.dioceseofbmt.org
+2025-09-01 23:04:16,042 - INFO - Website: http://www.dioceseofbmt.org
+2025-09-01 23:04:16,042 - INFO - Processing container 169
+2025-09-01 23:04:16,042 - INFO - Diocese name: Diocese of Brownsville
+2025-09-01 23:04:16,043 - INFO - Address: 1910 University Boulevard, Brownsville,TX78520, http://www.cdob.org/
+2025-09-01 23:04:16,043 - INFO - Website: http://www.cdob.org/
+2025-09-01 23:04:16,043 - INFO - Processing container 170
+2025-09-01 23:04:16,043 - INFO - Diocese name: Diocese of Corpus Christi
+2025-09-01 23:04:16,043 - INFO - Address: 620 Lipan Street, Corpus Christi,TX78401, http://www.diocesecc.org/
+2025-09-01 23:04:16,043 - INFO - Website: http://www.diocesecc.org/
+2025-09-01 23:04:16,043 - INFO - Processing container 171
+2025-09-01 23:04:16,043 - INFO - Diocese name: Diocese of Dallas
+2025-09-01 23:04:16,043 - INFO - Address: 3725 Blackburn Street, Dallas,TX75219, http://www.cathdal.org/
+2025-09-01 23:04:16,043 - INFO - Website: http://www.cathdal.org/
+2025-09-01 23:04:16,043 - INFO - Processing container 172
+2025-09-01 23:04:16,043 - INFO - Diocese name: Diocese of El Paso
+2025-09-01 23:04:16,044 - INFO - Address: 499 St. Matthews Street, El Paso,TX79907, http://www.elpasodiocese.org/
+2025-09-01 23:04:16,044 - INFO - Website: http://www.elpasodiocese.org/
+2025-09-01 23:04:16,044 - INFO - Processing container 173
+2025-09-01 23:04:16,044 - INFO - Diocese name: Diocese of Fort Worth
+2025-09-01 23:04:16,044 - INFO - Address: 800 West Loop 820 South, Fort Worth,TX76108, http://www.fwdioc.org/
+2025-09-01 23:04:16,044 - INFO - Website: http://www.fwdioc.org/
+2025-09-01 23:04:16,044 - INFO - Processing container 174
+2025-09-01 23:04:16,044 - INFO - Diocese name: Diocese of Laredo
+2025-09-01 23:04:16,044 - INFO - Address: 1901 Corpus Christi St., Laredo,TX78043, http://www.dioceseoflaredo.org/
+2025-09-01 23:04:16,044 - INFO - Website: http://www.dioceseoflaredo.org/
+2025-09-01 23:04:16,044 - INFO - Processing container 175
+2025-09-01 23:04:16,044 - INFO - Diocese name: Diocese of Lubbock
+2025-09-01 23:04:16,045 - INFO - Address: 4620 Fourth Street, Lubbock,TX79499-8700, http://www.catholiclubbock.org/
+2025-09-01 23:04:16,045 - INFO - Website: http://www.catholiclubbock.org/
+2025-09-01 23:04:16,045 - INFO - Processing container 176
+2025-09-01 23:04:16,045 - INFO - Diocese name: Diocese of San Angelo
+2025-09-01 23:04:16,045 - INFO - Address: 804 Ford Street, San Angelo,TX76905, http://www.sanangelodiocese.org/
+2025-09-01 23:04:16,045 - INFO - Website: http://www.sanangelodiocese.org/
+2025-09-01 23:04:16,045 - INFO - Processing container 177
+2025-09-01 23:04:16,045 - INFO - Diocese name: Diocese of The Personal Ordinariate of the Chair of St. Peter
+2025-09-01 23:04:16,045 - INFO - Address: 7730 Westview Drive, Houston,TX77055, http://www.ordinariate.net/
+2025-09-01 23:04:16,045 - INFO - Website: http://www.ordinariate.net/
+2025-09-01 23:04:16,045 - INFO - Processing container 178
+2025-09-01 23:04:16,045 - INFO - Diocese name: Diocese of Tyler
+2025-09-01 23:04:16,045 - INFO - Address: 1015 ESE Loop 323, Tyler,TX75701-9663, http://www.dioceseoftyler.org/
+2025-09-01 23:04:16,046 - INFO - Website: http://www.dioceseoftyler.org/
+2025-09-01 23:04:16,046 - INFO - Processing container 179
+2025-09-01 23:04:16,046 - INFO - Diocese name: Diocese of Victoria
+2025-09-01 23:04:16,046 - INFO - Address: P.O. Box 4070, 1505 E. Mesquite Lane, Victoria,TX77901, http://www.victoriadiocese.org/
+2025-09-01 23:04:16,046 - INFO - Website: http://www.victoriadiocese.org/
+2025-09-01 23:04:16,046 - INFO - Processing container 180
+2025-09-01 23:04:16,046 - INFO - Diocese name: Diocese of Salt Lake City
+2025-09-01 23:04:16,046 - INFO - Address: 27 C Street, Salt Lake City,UT84103, http://www.utahcatholicdiocese.org
+2025-09-01 23:04:16,046 - INFO - Website: http://www.utahcatholicdiocese.org
+2025-09-01 23:04:16,046 - INFO - Processing container 181
+2025-09-01 23:04:16,046 - INFO - Diocese name: Diocese of Burlington
+2025-09-01 23:04:16,046 - INFO - Address: 55 Joy Drive, South Burlington,VT05403, http://www.vermontcatholic.org/
+2025-09-01 23:04:16,047 - INFO - Website: http://www.vermontcatholic.org/
+2025-09-01 23:04:16,047 - INFO - Processing container 182
+2025-09-01 23:04:16,047 - INFO - Diocese name: Diocese of St. Thomas, VI
+2025-09-01 23:04:16,047 - INFO - Address: P.O. Box 301825, St. Thomas,VI00803-1825, http://www.catholicvi.com/
+2025-09-01 23:04:16,047 - INFO - Website: http://www.catholicvi.com/
+2025-09-01 23:04:16,047 - INFO - Processing container 183
+2025-09-01 23:04:16,047 - INFO - Diocese name: Diocese of Arlington
+2025-09-01 23:04:16,047 - INFO - Address: 200 North Glebe Road, Arlington,VA22203, http://www.arlingtondiocese.org/
+2025-09-01 23:04:16,047 - INFO - Website: http://www.arlingtondiocese.org/
+2025-09-01 23:04:16,047 - INFO - Processing container 184
+2025-09-01 23:04:16,047 - INFO - Diocese name: Diocese of Richmond
+2025-09-01 23:04:16,047 - INFO - Address: 7800 Carousel Lane, Richmond,VA23294-4201, http://www.richmonddiocese.org/
+2025-09-01 23:04:16,048 - INFO - Website: http://www.richmonddiocese.org/
+2025-09-01 23:04:16,048 - INFO - Processing container 185
+2025-09-01 23:04:16,048 - INFO - Diocese name: Archdiocese of Seattle
+2025-09-01 23:04:16,048 - INFO - Address: 710 9th Avenue, Seattle,WA98104, http://www.seattlearchdiocese.org/
+2025-09-01 23:04:16,048 - INFO - Website: http://www.seattlearchdiocese.org/
+2025-09-01 23:04:16,048 - INFO - Processing container 186
+2025-09-01 23:04:16,048 - INFO - Diocese name: Diocese of Spokane
+2025-09-01 23:04:16,048 - INFO - Address: P.O. Box 1453, Spokane,WA99210-1453, http://www.dioceseofspokane.org/
+2025-09-01 23:04:16,048 - INFO - Website: http://www.dioceseofspokane.org/
+2025-09-01 23:04:16,048 - INFO - Processing container 187
+2025-09-01 23:04:16,048 - INFO - Diocese name: Diocese of Yakima
+2025-09-01 23:04:16,048 - INFO - Address: P.O. Box 2189, Yakima,WA98907, http://www.yakimadiocese.org/
+2025-09-01 23:04:16,049 - INFO - Website: http://www.yakimadiocese.org/
+2025-09-01 23:04:16,049 - INFO - Processing container 188
+2025-09-01 23:04:16,049 - INFO - Diocese name: Archdiocese of the Military Services
+2025-09-01 23:04:16,049 - INFO - Address: 1025 Michigan Avenue N.E., P.O. Box 4469, Washington,DC20017, http://www.milarch.org/
+2025-09-01 23:04:16,049 - INFO - Website: http://www.milarch.org/
+2025-09-01 23:04:16,049 - INFO - Processing container 189
+2025-09-01 23:04:16,049 - INFO - Diocese name: Archdiocese of Washington
+2025-09-01 23:04:16,049 - INFO - Address: P.O. Box 29260, Washington,DC20017, http://www.adw.org/
+2025-09-01 23:04:16,049 - INFO - Website: http://www.adw.org/
+2025-09-01 23:04:16,049 - INFO - Processing container 190
+2025-09-01 23:04:16,049 - INFO - Diocese name: Diocese of Wheeling-Charleston
+2025-09-01 23:04:16,049 - INFO - Address: 1300 Byron Street, Wheeling,WV26003, http://www.dwc.org/
+2025-09-01 23:04:16,049 - INFO - Website: http://www.dwc.org/
+2025-09-01 23:04:16,050 - INFO - Processing container 191
+2025-09-01 23:04:16,050 - INFO - Diocese name: Archdiocese of Milwaukee
+2025-09-01 23:04:16,050 - INFO - Address: P.O. Box 70912, Milwaukee,WI53207-0912, http://www.archmil.org/
+2025-09-01 23:04:16,050 - INFO - Website: http://www.archmil.org/
+2025-09-01 23:04:16,050 - INFO - Processing container 192
+2025-09-01 23:04:16,050 - INFO - Diocese name: Diocese of Green Bay
+2025-09-01 23:04:16,050 - INFO - Address: P.O. Box 23825, Green Bay,WI54305-3825, http://www.gbdioc.org
+2025-09-01 23:04:16,050 - INFO - Website: http://www.gbdioc.org
+2025-09-01 23:04:16,050 - INFO - Processing container 193
+2025-09-01 23:04:16,050 - INFO - Diocese name: Diocese of La Crosse
+2025-09-01 23:04:16,050 - INFO - Address: 3710 East Avenue South, P.O. Box 4004, La Crosse,WI54602-4004, http://www.diolc.org/
+2025-09-01 23:04:16,050 - INFO - Website: http://www.diolc.org/
+2025-09-01 23:04:16,050 - INFO - Processing container 194
+2025-09-01 23:04:16,050 - INFO - Diocese name: Diocese of Madison
+2025-09-01 23:04:16,051 - INFO - Address: 702 South High Point Road, P.O. Box 44983, Madison,WI53719, http://www.madisondiocese.org/
+2025-09-01 23:04:16,051 - INFO - Website: http://www.madisondiocese.org/
+2025-09-01 23:04:16,051 - INFO - Processing container 195
+2025-09-01 23:04:16,051 - INFO - Diocese name: Diocese of Superior
+2025-09-01 23:04:16,051 - INFO - Address: 1201 Hughitt Avenue, Superior,WI54880, http://www.catholicdos.org/
+2025-09-01 23:04:16,051 - INFO - Website: http://www.catholicdos.org/
+2025-09-01 23:04:16,051 - INFO - Processing container 196
+2025-09-01 23:04:16,051 - INFO - Diocese name: Diocese of Cheyenne
+2025-09-01 23:04:16,051 - INFO - Address: 2121 Capitol Avenue, Cheyenne,WY82001, https://dcwy.org/
+2025-09-01 23:04:16,051 - INFO - Website: https://dcwy.org/
+2025-09-01 23:04:16,052 - INFO - Extracted information for 196 dioceses.
+2025-09-01 23:04:16,052 - INFO - Limiting extraction to 5 dioceses.
+2025-09-01 23:04:16,052 - INFO -                                                 Name  ...                      extracted_at
+0                              Archdiocese of Mobile  ...  2025-09-02T03:04:15.984447+00:00
+1                              Diocese of Birmingham  ...  2025-09-02T03:04:15.985275+00:00
+2                    Archdiocese of Anchorage-Juneau  ...  2025-09-02T03:04:15.987564+00:00
+3                               Diocese of Fairbanks  ...  2025-09-02T03:04:15.988207+00:00
+4  Holy Protection of Mary Byzantine Catholic Epa...  ...  2025-09-02T03:04:15.988560+00:00
+
+[5 rows x 4 columns]
+2025-09-01 23:04:16,268 - INFO - 
+Attempting to upsert 5 rows...
+2025-09-01 23:04:16,725 - INFO - HTTP Request: POST https://nzcwtjloonumxpsqzarq.supabase.co/rest/v1/Dioceses?on_conflict=Name&columns=%22Website%22%2C%22Address%22%2C%22extracted_at%22%2C%22Name%22 "HTTP/2 200 OK"
+2025-09-01 23:04:16,728 - INFO - ✅ Successfully upserted 5 rows!
+2025-09-01 23:04:16,729 - INFO - 
+--- Finding Parish Directories ---
+2025-09-01 23:04:17,012 - INFO - HTTP Request: GET https://nzcwtjloonumxpsqzarq.supabase.co/rest/v1/Dioceses?select=Website%2CName "HTTP/2 200 OK"
+2025-09-01 23:04:17,165 - INFO - HTTP Request: GET https://nzcwtjloonumxpsqzarq.supabase.co/rest/v1/DiocesesParishDirectory?select=diocese_url "HTTP/2 200 OK"
+2025-09-01 23:04:17,322 - INFO - HTTP Request: GET https://nzcwtjloonumxpsqzarq.supabase.co/rest/v1/DiocesesParishDirectory?select=diocese_url&order=updated_at.asc&limit=5 "HTTP/2 200 OK"
+2025-09-01 23:04:17,324 - INFO - ====== WebDriver manager ======
+2025-09-01 23:04:17,409 - INFO - Get LATEST chromedriver version for google-chrome
+2025-09-01 23:04:17,511 - INFO - Get LATEST chromedriver version for google-chrome
+2025-09-01 23:04:17,604 - INFO - Driver [/home/tomk/.wdm/drivers/chromedriver/linux64/139.0.7258.154/chromedriver-linux64/chromedriver] found in cache
+2025-09-01 23:04:19,280 - INFO - file_cache is only supported with oauth2client<4.0.0
+2025-09-01 23:04:25,179 - INFO - HTTP Request: POST https://nzcwtjloonumxpsqzarq.supabase.co/rest/v1/DiocesesParishDirectory "HTTP/2 201 Created"
+2025-09-01 23:04:26,091 - INFO - file_cache is only supported with oauth2client<4.0.0
+2025-09-01 23:04:30,504 - INFO - HTTP Request: POST https://nzcwtjloonumxpsqzarq.supabase.co/rest/v1/DiocesesParishDirectory "HTTP/2 201 Created"
+2025-09-01 23:04:32,808 - INFO - file_cache is only supported with oauth2client<4.0.0
+2025-09-01 23:04:37,242 - INFO - HTTP Request: POST https://nzcwtjloonumxpsqzarq.supabase.co/rest/v1/DiocesesParishDirectory "HTTP/2 201 Created"
+2025-09-01 23:04:42,495 - INFO - file_cache is only supported with oauth2client<4.0.0
+2025-09-01 23:04:47,388 - INFO - HTTP Request: POST https://nzcwtjloonumxpsqzarq.supabase.co/rest/v1/DiocesesParishDirectory "HTTP/2 201 Created"
+2025-09-01 23:04:50,958 - INFO - HTTP Request: POST https://nzcwtjloonumxpsqzarq.supabase.co/rest/v1/DiocesesParishDirectory "HTTP/2 201 Created"
+2025-09-01 23:04:51,058 - INFO - 
+--- Running Parish Extraction ---
+2025-09-01 23:04:51,060 - INFO - ✅ Chrome is already installed and available.
+2025-09-01 23:04:51,207 - INFO - HTTP Request: GET https://nzcwtjloonumxpsqzarq.supabase.co/rest/v1/DiocesesParishDirectory?select=diocese_url%2Cparish_directory_url&parish_directory_url=not.is.null&limit=5 "HTTP/2 200 OK"
+2025-09-01 23:04:51,355 - INFO - HTTP Request: GET https://nzcwtjloonumxpsqzarq.supabase.co/rest/v1/Dioceses?select=Website%2CName&Website=in.%28%22http%3A%2F%2Fwww.utahcatholicdiocese.org%22%2C%22http%3A%2F%2Fwww.parma.org%2F%22%2C%22http%3A%2F%2Fwww.eparchyofpassaic.com%2F%22%2C%22http%3A%2F%2Fwww.dioceseofprovidence.org%2F%22%2C%22http%3A%2F%2Fwww.scdiocese.org%2F%22%29 "HTTP/2 200 OK"
+2025-09-01 23:04:51,357 - INFO - ====== WebDriver manager ======
+2025-09-01 23:04:51,440 - INFO - Get LATEST chromedriver version for google-chrome
+2025-09-01 23:04:51,537 - INFO - Get LATEST chromedriver version for google-chrome
+2025-09-01 23:04:51,627 - INFO - Driver [/home/tomk/.wdm/drivers/chromedriver/linux64/139.0.7258.154/chromedriver-linux64/chromedriver] found in cache
+2025-09-01 23:04:52,055 - INFO - Processing Diocese of Salt Lake City...
+2025-09-01 23:04:55,464 - INFO -     📍 Parish finder interface detected
+2025-09-01 23:04:55,472 - WARNING -     ⚠️ No parish elements found
+2025-09-01 23:04:55,473 - INFO -     📍 Enhanced diocese card layout detected - extracting with detail pages
+2025-09-01 23:04:55,473 - INFO -     📊 Found 0 parish cards
+2025-09-01 23:04:55,473 - INFO -     📊 Summary: 0 detailed extractions successful, 0 failed
+2025-09-01 23:05:37,769 - INFO -     ℹ️ No map container found, trying direct JS extraction...
+2025-09-01 23:05:37,881 - INFO - Processing Eparchy of Parma...
+2025-09-01 23:05:41,517 - INFO -     📍 Parish finder interface detected
+2025-09-01 23:05:41,518 - WARNING -     ⚠️ No parish elements found
+2025-09-01 23:05:41,519 - INFO -     📍 Enhanced diocese card layout detected - extracting with detail pages
+2025-09-01 23:05:41,519 - INFO -     📊 Found 0 parish cards
+2025-09-01 23:05:41,519 - INFO -     📊 Summary: 0 detailed extractions successful, 0 failed
+2025-09-01 23:06:23,848 - INFO -     ℹ️ No map container found, trying direct JS extraction...
+2025-09-01 23:06:23,963 - INFO - Processing Byzantine Catholic Eparchy of Passaic...
+2025-09-01 23:06:34,585 - INFO -     📍 Found map container: .map
+2025-09-01 23:06:34,759 - INFO -     📍 Parish finder interface detected
+2025-09-01 23:06:34,788 - WARNING -     ⚠️ No parish elements found
+2025-09-01 23:06:34,788 - INFO -     📍 Enhanced diocese card layout detected - extracting with detail pages
+2025-09-01 23:06:34,790 - INFO -     📊 Found 0 parish cards
+2025-09-01 23:06:34,790 - INFO -     📊 Summary: 0 detailed extractions successful, 0 failed
+2025-09-01 23:06:35,073 - INFO - HTTP Request: POST https://nzcwtjloonumxpsqzarq.supabase.co/rest/v1/Parishes "HTTP/2 201 Created"
+2025-09-01 23:06:35,074 - INFO -     ✅ 📌 Saved: Home
+2025-09-01 23:06:35,074 - INFO -         📊 Method: table, Confidence: 0.85
+2025-09-01 23:06:35,195 - INFO - HTTP Request: POST https://nzcwtjloonumxpsqzarq.supabase.co/rest/v1/Parishes "HTTP/2 201 Created"
+2025-09-01 23:06:35,196 - INFO -     ✅ 📌 Saved: End
+2025-09-01 23:06:35,196 - INFO -         📊 Method: table, Confidence: 0.85
+2025-09-01 23:06:35,316 - INFO - HTTP Request: POST https://nzcwtjloonumxpsqzarq.supabase.co/rest/v1/Parishes "HTTP/2 201 Created"
+2025-09-01 23:06:35,317 - INFO -     ✅ 📌 Saved: Page Up
+2025-09-01 23:06:35,317 - INFO -         📊 Method: table, Confidence: 0.85
+2025-09-01 23:06:35,447 - INFO - HTTP Request: POST https://nzcwtjloonumxpsqzarq.supabase.co/rest/v1/Parishes "HTTP/2 201 Created"
+2025-09-01 23:06:35,448 - INFO -     ✅ 📌 Saved: Page Down
+2025-09-01 23:06:35,448 - INFO -         📊 Method: table, Confidence: 0.85
+2025-09-01 23:06:35,448 - INFO -   📊 Results: 4 saved, 0 skipped, 0 with detailed info
+2025-09-01 23:06:35,448 - INFO -   📈 Success rate: 100.0%
+2025-09-01 23:06:35,448 - INFO - Processing Diocese of Providence...
+2025-09-01 23:06:38,823 - INFO -     📍 Parish finder interface detected
+2025-09-01 23:06:38,824 - WARNING -     ⚠️ No parish elements found
+2025-09-01 23:06:38,824 - INFO -     📍 Enhanced diocese card layout detected - extracting with detail pages
+2025-09-01 23:06:38,824 - INFO -     📊 Found 0 parish cards
+2025-09-01 23:06:38,824 - INFO -     📊 Summary: 0 detailed extractions successful, 0 failed
+2025-09-01 23:07:20,944 - INFO -     ℹ️ No map container found, trying direct JS extraction...
+2025-09-01 23:07:21,074 - INFO - Processing Diocese of Sioux City...
+2025-09-01 23:07:25,135 - INFO -     📍 Parish finder interface detected
+2025-09-01 23:07:25,137 - INFO -     📊 Found 7 parish elements using li.site
+2025-09-01 23:07:25,141 - WARNING -       ⚠️ Skipped element 1: No valid parish data
+2025-09-01 23:07:25,141 - WARNING -       ⚠️ Skipped element 2: No valid parish data
+2025-09-01 23:07:25,147 - WARNING -       ⚠️ Skipped element 3: No valid parish data
+2025-09-01 23:07:25,148 - WARNING -       ⚠️ Skipped element 4: No valid parish data
+2025-09-01 23:07:25,152 - WARNING -       ⚠️ Skipped element 5: No valid parish data
+2025-09-01 23:07:25,152 - WARNING -       ⚠️ Skipped element 6: No valid parish data
+2025-09-01 23:07:25,153 - WARNING -       ⚠️ Skipped element 7: No valid parish data
+2025-09-01 23:07:25,153 - INFO -     📊 Successfully extracted 0 parishes from parish finder
+2025-09-01 23:07:25,153 - INFO -     📍 Enhanced diocese card layout detected - extracting with detail pages
+2025-09-01 23:07:25,153 - INFO -     📊 Found 0 parish cards
+2025-09-01 23:07:25,154 - INFO -     📊 Summary: 0 detailed extractions successful, 0 failed
+2025-09-01 23:08:07,217 - INFO -     ℹ️ No map container found, trying direct JS extraction...
+2025-09-01 23:08:07,396 - INFO -     ⏭️ Skipped: View the parishes within each pastorate and their map locations (not a parish)
+2025-09-01 23:08:07,396 - INFO -   📊 Results: 0 saved, 1 skipped, 0 with detailed info
+2025-09-01 23:08:07,482 - INFO - 
+--- Running Schedule Extraction ---
+2025-09-01 23:08:07,716 - INFO - HTTP Request: GET https://nzcwtjloonumxpsqzarq.supabase.co/rest/v1/Parishes?select=Web&Web=not.is.null&limit=5 "HTTP/2 200 OK"
+2025-09-01 23:08:44,485 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 23:08:44,821 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 23:08:45,487 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 23:08:45,784 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 23:08:46,505 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 23:08:46,886 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 23:08:48,095 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 23:08:48,375 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 23:09:01,546 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 23:09:01,876 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 23:09:02,507 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 23:09:02,845 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 23:09:03,582 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 23:09:04,099 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 23:09:05,107 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 23:09:05,377 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 23:09:15,974 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 23:09:17,070 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 23:09:17,521 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 23:09:17,928 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 23:09:18,554 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 23:09:19,254 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 23:09:21,384 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 23:09:21,871 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 23:09:22,646 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 23:09:23,444 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 23:09:48,435 - INFO - HTTP Request: POST https://nzcwtjloonumxpsqzarq.supabase.co/rest/v1/ParishSchedules?on_conflict=url&columns=%22adoration_page%22%2C%22reconciliation_page%22%2C%22adoration_info%22%2C%22parish_name%22%2C%22url%22%2C%22offers_adoration%22%2C%22reconciliation_info%22%2C%22scraped_at%22%2C%22offers_reconciliation%22 "HTTP/2 200 OK"
+2025-09-01 23:09:48,436 - INFO - 
+Pipeline finished.
