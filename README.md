@@ -334,6 +334,22 @@ if __name__ == "__main__":
     main()
 ```
 
+## Reporting and Analytics
+
+### `report_statistics.py`
+
+This script connects to the Supabase database to provide statistics and visualizations of the collected data. It reports the current number of records in key tables and generates charts showing how these numbers have changed over time.
+
+**Usage:**
+
+```bash
+/home/tomk/USCCB/venv/bin/python report_statistics.py
+```
+
+The script will generate PNG image files (e.g., `dioceses_records_over_time.png`, `parishes_records_over_time.png`) in the current directory, visualizing the record counts over time.
+
+---
+
 ## Automation and Scheduling
 
 ### Using Cron (Linux/macOS)
