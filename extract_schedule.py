@@ -74,7 +74,11 @@ def main(num_parishes=config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE):
             response = requests.get(urljoin(url, '/sitemap.xml'))
             if response.status_code == 200:
                 soup = BeautifulSoup(response.content, 'xml')
-                return [loc.text for loc in soup.find_all('loc')]
+                urls = []
+                for loc in soup.find_all('loc'):
+                    if loc.text and loc.text.startswith(('http://', 'https://')) and 'default' not in loc.text:
+                        urls.append(loc.text)
+                return urls
         except:
             pass
         return []
@@ -133,6 +137,7 @@ def main(num_parishes=config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE):
     def scrape_parish_data(url):
         sitemap_urls = get_sitemap_urls(url)
         all_urls = [url] + sitemap_urls
+        visited_urls = set()
 
         logger.info(f"Found {len(all_urls)} URLs on Sitemap page:")
         for sitemap_url in all_urls:
@@ -143,7 +148,7 @@ def main(num_parishes=config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE):
                 response = requests.get(sitemap_url)
                 if response.status_code == 200:
                     soup = BeautifulSoup(response.content, 'html.parser')
-                    page_links = [a['href'] for a in soup.find_all('a', href=True)]
+                    page_links = [urljoin(sitemap_url, a['href']) for a in soup.find_all('a', href=True)]
                 else:
                     page_links = []
             except:
@@ -159,7 +164,18 @@ def main(num_parishes=config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE):
             adoration_page = ""
 
             for page_url in [sitemap_url] + page_links:
-                logger.info(f"Checking {page_url}...")
+                if page_url in visited_urls:
+                    continue
+                visited_urls.add(page_url)
+
+                if not page_url.startswith(('http://', 'https://')):
+                    continue
+
+                # Ignore links to files
+                if re.search(r'\.(pdf|jpg|jpeg|png|gif|svg|zip|docx|xlsx|pptx|mp3|mp4|avi|mov)$', page_url, re.IGNORECASE):
+                    continue
+
+                logger.debug(f"Checking {page_url}...")
 
                 if not reconciliation_found and search_for_keywords(page_url, ['Reconciliation', 'Confession']):
                     reconciliation_found = True
@@ -197,15 +213,37 @@ def main(num_parishes=config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE):
     # Cell 7: Fetch parish URLs from Supabase and process
     parish_urls = []
     try:
-        query = supabase.table('Parishes').select('Web').not_.is_('Web', 'null')
-        if num_parishes != 0:
-            query = query.limit(num_parishes)
+        # Fetch all parishes with a valid URL
+        all_parishes_response = supabase.table('Parishes').select('Web').not_.is_('Web', 'null').execute()
+        all_parish_urls = {p['Web'] for p in all_parishes_response.data if p['Web']}
+        logger.info(f"Found {len(all_parish_urls)} parishes with websites in the 'Parishes' table.")
+
+        # Fetch all parishes that already have a schedule, ordered by oldest first
+        schedules_response = supabase.table('ParishSchedules').select('url, scraped_at').order('scraped_at').execute()
+        parishes_with_schedules = {item['url'] for item in schedules_response.data}
+        sorted_schedules = [item['url'] for item in schedules_response.data]
+        logger.info(f"Found {len(parishes_with_schedules)} parishes in the 'ParishSchedules' table.")
+
+        # Prioritize parishes that are not yet in ParishSchedules
+        parishes_to_scrape_new = [url for url in all_parish_urls if url not in parishes_with_schedules]
+        logger.info(f"Found {len(parishes_to_scrape_new)} new parishes to scrape.")
+
+        # Add parishes to rescrape, oldest first
+        parishes_to_rescrape = [url for url in sorted_schedules if url in all_parish_urls]
         
-        response = query.execute()
-        parish_urls = [p['Web'] for p in response.data if p['Web']]
-        logger.info(f"Fetched {len(parish_urls)} parish URLs from Supabase.")
+        # Combine the lists
+        prioritized_urls = parishes_to_scrape_new + parishes_to_rescrape
+
+        # Limit the number of parishes to process
+        if num_parishes != 0:
+            parish_urls = prioritized_urls[:num_parishes]
+        else:
+            parish_urls = prioritized_urls
+
+        logger.info(f"Processing {len(parish_urls)} parishes based on priority.")
+
     except Exception as e:
-        logger.info(f"Error fetching parish URLs from Supabase: {e}")
+        logger.error(f"Error fetching and prioritizing parish URLs from Supabase: {e}")
 
     results = []
     for url in parish_urls:
@@ -239,7 +277,7 @@ def main(num_parishes=config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE):
             response = supabase.table('ParishSchedules').upsert(results, on_conflict='url').execute()
 
             if hasattr(response, 'error') and response.error:
-                logger.info(f"Error saving data to Supabase: {response.error}")
+                logger.error(f"Error saving data to Supabase: {response.error}")
             else:
                 logger.info(f"Successfully saved {len(results)} records to Supabase table 'ParishSchedules'.")
                 # Optional: Verify data by fetching from Supabase
@@ -248,7 +286,7 @@ def main(num_parishes=config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE):
                 # logger.info(verify_response.data)
 
         except Exception as e:
-            logger.info(f"An unexpected error occurred during Supabase upsert: {e}")
+            logger.error(f"An unexpected error occurred during Supabase upsert: {e}")
     else:
         logger.info("No results to save to Supabase.")
 
@@ -283,4 +321,3 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
     main(args.num_parishes)
-
