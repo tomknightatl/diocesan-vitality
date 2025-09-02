@@ -115,11 +115,35 @@ The project uses Supabase (PostgreSQL) with the following key tables:
 
 1. **Install Python 3.x** (3.8 or higher recommended)
 
+2. **Install Google Chrome**
+
+   The project uses Selenium for web scraping, which requires a Chrome browser and ChromeDriver. While `webdriver-manager` will attempt to download the correct ChromeDriver automatically, it does *not* install Chrome itself.
+
+   **For Linux (Debian/Ubuntu-based systems):**
+
+   ```bash
+   # Download the Google Chrome signing key and save it to /usr/share/keyrings/
+   wget -O- https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg
+
+   # Add the Google Chrome repository to your sources list, referencing the new keyring file
+   echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list > /dev/null
+
+   # Update your package list
+   sudo apt update
+
+   # Install Google Chrome
+   sudo apt install google-chrome-stable
+   ```
+
+   **For other operating systems:**
+
+   Please download and install Chrome from the official website: [https://www.google.com/chrome/](https://www.google.com/chrome/)
+
 ### Environment Setup
 
 This project uses a virtual environment to manage dependencies and environment variables to securely store API keys.
 
-1.  **Create and Activate a Virtual Environment**
+3.  **Create and Activate a Virtual Environment**
 
     It is highly recommended to use a virtual environment to manage project dependencies.
 
@@ -140,7 +164,7 @@ This project uses a virtual environment to manage dependencies and environment v
 
     Your command prompt should now show `(venv)` indicating the virtual environment is active.
 
-2.  **Install Dependencies**
+4.  **Install Dependencies**
 
     With your virtual environment activated, install the required Python packages using `pip`:
 
@@ -148,7 +172,7 @@ This project uses a virtual environment to manage dependencies and environment v
     pip install -r requirements.txt
     ```
 
-3.  **Configure Environment Variables**
+5.  **Configure Environment Variables**
 
     This project uses environment variables to securely store API keys and other sensitive information. You need to create a `.env` file in the root directory of the project.
 
@@ -224,9 +248,9 @@ This script will:
 ### Step 2: Find Parish Directories
 
 ```bash
+python find_parishes.py --max_dioceses_to_process 0
+# or simply:
 python find_parishes.py
-# or use the older version if needed:
-python "02_Find_Parish_Directories (older but working).py"
 ```
 
 This script will:
@@ -236,15 +260,26 @@ This script will:
 - Use Google Custom Search as a fallback method
 - Store discovered URLs in the `DiocesesParishDirectory` table
 
+**Parameters**:
+- `--max_dioceses_to_process`: Optional. Maximum number of dioceses to process. Defaults to 5. Set to 0 for no limit.
+
 **Configuration**: Before running, ensure you've set:
-- `MAX_DIOCESES_TO_PROCESS` (line ~20 in the script) to control how many dioceses to process
 - Mock/live API flags (`use_mock_genai_direct_page`, `use_mock_genai_snippet`, `use_mock_search_engine`) to `False` for live API calls
 
 ### Step 3: Extract Parish Information
 
 ```bash
+python extract_parishes.py --num_dioceses 0 --num_parishes_per_diocese 0
+# or simply:
 python extract_parishes.py
 ```
+
+This script will:
+- Extract detailed parish information from diocese websites.
+
+**Parameters**:
+- `--num_dioceses`: Optional. Maximum number of dioceses to extract from. Defaults to 5. Set to 0 for no limit.
+- `--num_parishes_per_diocese`: Optional. Maximum number of parishes to extract from each diocese. Defaults to 5. Set to 0 for no limit.
 
 ### Step 4: Extract Liturgical Information (Optional)
 

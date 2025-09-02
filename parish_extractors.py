@@ -260,10 +260,7 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
             print(f"      ❌ {parish_name}: {error_msg}")
             return {'success': False, 'error': error_msg}
 
-    except Exception as e:
-            error_msg = f"Failed to extract details: {str(e)[:100]}"
-            logger.error(f"      ❌ {parish_name}: {error_msg}")
-            return {'success': False, 'error': error_msg}
+    
 
     def _extract_contact_info(self, soup: BeautifulSoup, result: Dict):
         """Extract contact information from parish detail page"""
@@ -643,7 +640,7 @@ class ParishFinderExtractor(BaseExtractor):
             logger.warning(f"        ⚠️ Error parsing parish element {element_num}: {str(e)[:50]}...")
             return None
 
-    def _extract_from_site_info(self, name: str, city: str, site_info, element, base_url: str) -> Optional[ParishData>:
+    def _extract_from_site_info(self, name: str, city: str, site_info, element, base_url: str) -> Optional[ParishData]:
         """Extract detailed information from siteInfo section"""
         try:
             main_section = site_info.find('div', class_='main')
@@ -1182,7 +1179,7 @@ class ImprovedGenericExtractor(BaseExtractor):
 # MAIN PROCESSING FUNCTION
 # =============================================================================
 
-def process_diocese_with_detailed_extraction(diocese_info: Dict, driver) -> Dict:
+def process_diocese_with_detailed_extraction(diocese_info: Dict, driver, max_parishes: int = 0) -> Dict:
     """
     Enhanced processing function that extracts detailed parish information
     by navigating to individual parish detail pages
@@ -1316,8 +1313,12 @@ def process_diocese_with_detailed_extraction(diocese_info: Dict, driver) -> Dict
             # Remove duplicates and validate
             unique_parishes = []
             seen_names = set()
+            parish_count = 0
 
             for parish in parishes:
+                if max_parishes != 0 and parish_count >= max_parishes:
+                    break
+
                 name_key = parish.name.lower().strip()
                 if name_key not in seen_names and len(parish.name) > 2:
                     # Set the source URLs for each parish
@@ -1325,6 +1326,7 @@ def process_diocese_with_detailed_extraction(diocese_info: Dict, driver) -> Dict
                     parish.parish_directory_url = parish_directory_url
                     unique_parishes.append(parish)
                     seen_names.add(name_key)
+                    parish_count += 1
 
             result['parishes_found'] = unique_parishes
             result['success'] = True

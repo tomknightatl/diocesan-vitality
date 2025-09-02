@@ -209,17 +209,26 @@ def close_driver():
 # Cell 4
 # User-configurable-parameters
 import os # For os.path.exists logic if adapted
+import argparse # Import argparse
+
 print("--- User Configurable Parameters Cell Initializing ---")
 
 # --- Processing Limit Configuration ---
-# Set the maximum number of random dioceses to process (None = process all)
-# This limits processing to help with testing or API quota management
-MAX_DIOCESES_TO_PROCESS = 1000  # Change this number or set to None to process all dioceses
+parser = argparse.ArgumentParser(description="Find parish directory URLs on diocesan websites.")
+parser.add_argument(
+    "--max_dioceses_to_process",
+    type=int,
+    default=5,
+    help="Maximum number of dioceses to process. Set to 0 for no limit. Defaults to 5."
+)
+args = parser.parse_args()
 
-if MAX_DIOCESES_TO_PROCESS:
+MAX_DIOCESES_TO_PROCESS = args.max_dioceses_to_process
+
+if MAX_DIOCESES_TO_PROCESS != 0:
     print(f"Processing will be limited to {MAX_DIOCESES_TO_PROCESS} randomly selected dioceses.")
 else:
-    print("Processing will include all dioceses that lack parish directory URLs.")
+    print("Processing will include all dioceses that lack parish directory URLs (no limit).")
 
 # --- Supabase Configuration ---
 SUPABASE_URL = os.getenv('SUPABASE_URL')
