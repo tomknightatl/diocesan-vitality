@@ -5,6 +5,7 @@ from extract_dioceses import main as extract_dioceses_main
 from find_parishes import find_parish_directories
 from extract_parishes import main as extract_parishes_main
 from extract_schedule import main as extract_schedule_main
+from report_statistics import main as report_statistics_main
 
 logger = get_logger(__name__)
 
@@ -14,6 +15,7 @@ def main():
     parser.add_argument("--skip_parish_directories", action="store_true", help="Skip finding parish directories.")
     parser.add_argument("--skip_parishes", action="store_true", help="Skip the parish extraction step.")
     parser.add_argument("--skip_schedules", action="store_true", help="Skip the schedule extraction step.")
+    parser.add_argument("--skip_reporting", action="store_true", help="Skip the reporting step.")
     parser.add_argument("--max_dioceses", type=int, default=config.DEFAULT_MAX_DIOCESES, help="Max number of dioceses to extract.")
     parser.add_argument("--max_parishes_per_diocese", type=int, default=config.DEFAULT_MAX_PARISHES_PER_DIOCESE, help="Max parishes to extract per diocese.")
     parser.add_argument("--num_parishes_for_schedule", type=int, default=config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE, help="Number of parishes to extract schedules for.")
@@ -60,6 +62,15 @@ def main():
             logger.error(f"Schedule extraction failed: {e}", exc_info=True)
     else:
         logger.info("\n--- Skipping Schedule Extraction ---")
+
+    if not args.skip_reporting:
+        try:
+            logger.info("\n--- Running Reporting ---")
+            report_statistics_main()
+        except Exception as e:
+            logger.error(f"Reporting failed: {e}", exc_info=True)
+    else:
+        logger.info("\n--- Skipping Reporting ---")
 
     logger.info("\nPipeline finished.")
 
