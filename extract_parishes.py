@@ -25,9 +25,23 @@ from parish_extractors import (
 load_dotenv()
 
 def main():
-    # Configuration
-    MAX_DIOCESES = 5  # Adjust as needed
-    
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Extract parish information from diocese websites.")
+    parser.add_argument(
+        "--num_dioceses",
+        type=int,
+        default=5,
+        help="Maximum number of dioceses to extract from. Set to 0 for no limit. Defaults to 5.",
+    )
+    parser.add_argument(
+        "--num_parishes_per_diocese",
+        type=int,
+        default=5,
+        help="Maximum number of parishes to extract from each diocese. Set to 0 for no limit. Defaults to 5.",
+    )
+    args = parser.parse_args()
+
     # Ensure Chrome is installed
     if not ensure_chrome_installed():
         print("Chrome installation failed. Please install Chrome manually.")
@@ -40,9 +54,14 @@ def main():
     )
     
     # Get dioceses with parish directory URLs
-    response = supabase.table('DiocesesParishDirectory').select(
+    query = supabase.table('DiocesesParishDirectory').select(
         'diocese_url, parish_directory_url'
-    ).not_.is_('parish_directory_url', 'null').limit(MAX_DIOCESES).execute()
+    ).not_.is_('parish_directory_url', 'null')
+    
+    if args.num_dioceses != 0:
+        query = query.limit(args.num_dioceses)
+    
+    response = query.execute()
     
     dioceses = response.data if response.data else []
     
@@ -66,7 +85,7 @@ def main():
             }
             
             print(f"Processing {diocese_info['name']}...")
-            result = process_diocese_with_detailed_extraction(diocese_info, driver)
+            result = process_diocese_with_detailed_extraction(diocese_info, driver, args.num_parishes_per_diocese)
             
             # Save parishes to database
             if result['parishes_found']:

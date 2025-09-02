@@ -443,7 +443,7 @@ def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_name: s
                 continue
 
             # Use existing upsert logic
-            response = supabase.table('Parishes').upsert(clean_data, on_conflict='Name,diocese_url').execute()
+            response = supabase.table('Parishes').upsert(clean_data).execute()
 
             if hasattr(response, 'error') and response.error:
                 logger.error(f"    ❌ Database error for {parish.name}: {response.error}")
