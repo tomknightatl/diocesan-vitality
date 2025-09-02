@@ -36,40 +36,23 @@ This project is a comprehensive data collection and analysis system for U.S. Cat
 
 ## Project Files
 
-### Core Data Collection Scripts
+### Core Pipeline
+- **`run_pipeline.py`**: The main entry point for running the entire data extraction pipeline. This script orchestrates the execution of the other modules.
 
-- **`extract_dioceses.py`**: Initial scraping of U.S. dioceses from the USCCB website. Populates the foundational `Dioceses` table with names, addresses, and official websites.
+### Data Extraction Modules
 
-- **`find_parishes.py` / `02_Find_Parish_Directories (older but working).py`**: AI-powered system that analyzes diocese websites to locate parish directory pages. Uses Google Gemini AI and custom search APIs with intelligent fallback mechanisms.
+- **`extract_dioceses.py`**: Scrapes the USCCB website to build the initial list of dioceses.
+- **`find_parishes.py`**: Analyzes diocese websites to find the parish directory URL.
+- **`extract_parishes.py`**: Extracts parish information from the parish directory URLs.
+- **`extract_schedule.py`**: Extracts liturgical schedules (Adoration and Reconciliation) from parish websites.
 
-### Parish Extraction Modules
+### Core Components & Utilities
 
-- **`parish_extraction_core.py`**: Core components for parish extraction including:
-  - Data models and enums (DiocesePlatform, ParishListingType, ParishData)
-  - Pattern detection system for website analysis
-  - Base extractor classes and utilities
-  - WebDriver setup functions
-  - Database integration and Supabase utilities
-  - Quality analysis functions
-
-- **`parish_extractors.py`**: Specialized extractor implementations featuring:
-  - Enhanced Diocese Card Extractor with detail page navigation
-  - Parish Finder Extractor for eCatholic sites
-  - Table Extractor for HTML-based listings
-  - Interactive Map Extractor for JavaScript maps
-  - Generic Extractor as intelligent fallback
-  - Main processing function orchestrating extraction
-
-- **`Extract_Parish_From_Diocese_Directory.py`**: Legacy monolithic script containing all parish extraction functionality (now split into the above two modules)
-
-### Specialized Tools
-
-- **`Find_Adoration_and_Reconciliation_information_for_a_Parish.py`**: Targeted extraction of specific liturgical information including Adoration and Reconciliation schedules from parish websites.
-
-### Utility Modules
-
-- **`db_utils.py`**: Database interaction utilities with connection management, summary generation, and table analysis functions.
-- **`llm_utils.py`**: Google Gemini AI integration with retry logic and error handling for robust AI-powered content analysis.
+- **`config.py`**: Centralized configuration for the project, including API keys and pipeline defaults.
+- **`parish_extraction_core.py`**: Core components for parish extraction, including data models and database utilities.
+- **`parish_extractors.py`**: Specialized extractor implementations for different website platforms.
+- **`core/`**: Directory containing core modules for database connection (`db.py`), WebDriver setup (`driver.py`), and utility functions (`utils.py`).
+- **`llm_utils.py`**: Utilities for interacting with the Google Gemini AI.
 
 ## Database Schema
 
@@ -279,43 +262,7 @@ python extract_schedule.py
 ```
 This script scrapes parish websites for Adoration and Reconciliation schedules. Use `--num_parishes` to limit how many parishes are processed.
 
-## Script Modifications for Standalone Execution
 
-When converting from Jupyter notebooks to standalone Python scripts, make these changes:
-
-### 1. Remove Jupyter-Specific Commands
-Replace or remove:
-- `get_ipython().system('command')` → Use `subprocess.run(['command'])`
-- `!pip install package` → Run separately or use `subprocess.run(['pip', 'install', 'package'])`
-- `from google.colab import userdata` → Use `os.getenv()` with python-dotenv
-
-### 2. Handle Chrome Installation
-For non-Colab environments, ensure Chrome is installed system-wide or modify the `ensure_chrome_installed()` function for your OS.
-
-### 3. Environment Variables
-Replace Colab secrets with environment variables:
-```python
-# Instead of:
-from google.colab import userdata
-SUPABASE_URL = userdata.get('SUPABASE_URL')
-
-# Use:
-from dotenv import load_dotenv
-import os
-load_dotenv()
-SUPABASE_URL = os.getenv('SUPABASE_URL')
-```
-
-### 4. Create a Main Function
-Wrap execution code in a main function:
-```python
-def main():
-    # Your execution code here
-    pass
-
-if __name__ == "__main__":
-    main()
-```
 
 ## Reporting and Analytics
 
