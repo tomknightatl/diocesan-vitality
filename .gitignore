@@ -1,3 +1,6 @@
 .env
 venv/
-@.env:Zone.Identifier
+.env:Zone.Identifier
+__pycache__/
+scraping.log
+data.db

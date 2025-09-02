@@ -203,12 +203,12 @@ def scrape_parish_data(url):
 # Cell 7: Fetch parish URLs from Supabase and process
 parish_urls = []
 try:
-    query = supabase.table('Parishes').select('Website').not_.is_('Website', 'null')
+    query = supabase.table('Parishes').select('Web').not_.is_('Web', 'null')
     if args.num_parishes != 0:
         query = query.limit(args.num_parishes)
     
     response = query.execute()
-    parish_urls = [p['Website'] for p in response.data if p['Website']]
+    parish_urls = [p['Web'] for p in response.data if p['Web']]
     print(f"Fetched {len(parish_urls)} parish URLs from Supabase.")
 except Exception as e:
     print(f"Error fetching parish URLs from Supabase: {e}")
@@ -250,12 +250,45 @@ print("Data saved to parish_data.db")
 
 
 # Cell 10
-# Verify data in the database
-conn = sqlite3.connect('data.db')
-df_from_db = pd.read_sql_query("SELECT * FROM AdorationReconcilation", conn)
-conn.close()
+# In[ ]:
 
-print(df_from_db)
+
+# Cell 9: Save extracted data to Supabase
+
+# Prepare data for Supabase upsert
+# The 'results' list already contains dictionaries with the necessary data.
+# We'll use these directly.
+
+if results:
+    try:
+        # Supabase upsert will create the table if it doesn't exist
+        # and infer the schema from the first upserted object.
+        # It's good practice to have a primary key for upsert to work correctly.
+        # Assuming 'url' can act as a unique identifier for each parish schedule.
+        response = supabase.table('ParishSchedules').upsert(results, on_conflict='url').execute()
+
+        if hasattr(response, 'error') and response.error:
+            print(f"Error saving data to Supabase: {response.error}")
+        else:
+            print(f"Successfully saved {len(results)} records to Supabase table 'ParishSchedules'.")
+            # Optional: Verify data by fetching from Supabase
+            # print("Verifying data in Supabase...")
+            # verify_response = supabase.table('ParishSchedules').select('*').limit(5).execute()
+            # print(verify_response.data)
+
+    except Exception as e:
+        print(f"An unexpected error occurred during Supabase upsert: {e}")
+else:
+    print("No results to save to Supabase.")
+
+
+# In[ ]:
+
+
+# Cell 10: (Removed SQLite verification, now handled by Supabase upsert and optional verification)
+# This cell previously verified data in the local SQLite database.
+# With data now being saved to Supabase, verification would involve querying Supabase.
+# The optional verification code is commented out in Cell 9.
 
 
 # In[ ]:
