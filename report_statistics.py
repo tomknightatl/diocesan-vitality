@@ -63,8 +63,24 @@ def plot_time_series(time_series_data: dict, table_name: str):
 
     fig, ax = plt.subplots(figsize=(12, 6))
     
+    min_date, max_date = None, None
+
     for col_name, df_ts in time_series_data.items():
         ax.plot(df_ts['date'], df_ts['count'], marker='o', linestyle='-', label=f'Cumulative Records by {col_name}')
+        
+        # Update min and max dates
+        if not df_ts.empty:
+            current_min = df_ts['date'].min()
+            current_max = df_ts['date'].max()
+            if min_date is None or current_min < min_date:
+                min_date = current_min
+            if max_date is None or current_max > max_date:
+                max_date = current_max
+
+    # Set x-axis limits with a 10-day padding
+    if min_date and max_date:
+        from datetime import timedelta
+        ax.set_xlim(min_date - timedelta(days=10), max_date + timedelta(days=10))
 
     ax.set_title(f'Cumulative Number of Records in {table_name} Over Time')
     ax.set_xlabel('Date')
