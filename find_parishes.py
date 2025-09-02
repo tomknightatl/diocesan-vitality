@@ -342,7 +342,7 @@ def get_page_with_retry(driver_instance, url):
     driver_instance.get(url)
 
 
-def find_parish_directories(max_dioceses_to_process=5):
+def find_parish_directories(max_dioceses_to_process=config.DEFAULT_MAX_DIOCESES):
     """Main function to run the parish directory finder."""
     
     if config.GENAI_API_KEY:

@@ -17,6 +17,10 @@ def setup_driver():
             chrome_options.add_argument("--disable-dev-shm-usage")
             chrome_options.add_argument("--disable-gpu")
             chrome_options.add_argument("window-size=1920,1080")
+            chrome_options.add_argument("--allow-insecure-localhost")
+            chrome_options.add_argument("--allow-running-insecure-content")
+            chrome_options.add_argument("--unsafely-treat-insecure-origin-as-secure")
+            chrome_options.add_argument("--cipher-suite-blacklist=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256")
             driver = webdriver.Chrome(
                 service=Service(ChromeDriverManager().install()), options=chrome_options
             )
