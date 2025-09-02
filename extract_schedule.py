@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 import argparse # Added
 from dotenv import load_dotenv # Added
 from supabase import create_client, Client # Added
+import config
 
 
 # In[ ]:
