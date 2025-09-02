@@ -17,7 +17,7 @@ from parish_extractors import (ensure_chrome_installed,
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def main(num_dioceses=5, num_parishes_per_diocese=5):
+def main(num_dioceses=config.DEFAULT_MAX_DIOCESES, num_parishes_per_diocese=config.DEFAULT_MAX_PARISHES_PER_DIOCESE):
     """
     Main function to extract parish information from diocese websites.
     """

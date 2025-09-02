@@ -11,8 +11,6 @@ import requests
 from bs4 import BeautifulSoup
 import re
 from urllib.parse import urljoin
-import sqlite3
-import pandas as pd
 import os
 from datetime import datetime, timezone
 import argparse # Added
@@ -23,7 +21,7 @@ from supabase import create_client, Client # Added
 # In[ ]:
 
 
-def main(num_parishes=5):
+def main(num_parishes=config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE):
     # Cell 2: Command-line arguments and Supabase setup
     load_dotenv() # Load environment variables from .env file
 
@@ -219,29 +217,6 @@ def main(num_parishes=5):
         print(f"Completed scraping {url}")
 
 
-    # In[ ]:
-
-
-    # Cell 8
-    df = pd.DataFrame(results)
-    print(df)
-
-
-    # In[ ]:
-
-
-    # Cell 9
-    conn = sqlite3.connect('data.db')
-    df.to_sql('AdorationReconcilation', conn, if_exists='replace', index=False)
-    conn.close()
-
-    print("Data saved to parish_data.db")
-
-
-    # In[ ]:
-
-
-    # Cell 10
     # In[ ]:
 
 

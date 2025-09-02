@@ -99,7 +99,7 @@ def extract_dioceses_data(soup):
 
     return dioceses
 
-def main(max_dioceses=5):
+def main(max_dioceses=config.DEFAULT_MAX_DIOCESES):
     """Main function to extract and store dioceses information."""
     url = "https://www.usccb.org/about/bishops-and-dioceses/all-dioceses"
     soup = get_soup(url)
