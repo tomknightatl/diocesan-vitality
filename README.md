@@ -227,74 +227,57 @@ If you encounter errors like "Permission denied" or "Chrome not found" when runn
 
 ## Running the System
 
-### Step 1: Build Diocese Database
+The primary method for running the data collection process is via the `run_pipeline.py` script. This script orchestrates the entire workflow, from diocese extraction to schedule collection, and includes options to skip specific stages.
+
+### Running the Full Pipeline
+
+To run the entire pipeline with default settings (processing 5 of each item), simply run:
 
 ```bash
-python extract_dioceses.py --max_dioceses 0
-# or simply:
+python run_pipeline.py
+```
+
+You can customize the run with the following parameters:
+- `--skip_dioceses`: Skip the diocese extraction step.
+- `--skip_parish_directories`: Skip finding parish directories.
+- `--skip_parishes`: Skip the parish extraction step.
+- `--skip_schedules`: Skip the schedule extraction step.
+- `--max_dioceses <number>`: Set the maximum number of dioceses to process.
+- `--max_parishes_per_diocese <number>`: Set the maximum number of parishes to extract per diocese.
+- `--num_parishes_for_schedule <number>`: Set the number of parishes to extract schedules for.
+
+For example, to run the entire pipeline without any limits, you would use:
+```bash
+python run_pipeline.py --max_dioceses 0 --max_parishes_per_diocese 0 --num_parishes_for_schedule 0
+```
+
+### Running Individual Scripts (for Testing or Debugging)
+
+While the pipeline is the recommended approach, you can run the individual scripts for testing, debugging, or targeted data extraction.
+
+#### Step 1: Build Diocese Database
+```bash
 python extract_dioceses.py
 ```
+This script scrapes the USCCB website for all U.S. dioceses, extracts their details, and stores them in the `Dioceses` table. Use the `--max_dioceses` argument to limit the number of dioceses processed.
 
-This script will:
-- Scrape the USCCB website for all U.S. dioceses
-- Extract names, addresses, and website URLs
-- Store the data in the Supabase `Dioceses` table. If a diocese with the same name already exists, its `extracted_at` timestamp will be updated; otherwise, a new record will be inserted.
-
-**Parameters**:
-- `--max_dioceses`: Optional. Maximum number of dioceses to extract. Defaults to 5. Set to 0 or omit for no limit.
-
-**Note**: The script contains some Jupyter-specific code (like `get_ipython()`). You may need to comment out or remove these lines when running as a standalone Python script.
-
-### Step 2: Find Parish Directories
-
+#### Step 2: Find Parish Directories
 ```bash
-python find_parishes.py --max_dioceses_to_process 0
-# or simply:
 python find_parishes.py
 ```
+This script fetches dioceses without parish directory URLs, uses Selenium and AI to find the correct pages, and stores them in the `DiocesesParishDirectory` table. Use `--max_dioceses_to_process` to limit the run.
 
-This script will:
-- Fetch dioceses from the database that don't have parish directory URLs
-- Use Selenium to load each diocese website
-- Apply AI analysis to identify parish directory links
-- Use Google Custom Search as a fallback method
-- Store discovered URLs in the `DiocesesParishDirectory` table
-
-**Parameters**:
-- `--max_dioceses_to_process`: Optional. Maximum number of dioceses to process. Defaults to 5. Set to 0 for no limit.
-
-**Configuration**: Before running, ensure you've set:
-- Mock/live API flags (`use_mock_genai_direct_page`, `use_mock_genai_snippet`, `use_mock_search_engine`) to `False` for live API calls
-
-### Step 3: Extract Parish Information
-
+#### Step 3: Extract Parish Information
 ```bash
-python extract_parishes.py --num_dioceses 0 --num_parishes_per_diocese 0
-# or simply:
 python extract_parishes.py
 ```
+This script extracts detailed parish information from the directory URLs. Use `--num_dioceses` and `--num_parishes_per_diocese` to limit the scope.
 
-This script will:
-- Extract detailed parish information from diocese websites.
-
-**Parameters**:
-- `--num_dioceses`: Optional. Maximum number of dioceses to extract from. Defaults to 5. Set to 0 for no limit.
-- `--num_parishes_per_diocese`: Optional. Maximum number of parishes to extract from each diocese. Defaults to 5. Set to 0 for no limit.
-
-### Step 4: Extract Liturgical Schedule 
-
+#### Step 4: Extract Liturgical Schedule
 ```bash
-python extract_schedule.py --num_parishes 0
-# or simply:
 python extract_schedule.py
 ```
-
-This script will:
-- Scrape specified parish websites for Adoration and Reconciliation schedules
-- Store the information in a Supabase table named `ParishSchedules`
-
-**Parameters**:
-- `--num_parishes`: Optional. Maximum number of parishes to extract from. Defaults to 5. Set to 0 for no limit.
+This script scrapes parish websites for Adoration and Reconciliation schedules. Use `--num_parishes` to limit how many parishes are processed.
 
 ## Script Modifications for Standalone Execution
 
