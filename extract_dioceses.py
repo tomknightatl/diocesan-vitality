@@ -2,7 +2,6 @@
 # coding: utf-8
 
 import argparse
-import logging
 import time
 from datetime import datetime, timezone
 
@@ -12,16 +11,9 @@ from bs4 import BeautifulSoup
 
 import config
 from core.db import get_supabase_client
+from core.logger import get_logger
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("scraping.log"),
-        logging.StreamHandler()
-    ]
-)
+logger = get_logger(__name__)
 
 def get_soup(url, retries=3, backoff_factor=1.0):
     """
@@ -39,18 +31,18 @@ def get_soup(url, retries=3, backoff_factor=1.0):
 
     for attempt in range(1, retries + 1):
         try:
-            logging.info(f"Attempt {attempt}: Fetching URL: {url}")
+            logger.info(f"Attempt {attempt}: Fetching URL: {url}")
             response = requests.get(url, headers=headers, timeout=20)
-            logging.info(f"Received status code: {response.status_code}")
+            logger.info(f"Received status code: {response.status_code}")
             response.raise_for_status()
             return BeautifulSoup(response.text, 'html.parser')
         except requests.RequestException as e:
-            logging.warning(f"Attempt {attempt} failed with error: {e}")
+            logger.warning(f"Attempt {attempt} failed with error: {e}")
             if attempt == retries:
-                logging.error(f"All {retries} attempts failed for URL: {url}")
+                logger.error(f"All {retries} attempts failed for URL: {url}")
                 return None
             sleep_time = backoff_factor * (2 ** (attempt - 1))
-            logging.info(f"Retrying in {sleep_time} seconds...")
+            logger.info(f"Retrying in {sleep_time} seconds...")
             time.sleep(sleep_time)
 
 def extract_dioceses_data(soup):
@@ -61,19 +53,19 @@ def extract_dioceses_data(soup):
     dioceses = []
     diocese_containers = soup.find_all('div', class_='views-row')
 
-    logging.info(f"Found {len(diocese_containers)} potential diocese containers")
+    logger.info(f"Found {len(diocese_containers)} potential diocese containers")
 
     for i, container in enumerate(diocese_containers):
-        logging.info(f"Processing container {i+1}")
+        logger.info(f"Processing container {i+1}")
 
         da_wrap = container.find('div', class_='da-wrap')
         if not da_wrap:
-            logging.warning(f"No da-wrap found in container {i+1}")
+            logger.warning(f"No da-wrap found in container {i+1}")
             continue
 
         name_div = da_wrap.find('div', class_='da-title')
         diocese_name = name_div.get_text(strip=True) if name_div else "N/A"
-        logging.info(f"Diocese name: {diocese_name}")
+        logger.info(f"Diocese name: {diocese_name}")
 
         address_div = da_wrap.find('div', class_='da-address')
         address_parts = []
@@ -84,11 +76,11 @@ def extract_dioceses_data(soup):
                     address_parts.append(text)
 
         address = ", ".join(address_parts)
-        logging.info(f"Address: {address}")
+        logger.info(f"Address: {address}")
 
         website_div = da_wrap.find('div', class_='site')
         website_url = website_div.find('a')['href'] if website_div and website_div.find('a') else "N/A"
-        logging.info(f"Website: {website_url}")
+        logger.info(f"Website: {website_url}")
 
         dioceses.append({
             'Name': diocese_name,
@@ -105,43 +97,43 @@ def main(max_dioceses=config.DEFAULT_MAX_DIOCESES):
     soup = get_soup(url)
 
     if not soup:
-        logging.error("Failed to fetch the dioceses page. Exiting.")
+        logger.error("Failed to fetch the dioceses page. Exiting.")
         return
 
-    logging.info("Successfully fetched and parsed the dioceses page.")
+    logger.info("Successfully fetched and parsed the dioceses page.")
     
     dioceses = extract_dioceses_data(soup)
-    logging.info(f"Extracted information for {len(dioceses)} dioceses.")
+    logger.info(f"Extracted information for {len(dioceses)} dioceses.")
 
     if not dioceses:
-        logging.warning("No dioceses were extracted.")
+        logger.warning("No dioceses were extracted.")
         return
 
     if max_dioceses > 0:
         dioceses = dioceses[:max_dioceses]
-        logging.info(f"Limiting extraction to {len(dioceses)} dioceses.")
+        logger.info(f"Limiting extraction to {len(dioceses)} dioceses.")
 
     dioceses_df = pd.DataFrame(dioceses)
-    logging.info(dioceses_df.head())
+    logger.info(dioceses_df.head())
 
     supabase = get_supabase_client()
     if not supabase:
-        logging.error("Could not initialize Supabase client. Exiting.")
+        logger.error("Could not initialize Supabase client. Exiting.")
         return
 
     try:
         data_to_insert = dioceses_df.to_dict('records')
-        logging.info(f"\nAttempting to upsert {len(data_to_insert)} rows...")
+        logger.info(f"\nAttempting to upsert {len(data_to_insert)} rows...")
         
         result = supabase.table('Dioceses').upsert(data_to_insert, on_conflict='Name').execute()
 
         if result.data:
-            logging.info(f"✅ Successfully upserted {len(result.data)} rows!")
+            logger.info(f"✅ Successfully upserted {len(result.data)} rows!")
         else:
-            logging.error("❌ Upsert returned no data")
+            logger.error("❌ Upsert returned no data")
 
     except Exception as e:
-        logging.error(f"❌ Bulk upsert failed: {e}")
+        logger.error(f"❌ Bulk upsert failed: {e}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Extract dioceses information from the USCCB website.")

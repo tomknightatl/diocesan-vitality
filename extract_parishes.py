@@ -4,7 +4,6 @@ Main script to extract parish data from U.S. Catholic dioceses
 """
 
 import argparse
-import logging
 
 import config
 from core.db import get_supabase_client
@@ -14,20 +13,21 @@ from parish_extraction_core import (PatternDetector,
                                     enhanced_safe_upsert_to_supabase)
 from parish_extractors import (ensure_chrome_installed,
                                process_diocese_with_detailed_extraction)
+from core.logger import get_logger
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = get_logger(__name__)
 
 def main(num_dioceses=config.DEFAULT_MAX_DIOCESES, num_parishes_per_diocese=config.DEFAULT_MAX_PARISHES_PER_DIOCESE):
     """
     Main function to extract parish information from diocese websites.
     """
     if not ensure_chrome_installed():
-        logging.error("Chrome installation failed. Please install Chrome manually.")
+        logger.error("Chrome installation failed. Please install Chrome manually.")
         return
 
     supabase = get_supabase_client()
     if not supabase:
-        logging.error("Failed to initialize Supabase client.")
+        logger.error("Failed to initialize Supabase client.")
         return
 
     # Get dioceses with parish directory URLs
@@ -42,7 +42,7 @@ def main(num_dioceses=config.DEFAULT_MAX_DIOCESES, num_parishes_per_diocese=conf
     dioceses = response.data if response.data else []
 
     if not dioceses:
-        logging.info("No dioceses with parish directory URLs found to process.")
+        logger.info("No dioceses with parish directory URLs found to process.")
         return
 
     # Get diocese names
@@ -56,7 +56,7 @@ def main(num_dioceses=config.DEFAULT_MAX_DIOCESES, num_parishes_per_diocese=conf
     # Process each diocese
     driver = setup_driver()
     if not driver:
-        logging.error("Failed to setup WebDriver.")
+        logger.error("Failed to setup WebDriver.")
         return
 
     try:
@@ -67,7 +67,7 @@ def main(num_dioceses=config.DEFAULT_MAX_DIOCESES, num_parishes_per_diocese=conf
                 'parish_directory_url': diocese['parish_directory_url']
             }
 
-            logging.info(f"Processing {diocese_info['name']}...")
+            logger.info(f"Processing {diocese_info['name']}...")
             result = process_diocese_with_detailed_extraction(diocese_info, driver, num_parishes_per_diocese)
 
             # Save parishes to database

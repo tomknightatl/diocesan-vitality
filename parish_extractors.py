@@ -19,14 +19,9 @@ This module contains:
 import time
 import re
 import subprocess
-import logging
-from typing import List, Dict, Optional
-from datetime import datetime, timezone
-from urllib.parse import urljoin
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+from typing import Dict, List, Optional
+from core.logger import get_logger
+logger = get_logger(__name__)
 
 # Web scraping
 from bs4 import BeautifulSoup
@@ -812,7 +807,7 @@ class ImprovedInteractiveMapExtractor(BaseExtractor):
             map_found = False
             for selector in map_selectors:
                 try:
-                    WebDriverWait(driver, 5).until(
+                    WebDriverWait(driver, 2).until(
                         EC.presence_of_element_located((By.CSS_SELECTOR, selector))
                     )
                     map_found = True

@@ -17,6 +17,9 @@ import argparse # Added
 from dotenv import load_dotenv # Added
 from supabase import create_client, Client # Added
 import config
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 # In[ ]:
@@ -51,11 +54,11 @@ def main(num_parishes=config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE):
     #     # Clone the repository
     #     # subprocess.run(['git', 'clone', REPO_URL]) # Use subprocess.run for standalone scripts
     #     # os.chdir(GITHUB_REPO)
-    #     print("Repository not found. Please ensure you are running from the project root or clone manually.")
+    #     logger.info("Repository not found. Please ensure you are running from the project root or clone manually.")
     # else:
     #     # os.chdir(GITHUB_REPO)
     #     # subprocess.run(['git', 'pull', 'origin', 'main']) # Use subprocess.run for standalone scripts
-    #     print(f"Repository {GITHUB_REPO} already exists. Assuming it's up to date.")
+    #     logger.info(f"Repository {GITHUB_REPO} already exists. Assuming it's up to date.")
 
     # # Configure Git (if needed for commits from this script)
     # # subprocess.run(['git', 'config', '--global', 'user.email', 'tomk@github.leemail.me'])
@@ -131,9 +134,9 @@ def main(num_parishes=config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE):
         sitemap_urls = get_sitemap_urls(url)
         all_urls = [url] + sitemap_urls
 
-        print(f"Found {len(all_urls)} URLs on Sitemap page:")
+        logger.info(f"Found {len(all_urls)} URLs on Sitemap page:")
         for sitemap_url in all_urls:
-            print(f"Sitemap URL: {sitemap_url}")
+            logger.info(f"Sitemap URL: {sitemap_url}")
 
             # Get all links from the sitemap page
             try:
@@ -146,7 +149,7 @@ def main(num_parishes=config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE):
             except:
                 page_links = []
 
-            print(f"Found {len(page_links)} links on {sitemap_url}")
+            logger.info(f"Found {len(page_links)} links on {sitemap_url}")
 
             reconciliation_found = False
             adoration_found = False
@@ -156,19 +159,19 @@ def main(num_parishes=config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE):
             adoration_page = ""
 
             for page_url in [sitemap_url] + page_links:
-                print(f"Checking {page_url}...")
+                logger.info(f"Checking {page_url}...")
 
                 if not reconciliation_found and search_for_keywords(page_url, ['Reconciliation', 'Confession']):
                     reconciliation_found = True
                     reconciliation_info = extract_time_info(page_url, 'Reconciliation')
                     reconciliation_page = page_url
-                    print(f"Reconciliation information found on {page_url}")
+                    logger.info(f"Reconciliation information found on {page_url}")
 
                 if not adoration_found and search_for_keywords(page_url, ['Adoration']):
                     adoration_found = True
                     adoration_info = extract_time_info(page_url, 'Adoration')
                     adoration_page = page_url
-                    print(f"Adoration information found on {page_url}")
+                    logger.info(f"Adoration information found on {page_url}")
 
                 if reconciliation_found and adoration_found:
                     break
@@ -200,13 +203,13 @@ def main(num_parishes=config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE):
         
         response = query.execute()
         parish_urls = [p['Web'] for p in response.data if p['Web']]
-        print(f"Fetched {len(parish_urls)} parish URLs from Supabase.")
+        logger.info(f"Fetched {len(parish_urls)} parish URLs from Supabase.")
     except Exception as e:
-        print(f"Error fetching parish URLs from Supabase: {e}")
+        logger.info(f"Error fetching parish URLs from Supabase: {e}")
 
     results = []
     for url in parish_urls:
-        print(f"Scraping {url}...")
+        logger.info(f"Scraping {url}...")
         result = scrape_parish_data(url)
         # Extract parish name from URL, handle cases where it might not be clean
         try:
@@ -215,7 +218,7 @@ def main(num_parishes=config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE):
             parish_name = url # Fallback to full URL if name extraction fails
         result['parish_name'] = parish_name
         results.append(result)
-        print(f"Completed scraping {url}")
+        logger.info(f"Completed scraping {url}")
 
 
     # In[ ]:
@@ -236,18 +239,18 @@ def main(num_parishes=config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE):
             response = supabase.table('ParishSchedules').upsert(results, on_conflict='url').execute()
 
             if hasattr(response, 'error') and response.error:
-                print(f"Error saving data to Supabase: {response.error}")
+                logger.info(f"Error saving data to Supabase: {response.error}")
             else:
-                print(f"Successfully saved {len(results)} records to Supabase table 'ParishSchedules'.")
+                logger.info(f"Successfully saved {len(results)} records to Supabase table 'ParishSchedules'.")
                 # Optional: Verify data by fetching from Supabase
-                # print("Verifying data in Supabase...")
+                # logger.info("Verifying data in Supabase...")
                 # verify_response = supabase.table('ParishSchedules').select('*').limit(5).execute()
-                # print(verify_response.data)
+                # logger.info(verify_response.data)
 
         except Exception as e:
-            print(f"An unexpected error occurred during Supabase upsert: {e}")
+            logger.info(f"An unexpected error occurred during Supabase upsert: {e}")
     else:
-        print("No results to save to Supabase.")
+        logger.info("No results to save to Supabase.")
 
 
     # In[ ]:

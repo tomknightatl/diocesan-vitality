@@ -10,7 +10,7 @@ def setup_driver():
     global driver
     if driver is None:
         try:
-            print("Setting up Chrome WebDriver...")
+            logger.info("Setting up Chrome WebDriver...")
             chrome_options = Options()
             chrome_options.add_argument("--headless")
             chrome_options.add_argument("--no-sandbox")
@@ -24,9 +24,9 @@ def setup_driver():
             driver = webdriver.Chrome(
                 service=Service(ChromeDriverManager().install()), options=chrome_options
             )
-            print("WebDriver setup successfully.")
+            logger.info("WebDriver setup successfully.")
         except Exception as e:
-            print(f"Error setting up WebDriver: {e}")
+            logger.info(f"Error setting up WebDriver: {e}")
             driver = None
     return driver
 
@@ -34,7 +34,7 @@ def close_driver():
     """Closes the Selenium WebDriver instance if it's active."""
     global driver
     if driver:
-        print("Closing WebDriver...")
+        logger.info("Closing WebDriver...")
         driver.quit()
         driver = None
-        print("WebDriver closed.")
+        logger.info("WebDriver closed.")

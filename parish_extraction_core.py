@@ -18,16 +18,13 @@ import os
 import time
 import json
 import re
-import logging
 from datetime import datetime, timezone
 from dataclasses import dataclass, asdict
 from enum import Enum
 from typing import List, Dict, Optional, Any
 from urllib.parse import urljoin, urlparse
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+from core.logger import get_logger
 
 # Web scraping
 from bs4 import BeautifulSoup
