@@ -15,6 +15,7 @@ import sqlite3
 import pandas as pd
 import os
 from google.colab import userdata
+from datetime import datetime, timezone
 
 
 # In[ ]:
@@ -168,7 +169,8 @@ def scrape_parish_data(url):
         'reconciliation_page': reconciliation_page,
         'offers_adoration': adoration_found,
         'adoration_info': adoration_info,
-        'adoration_page': adoration_page
+        'adoration_page': adoration_page,
+        'scraped_at': datetime.now(timezone.utc).isoformat()
     }
 
 

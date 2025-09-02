@@ -67,7 +67,8 @@
 
 # Cell 1
 # Install Install necessary libraries
-get_ipython().system('pip install supabase selenium webdriver-manager google-generativeai google-api-python-client tenacity')
+import os
+os.system('pip install supabase selenium webdriver-manager google-generativeai google-api-python-client tenacity')
 
 
 # In[ ]:
@@ -115,11 +116,13 @@ def ensure_chrome_installed():
         return False
 
 # Run the installation check
-chrome_ready = ensure_chrome_installed()
-if chrome_ready:
-    print("🚀 Ready to proceed with Selenium operations!")
-else:
-    print("⚠️  You may need to restart the runtime if Chrome installation failed.")
+# Run the installation check
+# chrome_ready = ensure_chrome_installed()
+# if chrome_ready:
+#     print("🚀 Ready to proceed with Selenium operations!")
+# else:
+#     print("⚠️  You may need to restart the runtime if Chrome installation failed.")
+print("NOTE: Chrome installation is skipped. Please ensure Chrome is installed and accessible on your system PATH.")
 
 
 # In[ ]:
@@ -141,10 +144,19 @@ from bs4 import BeautifulSoup # For parsing HTML
 
 # Selenium imports for web automation and dynamic content loading
 from selenium import webdriver
-# from selenium.webdriver.chrome.options import Options # Moved to User-configurable parameters cell
+from selenium.webdriver.chrome.options import Options
+chrome_options = Options()
+chrome_options.add_argument("--headless")
+chrome_options.add_argument("--no-sandbox")
+chrome_options.add_argument("--disable-dev-shm-usage")
+chrome_options.add_argument("--disable-gpu")
+chrome_options.add_argument("window-size=1920,1080")
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.common.exceptions import TimeoutException, WebDriverException
+
+# Google GenAI imports (for Gemini model)
+import google.generativeai as genai
 
 # Google GenAI imports (for Gemini model)
 # import google.generativeai as genai # Moved to User-configurable parameters cell
@@ -162,12 +174,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 # --- Selenium WebDriver Setup ---
 # chrome_options is now defined in the first code cell (User-configurable parameters).
 # Ensure it's available in the global scope if defined in the first cell.
-if 'chrome_options' not in globals():
-    print("Error: chrome_options not found. It should be defined in the User-configurable parameters cell.")
-    # Fallback to basic options if not found, though this indicates an issue with notebook structure
-    from selenium.webdriver.chrome.options import Options
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")
+
 
 driver = None # Global WebDriver instance
 
@@ -201,9 +208,6 @@ def close_driver():
 
 # Cell 4
 # User-configurable-parameters
-from google.colab import userdata
-import google.generativeai as genai
-from selenium.webdriver.chrome.options import Options
 import os # For os.path.exists logic if adapted
 print("--- User Configurable Parameters Cell Initializing ---")
 
@@ -232,7 +236,7 @@ else:
 # 2. EITHER: Uncomment the line below that assigns GENAI_API_KEY_FROM_USERDATA to GENAI_API_KEY
 #    OR: Directly assign your key string to GENAI_API_KEY.
 # 3. Set the use_mock_genai_direct_page and use_mock_genai_snippet flags (defined below) to False.
-GENAI_API_KEY_FROM_USERDATA = userdata.get('GENAI_API_KEY_USCCB')
+GENAI_API_KEY_FROM_USERDATA = os.getenv('GENAI_API_KEY_USCCB')
 GENAI_API_KEY = None # Default: No API key, forces mock.
 
 # UPDATED: Uncomment this line to use your API key from Colab Secrets
@@ -255,8 +259,8 @@ else:
 # 2. EITHER: Uncomment the lines below that assign _FROM_USERDATA to SEARCH_API_KEY and SEARCH_CX
 #    OR: Directly assign your key strings.
 # 3. Set the use_mock_search_engine flag (defined below) to False.
-SEARCH_API_KEY_FROM_USERDATA = userdata.get('SEARCH_API_KEY_USCCB')
-SEARCH_CX_FROM_USERDATA = userdata.get('SEARCH_CX_USCCB')
+SEARCH_API_KEY_FROM_USERDATA = os.getenv('SEARCH_API_KEY_USCCB')
+SEARCH_CX_FROM_USERDATA = os.getenv('SEARCH_CX_USCCB')
 
 SEARCH_API_KEY = None # Default: No API key, forces mock.
 SEARCH_CX = None      # Default: No CX, forces mock.
@@ -286,14 +290,6 @@ use_mock_search_engine = False  # Changed from True to False - Use LIVE Google C
 print(f"Mocking settings: Direct Page GenAI={use_mock_genai_direct_page}, Snippet GenAI={use_mock_genai_snippet}, Search Engine={use_mock_search_engine}")
 
 # --- Selenium WebDriver Options ---
-global chrome_options
-chrome_options = Options()
-chrome_options.add_argument("--headless")
-chrome_options.add_argument("--no-sandbox")
-chrome_options.add_argument("--disable-dev-shm-usage")
-chrome_options.add_argument("--disable-gpu")
-chrome_options.add_argument("window-size=1920,1080")
-print("Chrome options configured.")
 
 print("--- End User Configurable Parameters Cell ---")
 
@@ -379,6 +375,7 @@ else:
 
 from urllib.parse import urljoin, urlparse # For handling relative and absolute URLs
 import re # For regular expression matching in URL paths
+from datetime import datetime, timezone # For adding timezone-aware timestamps
 
 def normalize_url_join(base_url, relative_url):
     """Properly joins URLs while avoiding double slashes."""
@@ -811,7 +808,8 @@ if 'dioceses_to_scan' in locals() and dioceses_to_scan:
                         'diocese_url': current_url,
                         'parish_directory_url': parish_dir_url_found,
                         'found': status_text,
-                        'found_method': method
+                        'found_method': method,
+                        'scanned_at': datetime.now(timezone.utc).isoformat()
                     }
 
                     print(f"    Attempting to upsert data: {data_to_upsert}")
@@ -867,7 +865,8 @@ if 'dioceses_to_scan' in locals() and dioceses_to_scan:
                         'diocese_url': current_url,
                         'parish_directory_url': None,
                         'found': status_text,
-                        'found_method': method
+                        'found_method': method,
+                        'scanned_at': datetime.now(timezone.utc).isoformat()
                     }
                     try:
                         response = supabase.table('DiocesesParishDirectory').upsert(data_to_upsert).execute()
@@ -889,7 +888,8 @@ if 'dioceses_to_scan' in locals() and dioceses_to_scan:
                         'diocese_url': current_url,
                         'parish_directory_url': None,
                         'found': status_text,
-                        'found_method': method
+                        'found_method': method,
+                        'scanned_at': datetime.now(timezone.utc).isoformat()
                     }
                     try:
                         response = supabase.table('DiocesesParishDirectory').upsert(data_to_upsert).execute()

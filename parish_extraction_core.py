@@ -19,7 +19,7 @@ import time
 import json
 import re
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from dataclasses import dataclass, asdict
 from enum import Enum
 from typing import List, Dict, Optional, Any
@@ -395,7 +395,7 @@ def prepare_parish_for_supabase(parish_data: ParishData, diocese_name: str, dioc
         'full_address': parish_data.full_address,
         'latitude': parish_data.latitude,
         'longitude': parish_data.longitude,
-        'extracted_at': datetime.now().isoformat()
+        'extracted_at': datetime.now(timezone.utc).isoformat()
     }
 
 PARISH_SKIP_TERMS = [
@@ -443,7 +443,7 @@ def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_name: s
                 continue
 
             # Use existing upsert logic
-            response = supabase.table('Parishes').insert(clean_data).execute()
+            response = supabase.table('Parishes').upsert(clean_data, on_conflict='Name,diocese_url').execute()
 
             if hasattr(response, 'error') and response.error:
                 logger.error(f"    ❌ Database error for {parish.name}: {response.error}")
