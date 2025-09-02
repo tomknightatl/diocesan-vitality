@@ -16,68 +16,7 @@ This guide outlines the steps to build, configure, and deploy the web applicatio
 
 Replace `your-docker-registry/your-repo-name` with your actual registry and repository name.
 
-## Docker Registry Login
-
-Before building and pushing images, you need to log in to your Docker registry. For GitHub Container Registry (`ghcr.io`), follow these steps:
-
-1.  **Create GitHub Personal Access Tokens (PATs)**:
-You will need two types of PATs:
-    *   **For `gh auth login` (to configure the credential helper)**:
-        *   Go to your GitHub settings: `Settings` > `Developer settings` > `Personal access tokens` > `Tokens (classic)` > `Generate new token (classic)`.
-        *   Give your token a descriptive name (e.g., `gh_cli_auth_token`).
-        *   **Crucially**, select the following scopes: `repo`, `read:org`, and `workflow`. These permissions are required for the GitHub CLI to interact with your GitHub account and set up the credential helper.
-        *   Generate the token and copy it immediately. You won't be able to see it again.
-    *   **For pushing to `ghcr.io` (if not using `gh` as credential helper, or for direct `docker login` with PAT)**:
-        *   Go to your GitHub settings: `Settings` > `Developer settings` > `Personal access tokens` > `Tokens (classic)` > `Generate new token (classic)`.
-        *   Give your token a descriptive name (e.g., `ghcr_push_token`).
-        *   **Crucially**, select the `write:packages` scope. This permission is required to push images to GitHub Container Registry.
-        *   Generate the token and copy it immediately. You won't be able to see it again.
-
-2.  **Install and Configure Docker Credential Helper (Recommended)**:
-    To avoid storing credentials unencrypted and to securely manage your GitHub Container Registry login, use the GitHub CLI (`gh`) as a Docker credential helper.
-
-    *   **Install GitHub CLI (`gh`)**:
-        Follow the official installation instructions for your operating system: [https://github.com/cli/cli#installation](https://github.com/cli/cli#installation)
-        For Debian/Ubuntu, you can typically use:
-        ```sh
-        type -p curl >/dev/null || sudo apt update && sudo apt install curl -y
-        curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
-        && sudo chmod go+rb /usr/share/keyrings/githubcli-archive-keyring.gpg \
-        && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-        && sudo apt update \
-        && sudo apt install gh -y
-        ```
-    *   **Configure `gh` as Docker Credential Helper**:
-        After installing `gh`, authenticate it with GitHub. This will set up `gh` to manage your Docker credentials for `ghcr.io` securely.
-        ```sh
-        gh auth login
-        ```
-        Follow the prompts to authenticate with your GitHub account. When prompted for the host, select `github.com`. When prompted for authentication method, choose "Login with a web browser" or "Paste an authentication token". If pasting a token, use the PAT you created for `gh auth login` (with `repo`, `read:org`, `workflow` scopes).
-
-        Then, run the following command to configure Git and Docker to use `gh` for credential management:
-        ```sh
-        gh auth setup-git
-        ```
-
-    *   **Clean up old Docker credentials (if any)**:
-        If you previously logged in to `ghcr.io` without a credential helper, Docker might have stored unencrypted credentials in your `~/.docker/config.json` file. To ensure the `gh` credential helper is used, it's best to remove these old entries.
-        You can either:
-        *   Delete the entire `~/.docker/config.json` file (if you have no other Docker configurations you want to keep).
-        *   Or, open `~/.docker/config.json` in a text editor and remove the entry for `ghcr.io` under the `"auths"` section.
-
-3.  **Log in to GitHub Container Registry**:
-    Once the credential helper is configured, you can log in using your GitHub username. The credential helper will securely provide the necessary token.
-
-    ```sh
-    docker login ghcr.io -u YOUR_USERNAME
-    ```
-    **Important:** Replace `YOUR_USERNAME` with your actual GitHub username (e.g., `tomknightatl`). **DO NOT** use your Personal Access Token as the username. If the credential helper is working correctly, this command should *not* prompt you for a password and should succeed silently.
-
-    If you prefer to use a PAT directly without the credential helper (not recommended for security), use the `ghcr_push_token` you created:
-    ```sh
-    echo YOUR_GHCR_PUSH_PAT | docker login ghcr.io -u YOUR_USERNAME --password-stdin
-    ```
-    Replace `YOUR_GHCR_PUSH_PAT` with the Personal Access Token that has `write:packages` scope, and `YOUR_USERNAME` with your GitHub username.
+For authentication instructions with GitHub CLI (gh) and GitHub Container Registry (ghcr.io), please refer to [AUTHENTICATION.md](AUTHENTICATION.md).
 
 
 ## Troubleshooting Docker Permissions and Credential Helper
@@ -117,6 +56,44 @@ If you are still encountering issues with Docker permissions or the credential h
     docker login ghcr.io -u YOUR_USERNAME
     ```
     Replace `YOUR_USERNAME` with your GitHub username.
+
+## Verification Steps
+
+Before proceeding with building and pushing Docker images, it's crucial to verify that you are properly authenticated and have the necessary permissions.
+
+### 1. Verify GitHub CLI (gh) Authentication
+
+To check your GitHub CLI authentication status, run:
+
+```sh
+gh auth status
+```
+
+This command will show you which GitHub accounts you are logged into and their authentication status. Ensure you are logged in to the correct account.
+
+### 2. Verify Docker and GitHub Container Registry (ghcr.io) Setup
+
+To ensure Docker is running and configured to work with ghcr.io (especially if using `gh` as a credential helper), you can perform the following checks:
+
+*   **Check Docker Daemon Status:**
+    ```sh
+    sudo systemctl status docker
+    ```
+    Ensure the Docker daemon is active (running).
+
+*   **Test Docker Login to ghcr.io (if using credential helper):**
+    If you have configured `gh` as your Docker credential helper (as recommended in `AUTHENTICATION.md`), you can test your login without providing a password:
+    ```sh
+    docker login ghcr.io -u YOUR_GITHUB_USERNAME
+    ```
+    Replace `YOUR_GITHUB_USERNAME` with your actual GitHub username. If successful, this indicates your credential helper is working correctly.
+
+*   **Pull a Public Image (Optional):**
+    To further confirm Docker's ability to pull from ghcr.io, you can try pulling a public image (if one is available and known to you). For example:
+    ```sh
+    docker pull ghcr.io/github/super-linter:latest
+    ```
+    (Note: Replace `ghcr.io/github/super-linter:latest` with an actual public image from ghcr.io if this one is not suitable or available.)
 
 ## Step 1: Build and Push Docker Images
 
