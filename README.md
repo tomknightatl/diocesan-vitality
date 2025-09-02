@@ -291,7 +291,7 @@ python extract_schedule.py
 
 This script will:
 - Scrape specified parish websites for Adoration and Reconciliation schedules
-- Store the information in a local SQLite database
+- Store the information in a Supabase table named `ParishSchedules`
 
 **Parameters**:
 - `--num_parishes`: Optional. Maximum number of parishes to extract from. Defaults to 5. Set to 0 for no limit.
