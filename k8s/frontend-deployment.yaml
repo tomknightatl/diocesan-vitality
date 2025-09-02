@@ -15,6 +15,6 @@ spec:
       containers:
       - name: frontend
         # IMPORTANT: Replace this with the actual path to your container image
-        image: your-docker-registry/usccb-frontend:latest
+        image: ghcr.io/tomknightatl/usccb/usccb-frontend:latest
         ports:
         - containerPort: 80
