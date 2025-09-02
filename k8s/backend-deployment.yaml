@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        # IMPORTANT: Replace this with the actual path to your container image
+        image: your-docker-registry/usccb-backend:latest
+        ports:
+        - containerPort: 8000
+        env:
+        # It is strongly recommended to manage secrets using Kubernetes Secrets.
+        # 1. Create a secret like this:
+        #    kubectl create secret generic supabase-credentials \
+        #      --from-literal=SUPABASE_URL='your_supabase_url' \
+        #      --from-literal=SUPABASE_KEY='your_supabase_key'
+        # 2. Uncomment the envFrom block below.
+        # envFrom:
+        # - secretRef:
+        #     name: supabase-credentials
