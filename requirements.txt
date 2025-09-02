@@ -10,3 +10,5 @@ requests
 python-dotenv
 jupyter
 matplotlib
+pytest
+pytest-mock

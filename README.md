@@ -343,7 +343,7 @@ This script connects to the Supabase database to provide statistics and visualiz
 **Usage:**
 
 ```bash
-/home/tomk/USCCB/venv/bin/python report_statistics.py
+python report_statistics.py
 ```
 
 The script will generate PNG image files (e.g., `dioceses_records_over_time.png`, `parishes_records_over_time.png`) in the current directory, visualizing the record counts over time.

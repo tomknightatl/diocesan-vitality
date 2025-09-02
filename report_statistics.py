@@ -34,9 +34,9 @@ def fetch_and_process_table(table_name: str, supabase_client: Client):
         if 'extracted_at' in df.columns:
             df['extracted_at'] = pd.to_datetime(df['extracted_at'], format='ISO8601', utc=True, errors='coerce')
             date_cols.append('extracted_at')
-        if 'scanned_at' in df.columns: # For ParishSchedules
-                        df['scanned_at'] = pd.to_datetime(df['scanned_at'], utc=True, errors='coerce')
-            date_cols.append('scanned_at')
+        if 'scraped_at' in df.columns: # For ParishSchedules
+            df['scraped_at'] = pd.to_datetime(df['scraped_at'], utc=True, errors='coerce')
+            date_cols.append('scraped_at')
 
         if not date_cols:
             print(f"No relevant date columns found in {table_name} for time-series analysis.")
