@@ -26,18 +26,26 @@ Before building and pushing images, you need to log in to your Docker registry. 
     *   Generate the token and copy it immediately. You won't be able to see it again.
 
 2.  **Install and Configure Docker Credential Helper (Recommended)**:
-    To avoid storing credentials unencrypted and to securely manage your GitHub Container Registry login, use the `docker-credential-ghcr` helper.
+    To avoid storing credentials unencrypted and to securely manage your GitHub Container Registry login, use the GitHub CLI (`gh`) as a Docker credential helper.
 
-    *   **Install `docker-credential-ghcr`**:
+    *   **Install GitHub CLI (`gh`)**:
+        Follow the official installation instructions for your operating system: [https://github.com/cli/cli#installation](https://github.com/cli/cli#installation)
+        For Debian/Ubuntu, you can typically use:
         ```sh
-        sudo apt-get update && sudo apt-get install -y docker-credential-ghcr # For Debian/Ubuntu
-        # Or for other systems, refer to GitHub's documentation for installation.
+        type -p curl >/dev/null || sudo apt update && sudo apt install curl -y
+        curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
+        && sudo chmod go+rb /usr/share/keyrings/githubcli-archive-keyring.gpg \
+        && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+        && sudo apt update \
+        && sudo apt install gh -y
         ```
-    *   **Configure Docker to use the credential helper**:
+    *   **Configure `gh` as Docker Credential Helper**:
+        After installing `gh`, configure it to handle Docker authentication for `ghcr.io`:
         ```sh
-        docker-credential-ghcr configure
+        gh auth login -h ghcr.io -p https
         ```
-        This command will configure your Docker client to use `ghcr.io` with the credential helper.
+        Follow the prompts to authenticate with your GitHub account. This will set up `gh` to manage your Docker credentials for `ghcr.io` securely.
+
 
 3.  **Log in to GitHub Container Registry**:
     Once the credential helper is configured, you can log in using your GitHub username and the PAT you created. The credential helper will securely store your PAT.
