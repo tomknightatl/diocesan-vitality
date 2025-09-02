@@ -12,6 +12,7 @@ This guide outlines the steps to build, configure, and deploy the web applicatio
 > **Note on Docker Permissions:** On Linux, to run `docker` commands without `sudo`, add your user to the `docker` group by running:
 > `sudo usermod -aG docker $USER`
 > After this, you must start a new terminal session for the change to take effect.
+> **Crucially, once you are in the `docker` group, you should NOT use `sudo` with `docker` commands.** Using `sudo` will cause Docker to run as root, which will prevent it from using the credential helper configured in your user's home directory.
 
 Replace `your-docker-registry/your-repo-name` with your actual registry and repository name.
 
@@ -58,6 +59,12 @@ You will need two types of PATs:
         gh auth setup-git
         ```
 
+    *   **Clean up old Docker credentials (if any)**:
+        If you previously logged in to `ghcr.io` without a credential helper, Docker might have stored unencrypted credentials in your `~/.docker/config.json` file. To ensure the `gh` credential helper is used, it's best to remove these old entries.
+        You can either:
+        *   Delete the entire `~/.docker/config.json` file (if you have no other Docker configurations you want to keep).
+        *   Or, open `~/.docker/config.json` in a text editor and remove the entry for `ghcr.io` under the `"auths"` section.
+
 3.  **Log in to GitHub Container Registry**:
     Once the credential helper is configured, you can log in using your GitHub username. The credential helper will securely provide the necessary token.
 
@@ -84,10 +91,10 @@ You need to build the Docker images for both the frontend and backend and push t
 cd backend
 
 # Build the Docker image
-sudo docker build -t ghcr.io/tomknightatl/usccb/usccb-backend:latest .
+docker build -t ghcr.io/tomknightatl/usccb/usccb-backend:latest .
 
 # Push the image to your registry
-sudo docker push ghcr.io/tomknightatl/usccb/usccb-backend:latest
+docker push ghcr.io/tomknightatl/usccb/usccb-backend:latest
 ```
 
 ### Frontend
@@ -97,10 +104,10 @@ sudo docker push ghcr.io/tomknightatl/usccb/usccb-backend:latest
 cd frontend
 
 # Build the Docker image
-sudo docker build -t ghcr.io/tomknightatl/usccb/usccb-frontend:latest .
+docker build -t ghcr.io/tomknightatl/usccb/usccb-frontend:latest .
 
 # Push the image to your registry
-sudo docker push ghcr.io/tomknightatl/usccb/usccb-frontend:latest
+docker push ghcr.io/tomknightatl/usccb/usccb-frontend:latest
 ```
 
 ## Step 2: Create Kubernetes Secret for Supabase
