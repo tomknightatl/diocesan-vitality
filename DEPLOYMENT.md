@@ -160,20 +160,18 @@ The Kubernetes manifests in the `k8s/` directory have been pre-filled with the n
 
 After reviewing these files, commit and push them to your Git repository if you made any further changes.
 
-## Step 4: Deploy with ArgoCD
+## Step 4: Deploy with ArgoCD ApplicationSet
 
-Create a new Application in ArgoCD to manage the deployment.
+Instead of manually creating individual ArgoCD Applications, you will deploy an ArgoCD ApplicationSet. This ApplicationSet will automatically discover and deploy the Kubernetes manifests (Deployments, Services, Ingress, etc.) found in the `k8s/` directory of this repository.
 
--   **General Settings**:
-    -   **Application Name**: `usccb-webapp` (or your preferred name)
-    -   **Project**: `default` (or your preferred project)
-    -   **Sync Policy**: `Automatic` (with pruning and self-healing enabled for a full GitOps experience)
--   **Source**:
-    -   **Repository URL**: The URL of your Git repository.
-    -   **Revision**: `HEAD` (or the branch you are using).
-    -   **Path**: `k8s`
--   **Destination**:
-    -   **Cluster URL**: `https://kubernetes.default.svc` (or the target cluster).
-    -   **Namespace**: `default` (or the target namespace where you created the secret).
+1.  **Review the ApplicationSet Manifest**:
+    Examine the `k8s/applicationset.yaml` file. Ensure the `repoURL` within the `generators` and `template.spec.source` sections points to your Git repository where these Kubernetes manifests are stored. If you are using a private repository, ensure ArgoCD has the necessary credentials configured.
 
-Once you create the application, ArgoCD will automatically sync the manifests from your `k8s` directory and deploy the frontend and backend to your cluster.
+2.  **Deploy the ApplicationSet**:
+    Apply the ApplicationSet manifest to your Kubernetes cluster. This will create the ApplicationSet resource in ArgoCD, which will then automatically create and manage the individual ArgoCD Applications for your backend and frontend services.
+
+    ```sh
+    kubectl apply -f k8s/applicationset.yaml
+    ```
+
+Once the ApplicationSet is deployed, ArgoCD will automatically sync the manifests from your `k8s` directory and deploy the frontend and backend to your cluster.
