@@ -47,11 +47,16 @@ You will need two types of PATs:
         && sudo apt install gh -y
         ```
     *   **Configure `gh` as Docker Credential Helper**:
-        After installing `gh`, configure it to handle Docker authentication for `ghcr.io`. When prompted, use the PAT you created for `gh auth login` (with `repo`, `read:org`, `workflow` scopes).
+        After installing `gh`, authenticate it with GitHub. This will set up `gh` to manage your Docker credentials for `ghcr.io` securely.
         ```sh
-        gh auth login -h ghcr.io -p https
+        gh auth login
         ```
-        Follow the prompts to authenticate with your GitHub account. This will set up `gh` to manage your Docker credentials for `ghcr.io` securely.
+        Follow the prompts to authenticate with your GitHub account. When prompted for the host, select `github.com`. When prompted for authentication method, choose "Login with a web browser" or "Paste an authentication token". If pasting a token, use the PAT you created for `gh auth login` (with `repo`, `read:org`, `workflow` scopes).
+
+        Then, run the following command to configure Git and Docker to use `gh` for credential management:
+        ```sh
+        gh auth setup-git
+        ```
 
 3.  **Log in to GitHub Container Registry**:
     Once the credential helper is configured, you can log in using your GitHub username. The credential helper will securely provide the necessary token.
