@@ -6,6 +6,19 @@
 
 This project is a comprehensive data collection and analysis system for U.S. Catholic dioceses and parishes. It employs advanced web scraping techniques, AI-powered content analysis, and automated data processing to build and maintain a detailed database of Catholic institutions across the United States. The system collects information from the official USCCB website and individual diocese websites, including diocese details, parish directories, and detailed parish information.
 
+## How It Works
+
+The USCCB Data Extraction Pipeline is a multi-step process that systematically collects and organizes Catholic diocese and parish information from across the United States.
+
+![USCCB Data Extraction Pipeline Architecture](./architecture-diagram.svg)
+
+### Pipeline Steps
+
+1. **Extract Dioceses**: Scrapes the USCCB website for all U.S. dioceses
+2. **Find Parish Directories**: Uses AI to locate parish directory pages on diocese websites
+3. **Extract Parishes**: Collects detailed parish information using specialized extractors
+4. **Extract Schedules**: Visits individual parish websites to gather mass and service times
+
 ## Key Features
 
 - **Automated Diocese Discovery**: Scrapes the official USCCB website to collect diocese information
