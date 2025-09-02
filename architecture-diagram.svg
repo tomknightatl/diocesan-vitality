@@ -172,7 +172,17 @@
   </defs>
   
   <!-- Data flow arrows -->
-  <path d="M 240 170 L 315 140" stroke="#666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <!-- From USCCB Website to Step 1 -->
+  <path d="M 220 150 L 315 140" stroke="#666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- From Diocese Websites to Step 2 and Step 3 -->
+  <path d="M 220 200 L 315 290" stroke="#666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <path d="M 220 200 L 315 440" stroke="#666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- From Parish Websites to Step 4 -->
+  <path d="M 220 250 L 315 590" stroke="#666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Between pipeline steps -->
   <path d="M 500 140 L 545 140" stroke="#666" stroke-width="2" marker-end="url(#arrowhead)"/>
   <path d="M 410 200 L 410 225" stroke="#ff9800" stroke-width="2" marker-end="url(#arrowhead)"/>
   <path d="M 410 350 L 410 375" stroke="#e91e63" stroke-width="2" marker-end="url(#arrowhead)"/>
