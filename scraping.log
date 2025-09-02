@@ -12757,3 +12757,30 @@ Attempting to upsert 5 rows...
 2025-09-01 22:48:05,925 - INFO -     ⏭️ Skipped: View the parishes within each pastorate and their map locations (not a parish)
 2025-09-01 22:48:05,925 - INFO -   📊 Results: 0 saved, 1 skipped, 0 with detailed info
 2025-09-01 22:48:06,283 - INFO - HTTP Request: GET https://nzcwtjloonumxpsqzarq.supabase.co/rest/v1/Parishes?select=Web&Web=not.is.null&limit=5 "HTTP/2 200 OK"
+2025-09-01 22:48:40,788 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:48:41,100 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:48:41,758 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:48:42,086 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:48:42,808 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:48:43,239 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:48:44,381 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:48:44,659 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:48:56,449 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:48:56,775 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:48:57,414 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:48:57,712 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:48:58,415 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:48:58,799 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:49:00,878 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:49:01,170 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:49:11,301 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:49:12,329 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:49:12,713 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:49:13,171 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:49:13,748 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:49:14,311 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:49:16,390 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:49:16,837 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:49:17,568 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:49:18,426 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:49:39,605 - INFO - HTTP Request: POST https://nzcwtjloonumxpsqzarq.supabase.co/rest/v1/ParishSchedules?on_conflict=url&columns=%22url%22%2C%22parish_name%22%2C%22scraped_at%22%2C%22offers_reconciliation%22%2C%22reconciliation_info%22%2C%22adoration_info%22%2C%22adoration_page%22%2C%22reconciliation_page%22%2C%22offers_adoration%22 "HTTP/2 200 OK"
