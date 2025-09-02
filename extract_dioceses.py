@@ -1,63 +1,17 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-from dotenv import load_dotenv
-load_dotenv()
-import os
 import argparse
+import logging
+import time
 from datetime import datetime, timezone
 
-# <a href="https://colab.research.google.com/github/tomknightatl/USCCB/blob/main/Build%20Dioceses%20Database.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
-
-import subprocess
-
-# In[ ]:
-
-
-subprocess.run(['pip', 'install', 'supabase'], check=True)
-
-
-# In[ ]:
-
-
-# Cell for Supabase client initialization
-from supabase import create_client, Client
-
-# Access secrets from .env
-try:
-    supabase_url = os.getenv('SUPABASE_URL')
-    supabase_key = os.getenv('SUPABASE_KEY')
-
-    # Initialize Supabase client
-    supabase: Client = create_client(supabase_url, supabase_key)
-    # Optional: Test the connection with a simple query
-    # Uncomment the lines below if you want to test the connection
-    # try:
-    #     result = supabase.table('your_table_name').select('*').limit(1).execute()
-    #     print("✅ Connection test successful!")
-    # except Exception as test_error:
-    #     print(f"⚠️  Connection test failed: {test_error}")
-
-except Exception as e:
-    print(f"❌ Error initializing Supabase client: {e}")
-
-    # Set supabase to None so other code can check if initialization was successful
-    supabase = None
-
-
-# In[ ]:
-
-
-# Cell 1: Import necessary libraries
-
+import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-import pandas as pd
-import os
-import re
-from urllib.parse import urljoin, urlparse
-import time
-import logging
+
+import config
+from core.db import get_supabase_client
 
 # Configure logging
 logging.basicConfig(
@@ -69,21 +23,6 @@ logging.basicConfig(
     ]
 )
 
-def parse_arguments():
-    parser = argparse.ArgumentParser(description="Extract dioceses information from the USCCB website.")
-    parser.add_argument(
-        "--max_dioceses",
-        type=int,
-        default=0,
-        help="Maximum number of dioceses to extract. Set to 0 or None for no limit."
-    )
-    return parser.parse_args()
-
-# In[ ]:
-
-
-# Cell 3: Define helper functions
-
 def get_soup(url, retries=3, backoff_factor=1.0):
     """
     Fetches the content at the given URL and returns a BeautifulSoup object.
@@ -91,7 +30,7 @@ def get_soup(url, retries=3, backoff_factor=1.0):
     """
     headers = {
         'User-Agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                       'AppleWebKit/537.36 (KHTML, like Gecko) ' 
+                       'AppleWebKit/537.36 (KHTML, like Gecko) '
                        'Chrome/58.0.3029.110 Safari/537.3'),
         'Accept-Language': 'en-US,en;q=0.9',
         'Accept-Encoding': 'gzip, deflate',
@@ -114,7 +53,7 @@ def get_soup(url, retries=3, backoff_factor=1.0):
             logging.info(f"Retrying in {sleep_time} seconds...")
             time.sleep(sleep_time)
 
-def extract_dioceses(soup):
+def extract_dioceses_data(soup):
     """
     Extracts dioceses information from the parsed HTML.
     Returns a list of dictionaries with diocese details.
@@ -155,90 +94,64 @@ def extract_dioceses(soup):
             'Name': diocese_name,
             'Address': address,
             'Website': website_url,
-            'extracted_at': datetime.now(timezone.utc).isoformat() # Add extracted_at timestamp
+            'extracted_at': datetime.now(timezone.utc).isoformat()
         })
 
     return dioceses
 
+def main(max_dioceses=0):
+    """Main function to extract and store dioceses information."""
+    url = "https://www.usccb.org/about/bishops-and-dioceses/all-dioceses"
+    soup = get_soup(url)
 
-# In[ ]:
+    if not soup:
+        logging.error("Failed to fetch the dioceses page. Exiting.")
+        return
 
-
-# Cell 4: Fetch and parse the HTML content from URL
-
-url = "https://www.usccb.org/about/bishops-and-dioceses/all-dioceses"
-soup = get_soup(url)
-
-if soup:
     logging.info("Successfully fetched and parsed the dioceses page.")
-    # Print the first 1000 characters of the HTML to check its structure
-    logging.info("First 1000 characters of the HTML:")
-    logging.info(soup.prettify()[:1000])
-else:
-    logging.error("Failed to fetch the dioceses page. Please check your connection or the URL.")
-    exit()
+    
+    dioceses = extract_dioceses_data(soup)
+    logging.info(f"Extracted information for {len(dioceses)} dioceses.")
 
+    if not dioceses:
+        logging.warning("No dioceses were extracted.")
+        return
 
-# In[ ]:
+    if max_dioceses > 0:
+        dioceses = dioceses[:max_dioceses]
+        logging.info(f"Limiting extraction to {len(dioceses)} dioceses.")
 
+    dioceses_df = pd.DataFrame(dioceses)
+    logging.info(dioceses_df.head())
 
-# Cell 5: Extract dioceses information
+    supabase = get_supabase_client()
+    if not supabase:
+        logging.error("Could not initialize Supabase client. Exiting.")
+        return
 
-dioceses = extract_dioceses(soup)
-logging.info(f"Extracted information for {len(dioceses)} dioceses.")
+    try:
+        data_to_insert = dioceses_df.to_dict('records')
+        logging.info(f"\nAttempting to upsert {len(data_to_insert)} rows...")
+        
+        result = supabase.table('Dioceses').upsert(data_to_insert, on_conflict='Name').execute()
 
-if len(dioceses) == 0:
-    logging.warning("No dioceses were extracted. Printing the structure of the page:")
-    logging.warning(soup.prettify())
+        if result.data:
+            logging.info(f"✅ Successfully upserted {len(result.data)} rows!")
+        else:
+            logging.error("❌ Upsert returned no data")
 
-# Apply limit if specified
-args = parse_arguments()
-if args.max_dioceses is not None and args.max_dioceses > 0:
-    dioceses = dioceses[:args.max_dioceses]
-    logging.info(f"Limiting extraction to {len(dioceses)} dioceses based on --max_dioceses parameter.")
-else:
-    logging.info("Extracting all dioceses (no limit applied).")
+    except Exception as e:
+        logging.error(f"❌ Bulk upsert failed: {e}")
 
-
-# In[ ]:
-
-
-# Cell 6: Create a DataFrame and display results
-
-dioceses_df = pd.DataFrame(dioceses)
-logging.info(dioceses_df.head())
-
-
-# In[ ]:
-
-
-# Debug your DataFrame first
-logging.info("DataFrame info:")
-logging.info(f"Columns: {dioceses_df.columns.tolist()}")
-logging.info(f"Shape: {dioceses_df.shape}")
-logging.info("Data types:")
-logging.info(dioceses_df.dtypes)
-logging.info("\nFirst few rows:")
-logging.info(dioceses_df.head())
-
-# Convert DataFrame to list of dictionaries (correct format for Supabase)
-try:
-    # Method 1: Insert all rows at once (recommended for smaller datasets)
-    data_to_insert = dioceses_df.to_dict('records')  # Convert DataFrame to list of dicts
-
-    logging.info(f"\nAttempting to upsert {len(data_to_insert)} rows...")
-    logging.info(f"Sample record: {data_to_insert[0] if data_to_insert else 'No data'}")
-
-    # Upsert data, updating 'extracted_at' on conflict of 'Name'
-    result = supabase.table('Dioceses').upsert(data_to_insert, on_conflict='Name').execute()
-
-    if result.data:
-        logging.info(f"✅ Successfully upserted {len(result.data)} rows!")
-    else:
-        logging.error("❌ Upsert returned no data")
-
-except Exception as e:
-    logging.error(f"❌ Bulk upsert failed: {e}")
-    logging.warning("\nTrying row-by-row upsert for better error details...")
-
-
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Extract dioceses information from the USCCB website.")
+    parser.add_argument(
+        "--max_dioceses",
+        type=int,
+        default=0,
+        help="Maximum number of dioceses to extract. Set to 0 or None for no limit."
+    )
+    args = parser.parse_args()
+    
+    config.validate_config()
+    main(args.max_dioceses)

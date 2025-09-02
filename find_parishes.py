@@ -1,85 +1,32 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-import os
+import argparse
+import random
 import re
 import time
-import random
-import argparse
 from datetime import datetime, timezone
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urlparse
 
-from dotenv import load_dotenv
 import google.generativeai as genai
-import requests
 from bs4 import BeautifulSoup
 from google.api_core.exceptions import (DeadlineExceeded, GoogleAPIError,
                                         InternalServerError, ResourceExhausted,
                                         ServiceUnavailable)
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, WebDriverException
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from supabase import Client, create_client
-from tenacity import (RetryError, retry, retry_if_exception_type,
-                    stop_after_attempt, wait_exponential)
-from webdriver_manager.chrome import ChromeDriverManager
+from tenacity import RetryError, retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
-load_dotenv()
+import config
+from core.db import get_supabase_client
+from core.driver import close_driver, setup_driver
+from core.utils import normalize_url_join
 
 # --- Global Variables ---
-driver = None
-supabase = None
 use_mock_genai_direct_page = False
 use_mock_genai_snippet = False
 use_mock_search_engine = False
-GENAI_API_KEY = None
-SEARCH_API_KEY = None
-SEARCH_CX = None
-
-
-def setup_driver():
-    """Initializes and returns the Selenium WebDriver instance."""
-    global driver
-    if driver is None:
-        try:
-            print("Setting up Chrome WebDriver...")
-            chrome_options = Options()
-            chrome_options.add_argument("--headless")
-            chrome_options.add_argument("--no-sandbox")
-            chrome_options.add_argument("--disable-dev-shm-usage")
-            chrome_options.add_argument("--disable-gpu")
-            chrome_options.add_argument("window-size=1920,1080")
-            driver = webdriver.Chrome(
-                service=Service(ChromeDriverManager().install()), options=chrome_options
-            )
-            print("WebDriver setup successfully.")
-        except Exception as e:
-            print(f"Error setting up WebDriver: {e}")
-            print(
-                "Ensure Chrome is installed if not using a pre-built environment like Colab."
-            )
-            driver = None
-    return driver
-
-
-def close_driver():
-    """Closes the Selenium WebDriver instance if it's active."""
-    global driver
-    if driver:
-        print("Closing WebDriver...")
-        driver.quit()
-        driver = None
-        print("WebDriver closed.")
-
-
-def normalize_url_join(base_url, relative_url):
-    """Properly joins URLs while avoiding double slashes."""
-    if base_url.endswith("/") and relative_url.startswith("/"):
-        base_url = base_url.rstrip("/")
-    return urljoin(base_url, relative_url)
 
 
 def get_surrounding_text(element, max_length=200):
@@ -156,10 +103,6 @@ RETRYABLE_GENAI_EXCEPTIONS = (
 )
 def _invoke_genai_model_with_retry(prompt):
     """Internal helper to invoke the GenAI model with retry logic."""
-    if "genai" not in globals():
-        raise NameError(
-            "genai module not available. Ensure User-configurable parameters cell is run."
-        )
     model = genai.GenerativeModel("gemini-1.5-flash")
     return model.generate_content(prompt)
 
@@ -168,7 +111,7 @@ def analyze_links_with_genai(candidate_links, diocese_name=None):
     """Analyzes candidate links using GenAI (or mock) to find the best parish directory URL."""
     best_link_found = None
     highest_score = -1
-    current_use_mock_direct = use_mock_genai_direct_page if GENAI_API_KEY else True
+    current_use_mock_direct = use_mock_genai_direct_page if config.GENAI_API_KEY else True
     if not current_use_mock_direct:
         print(
             f"Attempting LIVE GenAI analysis for {len(candidate_links)} direct page links for {diocese_name or 'Unknown Diocese'}."
@@ -239,18 +182,11 @@ def _invoke_search_api_with_retry(service, query, cx_id):
     return service.cse().list(q=query, cx=cx_id, num=3).execute()
 
 
-def normalize_mock_url(base_url, path):
-    """Properly constructs URLs for mock data, avoiding double slashes."""
-    base_clean = base_url.rstrip("/")
-    path_clean = path if path.startswith("/") else "/" + path
-    return base_clean + path_clean
-
-
 def analyze_search_snippet_with_genai(search_results, diocese_name):
     """Analyzes search result snippets using GenAI (or mock) to find the best parish directory URL."""
     best_link_from_snippet = None
     highest_score = -1
-    current_use_mock_snippet = use_mock_genai_snippet if GENAI_API_KEY else True
+    current_use_mock_snippet = use_mock_genai_snippet if config.GENAI_API_KEY else True
     if not current_use_mock_snippet:
         print(
             f"Attempting LIVE GenAI analysis for {len(search_results)} snippets for {diocese_name}."
@@ -311,24 +247,24 @@ def analyze_search_snippet_with_genai(search_results, diocese_name):
 def search_for_directory_link(diocese_name, diocese_website_url):
     """Uses Google Custom Search (or mock) to find potential directory links, then analyzes snippets."""
     current_use_mock_search = (
-        use_mock_search_engine if (SEARCH_API_KEY and SEARCH_CX) else True
+        use_mock_search_engine if (config.SEARCH_API_KEY and config.SEARCH_CX) else True
     )
     if not current_use_mock_search:
         print(f"Attempting LIVE Google Custom Search for {diocese_name}.")
     if current_use_mock_search:
         mock_results = [
             {
-                "link": normalize_mock_url(diocese_website_url, "/parishes"),
+                "link": normalize_url_join(diocese_website_url, "/parishes"),
                 "title": f"Parishes - {diocese_name}",
                 "snippet": f"List of parishes in the Diocese of {diocese_name}. Find a parish near you.",
             },
             {
-                "link": normalize_mock_url(diocese_website_url, "/directory"),
+                "link": normalize_url_join(diocese_website_url, "/directory"),
                 "title": f"Directory - {diocese_name}",
                 "snippet": f"Official directory of churches and schools for {diocese_name}.",
             },
             {
-                "link": normalize_mock_url(diocese_website_url, "/find-a-church"),
+                "link": normalize_url_join(diocese_website_url, "/find-a-church"),
                 "title": f"Find a Church - {diocese_name}",
                 "snippet": f"Search for a Catholic church in {diocese_name}. Mass times and locations.",
             },
@@ -340,7 +276,7 @@ def search_for_directory_link(diocese_name, diocese_website_url):
         ]
         return analyze_search_snippet_with_genai(filtered_mock_results, diocese_name)
     try:
-        service = build("customsearch", "v1", developerKey=SEARCH_API_KEY)
+        service = build("customsearch", "v1", developerKey=config.SEARCH_API_KEY)
         queries = [
             f"parish directory site:{diocese_website_url}",
             f"list of churches site:{diocese_website_url}",
@@ -354,7 +290,7 @@ def search_for_directory_link(diocese_name, diocese_website_url):
                 break
             print(f"    Executing search query: {q}")
             try:
-                response = _invoke_search_api_with_retry(service, q, SEARCH_CX)
+                response = _invoke_search_api_with_retry(service, q, config.SEARCH_CX)
                 res_items = response.get("items", [])
                 for item in res_items:
                     link = item.get("link")
@@ -406,128 +342,79 @@ def get_page_with_retry(driver_instance, url):
     driver_instance.get(url)
 
 
-def main():
+def find_parish_directories(max_dioceses_to_process=5):
     """Main function to run the parish directory finder."""
-    global supabase, use_mock_genai_direct_page, use_mock_genai_snippet, use_mock_search_engine
-    global GENAI_API_KEY, SEARCH_API_KEY, SEARCH_CX
-
-    parser = argparse.ArgumentParser(
-        description="Find parish directory URLs on diocesan websites."
-    )
-    parser.add_argument(
-        "--max_dioceses_to_process",
-        type=int,
-        default=5,
-        help="Maximum number of dioceses to process. Set to 0 for no limit. Defaults to 5.",
-    )
-    args = parser.parse_args()
-    MAX_DIOCESES_TO_PROCESS = args.max_dioceses_to_process
-    if MAX_DIOCESES_TO_PROCESS != 0:
-        print(
-            f"Processing will be limited to {MAX_DIOCESES_TO_PROCESS} randomly selected dioceses."
-        )
-    else:
-        print(
-            "Processing will include all dioceses that lack parish directory URLs (no limit)."
-        )
-
-    SUPABASE_URL = os.getenv("SUPABASE_URL")
-    SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-    if SUPABASE_URL and SUPABASE_KEY:
-        print("Supabase URL and Key loaded successfully.")
+    
+    if config.GENAI_API_KEY:
         try:
-            supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-            print("Supabase client initialized successfully.")
-        except Exception as e:
-            print(f"Error initializing Supabase client: {e}")
-            supabase = None
-    else:
-        print("Supabase URL and/or Key NOT loaded. Please check environment variables.")
-
-    GENAI_API_KEY = os.getenv("GENAI_API_KEY_USCCB")
-    if GENAI_API_KEY and GENAI_API_KEY not in ["YOUR_API_KEY_PLACEHOLDER", "SET_YOUR_KEY_HERE"]:
-        try:
-            genai.configure(api_key=GENAI_API_KEY)
-            print("GenAI configured successfully for LIVE calls if relevant mock flags are False.")
+            genai.configure(api_key=config.GENAI_API_KEY)
+            print("GenAI configured successfully.")
         except Exception as e:
             print(f"Error configuring GenAI with key: {e}. GenAI features will be mocked.")
-            GENAI_API_KEY = None
     else:
         print("GenAI API Key is not set. GenAI features will be mocked globally.")
 
-    SEARCH_API_KEY = os.getenv("SEARCH_API_KEY_USCCB")
-    SEARCH_CX = os.getenv("SEARCH_CX_USCCB")
-    if SEARCH_API_KEY and SEARCH_API_KEY not in ["YOUR_API_KEY_PLACEHOLDER", "SET_YOUR_KEY_HERE"] and SEARCH_CX and SEARCH_CX not in ["YOUR_CX_PLACEHOLDER", "SET_YOUR_CX_HERE"]:
-        print("Google Custom Search API Key and CX loaded. Ready for LIVE calls if use_mock_search_engine is False.")
-    else:
-        print("Google Custom Search API Key and/or CX are NOT configured or available. Search engine calls will be mocked.")
-
-    print(
-        f"Mocking settings: Direct Page GenAI={use_mock_genai_direct_page}, Snippet GenAI={use_mock_genai_snippet}, Search Engine={use_mock_search_engine}"
-    )
+    supabase = get_supabase_client()
+    if not supabase:
+        return
 
     dioceses_to_scan = []
-    if supabase:
-        try:
-            response_dioceses = supabase.table("Dioceses").select("Website, Name").execute()
-            all_dioceses_list = (
-                response_dioceses.data if response_dioceses.data is not None else []
-            )
-            print(f"Fetched {len(all_dioceses_list)} total records from Dioceses table.")
-            
-            diocese_url_to_name = {d["Website"]: d["Name"] for d in all_dioceses_list}
+    try:
+        response_dioceses = supabase.table("Dioceses").select("Website, Name").execute()
+        all_dioceses_list = (
+            response_dioceses.data if response_dioceses.data is not None else []
+        )
+        print(f"Fetched {len(all_dioceses_list)} total records from Dioceses table.")
+        
+        diocese_url_to_name = {d["Website"]: d["Name"] for d in all_dioceses_list}
 
-            response_processed_dioceses = (
+        response_processed_dioceses = (
+            supabase.table("DiocesesParishDirectory")
+            .select("diocese_url")
+            .execute()
+        )
+        processed_diocese_urls = (
+            {item["diocese_url"] for item in response_processed_dioceses.data}
+            if response_processed_dioceses.data is not None
+            else set()
+        )
+        
+        unprocessed_dioceses_urls = set(diocese_url_to_name.keys()) - processed_diocese_urls
+        
+        dioceses_to_scan_urls = []
+
+        if unprocessed_dioceses_urls:
+            print(f"Found {len(unprocessed_dioceses_urls)} dioceses needing parish directory URLs.")
+            limit = max_dioceses_to_process if max_dioceses_to_process != 0 else len(unprocessed_dioceses_urls)
+            dioceses_to_scan_urls = random.sample(list(unprocessed_dioceses_urls), limit)
+        else:
+            print("All dioceses have been scanned. Rescanning the oldest entries based on 'updated_at'.")
+            limit = max_dioceses_to_process if max_dioceses_to_process != 0 else 5
+            response_oldest_scanned = (
                 supabase.table("DiocesesParishDirectory")
                 .select("diocese_url")
+                .order("updated_at", desc=False)
+                .limit(limit)
                 .execute()
             )
-            processed_diocese_urls = (
-                {item["diocese_url"] for item in response_processed_dioceses.data}
-                if response_processed_dioceses.data is not None
-                else set()
-            )
-            
-            unprocessed_dioceses_urls = set(diocese_url_to_name.keys()) - processed_diocese_urls
-            
-            dioceses_to_scan_urls = []
-
-            if unprocessed_dioceses_urls:
-                print(f"Found {len(unprocessed_dioceses_urls)} dioceses needing parish directory URLs.")
-                limit = MAX_DIOCESES_TO_PROCESS if MAX_DIOCESES_TO_PROCESS != 0 else len(unprocessed_dioceses_urls)
-                dioceses_to_scan_urls = random.sample(list(unprocessed_dioceses_urls), limit)
+            if response_oldest_scanned.data:
+                dioceses_to_scan_urls = [item["diocese_url"] for item in response_oldest_scanned.data]
+                print(f"Selected {len(dioceses_to_scan_urls)} oldest dioceses for rescanning.")
             else:
-                print("All dioceses have been scanned. Rescanning the oldest entries based on 'updated_at'.")
-                limit = MAX_DIOCESES_TO_PROCESS if MAX_DIOCESES_TO_PROCESS != 0 else 5
-                response_oldest_scanned = (
-                    supabase.table("DiocesesParishDirectory")
-                    .select("diocese_url")
-                    .order("updated_at", desc=False)
-                    .limit(limit)
-                    .execute()
-                )
-                if response_oldest_scanned.data:
-                    dioceses_to_scan_urls = [item["diocese_url"] for item in response_oldest_scanned.data]
-                    print(f"Selected {len(dioceses_to_scan_urls)} oldest dioceses for rescanning.")
-                else:
-                    print("Could not find any previously scanned dioceses to rescan.")
+                print("Could not find any previously scanned dioceses to rescan.")
 
-            dioceses_to_scan = [
-                {"url": url, "name": diocese_url_to_name.get(url, "Unknown Diocese")}
-                for url in dioceses_to_scan_urls
-                if url in diocese_url_to_name
-            ]
+        dioceses_to_scan = [
+            {"url": url, "name": diocese_url_to_name.get(url, "Unknown Diocese")}
+            for url in dioceses_to_scan_urls
+            if url in diocese_url_to_name
+        ]
 
-        except Exception as e:
-            print(f"Error during Supabase data operations: {e}")
-            dioceses_to_scan = []
-    else:
-        print("Supabase client not initialized. Skipping data fetch.")
+    except Exception as e:
+        print(f"Error during Supabase data operations: {e}")
+        dioceses_to_scan = []
 
     if not dioceses_to_scan:
-        print(
-            "No dioceses to scan."
-        )
+        print("No dioceses to scan.")
         return
 
     driver_instance = setup_driver()
@@ -587,39 +474,36 @@ def main():
                 print(
                     f"    Result: No Parish Directory URL definitively found for {current_url} (Final method: {method})"
                 )
-            if supabase:
-                data_to_upsert = {
-                    "diocese_url": current_url,
-                    "parish_directory_url": parish_dir_url_found,
-                    "found": status_text,
-                    "found_method": method,
-                    "updated_at": datetime.now(timezone.utc).isoformat(),
-                }
-                print(f"    Attempting to upsert data: {data_to_upsert}")
-                try:
-                    response = (
-                        supabase.table("DiocesesParishDirectory")
-                        .upsert(data_to_upsert)
-                        .execute()
-                    )
-                    if hasattr(response, "error") and response.error:
-                        error_detail = (
-                            response.error.message
-                            if hasattr(response.error, "message")
-                            else str(response.error)
-                        )
-                        raise Exception(f"Supabase upsert error: {error_detail}")
-                    print(
-                        f"    Successfully upserted data for {current_url} to Supabase."
-                    )
-                except Exception as supa_error:
-                    print(
-                        f"    Error upserting data to Supabase for {current_url}: {supa_error}"
-                    )
-            else:
-                print(
-                    f"    Supabase client not available. Skipping database write for {current_url}."
+            
+            data_to_upsert = {
+                "diocese_url": current_url,
+                "parish_directory_url": parish_dir_url_found,
+                "found": status_text,
+                "found_method": method,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+            print(f"    Attempting to upsert data: {data_to_upsert}")
+            try:
+                response = (
+                    supabase.table("DiocesesParishDirectory")
+                    .upsert(data_to_upsert)
+                    .execute()
                 )
+                if hasattr(response, "error") and response.error:
+                    error_detail = (
+                        response.error.message
+                        if hasattr(response.error, "message")
+                        else str(response.error)
+                    )
+                    raise Exception(f"Supabase upsert error: {error_detail}")
+                print(
+                    f"    Successfully upserted data for {current_url} to Supabase."
+                )
+            except Exception as supa_error:
+                print(
+                    f"    Error upserting data to Supabase for {current_url}: {supa_error}"
+                )
+        
         except RetryError as e:
             error_message = str(e).replace('"', "''")
             print(
@@ -627,37 +511,33 @@ def main():
             )
             status_text = f"Error: Page load failed - {error_message[:60]}"
             method = "error_page_load_failed"
-            if supabase:
-                data_to_upsert = {
-                    "diocese_url": current_url,
-                    "parish_directory_url": None,
-                    "found": status_text,
-                    "found_method": method,
-                    "updated_at": datetime.now(timezone.utc).isoformat(),
-                }
-                try:
-                    response = (
-                        supabase.table("DiocesesParishDirectory")
-                        .upsert(data_to_upsert)
-                        .execute()
-                    )
-                    if hasattr(response, "error") and response.error:
-                        error_detail = (
-                            response.error.message
-                            if hasattr(response.error, "message")
-                            else str(response.error)
-                        )
-                        raise Exception(
-                            f"Supabase upsert error (on page load fail): {error_detail}"
-                        )
-                except Exception as supa_error:
-                    print(
-                        f"    Error upserting error data to Supabase for {current_url}: {supa_error}"
-                    )
-            else:
-                print(
-                    f"    Supabase client not available. Skipping database write for error on {current_url}."
+            data_to_upsert = {
+                "diocese_url": current_url,
+                "parish_directory_url": None,
+                "found": status_text,
+                "found_method": method,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+            try:
+                response = (
+                    supabase.table("DiocesesParishDirectory")
+                    .upsert(data_to_upsert)
+                    .execute()
                 )
+                if hasattr(response, "error") and response.error:
+                    error_detail = (
+                        response.error.message
+                        if hasattr(response.error, "message")
+                        else str(response.error)
+                    )
+                    raise Exception(
+                        f"Supabase upsert error (on page load fail): {error_detail}"
+                    )
+            except Exception as supa_error:
+                print(
+                    f"    Error upserting error data to Supabase for {current_url}: {supa_error}"
+                )
+        
         except Exception as e:
             error_message = str(e).replace('"', "''")
             print(
@@ -665,39 +545,47 @@ def main():
             )
             status_text = f"Error: {error_message[:100]}"
             method = "error_processing_general"
-            if supabase:
-                data_to_upsert = {
-                    "diocese_url": current_url,
-                    "parish_directory_url": None,
-                    "found": status_text,
-                    "found_method": method,
-                    "updated_at": datetime.now(timezone.utc).isoformat(),
-                }
-                try:
-                    response = (
-                        supabase.table("DiocesesParishDirectory")
-                        .upsert(data_to_upsert)
-                        .execute()
-                    )
-                    if hasattr(response, "error") and response.error:
-                        error_detail = (
-                            response.error.message
-                            if hasattr(response.error, "message")
-                            else str(response.error)
-                        )
-                        raise Exception(
-                            f"Supabase upsert error (on general error): {error_detail}"
-                        )
-                except Exception as supa_error:
-                    print(
-                        f"    Error upserting error data to Supabase for {current_url}: {supa_error}"
-                    )
-            else:
-                print(
-                    f"    Supabase client not available. Skipping database write for error on {current_url}."
+            data_to_upsert = {
+                "diocese_url": current_url,
+                "parish_directory_url": None,
+                "found": status_text,
+                "found_method": method,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+            try:
+                response = (
+                    supabase.table("DiocesesParishDirectory")
+                    .upsert(data_to_upsert)
+                    .execute()
                 )
+                if hasattr(response, "error") and response.error:
+                    error_detail = (
+                        response.error.message
+                        if hasattr(response.error, "message")
+                        else str(response.error)
+                    )
+                    raise Exception(
+                        f"Supabase upsert error (on general error): {error_detail}"
+                    )
+            except Exception as supa_error:
+                print(
+                    f"    Error upserting error data to Supabase for {current_url}: {supa_error}"
+                )
+    
     close_driver()
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Find parish directory URLs on diocesan websites."
+    )
+    parser.add_argument(
+        "--max_dioceses_to_process",
+        type=int,
+        default=5,
+        help="Maximum number of dioceses to process. Set to 0 for no limit. Defaults to 5.",
+    )
+    args = parser.parse_args()
+    
+    config.validate_config()
+    find_parish_directories(args.max_dioceses_to_process)
