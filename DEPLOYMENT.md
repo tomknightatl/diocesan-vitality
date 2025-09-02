@@ -19,11 +19,18 @@ Replace `your-docker-registry/your-repo-name` with your actual registry and repo
 
 Before building and pushing images, you need to log in to your Docker registry. For GitHub Container Registry (`ghcr.io`), follow these steps:
 
-1.  **Create a GitHub Personal Access Token (PAT)**:
-    *   Go to your GitHub settings: `Settings` > `Developer settings` > `Personal access tokens` > `Tokens (classic)` > `Generate new token (classic)`.
-    *   Give your token a descriptive name (e.g., `ghcr_token`).
-    *   **Crucially**, select the `write:packages` scope. This permission is required to push images to GitHub Container Registry.
-    *   Generate the token and copy it immediately. You won't be able to see it again.
+1.  **Create GitHub Personal Access Tokens (PATs)**:
+You will need two types of PATs:
+    *   **For `gh auth login` (to configure the credential helper)**:
+        *   Go to your GitHub settings: `Settings` > `Developer settings` > `Personal access tokens` > `Tokens (classic)` > `Generate new token (classic)`.
+        *   Give your token a descriptive name (e.g., `gh_cli_auth_token`).
+        *   **Crucially**, select the following scopes: `repo`, `read:org`, and `workflow`. These permissions are required for the GitHub CLI to interact with your GitHub account and set up the credential helper.
+        *   Generate the token and copy it immediately. You won't be able to see it again.
+    *   **For pushing to `ghcr.io` (if not using `gh` as credential helper, or for direct `docker login` with PAT)**:
+        *   Go to your GitHub settings: `Settings` > `Developer settings` > `Personal access tokens` > `Tokens (classic)` > `Generate new token (classic)`.
+        *   Give your token a descriptive name (e.g., `ghcr_push_token`).
+        *   **Crucially**, select the `write:packages` scope. This permission is required to push images to GitHub Container Registry.
+        *   Generate the token and copy it immediately. You won't be able to see it again.
 
 2.  **Install and Configure Docker Credential Helper (Recommended)**:
     To avoid storing credentials unencrypted and to securely manage your GitHub Container Registry login, use the GitHub CLI (`gh`) as a Docker credential helper.
@@ -40,26 +47,26 @@ Before building and pushing images, you need to log in to your Docker registry. 
         && sudo apt install gh -y
         ```
     *   **Configure `gh` as Docker Credential Helper**:
-        After installing `gh`, configure it to handle Docker authentication for `ghcr.io`:
+        After installing `gh`, configure it to handle Docker authentication for `ghcr.io`. When prompted, use the PAT you created for `gh auth login` (with `repo`, `read:org`, `workflow` scopes).
         ```sh
         gh auth login -h ghcr.io -p https
         ```
         Follow the prompts to authenticate with your GitHub account. This will set up `gh` to manage your Docker credentials for `ghcr.io` securely.
 
-
 3.  **Log in to GitHub Container Registry**:
-    Once the credential helper is configured, you can log in using your GitHub username and the PAT you created. The credential helper will securely store your PAT.
+    Once the credential helper is configured, you can log in using your GitHub username. The credential helper will securely provide the necessary token.
 
     ```sh
-    echo YOUR_PAT | docker login ghcr.io -u YOUR_USERNAME --password-stdin
+    docker login ghcr.io -u YOUR_USERNAME
     ```
-    Replace `YOUR_PAT` with the Personal Access Token you generated, and `YOUR_USERNAME` with your GitHub username.
+    Replace `YOUR_USERNAME` with your GitHub username. The `gh` credential helper will handle the PAT.
 
-    Alternatively, if the credential helper is correctly set up, you can often just run:
+    If you prefer to use a PAT directly without the credential helper (not recommended for security), use the `ghcr_push_token` you created:
     ```sh
-    docker login ghcr.io
+    echo YOUR_GHCR_PUSH_PAT | docker login ghcr.io -u YOUR_USERNAME --password-stdin
     ```
-    And it will prompt you for your username and PAT, then store it securely.
+    Replace `YOUR_GHCR_PUSH_PAT` with the Personal Access Token that has `write:packages` scope, and `YOUR_USERNAME` with your GitHub username.
+
 
 ## Step 1: Build and Push Docker Images
 
