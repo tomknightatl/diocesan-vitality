@@ -25,6 +25,6 @@ spec:
         #      --from-literal=SUPABASE_URL='your_supabase_url' \
         #      --from-literal=SUPABASE_KEY='your_supabase_key'
         # 2. Uncomment the envFrom block below.
-        # envFrom:
-        # - secretRef:
-        #     name: supabase-credentials
+        envFrom:
+        - secretRef:
+            name: supabase-credentials
