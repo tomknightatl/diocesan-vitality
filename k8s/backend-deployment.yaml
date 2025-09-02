@@ -18,7 +18,7 @@ spec:
       containers:
       - name: backend
         # IMPORTANT: Replace this with the actual path to your container image
-        image: ghcr.io/tomknightatl/usccb/usccb-backend:latest
+        image: ghcr.io/tomknightatl/usccb/usccb-backend:latest # Dummy change to force refresh
         ports:
         - containerPort: 8000
         env:
