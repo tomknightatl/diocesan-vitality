@@ -45,9 +45,10 @@ def fetch_and_process_table(table_name: str, supabase_client: Client):
         # Aggregate data by date
         time_series_data = {}
         for col in date_cols:
-            # Group by date and count records
+            # Group by date, count records, and calculate cumulative sum
             daily_counts = df.set_index(col).resample('D').size().rename('count')
-            time_series_data[col] = daily_counts.reset_index().rename(columns={col: 'date'})
+            cumulative_counts = daily_counts.cumsum()
+            time_series_data[col] = cumulative_counts.reset_index().rename(columns={col: 'date'})
 
         return df, time_series_data
 
@@ -63,11 +64,11 @@ def plot_time_series(time_series_data: dict, table_name: str):
     fig, ax = plt.subplots(figsize=(12, 6))
     
     for col_name, df_ts in time_series_data.items():
-        ax.plot(df_ts['date'], df_ts['count'], marker='o', linestyle='-', label=f'Records by {col_name}')
+        ax.plot(df_ts['date'], df_ts['count'], marker='o', linestyle='-', label=f'Cumulative Records by {col_name}')
 
-    ax.set_title(f'Number of Records in {table_name} Over Time')
+    ax.set_title(f'Cumulative Number of Records in {table_name} Over Time')
     ax.set_xlabel('Date')
-    ax.set_ylabel('Number of Records')
+    ax.set_ylabel('Cumulative Number of Records')
     ax.grid(True)
     ax.legend()
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))

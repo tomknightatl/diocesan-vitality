@@ -99,7 +99,7 @@ def extract_dioceses_data(soup):
 
     return dioceses
 
-def main(max_dioceses=0):
+def main(max_dioceses=5):
     """Main function to extract and store dioceses information."""
     url = "https://www.usccb.org/about/bishops-and-dioceses/all-dioceses"
     soup = get_soup(url)
@@ -148,7 +148,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--max_dioceses",
         type=int,
-        default=0,
+        default=5,
         help="Maximum number of dioceses to extract. Set to 0 or None for no limit."
     )
     args = parser.parse_args()
