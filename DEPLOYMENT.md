@@ -143,7 +143,24 @@ kubectl create secret generic supabase-credentials \
   --from-literal=SUPABASE_KEY='your_supabase_service_role_key'
 ```
 
+## Step 2.5: Create Image Pull Secret for GitHub Container Registry (GHCR)
+
+If you are pulling Docker images from a private registry like GitHub Container Registry (`ghcr.io`), Kubernetes needs credentials to authenticate. Create a `docker-registry` type secret using your GHCR credentials. This secret will be referenced by your deployments to pull the images.
+
+Replace the placeholders with your actual GitHub username, Personal Access Token (PAT), and email.
+
+```bash
+kubectl create secret docker-registry ghcr-secret \
+  --docker-server=ghcr.io \
+  --docker-username=<YOUR_GITHUB_USERNAME> \
+  --docker-password=<YOUR_GITHUB_PAT> \
+  --docker-email=<YOUR_GITHUB_EMAIL>
+```
+
+**Note:** The deployments (`backend-deployment.yaml` and `frontend-deployment.yaml`) have been updated to reference this `ghcr-secret` in their `imagePullSecrets` section.
+
 ## Step 3: Review and Update Kubernetes Manifests
+
 
 The Kubernetes manifests in the `k8s/` directory have been pre-filled with the necessary values based on your previous inputs. However, you should review them and update if these values change in the future.
 

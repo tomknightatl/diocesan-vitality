@@ -12,6 +12,9 @@ spec:
       labels:
         app: frontend
     spec:
+      serviceAccountName: default
+      imagePullSecrets:
+      - name: ghcr-secret
       containers:
       - name: frontend
         # IMPORTANT: Replace this with the actual path to your container image
