@@ -192,3 +192,60 @@ Instead of manually creating individual ArgoCD Applications, you will deploy an 
     ```
 
 Once the ApplicationSet is deployed, ArgoCD will automatically sync the manifests from your `k8s` directory and deploy the frontend and backend to your cluster.
+
+## Step 5: Verify Deployment and Test Application
+
+After deploying the ApplicationSet, you can verify the successful deployment of your application using both the ArgoCD Web UI and `kubectl` commands.
+
+### 1. Verify in ArgoCD Web UI
+
+1.  **Access ArgoCD UI**: Log in to your ArgoCD instance.
+2.  **Navigate to Applications**: You should see a new application, likely named `usccb-app` (or whatever name you configured in `applicationset.yaml`).
+3.  **Check Status**: Ensure the application shows `Healthy` and `Synced` status. This indicates that all Kubernetes resources defined in your `k8s` directory have been successfully applied to the cluster and are running as expected.
+4.  **Inspect Resources**: Click on the application to view its resources (Deployments, Services, Pods, Ingress). Verify that all components are in a healthy state (e.g., Pods are `Running`, Deployments are `Available`).
+
+### 2. Verify with `kubectl` Commands
+
+You can also use `kubectl` to confirm the deployment status directly from your terminal.
+
+*   **Check Deployments**:
+    ```bash
+    kubectl get deployments -n default
+    ```
+    You should see `backend-deployment` and `frontend-deployment` listed with desired replicas available.
+
+*   **Check Pods**:
+    ```bash
+    kubectl get pods -n default
+    ```
+    Verify that pods for both backend and frontend are `Running`.
+
+*   **Check Services**:
+    ```bash
+    kubectl get services -n default
+    ```
+    Confirm that `backend-service` and `frontend-service` are present.
+
+*   **Check Ingress**:
+    ```bash
+    kubectl get ingress -n default
+    ```
+    Look for `main-ingress` and check its `ADDRESS` column. This should show the external IP address or hostname provided by your Ingress Controller.
+
+*   **Check Ingress Controller Pods**:
+    ```bash
+    kubectl get pods -n ingress-nginx
+    ```
+    Verify that the NGINX Ingress Controller pods are running in the `ingress-nginx` namespace.
+
+### 3. Test the Application
+
+Once the Ingress `ADDRESS` is available, you can test your application.
+
+1.  **Get Ingress Host**: The application should be accessible via the domain `diocesevitality.org` that you configured in `k8s/ingress.yaml`.
+
+2.  **Access Frontend**: Open your web browser and navigate to `http://diocesevitality.org/` (or `https://diocesevitality.org/` if you have TLS configured for your Ingress).
+
+3.  **Test Backend API**: You can test the backend API by trying to access an endpoint, for example, `http://diocesevitality.org/api/some-endpoint` (replace `some-endpoint` with an actual API endpoint from your backend).
+
+If you encounter any issues, check the logs of the relevant pods (`kubectl logs <pod-name> -n <namespace>`) and review the events (`kubectl describe pod <pod-name> -n <namespace>`).
