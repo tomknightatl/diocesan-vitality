@@ -8,13 +8,26 @@ This guide outlines the steps to build, configure, and deploy the web applicatio
 - `kubectl` installed and configured to access your Kubernetes cluster.
 - An account with a container registry (e.g., Docker Hub, Google Container Registry, GitHub Container Registry).
 - An Ingress Controller (like NGINX) running in your cluster.
-- ArgoCD installed in your cluster.
+
+> **Note on Docker Permissions:** On Linux, to run `docker` commands without `sudo`, add your user to the `docker` group by running:
+> `sudo usermod -aG docker $USER`
+> After this, you must start a new terminal session for the change to take effect.
+
+Replace `your-docker-registry/your-repo-name` with your actual registry and repository name.
+
+## Docker Registry Login
+
+Before building and pushing images, log in to your Docker registry. For GitHub Container Registry, use:
+
+```sh
+echo YOUR_PAT | sudo docker login ghcr.io -u YOUR_USERNAME --password-stdin
+```
+
+Replace `YOUR_PAT` with a GitHub Personal Access Token that has `write:packages` scope, and `YOUR_USERNAME` with your GitHub username.
 
 ## Step 1: Build and Push Docker Images
 
 You need to build the Docker images for both the frontend and backend and push them to your container registry.
-
-Replace `your-docker-registry/your-repo-name` with your actual registry and repository name.
 
 ### Backend
 
@@ -23,10 +36,10 @@ Replace `your-docker-registry/your-repo-name` with your actual registry and repo
 cd backend
 
 # Build the Docker image
-docker build -t your-docker-registry/your-repo-name/usccb-backend:latest .
+sudo docker build -t ghcr.io/tomknightatl/usccb/usccb-backend:latest .
 
 # Push the image to your registry
-docker push your-docker-registry/your-repo-name/usccb-backend:latest
+sudo docker push ghcr.io/tomknightatl/usccb/usccb-backend:latest
 ```
 
 ### Frontend
@@ -36,10 +49,10 @@ docker push your-docker-registry/your-repo-name/usccb-backend:latest
 cd frontend
 
 # Build the Docker image
-docker build -t your-docker-registry/your-repo-name/usccb-frontend:latest .
+sudo docker build -t ghcr.io/tomknightatl/usccb/usccb-frontend:latest .
 
 # Push the image to your registry
-docker push your-docker-registry/your-repo-name/usccb-frontend:latest
+sudo docker push ghcr.io/tomknightatl/usccb/usccb-frontend:latest
 ```
 
 ## Step 2: Create Kubernetes Secret for Supabase
@@ -88,4 +101,3 @@ Create a new Application in ArgoCD to manage the deployment.
     -   **Namespace**: `default` (or the target namespace where you created the secret).
 
 Once you create the application, ArgoCD will automatically sync the manifests from your `k8s` directory and deploy the frontend and backend to your cluster.
-
