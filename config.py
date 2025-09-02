@@ -1,5 +1,8 @@
 import os
 from dotenv import load_dotenv
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 load_dotenv()
 
@@ -22,11 +25,11 @@ DEFAULT_NUM_PARISHES_FOR_SCHEDULE = 5
 def validate_config():
     """Validates that all necessary environment variables are loaded."""
     if not all([SUPABASE_URL, SUPABASE_KEY, GENAI_API_KEY, SEARCH_API_KEY, SEARCH_CX]):
-        print("Warning: One or more environment variables are not set.")
-        print("Please check your .env file or environment configuration.")
+        logger.warning("Warning: One or more environment variables are not set.")
+        logger.warning("Please check your .env file or environment configuration.")
         return False
     
-    print("All configurations loaded successfully.")
+    logger.info("All configurations loaded successfully.")
     return True
 
 if __name__ == "__main__":

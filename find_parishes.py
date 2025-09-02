@@ -22,6 +22,9 @@ import config
 from core.db import get_supabase_client
 from core.driver import close_driver, setup_driver
 from core.utils import normalize_url_join
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 # --- Global Variables ---
 use_mock_genai_direct_page = False
@@ -113,7 +116,7 @@ def analyze_links_with_genai(candidate_links, diocese_name=None):
     highest_score = -1
     current_use_mock_direct = use_mock_genai_direct_page if config.GENAI_API_KEY else True
     if not current_use_mock_direct:
-        print(
+        logger.info(
             f"Attempting LIVE GenAI analysis for {len(candidate_links)} direct page links for {diocese_name or 'Unknown Diocese'}."
         )
     if current_use_mock_direct:
@@ -154,11 +157,11 @@ def analyze_links_with_genai(candidate_links, diocese_name=None):
                     highest_score = score
                     best_link_found = link_info["href"]
         except RetryError as e:
-            print(
+            logger.info(
                 f"    GenAI API call (Direct Link) failed after multiple retries for {link_info['href']}: {e}"
             )
         except Exception as e:
-            print(
+            logger.info(
                 f"    Error calling GenAI (Direct Link) for {link_info['href']}: {e}. No score assigned."
             )
     return best_link_found
@@ -188,7 +191,7 @@ def analyze_search_snippet_with_genai(search_results, diocese_name):
     highest_score = -1
     current_use_mock_snippet = use_mock_genai_snippet if config.GENAI_API_KEY else True
     if not current_use_mock_snippet:
-        print(
+        logger.info(
             f"Attempting LIVE GenAI analysis for {len(search_results)} snippets for {diocese_name}."
         )
     if current_use_mock_snippet:
@@ -236,11 +239,11 @@ def analyze_search_snippet_with_genai(search_results, diocese_name):
                     highest_score = score
                     best_link_from_snippet = link
         except RetryError as e:
-            print(
+            logger.info(
                 f"    GenAI API call (Snippet) for {link} failed after multiple retries: {e}"
             )
         except Exception as e:
-            print(f"    Error calling GenAI for snippet analysis of {link}: {e}")
+            logger.info(f"    Error calling GenAI for snippet analysis of {link}: {e}")
     return best_link_from_snippet
 
 
@@ -250,7 +253,7 @@ def search_for_directory_link(diocese_name, diocese_website_url):
         use_mock_search_engine if (config.SEARCH_API_KEY and config.SEARCH_CX) else True
     )
     if not current_use_mock_search:
-        print(f"Attempting LIVE Google Custom Search for {diocese_name}.")
+        logger.info(f"Attempting LIVE Google Custom Search for {diocese_name}.")
     if current_use_mock_search:
         mock_results = [
             {
@@ -288,7 +291,7 @@ def search_for_directory_link(diocese_name, diocese_website_url):
         for q in queries:
             if len(search_results_items) >= 5:
                 break
-            print(f"    Executing search query: {q}")
+            logger.info(f"    Executing search query: {q}")
             try:
                 response = _invoke_search_api_with_retry(service, q, config.SEARCH_CX)
                 res_items = response.get("items", [])
@@ -299,23 +302,23 @@ def search_for_directory_link(diocese_name, diocese_website_url):
                         unique_links.add(link)
                 time.sleep(0.2)
             except RetryError as e:
-                print(f"    Search API call failed after retries for query '{q}': {e}")
+                logger.info(f"    Search API call failed after retries for query '{q}': {e}")
                 continue
             except HttpError as e:
                 if e.resp.status == 403:
-                    print(f"    Access denied (403) for query '{q}': {e.reason}")
-                    print(
+                    logger.info(f"    Access denied (403) for query '{q}': {e.reason}")
+                    logger.info(
                         "    Check that Custom Search API is enabled and credentials are correct."
                     )
                     break
                 else:
-                    print(f"    HTTP error for query '{q}': {e}")
+                    logger.info(f"    HTTP error for query '{q}': {e}")
                     continue
             except Exception as e:
-                print(f"    Unexpected error for query '{q}': {e}")
+                logger.info(f"    Unexpected error for query '{q}': {e}")
                 continue
         if not search_results_items:
-            print(f"    Search engine returned no results for {diocese_name}.")
+            logger.info(f"    Search engine returned no results for {diocese_name}.")
             return None
         formatted_results = [
             {
@@ -327,7 +330,7 @@ def search_for_directory_link(diocese_name, diocese_website_url):
         ]
         return analyze_search_snippet_with_genai(formatted_results, diocese_name)
     except Exception as e:
-        print(f"    Error during search engine setup for {diocese_name}: {e}")
+        logger.info(f"    Error during search engine setup for {diocese_name}: {e}")
         return None
 
 
@@ -348,11 +351,11 @@ def find_parish_directories(max_dioceses_to_process=config.DEFAULT_MAX_DIOCESES)
     if config.GENAI_API_KEY:
         try:
             genai.configure(api_key=config.GENAI_API_KEY)
-            print("GenAI configured successfully.")
+            logger.info("GenAI configured successfully.")
         except Exception as e:
-            print(f"Error configuring GenAI with key: {e}. GenAI features will be mocked.")
+            logger.info(f"Error configuring GenAI with key: {e}. GenAI features will be mocked.")
     else:
-        print("GenAI API Key is not set. GenAI features will be mocked globally.")
+        logger.info("GenAI API Key is not set. GenAI features will be mocked globally.")
 
     supabase = get_supabase_client()
     if not supabase:
@@ -364,7 +367,7 @@ def find_parish_directories(max_dioceses_to_process=config.DEFAULT_MAX_DIOCESES)
         all_dioceses_list = (
             response_dioceses.data if response_dioceses.data is not None else []
         )
-        print(f"Fetched {len(all_dioceses_list)} total records from Dioceses table.")
+        logger.info(f"Fetched {len(all_dioceses_list)} total records from Dioceses table.")
         
         diocese_url_to_name = {d["Website"]: d["Name"] for d in all_dioceses_list}
 
@@ -384,11 +387,11 @@ def find_parish_directories(max_dioceses_to_process=config.DEFAULT_MAX_DIOCESES)
         dioceses_to_scan_urls = []
 
         if unprocessed_dioceses_urls:
-            print(f"Found {len(unprocessed_dioceses_urls)} dioceses needing parish directory URLs.")
+            logger.info(f"Found {len(unprocessed_dioceses_urls)} dioceses needing parish directory URLs.")
             limit = max_dioceses_to_process if max_dioceses_to_process != 0 else len(unprocessed_dioceses_urls)
             dioceses_to_scan_urls = random.sample(list(unprocessed_dioceses_urls), limit)
         else:
-            print("All dioceses have been scanned. Rescanning the oldest entries based on 'updated_at'.")
+            logger.info("All dioceses have been scanned. Rescanning the oldest entries based on 'updated_at'.")
             limit = max_dioceses_to_process if max_dioceses_to_process != 0 else 5
             response_oldest_scanned = (
                 supabase.table("DiocesesParishDirectory")
@@ -399,9 +402,9 @@ def find_parish_directories(max_dioceses_to_process=config.DEFAULT_MAX_DIOCESES)
             )
             if response_oldest_scanned.data:
                 dioceses_to_scan_urls = [item["diocese_url"] for item in response_oldest_scanned.data]
-                print(f"Selected {len(dioceses_to_scan_urls)} oldest dioceses for rescanning.")
+                logger.info(f"Selected {len(dioceses_to_scan_urls)} oldest dioceses for rescanning.")
             else:
-                print("Could not find any previously scanned dioceses to rescan.")
+                logger.info("Could not find any previously scanned dioceses to rescan.")
 
         dioceses_to_scan = [
             {"url": url, "name": diocese_url_to_name.get(url, "Unknown Diocese")}
@@ -410,23 +413,23 @@ def find_parish_directories(max_dioceses_to_process=config.DEFAULT_MAX_DIOCESES)
         ]
 
     except Exception as e:
-        print(f"Error during Supabase data operations: {e}")
+        logger.info(f"Error during Supabase data operations: {e}")
         dioceses_to_scan = []
 
     if not dioceses_to_scan:
-        print("No dioceses to scan.")
+        logger.info("No dioceses to scan.")
         return
 
     driver_instance = setup_driver()
     if not driver_instance:
-        print("Selenium WebDriver not available. Skipping URL processing.")
+        logger.info("Selenium WebDriver not available. Skipping URL processing.")
         return
 
-    print(f"Processing {len(dioceses_to_scan)} dioceses with Selenium...")
+    logger.info(f"Processing {len(dioceses_to_scan)} dioceses with Selenium...")
     for diocese_info in dioceses_to_scan:
         current_url = diocese_info["url"]
         diocese_name = diocese_info["name"]
-        print(f"--- Processing: {current_url} ({diocese_name}) ---")
+        logger.info(f"--- Processing: {current_url} ({diocese_name}) ---")
         parish_dir_url_found = None
         status_text = "Not Found"
         method = "not_found_all_stages"
@@ -437,7 +440,7 @@ def find_parish_directories(max_dioceses_to_process=config.DEFAULT_MAX_DIOCESES)
             soup = BeautifulSoup(page_source, "html.parser")
             candidate_links = find_candidate_urls(soup, current_url)
             if candidate_links:
-                print(
+                logger.info(
                     f"    Found {len(candidate_links)} candidates from direct page. Analyzing..."
                 )
                 parish_dir_url_found = analyze_links_with_genai(
@@ -447,15 +450,15 @@ def find_parish_directories(max_dioceses_to_process=config.DEFAULT_MAX_DIOCESES)
                     method = "genai_direct_page_analysis"
                     status_text = "Success"
                 else:
-                    print(
+                    logger.info(
                         f"    GenAI (direct page) did not find a suitable URL for {current_url}."
                     )
             else:
-                print(
+                logger.info(
                     f"    No candidate links found by direct page scan for {current_url}."
                 )
             if not parish_dir_url_found:
-                print(
+                logger.info(
                     f"    Direct page analysis failed for {current_url}. Trying search engine fallback..."
                 )
                 parish_dir_url_found = search_for_directory_link(
@@ -465,13 +468,13 @@ def find_parish_directories(max_dioceses_to_process=config.DEFAULT_MAX_DIOCESES)
                     method = "search_engine_snippet_genai"
                     status_text = "Success"
                 else:
-                    print(f"    Search engine fallback also failed for {current_url}.")
+                    logger.info(f"    Search engine fallback also failed for {current_url}.")
             if parish_dir_url_found:
-                print(
+                logger.info(
                     f"    Result: Parish Directory URL for {current_url}: {parish_dir_url_found} (Method: {method})"
                 )
             else:
-                print(
+                logger.info(
                     f"    Result: No Parish Directory URL definitively found for {current_url} (Final method: {method})"
                 )
             
@@ -482,7 +485,7 @@ def find_parish_directories(max_dioceses_to_process=config.DEFAULT_MAX_DIOCESES)
                 "found_method": method,
                 "updated_at": datetime.now(timezone.utc).isoformat(),
             }
-            print(f"    Attempting to upsert data: {data_to_upsert}")
+            logger.info(f"    Attempting to upsert data: {data_to_upsert}")
             try:
                 response = (
                     supabase.table("DiocesesParishDirectory")
@@ -496,17 +499,17 @@ def find_parish_directories(max_dioceses_to_process=config.DEFAULT_MAX_DIOCESES)
                         else str(response.error)
                     )
                     raise Exception(f"Supabase upsert error: {error_detail}")
-                print(
+                logger.info(
                     f"    Successfully upserted data for {current_url} to Supabase."
                 )
             except Exception as supa_error:
-                print(
+                logger.info(
                     f"    Error upserting data to Supabase for {current_url}: {supa_error}"
                 )
         
         except RetryError as e:
             error_message = str(e).replace('"', "''")
-            print(
+            logger.info(
                 f"    Result: Page load failed after multiple retries for {current_url}: {error_message[:100]}"
             )
             status_text = f"Error: Page load failed - {error_message[:60]}"
@@ -534,13 +537,13 @@ def find_parish_directories(max_dioceses_to_process=config.DEFAULT_MAX_DIOCESES)
                         f"Supabase upsert error (on page load fail): {error_detail}"
                     )
             except Exception as supa_error:
-                print(
+                logger.info(
                     f"    Error upserting error data to Supabase for {current_url}: {supa_error}"
                 )
         
         except Exception as e:
             error_message = str(e).replace('"', "''")
-            print(
+            logger.info(
                 f"    Result: General error processing {current_url}: {error_message[:100]}"
             )
             status_text = f"Error: {error_message[:100]}"
@@ -568,7 +571,7 @@ def find_parish_directories(max_dioceses_to_process=config.DEFAULT_MAX_DIOCESES)
                         f"Supabase upsert error (on general error): {error_detail}"
                     )
             except Exception as supa_error:
-                print(
+                logger.info(
                     f"    Error upserting error data to Supabase for {current_url}: {supa_error}"
                 )
     
