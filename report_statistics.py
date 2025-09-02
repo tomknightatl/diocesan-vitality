@@ -29,13 +29,13 @@ def fetch_and_process_table(table_name: str, supabase_client: Client):
         # Convert relevant columns to datetime
         date_cols = []
         if 'created_at' in df.columns:
-            df['created_at'] = pd.to_datetime(df['created_at'])
+            df['created_at'] = pd.to_datetime(df['created_at'], utc=True, errors='coerce')
             date_cols.append('created_at')
         if 'extracted_at' in df.columns:
-            df['extracted_at'] = pd.to_datetime(df['extracted_at'])
+            df['extracted_at'] = pd.to_datetime(df['extracted_at'], format='ISO8601', utc=True, errors='coerce')
             date_cols.append('extracted_at')
         if 'scanned_at' in df.columns: # For ParishSchedules
-            df['scanned_at'] = pd.to_datetime(df['scanned_at'])
+                        df['scanned_at'] = pd.to_datetime(df['scanned_at'], utc=True, errors='coerce')
             date_cols.append('scanned_at')
 
         if not date_cols:
