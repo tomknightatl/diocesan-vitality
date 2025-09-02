@@ -21,7 +21,7 @@ import re
 import subprocess
 import logging
 from typing import List, Dict, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from urllib.parse import urljoin
 
 # Configure logging
@@ -1202,7 +1202,7 @@ def process_diocese_with_detailed_extraction(diocese_info: Dict, driver) -> Dict
         'diocese_name': diocese_name,
         'diocese_url': diocese_url,
         'parish_directory_url': parish_directory_url,
-        'timestamp': datetime.now().isoformat(),
+        'timestamp': datetime.now(timezone.utc).isoformat(),
         'pattern_detected': None,
         'parishes_found': [],
         'success': False,
