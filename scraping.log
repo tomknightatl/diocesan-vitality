@@ -9240,3 +9240,31 @@ Attempting to upsert 196 rows...
 2025-09-01 22:11:22,058 - INFO - Sample record: {'Name': 'Archdiocese of Mobile', 'Address': '400 Government Street, Mobile,AL36602, https://mobarch.org/', 'Website': 'https://mobarch.org/', 'extracted_at': '2025-09-02T02:11:21.974987+00:00'}
 2025-09-01 22:11:22,557 - INFO - HTTP Request: POST https://nzcwtjloonumxpsqzarq.supabase.co/rest/v1/Dioceses?on_conflict=Name&columns=%22extracted_at%22%2C%22Name%22%2C%22Address%22%2C%22Website%22 "HTTP/2 200 OK"
 2025-09-01 22:11:22,568 - INFO - ✅ Successfully upserted 196 rows!
+2025-09-01 22:17:56,036 - INFO - HTTP Request: GET https://nzcwtjloonumxpsqzarq.supabase.co/rest/v1/Parishes?select=Web&Web=not.is.null&limit=5 "HTTP/2 200 OK"
+2025-09-01 22:18:31,648 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:18:31,965 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:18:32,642 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:18:32,947 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:18:33,695 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:18:34,114 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:18:35,170 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:18:35,442 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:18:47,305 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:18:47,937 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:18:48,581 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:18:48,918 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:18:49,645 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:18:50,071 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:18:51,189 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:18:51,471 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:19:01,916 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:19:02,927 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:19:03,368 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:19:03,808 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:19:04,460 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:19:05,049 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:19:07,158 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:19:07,661 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:19:08,487 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:19:09,265 - WARNING - Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+2025-09-01 22:19:31,112 - INFO - HTTP Request: POST https://nzcwtjloonumxpsqzarq.supabase.co/rest/v1/ParishSchedules?on_conflict=url&columns=%22parish_name%22%2C%22scraped_at%22%2C%22reconciliation_info%22%2C%22url%22%2C%22adoration_page%22%2C%22adoration_info%22%2C%22offers_adoration%22%2C%22offers_reconciliation%22%2C%22reconciliation_page%22 "HTTP/2 200 OK"

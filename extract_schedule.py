@@ -23,282 +23,285 @@ from supabase import create_client, Client # Added
 # In[ ]:
 
 
-# Cell 2: Command-line arguments and Supabase setup
-load_dotenv() # Load environment variables from .env file
+ indef main(num_parishes=5):
+    # Cell 2: Command-line arguments and Supabase setup
+    load_dotenv() # Load environment variables from .env file
 
-parser = argparse.ArgumentParser(description="Extract adoration and reconciliation schedules from parish websites.")
-parser.add_argument(
-    "--num_parishes",
-    type=int,
-    default=5,
-    help="Maximum number of parishes to extract from. Set to 0 for no limit. Defaults to 5."
-)
-args = parser.parse_args()
+    # Initialize Supabase client
+    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_key = os.getenv("SUPABASE_KEY")
+    supabase: Client = create_client(supabase_url, supabase_key)
 
-# Initialize Supabase client
-supabase_url = os.getenv("SUPABASE_URL")
-supabase_key = os.getenv("SUPABASE_KEY")
-supabase: Client = create_client(supabase_url, supabase_key)
-
-# In[ ]:
+    # In[ ]:
 
 
-# Cell 3: (Original Cell 2 content, modified to remove Colab-specific git commands)
-# This section is for setting up the environment, not directly related to the core scraping logic.
-# Assuming the repository is already cloned and configured in a standard environment.
-# Removed Colab-specific git clone and config commands.
-# If running in a non-Colab environment, ensure your working directory is the project root.
-# GitHub credentials are now handled via environment variables if needed elsewhere.
-# GITHUB_REPO = 'USCCB'
-# GITHUB_USERNAME = os.getenv('GitHubUserforUSCCB') # Using os.getenv instead of userdata
-# GITHUB_PAT = os.getenv('GitHubPATforUSCCB') # Using os.getenv instead of userdata
+    # Cell 3: (Original Cell 2 content, modified to remove Colab-specific git commands)
+    # This section is for setting up the environment, not directly related to the core scraping logic.
+    # Assuming the repository is already cloned and configured in a standard environment.
+    # Removed Colab-specific git clone and config commands.
+    # If running in a non-Colab environment, ensure your working directory is the project root.
+    # GitHub credentials are now handled via environment variables if needed elsewhere.
+    # GITHUB_REPO = 'USCCB'
+    # GITHUB_USERNAME = os.getenv('GitHubUserforUSCCB') # Using os.getenv instead of userdata
+    # GITHUB_PAT = os.getenv('GitHubPATforUSCCB') # Using os.getenv instead of userdata
 
-# REPO_URL = f"https://{GITHUB_USERNAME}:{GITHUB_PAT}@github.com/{GITHUB_USERNAME}/{GITHUB_REPO}.git"
+    # REPO_URL = f"https://{GITHUB_USERNAME}:{GITHUB_PAT}@github.com/{GITHUB_USERNAME}/{GITHUB_REPO}.git"
 
-# # Check if the repository directory already exists
-# if not os.path.exists(GITHUB_REPO):
-#     # Clone the repository
-#     # subprocess.run(['git', 'clone', REPO_URL]) # Use subprocess.run for standalone scripts
-#     # os.chdir(GITHUB_REPO)
-#     print("Repository not found. Please ensure you are running from the project root or clone manually.")
-# else:
-#     # os.chdir(GITHUB_REPO)
-#     # subprocess.run(['git', 'pull', 'origin', 'main']) # Use subprocess.run for standalone scripts
-#     print(f"Repository {GITHUB_REPO} already exists. Assuming it's up to date.")
+    # # Check if the repository directory already exists
+    # if not os.path.exists(GITHUB_REPO):
+    #     # Clone the repository
+    #     # subprocess.run(['git', 'clone', REPO_URL]) # Use subprocess.run for standalone scripts
+    #     # os.chdir(GITHUB_REPO)
+    #     print("Repository not found. Please ensure you are running from the project root or clone manually.")
+    # else:
+    #     # os.chdir(GITHUB_REPO)
+    #     # subprocess.run(['git', 'pull', 'origin', 'main']) # Use subprocess.run for standalone scripts
+    #     print(f"Repository {GITHUB_REPO} already exists. Assuming it's up to date.")
 
-# # Configure Git (if needed for commits from this script)
-# # subprocess.run(['git', 'config', '--global', 'user.email', 'tomk@github.leemail.me'])
-# # subprocess.run(['git', 'config', '--global', 'user.name', 'tomknightatl'])
-
-
-# In[ ]:
+    # # Configure Git (if needed for commits from this script)
+    # # subprocess.run(['git', 'config', '--global', 'user.email', 'tomk@github.leemail.me'])
+    # # subprocess.run(['git', 'config', '--global', 'user.name', 'tomknightatl'])
 
 
-# Cell 3
-def get_sitemap_urls(url):
-    try:
-        response = requests.get(urljoin(url, '/sitemap.xml'))
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.content, 'xml')
-            return [loc.text for loc in soup.find_all('loc')]
-    except:
-        pass
-    return []
+    # In[ ]:
 
 
-# In[ ]:
-
-
-# Cell 4
-def search_for_keywords(url, keywords):
-    try:
-        response = requests.get(url)
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.content, 'html.parser')
-            text = soup.get_text().lower()
-            return any(keyword.lower() in text for keyword in keywords)
-    except:
-        pass
-    return False
-
-
-# In[ ]:
-
-
-# Cell 5
-def extract_time_info(url, keyword):
-    try:
-        response = requests.get(url)
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.content, 'html.parser')
-            text = soup.get_text()
-
-            # Look for patterns like "X hours per week" or "X hours per month"
-            time_pattern = re.compile(r'(\d+)\s*hours?\s*per\s*(week|month)', re.IGNORECASE)
-            match = time_pattern.search(text)
-
-            if match:
-                hours = int(match.group(1))
-                period = match.group(2).lower()
-                return f"{hours} hours per {period}"
-
-            # If no clear pattern is found, return the paragraph containing the keyword
-            paragraphs = soup.find_all('p')
-            for p in paragraphs:
-                if keyword.lower() in p.text.lower():
-                    return p.text.strip()
-    except:
-        pass
-    return "Information not found"
-
-
-# In[ ]:
-
-
-# Cell 6
-def scrape_parish_data(url):
-    sitemap_urls = get_sitemap_urls(url)
-    all_urls = [url] + sitemap_urls
-
-    print(f"Found {len(all_urls)} URLs on Sitemap page:")
-    for sitemap_url in all_urls:
-        print(f"Sitemap URL: {sitemap_url}")
-
-        # Get all links from the sitemap page
+    # Cell 3
+    def get_sitemap_urls(url):
         try:
-            response = requests.get(sitemap_url)
+            response = requests.get(urljoin(url, '/sitemap.xml'))
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.content, 'xml')
+                return [loc.text for loc in soup.find_all('loc')]
+        except:
+            pass
+        return []
+
+
+    # In[ ]:
+
+
+    # Cell 4
+    def search_for_keywords(url, keywords):
+        try:
+            response = requests.get(url)
             if response.status_code == 200:
                 soup = BeautifulSoup(response.content, 'html.parser')
-                page_links = [a['href'] for a in soup.find_all('a', href=True)]
-            else:
-                page_links = []
+                text = soup.get_text().lower()
+                return any(keyword.lower() in text for keyword in keywords)
         except:
-            page_links = []
+            pass
+        return False
 
-        print(f"Found {len(page_links)} links on {sitemap_url}")
 
-        reconciliation_found = False
-        adoration_found = False
-        reconciliation_info = ""
-        adoration_info = ""
-        reconciliation_page = ""
-        adoration_page = ""
+    # In[ ]:
 
-        for page_url in [sitemap_url] + page_links:
-            print(f"Checking {page_url}...")
 
-            if not reconciliation_found and search_for_keywords(page_url, ['Reconciliation', 'Confession']):
-                reconciliation_found = True
-                reconciliation_info = extract_time_info(page_url, 'Reconciliation')
-                reconciliation_page = page_url
-                print(f"Reconciliation information found on {page_url}")
+    # Cell 5
+    def extract_time_info(url, keyword):
+        try:
+            response = requests.get(url)
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.content, 'html.parser')
+                text = soup.get_text()
 
-            if not adoration_found and search_for_keywords(page_url, ['Adoration']):
-                adoration_found = True
-                adoration_info = extract_time_info(page_url, 'Adoration')
-                adoration_page = page_url
-                print(f"Adoration information found on {page_url}")
+                # Look for patterns like "X hours per week" or "X hours per month"
+                time_pattern = re.compile(r'(\d+)\s*hours?\s*per\s*(week|month)', re.IGNORECASE)
+                match = time_pattern.search(text)
+
+                if match:
+                    hours = int(match.group(1))
+                    period = match.group(2).lower()
+                    return f"{hours} hours per {period}"
+
+                # If no clear pattern is found, return the paragraph containing the keyword
+                paragraphs = soup.find_all('p')
+                for p in paragraphs:
+                    if keyword.lower() in p.text.lower():
+                        return p.text.strip()
+        except:
+            pass
+        return "Information not found"
+
+
+    # In[ ]:
+
+
+    # Cell 6
+    def scrape_parish_data(url):
+        sitemap_urls = get_sitemap_urls(url)
+        all_urls = [url] + sitemap_urls
+
+        print(f"Found {len(all_urls)} URLs on Sitemap page:")
+        for sitemap_url in all_urls:
+            print(f"Sitemap URL: {sitemap_url}")
+
+            # Get all links from the sitemap page
+            try:
+                response = requests.get(sitemap_url)
+                if response.status_code == 200:
+                    soup = BeautifulSoup(response.content, 'html.parser')
+                    page_links = [a['href'] for a in soup.find_all('a', href=True)]
+                else:
+                    page_links = []
+            except:
+                page_links = []
+
+            print(f"Found {len(page_links)} links on {sitemap_url}")
+
+            reconciliation_found = False
+            adoration_found = False
+            reconciliation_info = ""
+            adoration_info = ""
+            reconciliation_page = ""
+            adoration_page = ""
+
+            for page_url in [sitemap_url] + page_links:
+                print(f"Checking {page_url}...")
+
+                if not reconciliation_found and search_for_keywords(page_url, ['Reconciliation', 'Confession']):
+                    reconciliation_found = True
+                    reconciliation_info = extract_time_info(page_url, 'Reconciliation')
+                    reconciliation_page = page_url
+                    print(f"Reconciliation information found on {page_url}")
+
+                if not adoration_found and search_for_keywords(page_url, ['Adoration']):
+                    adoration_found = True
+                    adoration_info = extract_time_info(page_url, 'Adoration')
+                    adoration_page = page_url
+                    print(f"Adoration information found on {page_url}")
+
+                if reconciliation_found and adoration_found:
+                    break
 
             if reconciliation_found and adoration_found:
                 break
 
-        if reconciliation_found and adoration_found:
-            break
-
-    return {
-        'url': url,
-        'offers_reconciliation': reconciliation_found,
-        'reconciliation_info': reconciliation_info,
-        'reconciliation_page': reconciliation_page,
-        'offers_adoration': adoration_found,
-        'adoration_info': adoration_info,
-        'adoration_page': adoration_page,
-        'scraped_at': datetime.now(timezone.utc).isoformat()
-    }
+        return {
+            'url': url,
+            'offers_reconciliation': reconciliation_found,
+            'reconciliation_info': reconciliation_info,
+            'reconciliation_page': reconciliation_page,
+            'offers_adoration': adoration_found,
+            'adoration_info': adoration_info,
+            'adoration_page': adoration_page,
+            'scraped_at': datetime.now(timezone.utc).isoformat()
+        }
 
 
-# In[ ]:
+    # In[ ]:
 
 
-# Cell 7: Fetch parish URLs from Supabase and process
-parish_urls = []
-try:
-    query = supabase.table('Parishes').select('Web').not_.is_('Web', 'null')
-    if args.num_parishes != 0:
-        query = query.limit(args.num_parishes)
-    
-    response = query.execute()
-    parish_urls = [p['Web'] for p in response.data if p['Web']]
-    print(f"Fetched {len(parish_urls)} parish URLs from Supabase.")
-except Exception as e:
-    print(f"Error fetching parish URLs from Supabase: {e}")
-
-results = []
-for url in parish_urls:
-    print(f"Scraping {url}...")
-    result = scrape_parish_data(url)
-    # Extract parish name from URL, handle cases where it might not be clean
+    # Cell 7: Fetch parish URLs from Supabase and process
+    parish_urls = []
     try:
-        parish_name = url.split('//')[1].split('.')[0]
-    except IndexError:
-        parish_name = url # Fallback to full URL if name extraction fails
-    result['parish_name'] = parish_name
-    results.append(result)
-    print(f"Completed scraping {url}")
-
-
-# In[ ]:
-
-
-# Cell 8
-df = pd.DataFrame(results)
-print(df)
-
-
-# In[ ]:
-
-
-# Cell 9
-conn = sqlite3.connect('data.db')
-df.to_sql('AdorationReconcilation', conn, if_exists='replace', index=False)
-conn.close()
-
-print("Data saved to parish_data.db")
-
-
-# In[ ]:
-
-
-# Cell 10
-# In[ ]:
-
-
-# Cell 9: Save extracted data to Supabase
-
-# Prepare data for Supabase upsert
-# The 'results' list already contains dictionaries with the necessary data.
-# We'll use these directly.
-
-if results:
-    try:
-        # Supabase upsert will create the table if it doesn't exist
-        # and infer the schema from the first upserted object.
-        # It's good practice to have a primary key for upsert to work correctly.
-        # Assuming 'url' can act as a unique identifier for each parish schedule.
-        response = supabase.table('ParishSchedules').upsert(results, on_conflict='url').execute()
-
-        if hasattr(response, 'error') and response.error:
-            print(f"Error saving data to Supabase: {response.error}")
-        else:
-            print(f"Successfully saved {len(results)} records to Supabase table 'ParishSchedules'.")
-            # Optional: Verify data by fetching from Supabase
-            # print("Verifying data in Supabase...")
-            # verify_response = supabase.table('ParishSchedules').select('*').limit(5).execute()
-            # print(verify_response.data)
-
+        query = supabase.table('Parishes').select('Web').not_.is_('Web', 'null')
+        if num_parishes != 0:
+            query = query.limit(num_parishes)
+        
+        response = query.execute()
+        parish_urls = [p['Web'] for p in response.data if p['Web']]
+        print(f"Fetched {len(parish_urls)} parish URLs from Supabase.")
     except Exception as e:
-        print(f"An unexpected error occurred during Supabase upsert: {e}")
-else:
-    print("No results to save to Supabase.")
+        print(f"Error fetching parish URLs from Supabase: {e}")
+
+    results = []
+    for url in parish_urls:
+        print(f"Scraping {url}...")
+        result = scrape_parish_data(url)
+        # Extract parish name from URL, handle cases where it might not be clean
+        try:
+            parish_name = url.split('//')[1].split('.')[0]
+        except IndexError:
+            parish_name = url # Fallback to full URL if name extraction fails
+        result['parish_name'] = parish_name
+        results.append(result)
+        print(f"Completed scraping {url}")
 
 
-# In[ ]:
+    # In[ ]:
 
 
-# Cell 10: (Removed SQLite verification, now handled by Supabase upsert and optional verification)
-# This cell previously verified data in the local SQLite database.
-# With data now being saved to Supabase, verification would involve querying Supabase.
-# The optional verification code is commented out in Cell 9.
+    # Cell 8
+    df = pd.DataFrame(results)
+    print(df)
 
 
-# In[ ]:
+    # In[ ]:
 
 
-# Cell 11: Git operations (removed for standalone script compatibility)
-# Git operations are typically handled outside the script in a production environment.
-# If you need to commit and push, please do so manually from your terminal.
-# For example:
-# git add data.db
-# git commit -m "Updated adoration and reconciliation data"
-# git push origin main
+    # Cell 9
+    conn = sqlite3.connect('data.db')
+    df.to_sql('AdorationReconcilation', conn, if_exists='replace', index=False)
+    conn.close()
+
+    print("Data saved to parish_data.db")
+
+
+    # In[ ]:
+
+
+    # Cell 10
+    # In[ ]:
+
+
+    # Cell 9: Save extracted data to Supabase
+
+    # Prepare data for Supabase upsert
+    # The 'results' list already contains dictionaries with the necessary data.
+    # We'll use these directly.
+
+    if results:
+        try:
+            # Supabase upsert will create the table if it doesn't exist
+            # and infer the schema from the first upserted object.
+            # It's good practice to have a primary key for upsert to work correctly.
+            # Assuming 'url' can act as a unique identifier for each parish schedule.
+            response = supabase.table('ParishSchedules').upsert(results, on_conflict='url').execute()
+
+            if hasattr(response, 'error') and response.error:
+                print(f"Error saving data to Supabase: {response.error}")
+            else:
+                print(f"Successfully saved {len(results)} records to Supabase table 'ParishSchedules'.")
+                # Optional: Verify data by fetching from Supabase
+                # print("Verifying data in Supabase...")
+                # verify_response = supabase.table('ParishSchedules').select('*').limit(5).execute()
+                # print(verify_response.data)
+
+        except Exception as e:
+            print(f"An unexpected error occurred during Supabase upsert: {e}")
+    else:
+        print("No results to save to Supabase.")
+
+
+    # In[ ]:
+
+
+    # Cell 10: (Removed SQLite verification, now handled by Supabase upsert and optional verification)
+    # This cell previously verified data in the local SQLite database.
+    # With data now being saved to Supabase, verification would involve querying Supabase.
+    # The optional verification code is commented out in Cell 9.
+
+
+    # In[ ]:
+
+
+    # Cell 11: Git operations (removed for standalone script compatibility)
+    # Git operations are typically handled outside the script in a production environment.
+    # If you need to commit and push, please do so manually from your terminal.
+    # For example:
+    # git add data.db
+    # git commit -m "Updated adoration and reconciliation data"
+    # git push origin main
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Extract adoration and reconciliation schedules from parish websites.")
+    parser.add_argument(
+        "--num_parishes",
+        type=int,
+        default=5,
+        help="Maximum number of parishes to extract from. Set to 0 for no limit. Defaults to 5."
+    )
+    args = parser.parse_args()
+    main(args.num_parishes)
 

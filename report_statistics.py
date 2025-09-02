@@ -74,7 +74,7 @@ def plot_time_series(time_series_data: dict, table_name: str):
     plt.xticks(rotation=45)
     plt.tight_layout()
 
-    filename = f"{table_name.lower()}_records_over_time.png"
+    filename = f"reports/{table_name.lower()}_records_over_time.png"
     plt.savefig(filename)
     print(f"Chart saved to {filename}")
     plt.close(fig) # Close the figure to free memory
