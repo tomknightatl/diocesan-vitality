@@ -71,7 +71,7 @@ You will need two types of PATs:
     ```sh
     docker login ghcr.io -u YOUR_USERNAME
     ```
-    Replace `YOUR_USERNAME` with your GitHub username. The `gh` credential helper will handle the PAT.
+    **Important:** Replace `YOUR_USERNAME` with your actual GitHub username (e.g., `tomknightatl`). **DO NOT** use your Personal Access Token as the username. If the credential helper is working correctly, this command should *not* prompt you for a password and should succeed silently.
 
     If you prefer to use a PAT directly without the credential helper (not recommended for security), use the `ghcr_push_token` you created:
     ```sh
@@ -79,6 +79,44 @@ You will need two types of PATs:
     ```
     Replace `YOUR_GHCR_PUSH_PAT` with the Personal Access Token that has `write:packages` scope, and `YOUR_USERNAME` with your GitHub username.
 
+
+## Troubleshooting Docker Permissions and Credential Helper
+
+If you are still encountering issues with Docker permissions or the credential helper, follow these troubleshooting steps:
+
+1.  **Verify Docker Group Membership**:
+    Ensure your user account is correctly added to the `docker` group.
+    ```sh
+    groups
+    ```
+    You should see `docker` in the output. If not, re-run `sudo usermod -aG docker $USER` and **log out and log back in** (or restart your system) for the changes to take full effect. A new terminal session might not be enough.
+
+2.  **Verify Docker Daemon Status**:
+    Ensure the Docker daemon is running.
+    ```sh
+    sudo systemctl status docker
+    ```
+    If it's not running or has errors, try restarting it:
+    ```sh
+    sudo systemctl restart docker
+    ```
+
+3.  **Verify Credential Helper Configuration**:
+    Check your Docker configuration file to ensure the `gh` credential helper is correctly set up.
+    ```sh
+    cat ~/.docker/config.json
+    ```
+    You should see an entry like `"credsStore": "gh"` or `"credHelpers": {"ghcr.io": "gh"}`. If not, re-run `gh auth setup-git`.
+
+4.  **Clean up old Docker credentials**:
+    As mentioned in the "Docker Registry Login" section, old unencrypted credentials can cause issues. Make sure you have removed any conflicting entries from `~/.docker/config.json`.
+
+5.  **Test Docker Login**:
+    After performing the above steps, try logging in again. If the credential helper is working, it should not prompt for a password.
+    ```sh
+    docker login ghcr.io -u YOUR_USERNAME
+    ```
+    Replace `YOUR_USERNAME` with your GitHub username.
 
 ## Step 1: Build and Push Docker Images
 
