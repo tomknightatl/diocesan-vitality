@@ -143,22 +143,22 @@ kubectl create secret generic supabase-credentials \
   --from-literal=SUPABASE_KEY='your_supabase_service_role_key'
 ```
 
-## Step 3: Update Kubernetes Manifests
+## Step 3: Review and Update Kubernetes Manifests
 
-The Kubernetes manifests in the `k8s/` directory contain placeholder values that you must update.
+The Kubernetes manifests in the `k8s/` directory have been pre-filled with the necessary values based on your previous inputs. However, you should review them and update if these values change in the future.
 
 1.  **`k8s/backend-deployment.yaml`**:
-    -   Update the `spec.template.spec.containers[0].image` to the backend image path you pushed in Step 1.
-    -   Uncomment the `envFrom` section to use the `supabase-credentials` secret you created.
+    -   The `spec.template.spec.containers[0].image` is set to your backend image path.
+    -   The `envFrom` section is uncommented to use the `supabase-credentials` secret.
 
 2.  **`k8s/frontend-deployment.yaml`**:
-    -   Update the `spec.template.spec.containers[0].image` to the frontend image path you pushed in Step 1.
+    -   The `spec.template.spec.containers[0].image` is set to your frontend image path.
 
 3.  **`k8s/ingress.yaml`**:
-    -   Update the `spec.rules[0].host` to the domain where you want to host the application (e.g., `usccb.your-domain.com`).
+    -   The `spec.rules[0].host` is set to `diocesevitality.org`.
     -   Ensure the `kubernetes.io/ingress.class` annotation matches your cluster's Ingress Controller.
 
-After updating these files, commit and push them to your Git repository.
+After reviewing these files, commit and push them to your Git repository if you made any further changes.
 
 ## Step 4: Deploy with ArgoCD
 
