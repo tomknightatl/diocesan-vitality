@@ -14,38 +14,61 @@ from urllib.parse import urljoin
 import sqlite3
 import pandas as pd
 import os
-from google.colab import userdata
 from datetime import datetime, timezone
+import argparse # Added
+from dotenv import load_dotenv # Added
+from supabase import create_client, Client # Added
 
 
 # In[ ]:
 
 
-# Cell 2: Clone GitHub repository and configure Git
-import os
-from google.colab import userdata
+# Cell 2: Command-line arguments and Supabase setup
+load_dotenv() # Load environment variables from .env file
 
-# GitHub credentials
-GITHUB_REPO = 'USCCB'
-GITHUB_USERNAME = userdata.get('GitHubUserforUSCCB')
-GITHUB_PAT = userdata.get('GitHubPATforUSCCB')
+parser = argparse.ArgumentParser(description="Extract adoration and reconciliation schedules from parish websites.")
+parser.add_argument(
+    "--num_parishes",
+    type=int,
+    default=5,
+    help="Maximum number of parishes to extract from. Set to 0 for no limit. Defaults to 5."
+)
+args = parser.parse_args()
 
-# GitHub repository URL
-REPO_URL = f"https://{GITHUB_USERNAME}:{GITHUB_PAT}@github.com/{GITHUB_USERNAME}/{GITHUB_REPO}.git"
+# Initialize Supabase client
+supabase_url = os.getenv("SUPABASE_URL")
+supabase_key = os.getenv("SUPABASE_KEY")
+supabase: Client = create_client(supabase_url, supabase_key)
 
-# Check if the repository directory already exists
-if not os.path.exists(GITHUB_REPO):
-    # Clone the repository
-    get_ipython().system('git clone {REPO_URL}')
-    os.chdir(GITHUB_REPO)
-else:
-    print(f"Repository {GITHUB_REPO} already exists. Updating...")
-    os.chdir(GITHUB_REPO)
-    get_ipython().system('git pull origin main')
+# In[ ]:
 
-# Configure Git
-get_ipython().system('git config --global user.email "tomk@github.leemail.me"')
-get_ipython().system('git config --global user.name "tomknightatl"')
+
+# Cell 3: (Original Cell 2 content, modified to remove Colab-specific git commands)
+# This section is for setting up the environment, not directly related to the core scraping logic.
+# Assuming the repository is already cloned and configured in a standard environment.
+# Removed Colab-specific git clone and config commands.
+# If running in a non-Colab environment, ensure your working directory is the project root.
+# GitHub credentials are now handled via environment variables if needed elsewhere.
+# GITHUB_REPO = 'USCCB'
+# GITHUB_USERNAME = os.getenv('GitHubUserforUSCCB') # Using os.getenv instead of userdata
+# GITHUB_PAT = os.getenv('GitHubPATforUSCCB') # Using os.getenv instead of userdata
+
+# REPO_URL = f"https://{GITHUB_USERNAME}:{GITHUB_PAT}@github.com/{GITHUB_USERNAME}/{GITHUB_REPO}.git"
+
+# # Check if the repository directory already exists
+# if not os.path.exists(GITHUB_REPO):
+#     # Clone the repository
+#     # subprocess.run(['git', 'clone', REPO_URL]) # Use subprocess.run for standalone scripts
+#     # os.chdir(GITHUB_REPO)
+#     print("Repository not found. Please ensure you are running from the project root or clone manually.")
+# else:
+#     # os.chdir(GITHUB_REPO)
+#     # subprocess.run(['git', 'pull', 'origin', 'main']) # Use subprocess.run for standalone scripts
+#     print(f"Repository {GITHUB_REPO} already exists. Assuming it's up to date.")
+
+# # Configure Git (if needed for commits from this script)
+# # subprocess.run(['git', 'config', '--global', 'user.email', 'tomk@github.leemail.me'])
+# # subprocess.run(['git', 'config', '--global', 'user.name', 'tomknightatl'])
 
 
 # In[ ]:
@@ -177,19 +200,29 @@ def scrape_parish_data(url):
 # In[ ]:
 
 
-# Cell 7
-parish_urls = [
-    'https://allsaintsdunwoody.org/',
-#    'https://sacredheartatlanta.org/',
-#    'https://cathedralctk.com/',
-    'https://www.christourhopeatl.org/'
-]
+# Cell 7: Fetch parish URLs from Supabase and process
+parish_urls = []
+try:
+    query = supabase.table('Parishes').select('Website').not_.is_('Website', 'null')
+    if args.num_parishes != 0:
+        query = query.limit(args.num_parishes)
+    
+    response = query.execute()
+    parish_urls = [p['Website'] for p in response.data if p['Website']]
+    print(f"Fetched {len(parish_urls)} parish URLs from Supabase.")
+except Exception as e:
+    print(f"Error fetching parish URLs from Supabase: {e}")
 
 results = []
 for url in parish_urls:
     print(f"Scraping {url}...")
     result = scrape_parish_data(url)
-    result['parish_name'] = url.split('//')[1].split('.')[0]
+    # Extract parish name from URL, handle cases where it might not be clean
+    try:
+        parish_name = url.split('//')[1].split('.')[0]
+    except IndexError:
+        parish_name = url # Fallback to full URL if name extraction fails
+    result['parish_name'] = parish_name
     results.append(result)
     print(f"Completed scraping {url}")
 
@@ -228,13 +261,11 @@ print(df_from_db)
 # In[ ]:
 
 
-# Cell 11: Commit changes and push to GitHub
-# Add changes to git
-get_ipython().system('git add data.db')
-
-# Commit changes
-get_ipython().system('git commit -m "Added data to data.db using Find_Adoration_and_Reconciliation_information_for_a_Parish.ipynb"')
-
-# Push changes to GitHub
-get_ipython().system('git push origin main')
+# Cell 11: Git operations (removed for standalone script compatibility)
+# Git operations are typically handled outside the script in a production environment.
+# If you need to commit and push, please do so manually from your terminal.
+# For example:
+# git add data.db
+# git commit -m "Updated adoration and reconciliation data"
+# git push origin main
 

@@ -284,12 +284,17 @@ This script will:
 ### Step 4: Extract Liturgical Information (Optional)
 
 ```bash
+python extract_schedule.py --num_parishes 0
+# or simply:
 python extract_schedule.py
 ```
 
 This script will:
 - Scrape specified parish websites for Adoration and Reconciliation schedules
 - Store the information in a local SQLite database
+
+**Parameters**:
+- `--num_parishes`: Optional. Maximum number of parishes to extract from. Defaults to 5. Set to 0 for no limit.
 
 ## Script Modifications for Standalone Execution
 
