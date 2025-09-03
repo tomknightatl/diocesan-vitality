@@ -12,7 +12,7 @@ metadata:
 spec:
   rules:
   # IMPORTANT: Replace with your actual domain
-  - host: diocesevitality.org
+  - host: optinosis.online
     http:
       paths:
       - path: /api(/|$)(.*)
