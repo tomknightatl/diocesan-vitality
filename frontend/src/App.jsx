@@ -8,7 +8,7 @@ function App() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch('/api/dioceses')
+    fetch('http://api.diocesevitality.org/dioceses')
       .then(response => {
         if (!response.ok) {
           throw new Error('Network response was not ok');
