@@ -18,6 +18,6 @@ spec:
       containers:
       - name: frontend
         # IMPORTANT: Replace this with the actual path to your container image
-        image: ghcr.io/tomknightatl/usccb/usccb-frontend:v1.0.2
+        image: ghcr.io/tomknightatl/usccb/usccb-frontend:v1.0.3
         ports:
         - containerPort: 80
