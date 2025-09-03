@@ -227,7 +227,7 @@ You can also use `kubectl` to confirm the deployment status directly from your t
     Confirm that `backend-service` and `frontend-service` are present.
 
 *   **Get Ingress Controller External IP**:
-    To find the public IP address of your cluster's Load Balancer, which is managed by the NGINX Ingress Controller, run:
+    To find the public IP address of your cluster's Load Balancer, which is managed by the NGINX Ingress Controller, run the following specific command:
     ```bash
     kubectl get services -n ingress-nginx ingress-nginx-controller
     ```
