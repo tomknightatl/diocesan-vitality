@@ -226,6 +226,13 @@ You can also use `kubectl` to confirm the deployment status directly from your t
     ```
     Confirm that `backend-service` and `frontend-service` are present.
 
+*   **Get Ingress Controller External IP**:
+    To find the public IP address of your cluster's Load Balancer, which is managed by the NGINX Ingress Controller, run:
+    ```bash
+    kubectl get services -n ingress-nginx ingress-nginx-controller
+    ```
+    Look for the `EXTERNAL-IP` in the output. This is the IP address you will use to configure your DNS records.
+
 *   **Check Ingress**:
     ```bash
     kubectl get ingress -n default
@@ -240,12 +247,33 @@ You can also use `kubectl` to confirm the deployment status directly from your t
 
 ### 3. Test the Application
 
-Once the Ingress `ADDRESS` is available, you can test your application.
+Once the Ingress `ADDRESS` is available and you have configured your DNS, you can test your application.
 
-1.  **Get Ingress Host**: The application should be accessible via the domain `diocesevitality.org` that you configured in `k8s/ingress.yaml`.
+1.  **Configure DNS Records (Example: Cloudflare)**:
+    You need to point your domain (`diocesevitality.org`) to the `EXTERNAL-IP` obtained from the Ingress Controller's Load Balancer. Assuming you are using Cloudflare for DNS management:
 
-2.  **Access Frontend**: Open your web browser and navigate to `http://diocesevitality.org/` (or `https://diocesevitality.org/` if you have TLS configured for your Ingress).
+    *   Log in to your Cloudflare dashboard.
+    *   Select your domain (`diocesevitality.org`).
+    *   Go to the `DNS` section.
+    *   Add a new `A` record:
+        *   **Type**: `A`
+        *   **Name**: `@` (for the root domain `diocesevitality.org`)
+        *   **IPv4 address**: Paste the `EXTERNAL-IP` obtained from `kubectl get services`.
+        *   **Proxy status**: `Proxied` (orange cloud) is recommended for Cloudflare's features (CDN, WAF, SSL).
+        *   **TTL**: `Auto`
+    *   If you want `www.diocesevitality.org` to also work, add another `A` record:
+        *   **Type**: `A`
+        *   **Name**: `www`
+        *   **IPv4 address**: Paste the same `EXTERNAL-IP`.
+        *   **Proxy status**: `Proxied`
+        *   **TTL**: `Auto`
 
-3.  **Test Backend API**: You can test the backend API by trying to access an endpoint, for example, `http://diocesevitality.org/api/some-endpoint` (replace `some-endpoint` with an actual API endpoint from your backend).
+    Allow some time for DNS changes to propagate (this can take a few minutes to a few hours).
+
+2.  **Get Ingress Host**: The application should be accessible via the domain `diocesevitality.org` that you configured in `k8s/ingress.yaml`.
+
+3.  **Access Frontend**: Open your web browser and navigate to `http://diocesevitality.org/` (or `https://diocesevitality.org/` if you have TLS configured for your Ingress).
+
+4.  **Test Backend API**: You can test the backend API by trying to access an endpoint, for example, `http://diocesevitality.org/api/some-endpoint` (replace `some-endpoint` with an actual API endpoint from your backend).
 
 If you encounter any issues, check the logs of the relevant pods (`kubectl logs <pod-name> -n <namespace>`) and review the events (`kubectl describe pod <pod-name> -n <namespace>`).
