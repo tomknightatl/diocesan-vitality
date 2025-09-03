@@ -12,8 +12,7 @@ metadata:
 spec:
   rules:
   # IMPORTANT: Replace with your actual domain
-  - host: optinosis.online
-    http:
+  - http:
       paths:
       - path: /api(/|$)(.*)
         pathType: ImplementationSpecific
