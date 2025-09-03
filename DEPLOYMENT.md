@@ -139,6 +139,7 @@ Replace the placeholder values with your actual Supabase credentials.
 
 ```sh
 kubectl create secret generic supabase-credentials \
+  -n usccb \
   --from-literal=SUPABASE_URL='your_supabase_url' \
   --from-literal=SUPABASE_KEY='your_supabase_service_role_key'
 ```
@@ -151,6 +152,7 @@ Replace the placeholders with your actual GitHub username, Personal Access Token
 
 ```bash
 kubectl create secret docker-registry ghcr-secret \
+  -n usccb \
   --docker-server=ghcr.io \
   --docker-username=<YOUR_GITHUB_USERNAME> \
   --docker-password=<YOUR_GITHUB_PAT> \
