@@ -19,6 +19,9 @@ FROM nginx:1.25-alpine
 # Copy the custom Nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
+# Remove the default Nginx index.html to ensure our built index.html is used
+RUN rm /usr/share/nginx/html/index.html
+
 # Copy the built static files from the build stage
 COPY --from=build /app/dist /usr/share/nginx/html
 
