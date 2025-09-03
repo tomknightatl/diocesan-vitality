@@ -20,7 +20,7 @@ spec:
         path: '{{path}}'
       destination:
         server: https://kubernetes.default.svc
-        namespace: USCCB
+        namespace: usccb
       syncPolicy:
         automated:
           prune: true
