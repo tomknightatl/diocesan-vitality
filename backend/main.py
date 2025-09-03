@@ -3,12 +3,29 @@ from fastapi import FastAPI
 from dotenv import load_dotenv
 from supabase import create_client, Client
 from pathlib import Path
+from fastapi.middleware.cors import CORSMiddleware
 
 # Load .env file from the project root
 dotenv_path = Path(__file__).resolve().parent.parent / '.env'
 load_dotenv(dotenv_path=dotenv_path)
 
 app = FastAPI()
+
+# Configure CORS middleware
+origins = [
+    "http://usccb.diocesevitality.org",
+    "https://usccb.diocesevitality.org",
+    "http://localhost:8080",
+    "http://localhost:8081",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
