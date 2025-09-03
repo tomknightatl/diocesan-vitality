@@ -8,7 +8,7 @@
 
 # Cell 1: Import libraries
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
 import re
 from urllib.parse import urljoin
 import os
@@ -18,6 +18,9 @@ from dotenv import load_dotenv # Added
 from supabase import create_client, Client # Added
 import config
 from core.logger import get_logger
+import warnings
+
+warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
 logger = get_logger(__name__)
 
@@ -172,7 +175,7 @@ def main(num_parishes=config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE):
                     continue
 
                 # Ignore links to files
-                if re.search(r'\.(pdf|jpg|jpeg|png|gif|svg|zip|docx|xlsx|pptx|mp3|mp4|avi|mov)$', page_url, re.IGNORECASE):
+                if re.search(r'\.(pdf|jpg|jpeg|png|gif|svg|zip|docx|xlsx|pptx|mp3|mp4|avi|mov), page_url, re.IGNORECASE):
                     continue
 
                 logger.debug(f"Checking {page_url}...")
