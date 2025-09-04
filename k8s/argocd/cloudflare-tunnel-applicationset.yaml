@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: cloudflare-tunnel-multi-env
+  name: cloudflare-tunnel-prd
   namespace: argocd
 spec:
   generators:
@@ -9,22 +9,7 @@ spec:
       selector:
         matchLabels:
           argocd.argoproj.io/secret-type: cluster
-          environment: dev
-  - clusters:
-      selector:
-        matchLabels:
-          argocd.argoproj.io/secret-type: cluster
-          environment: stg
-  - clusters:
-      selector:
-        matchLabels:
-          argocd.argoproj.io/secret-type: cluster
-          environment: prd
-  - clusters:
-      selector:
-        matchLabels:
-          argocd.argoproj.io/secret-type: cluster
-          environment: arg
+          environment: prd  # Only looking for production clusters
   template:
     metadata:
       name: 'cloudflare-tunnel-{{name}}'
@@ -34,7 +19,7 @@ spec:
       source:
         repoURL: https://github.com/tomknightatl/infra.git
         targetRevision: HEAD
-        path: 'USCCB/k8s/argocd/cloudflare-tunnel/overlays/{{metadata.labels.environment}}'
+        path: 'USCCB/k8s/argocd/cloudflare-tunnel/overlays/prd'  # Direct path to prd
       destination:
         server: '{{server}}'
         namespace: cloudflare-tunnel
