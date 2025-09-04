@@ -14,39 +14,41 @@ The following files are included in your repository:
 ```
 
    📁 infra/
-    └── 📁 argocd/
-        ├── 📁 cloudflare-tunnel/
-        │   ├── 📁 base/                          ← Common resources
-        │   │   ├── 📄 deployment.yaml
-        │   │   ├── 📄 service.yaml
-        │   │   ├── 📄 namespace.yaml
-        │   │   ├── 📄 pod-disruption-budget.yaml
-        │   │   ├── 📄 kustomization.yaml
-        │   │   └── 📄 tunnel-token-template.yaml
-        │   ├── 📁 overlays/
-        │   │   ├── 📁 dev/                       ← Dev-specific config
-        │   │   │   ├── 📄 cloudflared-config.yaml    ← Dev tunnel ID & hostnames
-        │   │   │   ├── 📄 sealedsecret.yaml          ← Dev tunnel token
-        │   │   │   ├── 📄 resource-limits.yaml       ← Dev resource constraints
-        │   │   │   └── 📄 kustomization.yaml
-        │   │   ├── 📁 stg/                       ← Staging-specific config
-        │   │   │   ├── 📄 cloudflared-config.yaml    ← Staging tunnel ID & hostnames
-        │   │   │   ├── 📄 sealedsecret.yaml          ← Staging tunnel token
-        │   │   │   ├── 📄 resource-limits.yaml       ← Staging resource constraints
-        │   │   │   └── 📄 kustomization.yaml
-        │   │   ├── 📁 prd/                       ← Prod-specific config
-        │   │   │   ├── 📄 cloudflared-config.yaml    ← Prod tunnel ID & hostnames
-        │   │   │   ├── 📄 sealedsecret.yaml          ← Prod tunnel token
-        │   │   │   ├── 📄 resource-limits.yaml       ← Prod resource constraints
-        │   │   │   └── 📄 kustomization.yaml
-        │   │   └── 📁 arg/                       ← ArgoCD cluster config
-        │   │       ├── 📄 cloudflared-config.yaml    ← ArgoCD tunnel ID & hostnames
-        │   │       ├── 📄 sealedsecret.yaml          ← ArgoCD tunnel token
-        │   │       ├── 📄 resource-limits.yaml       ← ArgoCD resource constraints
-        │   │       └── 📄 kustomization.yaml
-        ├── 📄 cloudflare-tunnel-applicationset.yaml  ← Multi-environment ApplicationSet
-        ├── 📄 cloudflare-tunnel-applicationset-README.md
-        └── 📄 README.md
+    └── 📁 USCCB/
+        └── 📁 k8s/
+            └── 📁 argocd/
+                ├── 📁 cloudflare-tunnel/
+                │   ├── 📁 base/                          ← Common resources
+                │   │   ├── 📄 deployment.yaml
+                │   │   ├── 📄 service.yaml
+                │   │   ├── 📄 namespace.yaml
+                │   │   ├── 📄 pod-disruption-budget.yaml
+                │   │   ├── 📄 kustomization.yaml
+                │   │   └── 📄 tunnel-token-template.yaml
+                │   ├── 📁 overlays/
+                │   │   ├── 📁 dev/                       ← Dev-specific config
+                │   │   │   ├── 📄 cloudflared-config.yaml    ← Dev tunnel ID & hostnames
+                │   │   │   ├── 📄 sealedsecret.yaml          ← Dev tunnel token
+                │   │   │   ├── 📄 resource-limits.yaml       ← Dev resource constraints
+                │   │   │   └── 📄 kustomization.yaml
+                │   │   ├── 📁 stg/                       ← Staging-specific config
+                │   │   │   ├── 📄 cloudflared-config.yaml    ← Staging tunnel ID & hostnames
+                │   │   │   ├── 📄 sealedsecret.yaml          ← Staging tunnel token
+                │   │   │   ├── 📄 resource-limits.yaml       ← Staging resource constraints
+                │   │   │   └── 📄 kustomization.yaml
+                │   │   ├── 📁 prd/                       ← Prod-specific config
+                │   │   │   ├── 📄 cloudflared-config.yaml    ← Prod tunnel ID & hostnames
+                │   │   │   ├── 📄 sealedsecret.yaml          ← Prod tunnel token
+                │   │   │   ├── 📄 resource-limits.yaml       ← Prod resource constraints
+                │   │   │   └── 📄 kustomization.yaml
+                │   │   └── 📁 arg/                       ← ArgoCD cluster config
+                │   │       ├── 📄 cloudflared-config.yaml    ← ArgoCD tunnel ID & hostnames
+                │   │       ├── 📄 sealedsecret.yaml          ← ArgoCD tunnel token
+                │   │       ├── 📄 resource-limits.yaml       ← ArgoCD resource constraints
+                │   │       └── 📄 kustomization.yaml
+                ├── 📄 cloudflare-tunnel-applicationset.yaml  ← Multi-environment ApplicationSet
+                ├── 📄 cloudflare-tunnel-applicationset-README.md
+                └── 📄 README.md
 ```
 
 ## ApplicationSet Configuration
@@ -108,14 +110,14 @@ This repository contains the configuration for deploying a Cloudflare tunnel usi
 
 ### Step 1: Label Your Clusters if they are not already labeled.
 
-Those instructions are in the ~\argocd\README.md file
+Those instructions are in the ~/USCCB/k8s/argocd/README.md file
 
 
 ### Step 2: Apply the ApplicationSet
 
 ```bash
 # Apply the ApplicationSet to deploy Cloudflare tunnel
-kubectl apply -f infra/argocd/cloudflare-tunnel-applicationset.yaml
+kubectl apply -f ~/USCCB/k8s/argocd/cloudflare-tunnel-applicationset.yaml
 ```
 
 **Expected Status After Step 2**: 
@@ -200,7 +202,7 @@ Create sealed secrets for each environment's tunnel token:
 2. **Save your prd tunnel token to a file**
 
    ```bash
-   cd ~/infra/argocd/cloudflare-tunnel/overlays/prd
+   cd ~/USCCB/k8s/argocd/cloudflare-tunnel/overlays/prd
    echo "your-dev-tunnel-token-here" > tunnel-token.txt
    ```
    Replace `your-dev-tunnel-token-here` with the actual token from your dev tunnel.
@@ -230,11 +232,11 @@ Create sealed secrets for each environment's tunnel token:
 
 5. **Update your repository**
 
-   Replace the content in `infra/argocd/cloudflare-tunnel/overlays/prd/sealedsecret.yaml` with the content of your newly created `sealed-secret.yaml`.
+   Replace the content in `~/USCCB/k8s/argocd/cloudflare-tunnel/overlays/prd/sealedsecret.yaml` with the content of your newly created `sealed-secret.yaml`.
 
 6. **Update the tunnel ID in the config**
 
-   Edit `infra/argocd/cloudflare-tunnel/overlays/dev/cloudflared-config.yaml` to include your dev tunnel ID (you can find this in the Cloudflare dashboard).
+   Edit `~/USCCB/k8s/argocd/cloudflare-tunnel/overlays/dev/cloudflared-config.yaml` to include your dev tunnel ID (you can find this in the Cloudflare dashboard).
 
 7. **Clean up**
 
@@ -261,7 +263,7 @@ The repository now includes environment-specific resource limits to optimize dep
    ```bash
    git status   # confirm overlay files have changed
    git switch -c feature/multi-env-cloudflare-tunnel-with-resources
-   git add ~/infra/argocd/cloudflare-tunnel/
+   git add ~/USCCB/k8s/argocd/cloudflare-tunnel/
    git commit -m "Add multi-environment Cloudflare tunnel with environment-specific resources
    - Use Kustomize strategic merge patches for resource customization
    - Environment-specific resources (dev, stg, arg, prd)"
@@ -390,7 +392,7 @@ For optimal tunnel performance and stability, we use the following configuration
 
 To update Cloudflare tunnel configuration for a specific environment:
 
-1. **Edit environment-specific files**: Modify files in `infra/argocd/cloudflare-tunnel/overlays/{environment}/`
+1. **Edit environment-specific files**: Modify files in `~/USCCB/k8s/argocd/cloudflare-tunnel/overlays/{environment}/`
 2. **Commit changes**: `git add` and `git commit` the changes
 3. **Push to repository**: `git push origin main`
 4. **ArgoCD auto-sync**: ApplicationSet will automatically detect and apply changes
@@ -399,7 +401,7 @@ To update Cloudflare tunnel configuration for a specific environment:
 
 ```yaml
 # To update the dev tunnel configuration:
-# Edit infra/argocd/cloudflare-tunnel/overlays/dev/cloudflared-config.yaml
+# Edit ~/USCCB/k8s/argocd/cloudflare-tunnel/overlays/dev/cloudflared-config.yaml
 
 # Add new hostnames or modify existing ones
 ingress:
@@ -407,16 +409,16 @@ ingress:
     service: http://new-service.default.svc.cluster.local:80
 
 # To update dev resources:
-# Edit infra/argocd/cloudflare-tunnel/overlays/dev/resource-limits.yaml
+# Edit ~/USCCB/k8s/argocd/cloudflare-tunnel/overlays/dev/resource-limits.yaml
 
 # To update stg configuration:
-# Edit infra/argocd/cloudflare-tunnel/overlays/stg/cloudflared-config.yaml
+# Edit ~/USCCB/k8s/argocd/cloudflare-tunnel/overlays/stg/cloudflared-config.yaml
 
 # Prd updates:
-# Edit infra/argocd/cloudflare-tunnel/overlays/prd/cloudflared-config.yaml
+# Edit ~/USCCB/k8s/argocd/cloudflare-tunnel/overlays/prd/cloudflared-config.yaml
 
 # Arg updates:
-# Edit infra/argocd/cloudflare-tunnel/overlays/arg/cloudflared-config.yaml
+# Edit ~/USCCB/k8s/argocd/cloudflare-tunnel/overlays/arg/cloudflared-config.yaml
 ```
 
 ### Environment-Specific Customization
@@ -483,7 +485,7 @@ To add a new environment (e.g., arg):
 
 1. **Create the overlay directory**:
    ```bash
-   mkdir -p infra/argocd/cloudflare-tunnel/overlays/arg
+   mkdir -p ~/USCCB/k8s/argocd/cloudflare-tunnel/overlays/arg
    ```
 
 2. **Create arg-specific files**:

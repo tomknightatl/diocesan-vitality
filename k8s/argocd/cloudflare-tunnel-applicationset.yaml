@@ -34,7 +34,7 @@ spec:
       source:
         repoURL: https://github.com/tomknightatl/infra.git
         targetRevision: HEAD
-        path: 'argocd/cloudflare-tunnel/overlays/{{metadata.labels.environment}}'
+        path: 'USCCB/k8s/argocd/cloudflare-tunnel/overlays/{{metadata.labels.environment}}'
       destination:
         server: '{{server}}'
         namespace: cloudflare-tunnel
