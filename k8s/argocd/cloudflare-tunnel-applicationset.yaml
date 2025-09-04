@@ -17,9 +17,9 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://github.com/tomknightatl/infra.git
+        repoURL: https://github.com/tomknightatl/USCCB.git
         targetRevision: HEAD
-        path: 'USCCB/k8s/argocd/cloudflare-tunnel/overlays/prd'  # Direct path to prd
+        path: 'k8s/argocd/cloudflare-tunnel/overlays/prd'  # Direct path to prd
       destination:
         server: '{{server}}'
         namespace: cloudflare-tunnel
