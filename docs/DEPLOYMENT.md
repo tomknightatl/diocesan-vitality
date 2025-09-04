@@ -57,11 +57,12 @@ If you are still encountering issues with Docker permissions or the credential h
     As mentioned in the "Docker Registry Login" section, old unencrypted credentials can cause issues. Make sure you have removed any conflicting entries from `~/.docker/config.json`.
 
 5.  **Test Docker Login**:
-    After performing the above steps, try logging in again. If the credential helper is working, it should not prompt for a password.
+    After performing the above steps, try logging in again. Replace `YOUR_USERNAME` with your GitHub username.  If the credential helper is working, it should not prompt for a password.
     ```sh
     docker login ghcr.io -u YOUR_USERNAME
     ```
-    Replace `YOUR_USERNAME` with your GitHub username.
+    
+    
 
 ## Verification Steps
 
