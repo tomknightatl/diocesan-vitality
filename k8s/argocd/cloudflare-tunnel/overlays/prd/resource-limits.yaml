@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudflared
+  namespace: cloudflare-tunnel
+spec:
+  replicas: 2  # Reduced from 3 to 2 for your single-node cluster
+  template:
+    spec:
+      containers:
+      - name: cloudflared
+        resources:
+          requests:
+            cpu: 50m       # Reduced from 200m - cloudflared is very efficient
+            memory: 128Mi  # Reduced from 256Mi - typically sufficient for tunnel
+          limits:
+            cpu: 200m      # Reduced from 1000m - prevents resource hogging
+            memory: 256Mi  # Reduced from 1Gi - reasonable limit for tunnel

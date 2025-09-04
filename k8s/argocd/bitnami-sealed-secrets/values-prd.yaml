@@ -1,0 +1,27 @@
+# Minimal Bitnami Sealed Secrets Controller - Prd Environment Configuration
+# Avoid all auto-configuration conflicts by using minimal overrides
+
+# Development-specific naming
+fullnameOverride: "sealed-secrets-controller"
+
+# Development environment labels and annotations
+commonLabels:
+  environment: prd
+  component: sealed-secrets
+  
+podAnnotations:
+  environment: prd
+  managed-by: argocd
+
+# Disable monitoring for development
+metrics:
+  dashboards:
+    create: false
+  serviceMonitor:
+    enabled: false
+
+# DO NOT specify:
+# - resources (triggers GOMAXPROCS/GOMEMLIMIT auto-config)
+# - security contexts (use chart defaults)
+# - environment variables (let chart handle them)
+# - service/rbac configs (use chart defaults)

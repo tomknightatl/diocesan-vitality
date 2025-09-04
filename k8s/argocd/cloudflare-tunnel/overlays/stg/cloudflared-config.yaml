@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared-config
+  namespace: cloudflare-tunnel
+data:
+  config.yaml: |
+    # Stg Tunnel Configuration
+    tunnel: c1684615-d94c-4f2d-b5e5-9ab87978e7f5  # optinosis-tunnel-stg
+    # credentials-file: /etc/cloudflared/credentials.json
+    
+    # Logging configuration
+    loglevel: info
+    
+    # Protocol settings
+    protocol: quic
+    compression: true
+    
+    # Service connectivity settings
+    no-tls-verify: true
+    
+    # Retry settings
+    retries: 10
+    grace-period: 30s
+    
+    # Metrics configuration
+    metrics: 0.0.0.0:2000
+    
+    # Proxy Settings
+    proxy-connect-timeout: 30s
+    proxy-tls-timeout: 30s
+    
+    # Stg-specific ingress rules
+    ingress:  
+      # Open WebUI - Stg  
+      - hostname: optinexus.optinosis.net
+        service: http://open-webui.open-webui.svc.cluster.local:8080
+        originRequest:
+          noTLSVerify: true
+          connectTimeout: 30s
+          keepAliveConnections: 100
+          keepAliveTimeout: 30s
+      
+      # Default fallback
+      - service: http_status:404
