@@ -11,3 +11,5 @@ data.db
 __pycache__/
 scraping.log
 data.db
+frontend/node_modules/
+reports/
