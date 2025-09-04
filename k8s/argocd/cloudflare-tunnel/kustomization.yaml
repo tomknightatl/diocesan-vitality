@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: cloudflare-tunnel
+
+resources:
+  - namespace.yaml
+  - deployment.yaml
+  - service.yaml
+  - sealedsecret.yaml
+  # - ingress.yaml  # Commented out - not needed for tunnel operation
+  - pod-disruption-budget.yaml
+  - cloudflared-config.yaml
