@@ -3,12 +3,12 @@ kind: Kustomization
 
 namespace: cloudflare-tunnel
 
-bases:
-  - ../../base
-
 resources:
-  - cloudflared-config.yaml
+  - ../../base
   - sealedsecret.yaml
 
-patchesStrategicMerge:
-  - resource-limits.yaml
+patches:
+  - path: resource-limits.yaml
+    target:
+      kind: Deployment
+      name: cloudflared
