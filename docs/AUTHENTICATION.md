@@ -8,6 +8,119 @@ This document provides comprehensive instructions for authenticating with GitHub
 - Docker installed and running
 - GitHub CLI (`gh`) installed ([installation guide](https://github.com/cli/cli#installation))
 
+## Step 0: Clear Prior Authentication (Optional)
+
+If you have previous authentication attempts that may conflict, clear them before starting:
+
+### 0.1 Clear GitHub CLI Authentication
+
+```bash
+# Check current gh authentication status
+gh auth status
+
+# Example output:
+# github.com
+#   ✓ Logged in to github.com account YOUR_USERNAME (GH_TOKEN)
+#   - Active account: true
+#   ...
+
+# If you see "(GH_TOKEN)" in the output:
+# This means gh is using the environment variable, not stored credentials
+# To clear this authentication:
+unset GH_TOKEN
+unset GITHUB_TOKEN
+
+# If you see "(keyring)" or "(oauth_token)" in the output:
+# This means gh has stored credentials that need to be logged out
+gh auth logout -h github.com
+
+# Remove gh config files to ensure complete cleanup
+rm -f ~/.config/gh/hosts.yml
+
+# Verify authentication is cleared
+gh auth status
+# Should show: You are not logged into any GitHub hosts
+```
+
+### 0.2 Clear Docker Authentication
+
+```bash
+# Backup existing Docker config if it exists
+if [ -f ~/.docker/config.json ]; then
+    cp ~/.docker/config.json ~/.docker/config.json.backup.$(date +%Y%m%d)
+    echo "✓ Backed up existing Docker config"
+    
+    # Show current credential configuration
+    if grep -q "credsStore\|credHelpers" ~/.docker/config.json; then
+        echo "Current credential helpers configured:"
+        grep -E "credsStore|credHelpers" ~/.docker/config.json
+    fi
+fi
+
+# Clear ALL Docker credentials and credential helpers
+echo '{}' > ~/.docker/config.json
+echo "✓ Docker credentials and credential helpers cleared"
+
+# If using credential helpers, also clear stored passwords
+# For pass (Linux)
+if command -v pass >/dev/null 2>&1; then
+    pass ls docker-credential-helpers 2>/dev/null && \
+        pass rm -rf docker-credential-helpers 2>/dev/null && \
+        echo "✓ Cleared passwords from pass store" || \
+        echo "✓ No Docker passwords in pass store"
+fi
+
+# For macOS keychain
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    security delete-generic-password -s "ghcr.io" 2>/dev/null && \
+        echo "✓ Cleared ghcr.io from macOS keychain" || \
+        echo "✓ No ghcr.io credentials in keychain"
+fi
+
+# Verify Docker config is clean
+if [ "$(cat ~/.docker/config.json)" = "{}" ]; then
+    echo "✓ Docker configuration successfully reset"
+else
+    echo "⚠ Warning: Docker config may still contain data"
+fi
+```
+
+### 0.3 Clear Git Credentials
+
+```bash
+# Clear git credential helper
+git config --global --unset credential.helper 2>/dev/null && \
+    echo "✓ Git credential helper cleared" || \
+    echo "✓ No git credential helper was configured"
+
+# Clear any cached credentials
+git credential-cache exit 2>/dev/null && \
+    echo "✓ Git credential cache cleared" || \
+    echo "✓ No git credentials were cached"
+
+# Verify git credential configuration is cleared
+if [ -z "$(git config --global credential.helper)" ]; then
+    echo "✓ Git credentials successfully cleared"
+else
+    echo "⚠ Git credential helper still configured: $(git config --global credential.helper)"
+fi
+```
+
+### 0.4 Clear Environment Variables
+
+```bash
+# Unset any existing environment variables
+unset GH_TOKEN
+unset GITHUB_TOKEN
+unset GITHUB_USERNAME
+unset DOCKER_USERNAME
+
+# Verify they're cleared
+env | grep -E "GH_TOKEN|GITHUB" || echo "Environment variables cleared"
+```
+
+**Note:** Only run this step if you're having authentication issues or want a completely fresh start. If you're setting up for the first time, you can skip to Step 1.
+
 ## Step 1: Create a GitHub Personal Access Token (PAT)
 
 Create a single PAT with all necessary permissions for both git and docker operations.
@@ -120,6 +233,20 @@ fi
 ### 4.1 Configure GitHub CLI with Token
 
 ```bash
+# First, verify GH_TOKEN is loaded
+if [ -z "$GH_TOKEN" ]; then
+    echo "⚠ GH_TOKEN is not set. Loading from .env file..."
+    export $(cat .env | grep -v '^#' | xargs)
+fi
+
+# Verify token is now available
+if [ -n "$GH_TOKEN" ]; then
+    echo "✓ GH_TOKEN is loaded"
+else
+    echo "✗ GH_TOKEN is still not set. Please check your .env file"
+    exit 1
+fi
+
 # Authenticate gh CLI using token from environment
 echo $GH_TOKEN | gh auth login --with-token
 
@@ -143,8 +270,8 @@ Configure git with your identity:
 
 ```bash
 # Configure git with your identity
-git config --global user.email "your-email@example.com"
-git config --global user.name "Your Name"
+git config --global user.email "tomk@github.leemail.me"
+git config --global user.name "Tom Knight"
 ```
 
 ## Step 5: Configure Docker for GitHub Container Registry
@@ -178,8 +305,29 @@ To avoid storing credentials unencrypted, configure a credential helper for your
 If you're just developing locally and don't mind the security warning:
 
 ```bash
-# Keep the clean config - credentials will be stored base64 encoded
-echo "Using basic credential storage (base64 encoded)"
+# Ensure Docker config is completely clean (no credential helpers)
+mkdir -p ~/.docker
+echo '{}' > ~/.docker/config.json
+
+# IMPORTANT: If docker-credential-pass is installed, temporarily disable it
+if command -v docker-credential-pass >/dev/null 2>&1; then
+    echo "⚠ docker-credential-pass detected. Temporarily disabling it..."
+    sudo mv /usr/local/bin/docker-credential-pass /usr/local/bin/docker-credential-pass.disabled 2>/dev/null || true
+    echo "✓ Credential helper disabled for simple setup"
+fi
+
+# Verify no credential helpers are configured
+if [ "$(cat ~/.docker/config.json)" = "{}" ]; then
+    echo "✓ Using basic credential storage (base64 encoded)"
+    echo "✓ Ready for Docker login"
+else
+    echo "⚠ Docker config is not clean. Clearing it now..."
+    echo '{}' > ~/.docker/config.json
+    echo "✓ Docker config cleared"
+fi
+
+# Note: To re-enable docker-credential-pass later, run:
+# sudo mv /usr/local/bin/docker-credential-pass.disabled /usr/local/bin/docker-credential-pass
 ```
 
 #### Option B: Encrypted Storage for Linux
@@ -188,12 +336,24 @@ echo "Using basic credential storage (base64 encoded)"
 # Install pass and gpg2
 sudo apt-get install -y pass gnupg2
 
-# Generate a GPG key (if you don't have one)
-gpg2 --gen-key
-# Follow the prompts to create your key
+# Check if you already have a GPG key
+gpg2 --list-secret-keys --keyid-format LONG
 
-# Initialize pass with your GPG key email/ID
-pass init "your-email@example.com"
+# If no keys exist, generate a new GPG key
+gpg2 --gen-key
+# Follow the prompts:
+# - Select default options (RSA and RSA, 3072 bits)
+# - Enter your real name and email
+# - Set a passphrase (remember this!)
+
+# Get your GPG key ID or email
+GPG_ID=$(gpg2 --list-secret-keys --keyid-format LONG | grep sec | head -1 | awk '{print $2}' | cut -d'/' -f2)
+echo "Your GPG key ID: $GPG_ID"
+
+# Initialize pass with your actual GPG key ID
+pass init "$GPG_ID"
+# Or use your email if you prefer:
+# pass init "your-actual-email@example.com"
 
 # Download and install docker-credential-pass
 VERSION=$(curl -s https://api.github.com/repos/docker/docker-credential-helpers/releases/latest | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
@@ -204,6 +364,11 @@ sudo mv docker-credential-pass-v${VERSION}.linux-amd64 /usr/local/bin/docker-cre
 # Configure Docker to use pass
 echo '{"credsStore": "pass"}' > ~/.docker/config.json
 echo "Docker configured to use encrypted pass storage"
+
+# Test that pass is working
+echo "test" | pass insert -e docker-credential-helpers/test
+pass show docker-credential-helpers/test >/dev/null 2>&1 && echo "✓ Pass is working correctly"
+pass rm docker-credential-helpers/test
 ```
 
 #### Option C: Encrypted Storage for macOS
@@ -316,7 +481,7 @@ docker rmi alpine:latest
 
 **Note:** Most images on ghcr.io require authentication to pull, even if marked as public. The best test is to push and pull your own images.
 
-### 6.4 Verify All Services
+### 6.3 Verify All Services
 
 Run this comprehensive check script:
 
