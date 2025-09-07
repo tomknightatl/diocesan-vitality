@@ -14,12 +14,14 @@ spec:
         app: backend
     spec:
       serviceAccountName: default
-      imagePullSecrets:
-      - name: ghcr-secret
+      # Comment out or remove imagePullSecrets if using public Docker Hub repositories
+      # imagePullSecrets:
+      # - name: dockerhub-secret
       containers:
       - name: backend
-        # IMPORTANT: Replace this with the actual path to your container image
-        image: ghcr.io/tomknightatl/usccb/usccb-backend:latest
+        # IMPORTANT: Replace YOUR_DOCKERHUB_USERNAME with your actual Docker Hub username
+        image: tomatl/usccb-backend:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8000
         env:

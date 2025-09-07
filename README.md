@@ -382,14 +382,39 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-## Web Application
-
+Web Application
 This project includes a web application to provide a user interface for the collected data. The application is architected as a modern, containerized service-oriented system, ready for deployment on Kubernetes.
+Project Structure
 
-### Project Structure
+/frontend: A React single-page application (SPA) created with Vite. It is served by a lightweight NGINX web server.
+/backend: A Python API built with FastAPI. It serves data from the Supabase database and provides a secure interface for admin actions.
+/k8s: Contains all the Kubernetes manifests required to deploy the frontend and backend services, including Deployments, Services, and an Ingress for routing traffic.
 
--   **/frontend**: A React single-page application (SPA) created with Vite. It is served by a lightweight NGINX web server.
--   **/backend**: A Python API built with FastAPI. It serves data from the Supabase database and provides a secure interface for admin actions.
--   **/k8s**: Contains all the Kubernetes manifests required to deploy the frontend and backend services, including Deployments, Services, and an Ingress for routing traffic.
+Container Registry
+The web application uses Docker Hub for container image storage. Docker Hub provides:
 
-For detailed instructions on how to build and deploy the web application, please see the [**Deployment Guide (DEPLOYMENT.md)**](./DEPLOYMENT.md).
+Free public repositories: Unlimited public container images
+Simple authentication: Standard Docker login workflow
+Wide compatibility: Supported by all Kubernetes distributions
+No vendor lock-in: Works independently of any specific cloud provider
+
+To use Docker Hub:
+
+Create a free account at hub.docker.com
+Create repositories for your images (e.g., usccb-frontend, usccb-backend)
+Build and push your images:
+bash# Login to Docker Hub
+docker login -u YOUR_DOCKERHUB_USERNAME
+
+# Build and push backend
+cd backend
+docker build -t YOUR_DOCKERHUB_USERNAME/usccb-backend:latest .
+docker push YOUR_DOCKERHUB_USERNAME/usccb-backend:latest
+
+# Build and push frontend
+cd ../frontend
+docker build -t YOUR_DOCKERHUB_USERNAME/usccb-frontend:latest .
+docker push YOUR_DOCKERHUB_USERNAME/usccb-frontend:latest
+
+
+For detailed instructions on how to build and deploy the web application, please see the Deployment Guide (DEPLOYMENT.md).
