@@ -1,4 +1,5 @@
 .env
+data.db
 venv/
 __pycache__/
 *.pyc
@@ -6,9 +7,6 @@ __pycache__/
 .pytest_cache/
 data.db
 .env:Zone.Identifier
-__pycache__/
 scraping.log
-data.db
 frontend/node_modules/
 reports/
-.env
