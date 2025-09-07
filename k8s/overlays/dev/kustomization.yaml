@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: usccb-dev
+
+resources:
+  - backend-deployment.yaml
+  - frontend-deployment.yaml
+  - backend-service.yaml
+  - frontend-service.yaml
+
+commonLabels:
+  environment: dev
+  app.kubernetes.io/part-of: usccb
+  app.kubernetes.io/managed-by: argocd

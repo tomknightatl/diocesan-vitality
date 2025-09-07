@@ -1,0 +1,83 @@
+name: CD Pipeline - Update Manifests
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      image_tag:
+        description: 'Docker image tag to deploy (e.g., develop, latest, or SHA)'
+        required: true
+        default: 'develop'
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/usccb
+
+jobs:
+  update-manifests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+      - name: Update Kubernetes manifests
+        run: |
+          # Determine the manifest files based on environment
+          if [[ "${{ github.event.inputs.environment }}" == "prod" ]]; then
+            BACKEND_FILE="k8s/backend-deployment.yaml"
+            FRONTEND_FILE="k8s/frontend-deployment.yaml"
+          else
+            # For dev/staging, you might have separate files or use the same
+            BACKEND_FILE="k8s/backend-deployment.yaml"
+            FRONTEND_FILE="k8s/frontend-deployment.yaml"
+          fi
+          
+          # Update image tags using sed (simple approach)
+          # In the future, consider using yq for more robust YAML manipulation
+          
+          # Update backend image
+          sed -i "s|image: .*/usccb:backend-.*|image: ${{ env.IMAGE_NAME }}:backend-${{ github.event.inputs.image_tag }}|g" $BACKEND_FILE
+          
+          # Update frontend image
+          sed -i "s|image: .*/usccb:frontend-.*|image: ${{ env.IMAGE_NAME }}:frontend-${{ github.event.inputs.image_tag }}|g" $FRONTEND_FILE
+          
+          # Show the changes
+          echo "Updated manifests:"
+          git diff
+
+      - name: Commit and push changes
+        run: |
+          git add k8s/
+          
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Deploy ${{ github.event.inputs.image_tag }} to ${{ github.event.inputs.environment }} environment"
+            
+            # Create a branch for the deployment
+            BRANCH_NAME="deploy/${{ github.event.inputs.environment }}-${{ github.event.inputs.image_tag }}-$(date +%Y%m%d-%H%M%S)"
+            git checkout -b $BRANCH_NAME
+            git push origin $BRANCH_NAME
+            
+            echo "Changes pushed to branch: $BRANCH_NAME"
+            echo "ArgoCD will detect and sync these changes automatically"
+            
+            # Optionally, create a PR (uncomment if you want PR-based deployments)
+            # gh pr create --title "Deploy ${{ github.event.inputs.image_tag }} to ${{ github.event.inputs.environment }}" \
+            #              --body "Automated deployment of ${{ github.event.inputs.image_tag }} to ${{ github.event.inputs.environment }} environment" \
+            #              --base main

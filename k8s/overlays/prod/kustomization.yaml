@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: usccb
+
+resources:
+  - ../../backend-deployment.yaml
+  - ../../frontend-deployment.yaml
+  - ../../backend-service.yaml
+  - ../../frontend-service.yaml
+
+commonLabels:
+  environment: prod
+  app.kubernetes.io/part-of: usccb
+  app.kubernetes.io/managed-by: argocd
+
+images:
+  - name: tomatl/usccb:backend
+    newTag: backend-latest
+  - name: tomatl/usccb:frontend
+    newTag: frontend-latest

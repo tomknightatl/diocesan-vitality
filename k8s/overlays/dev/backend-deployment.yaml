@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: backend-deployment
+  namespace: usccb-dev
 spec:
   replicas: 1
   selector:
@@ -11,6 +12,7 @@ spec:
     metadata:
       labels:
         app: backend
+        environment: dev
     spec:
       serviceAccountName: default
       # Comment out or remove imagePullSecrets if using public Docker Hub repositories
@@ -18,19 +20,13 @@ spec:
       - name: dockerhub-secret
       containers:
       - name: backend
-        # IMPORTANT: Replace YOUR_DOCKERHUB_USERNAME with your actual Docker Hub username
-        # Using single repository with tags: usccb:backend
         image: tomatl/usccb:backend-develop
         imagePullPolicy: Always
         ports:
         - containerPort: 8000
         env:
-        # It is strongly recommended to manage secrets using Kubernetes Secrets.
-        # 1. Create a secret like this:
-        #    kubectl create secret generic supabase-credentials \
-        #      --from-literal=SUPABASE_URL='your_supabase_url' \
-        #      --from-literal=SUPABASE_KEY='your_supabase_key'
-        # 2. Uncomment the envFrom block below.
+        - name: ENVIRONMENT
+          value: "development"
         envFrom:
         - secretRef:
             name: supabase-credentials
