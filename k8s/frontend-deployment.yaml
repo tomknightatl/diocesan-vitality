@@ -15,12 +15,13 @@ spec:
     spec:
       serviceAccountName: default
       # Comment out or remove imagePullSecrets if using public Docker Hub repositories
-      # imagePullSecrets:
-      # - name: dockerhub-secret
+      imagePullSecrets:
+      - name: dockerhub-secret
       containers:
       - name: frontend
         # IMPORTANT: Replace YOUR_DOCKERHUB_USERNAME with your actual Docker Hub username
-        image: tomatl/usccb-frontend:latest
+        # Using single repository with tags: usccb:frontend
+        image: tomatl/usccb:frontend
         imagePullPolicy: Always
         ports:
         - containerPort: 80

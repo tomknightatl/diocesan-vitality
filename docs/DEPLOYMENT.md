@@ -14,8 +14,6 @@ This guide outlines the steps to build, configure, and deploy the web applicatio
 > After this, you must start a new terminal session for the change to take effect.
 > **Crucially, once you are in the `docker` group, you should NOT use `sudo` with `docker` commands.** Using `sudo` will cause Docker to run as root, which will prevent it from using the credential helper configured in your user's home directory.
 
-Replace `your-dockerhub-username/your-repo-name` with your actual Docker Hub username and repository name.
-
 For authentication instructions with Docker Hub, please refer to the Docker Hub Authentication section below.
 
 ## Docker Hub Authentication
@@ -33,23 +31,34 @@ For authentication instructions with Docker Hub, please refer to the Docker Hub 
    - Give it a descriptive name (e.g., "USCCB Deployment")
    - Copy the token and save it securely
 
-3. **Login to Docker Hub**:
+3. **Add Docker Hub credentials to .env file**:
    ```bash
-   # Using token (recommended)
-   docker login -u YOUR_DOCKERHUB_USERNAME
-   # Enter your access token when prompted for password
+   # Edit your .env file
+   nano .env
    
-   # Or using environment variables from .env
-   source .env
-   echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+   # Add or update these lines:
+   DOCKER_USERNAME=your-dockerhub-username
+   DOCKER_PASSWORD=your-dockerhub-access-token
    ```
 
-4. **Create repositories on Docker Hub** (if using private repos):
+4. **Login to Docker Hub**:
+   ```bash
+   # Load environment variables from .env
+   source .env
+   
+   # Login using environment variables
+   printf '%s' "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
+   ```
+
+5. **Create repository on Docker Hub**:
    - Go to https://hub.docker.com/repositories
    - Click "Create Repository"
-   - Name it `usccb-backend`
-   - Choose Public (free) or Private (requires paid plan)
-   - Repeat for `usccb-frontend`
+   - Name it `usccb` (single repository for all images)
+   - Choose Public (free) or Private (1 private repo free)
+   
+   This single repository will hold both images using tags:
+   - `usccb:backend` for the backend service
+   - `usccb:frontend` for the frontend service
 
 ## Verification Steps
 
@@ -58,18 +67,21 @@ Before proceeding with building and pushing Docker images, verify that you are p
 ### 1. Verify Docker Hub Authentication
 
 ```bash
+# Load environment variables
+source .env
+
 # Check if you're logged in
 docker info | grep Username
-# Should show: Username: YOUR_DOCKERHUB_USERNAME
+# Should show: Username: <your-dockerhub-username>
 
 # Test pulling a public image
 docker pull hello-world
 
 # Test pushing (will create a test repo)
-docker tag hello-world:latest YOUR_DOCKERHUB_USERNAME/test:latest
-docker push YOUR_DOCKERHUB_USERNAME/test:latest
+docker tag hello-world:latest $DOCKER_USERNAME/test:latest
+docker push $DOCKER_USERNAME/test:latest
 # Clean up
-docker rmi YOUR_DOCKERHUB_USERNAME/test:latest
+docker rmi $DOCKER_USERNAME/test:latest
 ```
 
 ## Step 1: Build and Push Docker Images
@@ -79,14 +91,17 @@ You need to build the Docker images for both the frontend and backend and push t
 ### Backend
 
 ```bash
+# Load environment variables
+source .env
+
 # Navigate to the backend directory
 cd backend
 
-# Build the Docker image
-docker build -t YOUR_DOCKERHUB_USERNAME/usccb-backend:latest .
+# Build the Docker image with tag
+docker build -t $DOCKER_USERNAME/usccb:backend .
 
-# Push the image to Docker Hub
-docker push YOUR_DOCKERHUB_USERNAME/usccb-backend:latest
+# Push the backend image to Docker Hub
+docker push $DOCKER_USERNAME/usccb:backend
 ```
 
 ### Frontend
@@ -95,24 +110,26 @@ docker push YOUR_DOCKERHUB_USERNAME/usccb-backend:latest
 # Navigate to the frontend directory
 cd ../frontend
 
-# Build the Docker image
-docker build -t YOUR_DOCKERHUB_USERNAME/usccb-frontend:latest .
+# Build the Docker image with tag
+docker build -t $DOCKER_USERNAME/usccb:frontend .
 
-# Push the image to Docker Hub
-docker push YOUR_DOCKERHUB_USERNAME/usccb-frontend:latest
+# Push the frontend image to Docker Hub
+docker push $DOCKER_USERNAME/usccb:frontend
 ```
 
 ## Step 2: Create Kubernetes Secret for Supabase
 
 Create a Kubernetes secret to securely store your Supabase URL and service key. This prevents storing sensitive information directly in your Git repository.
 
-Replace the placeholder values with your actual Supabase credentials.
-
 ```bash
+# Load environment variables
+source .env
+
+# Create secret using environment variables
 kubectl create secret generic supabase-credentials \
   -n usccb \
-  --from-literal=SUPABASE_URL='your_supabase_url' \
-  --from-literal=SUPABASE_KEY='your_supabase_service_role_key'
+  --from-literal=SUPABASE_URL="$SUPABASE_URL" \
+  --from-literal=SUPABASE_KEY="$SUPABASE_KEY"
 ```
 
 ## Step 2.5: Create Image Pull Secret for Docker Hub (Only for Private Repositories)
@@ -122,27 +139,48 @@ kubectl create secret generic supabase-credentials \
 If you are using private Docker Hub repositories, create a `docker-registry` type secret:
 
 ```bash
+# Load environment variables
+source .env
+
+# Create image pull secret using environment variables
 kubectl create secret docker-registry dockerhub-secret \
   -n usccb \
   --docker-server=docker.io \
-  --docker-username=<YOUR_DOCKERHUB_USERNAME> \
-  --docker-password=<YOUR_DOCKERHUB_TOKEN> \
-  --docker-email=<YOUR_EMAIL>
+  --docker-username="$DOCKER_USERNAME" \
+  --docker-password="$DOCKER_PASSWORD" \
+  --docker-email="your-email@example.com"
 ```
 
 **Note:** The deployments (`backend-deployment.yaml` and `frontend-deployment.yaml`) have been updated to reference this `dockerhub-secret` in their `imagePullSecrets` section. If using public repositories, you can comment out or remove the `imagePullSecrets` section.
 
 ## Step 3: Review and Update Kubernetes Manifests
 
-The Kubernetes manifests in the `k8s/` directory need to be updated with your Docker Hub username:
+The Kubernetes manifests in the `k8s/` directory need to be updated with your Docker Hub username from the environment variable:
 
+### Option A: Manual Update
 1. **`k8s/backend-deployment.yaml`**:
-   - Update `spec.template.spec.containers[0].image` to: `YOUR_DOCKERHUB_USERNAME/usccb-backend:latest`
+   - Update `spec.template.spec.containers[0].image` to: `<your-dockerhub-username>/usccb:backend`
    - If using public repos, comment out or remove the `imagePullSecrets` section
 
 2. **`k8s/frontend-deployment.yaml`**:
-   - Update `spec.template.spec.containers[0].image` to: `YOUR_DOCKERHUB_USERNAME/usccb-frontend:latest`
+   - Update `spec.template.spec.containers[0].image` to: `<your-dockerhub-username>/usccb:frontend`
    - If using public repos, comment out or remove the `imagePullSecrets` section
+
+### Option B: Automated Update Using Environment Variables
+```bash
+# Load environment variables
+source .env
+
+# Update backend deployment with your Docker Hub username
+sed -i "s|YOUR_DOCKERHUB_USERNAME|$DOCKER_USERNAME|g" k8s/backend-deployment.yaml
+
+# Update frontend deployment with your Docker Hub username
+sed -i "s|YOUR_DOCKERHUB_USERNAME|$DOCKER_USERNAME|g" k8s/frontend-deployment.yaml
+
+# For macOS, use sed -i '' instead:
+# sed -i '' "s|YOUR_DOCKERHUB_USERNAME|$DOCKER_USERNAME|g" k8s/backend-deployment.yaml
+# sed -i '' "s|YOUR_DOCKERHUB_USERNAME|$DOCKER_USERNAME|g" k8s/frontend-deployment.yaml
+```
 
 3. **`k8s/ingress.yaml`**:
    - The `spec.rules[0].host` is set to `diocesevitality.org`
@@ -216,9 +254,10 @@ Once the Ingress `ADDRESS` is available and you have configured your DNS:
 
 1. **Authentication Failed**:
    ```bash
-   # Re-login to Docker Hub
+   # Load environment variables and re-login
+   source .env
    docker logout
-   docker login -u YOUR_DOCKERHUB_USERNAME
+   printf '%s' "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
    ```
 
 2. **Push Denied**:
@@ -258,6 +297,58 @@ If the application is not working:
    ```bash
    kubectl get secrets -n usccb
    ```
+
+## Quick Deployment Script
+
+For convenience, you can create a deployment script that uses all environment variables:
+
+```bash
+#!/bin/bash
+# deploy.sh - Complete deployment script
+
+# Load environment variables
+source .env
+
+# Login to Docker Hub
+printf '%s' "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
+
+# Build and push images
+echo "Building and pushing backend..."
+cd backend
+docker build -t $DOCKER_USERNAME/usccb:backend .
+docker push $DOCKER_USERNAME/usccb:backend
+
+echo "Building and pushing frontend..."
+cd ../frontend
+docker build -t $DOCKER_USERNAME/usccb:frontend .
+docker push $DOCKER_USERNAME/usccb:frontend
+cd ..
+
+# Update Kubernetes manifests with Docker Hub username
+sed -i "s|YOUR_DOCKERHUB_USERNAME|$DOCKER_USERNAME|g" k8s/backend-deployment.yaml
+sed -i "s|YOUR_DOCKERHUB_USERNAME|$DOCKER_USERNAME|g" k8s/frontend-deployment.yaml
+
+# Create Kubernetes secrets
+kubectl create namespace usccb --dry-run=client -o yaml | kubectl apply -f -
+
+kubectl create secret generic supabase-credentials \
+  -n usccb \
+  --from-literal=SUPABASE_URL="$SUPABASE_URL" \
+  --from-literal=SUPABASE_KEY="$SUPABASE_KEY" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+# Create image pull secret if using private repository
+kubectl create secret docker-registry dockerhub-secret \
+  -n usccb \
+  --docker-server=docker.io \
+  --docker-username="$DOCKER_USERNAME" \
+  --docker-password="$DOCKER_PASSWORD" \
+  --docker-email="your-email@example.com" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+echo "Deployment preparation complete!"
+echo "Now commit and push your changes to Git, then apply the ArgoCD ApplicationSet."
+```
 
 ## Docker Hub vs GitHub Container Registry
 

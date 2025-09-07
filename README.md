@@ -182,6 +182,9 @@ This project uses a virtual environment to manage dependencies and environment v
     GENAI_API_KEY_USCCB="your_google_genai_api_key_here"
     SEARCH_API_KEY_USCCB="your_google_custom_search_api_key_here"
     SEARCH_CX_USCCB="your_google_custom_search_engine_id_here"
+    # Docker Hub credentials (for deployment)
+    DOCKER_USERNAME="your_dockerhub_username"
+    DOCKER_PASSWORD="your_dockerhub_password_or_token"
     ```
 
     **Important:**
@@ -382,39 +385,49 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-Web Application
+## Web Application
+
 This project includes a web application to provide a user interface for the collected data. The application is architected as a modern, containerized service-oriented system, ready for deployment on Kubernetes.
-Project Structure
 
-/frontend: A React single-page application (SPA) created with Vite. It is served by a lightweight NGINX web server.
-/backend: A Python API built with FastAPI. It serves data from the Supabase database and provides a secure interface for admin actions.
-/k8s: Contains all the Kubernetes manifests required to deploy the frontend and backend services, including Deployments, Services, and an Ingress for routing traffic.
+### Project Structure
 
-Container Registry
-The web application uses Docker Hub for container image storage. Docker Hub provides:
+-   **/frontend**: A React single-page application (SPA) created with Vite. It is served by a lightweight NGINX web server.
+-   **/backend**: A Python API built with FastAPI. It serves data from the Supabase database and provides a secure interface for admin actions.
+-   **/k8s**: Contains all the Kubernetes manifests required to deploy the frontend and backend services, including Deployments, Services, and an Ingress for routing traffic.
 
-Free public repositories: Unlimited public container images
-Simple authentication: Standard Docker login workflow
-Wide compatibility: Supported by all Kubernetes distributions
-No vendor lock-in: Works independently of any specific cloud provider
+### Container Registry
+
+The web application uses **Docker Hub** for container image storage. Docker Hub provides:
+- **Free public repositories**: Unlimited public container images
+- **Simple authentication**: Standard Docker login workflow
+- **Wide compatibility**: Supported by all Kubernetes distributions
+- **No vendor lock-in**: Works independently of any specific cloud provider
 
 To use Docker Hub:
+1. Create a free account at [hub.docker.com](https://hub.docker.com)
+2. Create a repository for your images (e.g., `usccb` with tags for different services)
+3. Configure your credentials in the `.env` file:
+   ```bash
+   DOCKER_USERNAME=your-dockerhub-username
+   DOCKER_PASSWORD=your-dockerhub-access-token
+   ```
+4. Build and push your images:
+   ```bash
+   # Load environment variables
+   source .env
+   
+   # Login to Docker Hub
+   printf '%s' "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
+   
+   # Build and push backend
+   cd backend
+   docker build -t $DOCKER_USERNAME/usccb:backend .
+   docker push $DOCKER_USERNAME/usccb:backend
+   
+   # Build and push frontend
+   cd ../frontend
+   docker build -t $DOCKER_USERNAME/usccb:frontend .
+   docker push $DOCKER_USERNAME/usccb:frontend
+   ```
 
-Create a free account at hub.docker.com
-Create repositories for your images (e.g., usccb-frontend, usccb-backend)
-Build and push your images:
-bash# Login to Docker Hub
-docker login -u YOUR_DOCKERHUB_USERNAME
-
-# Build and push backend
-cd backend
-docker build -t YOUR_DOCKERHUB_USERNAME/usccb-backend:latest .
-docker push YOUR_DOCKERHUB_USERNAME/usccb-backend:latest
-
-# Build and push frontend
-cd ../frontend
-docker build -t YOUR_DOCKERHUB_USERNAME/usccb-frontend:latest .
-docker push YOUR_DOCKERHUB_USERNAME/usccb-frontend:latest
-
-
-For detailed instructions on how to build and deploy the web application, please see the Deployment Guide (DEPLOYMENT.md).
+For detailed instructions on how to build and deploy the web application, please see the [**Deployment Guide (DEPLOYMENT.md)**](./DEPLOYMENT.md).
