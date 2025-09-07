@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: usccb-dev
+  name: usccb-prod
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -10,12 +10,12 @@ spec:
   
   source:
     repoURL: https://github.com/tomknightatl/USCCB
-    targetRevision: develop  # Track develop branch for dev environment
-    path: k8s/overlays/dev  # Use dev-specific manifests
+    targetRevision: main  # Track main branch for production
+    path: k8s/overlays/prod  # Use prod-specific manifests
     
   destination:
     server: https://kubernetes.default.svc
-    namespace: usccb-dev
+    namespace: usccb
     
   syncPolicy:
     automated:

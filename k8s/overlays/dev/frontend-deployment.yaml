@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+  namespace: usccb-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+        environment: dev
+    spec:
+      serviceAccountName: default
+      # Comment out or remove imagePullSecrets if using public Docker Hub repositories
+      imagePullSecrets:
+      - name: dockerhub-secret
+      containers:
+      - name: frontend
+        image: tomatl/usccb:frontend-develop
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+        env:
+        - name: ENVIRONMENT
+          value: "development"
