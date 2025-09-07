@@ -4,18 +4,19 @@ kind: Kustomization
 namespace: usccb
 
 resources:
-  - ../../backend-deployment.yaml
-  - ../../frontend-deployment.yaml
-  - ../../backend-service.yaml
-  - ../../frontend-service.yaml
+  - ../../base
 
-commonLabels:
-  environment: prod
-  app.kubernetes.io/part-of: usccb
-  app.kubernetes.io/managed-by: argocd
+# Use 'labels' instead of deprecated 'commonLabels'
+labels:
+  - pairs:
+      environment: prod
+      app.kubernetes.io/part-of: usccb
+      app.kubernetes.io/managed-by: argocd
+    includeSelectors: true
+    includeTemplates: true
 
 images:
-  - name: tomatl/usccb:backend
+  - name: tomatl/usccb
     newTag: backend-latest
-  - name: tomatl/usccb:frontend
+  - name: tomatl/usccb
     newTag: frontend-latest
