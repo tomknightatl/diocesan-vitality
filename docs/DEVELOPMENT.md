@@ -24,12 +24,7 @@ Your production setup:
 
 ### 1. Environment Setup
 
-Create a local development `.env.local` file:
-```bash
-# Copy from your main .env but use local values
-cp .env .env.local
-
-# Edit .env.local for local development
+# Edit .env 
 SUPABASE_URL=your_supabase_url_here
 SUPABASE_KEY=your_supabase_key_here
 GENAI_API_KEY_USCCB=your_genai_key_here
@@ -55,7 +50,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 # Load local environment
-export $(cat .env.local | grep -v '^#' | xargs)
+export $(cat .env | grep -v '^#' | xargs)
 
 # Run backend in development mode
 cd backend
@@ -84,9 +79,9 @@ npm run dev
 ### 4. Database Scripts Development
 
 ```bash
-# With your virtual environment activated and .env.local loaded
+# With your virtual environment activated and .env loaded
 source venv/bin/activate
-export $(cat .env.local | grep -v '^#' | xargs)
+export $(cat .env | grep -v '^#' | xargs)
 
 # Test individual scripts
 python extract_dioceses.py --max_dioceses 2
@@ -101,7 +96,7 @@ python run_pipeline.py --max_dioceses 1 --max_parishes_per_diocese 2 --num_paris
 ```bash
 # Terminal 1: Backend
 source venv/bin/activate
-export $(cat .env.local | grep -v '^#' | xargs)
+export $(cat .env | grep -v '^#' | xargs)
 cd backend && uvicorn main:app --reload
 
 # Terminal 2: Frontend  
@@ -159,7 +154,7 @@ git checkout -b feature/your-feature-name
 
 # Start local development environment
 source venv/bin/activate
-export $(cat .env.local | grep -v '^#' | xargs)
+export $(cat .env | grep -v '^#' | xargs)
 
 # Backend terminal
 cd backend && uvicorn main:app --reload
@@ -230,7 +225,7 @@ Create `.vscode/settings.json`:
 ```json
 {
   "python.defaultInterpreterPath": "./venv/bin/python",
-  "python.envFile": "${workspaceFolder}/.env.local",
+  "python.envFile": "${workspaceFolder}/.env",
   "python.testing.pytestEnabled": true,
   "python.testing.pytestArgs": ["tests"],
   "eslint.workingDirectories": ["frontend"]
@@ -247,7 +242,7 @@ Create `.vscode/launch.json`:
       "type": "python",
       "request": "launch",
       "program": "${workspaceFolder}/backend/main.py",
-      "envFile": "${workspaceFolder}/.env.local",
+      "envFile": "${workspaceFolder}/.env",
       "console": "integratedTerminal"
     }
   ]
@@ -362,7 +357,7 @@ cd frontend && npm install && cd ..
 
 # 2. Start local environment (each development session)
 source venv/bin/activate
-export $(cat .env.local | grep -v '^#' | xargs)
+export $(cat .env | grep -v '^#' | xargs)
 
 # 3. Run backend (terminal 1)
 cd backend && uvicorn main:app --reload
