@@ -378,6 +378,7 @@ def find_parish_directories(diocese_id=None, max_dioceses_to_process=config.DEFA
             logger.info("No dioceses found to process.")
             return
 
+        dioceses_to_scan_urls = []
         # If a specific diocese is provided, we scan it regardless of whether it was processed before.
         if diocese_id:
             dioceses_to_scan_urls = [d['Website'] for d in all_dioceses_list if d.get('Website')]
@@ -418,7 +419,7 @@ def find_parish_directories(diocese_id=None, max_dioceses_to_process=config.DEFA
 
         # Construct the final list of dioceses to scan
         dioceses_to_scan = [
-            {"url": d['Website'], "name": d['Name']}
+            {"id": d['id'], "url": d['Website'], "name": d['Name']}
             for d in all_dioceses_list
             if d.get('Website') in dioceses_to_scan_urls
         ]
@@ -440,6 +441,7 @@ def find_parish_directories(diocese_id=None, max_dioceses_to_process=config.DEFA
     for diocese_info in dioceses_to_scan:
         current_url = diocese_info["url"]
         diocese_name = diocese_info["name"]
+        current_diocese_id = diocese_info["id"]
         logger.info(f"--- Processing: {current_url} ({diocese_name}) ---")
         parish_dir_url_found = None
         status_text = "Not Found"
@@ -490,6 +492,7 @@ def find_parish_directories(diocese_id=None, max_dioceses_to_process=config.DEFA
                 )
             
             data_to_upsert = {
+                "diocese_id": current_diocese_id,
                 "diocese_url": current_url,
                 "parish_directory_url": parish_dir_url_found,
                 "found": status_text,
@@ -526,6 +529,7 @@ def find_parish_directories(diocese_id=None, max_dioceses_to_process=config.DEFA
             status_text = f"Error: Page load failed - {error_message[:60]}"
             method = "error_page_load_failed"
             data_to_upsert = {
+                "diocese_id": current_diocese_id,
                 "diocese_url": current_url,
                 "parish_directory_url": None,
                 "found": status_text,
@@ -560,6 +564,7 @@ def find_parish_directories(diocese_id=None, max_dioceses_to_process=config.DEFA
             status_text = f"Error: {error_message[:100]}"
             method = "error_processing_general"
             data_to_upsert = {
+                "diocese_id": current_diocese_id,
                 "diocese_url": current_url,
                 "parish_directory_url": None,
                 "found": status_text,
