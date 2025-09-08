@@ -13,4 +13,4 @@ matplotlib
 pytest
 pytest-mock
 fastapi
-uvicorn
+uvicornlxml
