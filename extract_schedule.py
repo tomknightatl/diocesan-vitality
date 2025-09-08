@@ -6,7 +6,7 @@ import os
 import re
 import warnings
 from datetime import datetime, timezone
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
@@ -44,7 +44,6 @@ def extract_time_info_from_soup(soup: BeautifulSoup, keyword: str) -> str:
     """Extracts schedule information from a BeautifulSoup object."""
     text = soup.get_text()
     
-    # Look for patterns like "X hours per week" or "X hours per month"
     time_pattern = re.compile(r'(\d+)\s*hours?\s*per\s*(week|month)', re.IGNORECASE)
     match = time_pattern.search(text)
     if match:
@@ -52,7 +51,6 @@ def extract_time_info_from_soup(soup: BeautifulSoup, keyword: str) -> str:
         period = match.group(2).lower()
         return f"{hours} hours per {period}"
 
-    # If no clear pattern is found, return the paragraph containing the keyword
     for p in soup.find_all('p'):
         if keyword.lower() in p.text.lower():
             return p.text.strip()
@@ -60,38 +58,62 @@ def extract_time_info_from_soup(soup: BeautifulSoup, keyword: str) -> str:
     return "Information not found"
 
 
+def extract_time_info(url: str, keyword: str) -> str:
+    """Fetches a URL and extracts schedule information related to a keyword."""
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.content, 'html.parser')
+        return extract_time_info_from_soup(soup, keyword)
+    except requests.exceptions.RequestException as e:
+        logger.warning(f"Could not fetch {url} for time info extraction: {e}")
+        return "Information not found"
+
+
+def choose_best_url(urls: list[str], keywords: list[str]) -> str:
+    """Chooses the best URL from a list based on keyword matching in the URL path."""
+    if not urls:
+        return ""
+    if len(urls) == 1:
+        return urls[0]
+
+    best_url = urls[0]
+    max_score = -1
+
+    for url in urls:
+        score = 0
+        url_path = urlparse(url).path.lower()
+        for kw in keywords:
+            if kw in url_path:
+                score += 2 # Higher score for keyword in path
+        
+        # Bonus for being a more specific path
+        if len(url_path.split('/')) > 2:
+            score += 1
+
+        if score > max_score:
+            max_score = score
+            best_url = url
+            
+    logger.info(f"Selected best URL from {len(urls)} candidates: {best_url}")
+    return best_url
+
+
 def scrape_parish_data(url: str) -> dict:
     """
-    Scrapes a parish website to find Reconciliation and Adoration info.
-    It performs a controlled breadth-first search of the website, limited
-    by MAX_PAGES_TO_SCAN.
+    Scrapes a parish website to find the best pages for Reconciliation and Adoration info.
     """
     urls_to_visit = {url}
     visited_urls = set()
+    candidate_pages = {'reconciliation': [], 'adoration': []}
 
-    # Add sitemap URLs to the list of pages to visit
     sitemap_urls = get_sitemap_urls(url)
     if sitemap_urls:
-        logger.info(f"Found {len(sitemap_urls)} sitemap URLs for {url}")
         urls_to_visit.update(sitemap_urls)
 
     logger.info(f"Starting scan with {len(urls_to_visit)} initial URLs.")
 
-    data = {
-        'url': url,
-        'offers_reconciliation': False,
-        'reconciliation_info': "Information not found",
-        'reconciliation_page': "",
-        'offers_adoration': False,
-        'adoration_info': "Information not found",
-        'adoration_page': "",
-    }
-
     while urls_to_visit and len(visited_urls) < MAX_PAGES_TO_SCAN:
-        if data['offers_reconciliation'] and data['offers_adoration']:
-            logger.info("Found both Reconciliation and Adoration info. Stopping scan.")
-            break
-
         current_url = urls_to_visit.pop()
         if current_url in visited_urls:
             continue
@@ -108,25 +130,20 @@ def scrape_parish_data(url: str) -> dict:
             response.raise_for_status()
             soup = BeautifulSoup(response.content, 'html.parser')
             
-            # Discover new links to visit
             for a in soup.find_all('a', href=True):
-                link = urljoin(current_url, a['href']).split('#')[0] # Clean fragments
+                link = urljoin(current_url, a['href']).split('#')[0]
                 if link.startswith(('http://', 'https://')) and link not in visited_urls:
                     urls_to_visit.add(link)
 
             page_text_lower = soup.get_text().lower()
 
-            if not data['offers_reconciliation'] and any(kw in page_text_lower for kw in ['reconciliation', 'confession']):
+            if any(kw in page_text_lower for kw in ['reconciliation', 'confession']):
                 logger.info(f"Found 'Reconciliation' keywords on {current_url}")
-                data['reconciliation_info'] = extract_time_info_from_soup(soup, 'Reconciliation')
-                data['reconciliation_page'] = current_url
-                data['offers_reconciliation'] = True
+                candidate_pages['reconciliation'].append(current_url)
 
-            if not data['offers_adoration'] and 'adoration' in page_text_lower:
+            if 'adoration' in page_text_lower:
                 logger.info(f"Found 'Adoration' keyword on {current_url}")
-                data['adoration_info'] = extract_time_info_from_soup(soup, 'Adoration')
-                data['adoration_page'] = current_url
-                data['offers_adoration'] = True
+                candidate_pages['adoration'].append(current_url)
 
         except requests.exceptions.RequestException as e:
             logger.warning(f"Could not fetch or process {current_url}: {e}")
@@ -134,8 +151,31 @@ def scrape_parish_data(url: str) -> dict:
     if len(visited_urls) >= MAX_PAGES_TO_SCAN:
         logger.warning(f"Reached scan limit of {MAX_PAGES_TO_SCAN} pages for {url}.")
 
-    data['scraped_at'] = datetime.now(timezone.utc).isoformat()
-    return data
+    # --- Analysis Step ---
+    result = {'url': url, 'scraped_at': datetime.now(timezone.utc).isoformat()}
+    
+    if candidate_pages['reconciliation']:
+        best_page = choose_best_url(candidate_pages['reconciliation'], ['reconciliation', 'confession', 'sacrament'])
+        result['reconciliation_page'] = best_page
+        result['offers_reconciliation'] = True
+        result['reconciliation_info'] = extract_time_info(best_page, 'Reconciliation')
+    else:
+        result['offers_reconciliation'] = False
+        result['reconciliation_info'] = "No relevant page found"
+        result['reconciliation_page'] = ""
+
+    if candidate_pages['adoration']:
+        best_page = choose_best_url(candidate_pages['adoration'], ['adoration', 'eucharist'])
+        result['adoration_page'] = best_page
+        result['offers_adoration'] = True
+        result['adoration_info'] = extract_time_info(best_page, 'Adoration')
+    else:
+        result['offers_adoration'] = False
+        result['adoration_info'] = "No relevant page found"
+        result['adoration_page'] = ""
+        
+    return result
+
 
 def get_url_for_parish(supabase: Client, parish_id: int) -> list[str]:
     """Fetches the website URL for a single parish by its ID."""
@@ -152,6 +192,7 @@ def get_url_for_parish(supabase: Client, parish_id: int) -> list[str]:
     except Exception as e:
         logger.error(f"Error fetching parish URL for ID {parish_id}: {e}")
     return []
+
 
 def get_prioritized_urls(supabase: Client, num_parishes: int) -> list[str]:
     """Fetches parish URLs from Supabase and prioritizes them for scraping."""
@@ -214,14 +255,14 @@ def main(num_parishes: int, parish_id: int = None):
         logger.info("No parish URLs to process. Exiting.")
         return
 
-    logger.info(f"Processing {len(parish_urls)} parishes based on priority.")
+    logger.info(f"Processing {len(parish_urls)} parishes.")
 
     results = []
     for url in parish_urls:
         logger.info(f"Scraping {url}...")
         result = scrape_parish_data(url)
         try:
-            parish_name = url.split('//')[1].split('.')[0]
+            parish_name = urlparse(url).netloc.replace('www.','')
         except IndexError:
             parish_name = url
         result['parish_name'] = parish_name
