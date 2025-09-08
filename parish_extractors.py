@@ -20,6 +20,7 @@ import time
 import re
 import subprocess
 from typing import Dict, List, Optional
+from datetime import datetime, timezone
 from core.logger import get_logger
 logger = get_logger(__name__)
 
@@ -386,85 +387,6 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
 
         except Exception as e:
             logger.warning(f"        ⚠️ Error extracting clergy info: {str(e)[:50]}")
-
-    def _parse_address_components(self, full_address: str, result: Dict):
-        """Parse full address into street address and zip code"""
-        try:
-            # Extract zip code (5 digits, possibly followed by 4 more)
-            zip_match = re.search(r'\b(\d{5}(?:-\d{4})?)\b', full_address)
-            if zip_match:
-                result['zip_code'] = zip_match.group(1)
-
-            # Extract street address (everything before the first comma, or before city/state)
-            address_parts = full_address.split(',')
-            if len(address_parts) > 0:
-                potential_street = address_parts[0].strip()
-                if re.search(r'\d+', potential_street):
-                    result['street_address'] = potential_street
-
-        except Exception as e:
-            print(f"        ⚠️ Error parsing address: {str(e)[:30]}")
-
-    def _extract_service_times(self, soup: BeautifulSoup, result: Dict):
-        """Extract service times from parish detail page"""
-        try:
-            service_sections = soup.find_all(['div', 'section'],
-                                           string=re.compile(r'service.*times|mass.*times|masses|schedule', re.I))
-
-            service_headers = soup.find_all(['h3', 'h4'],
-                                          string=re.compile(r'service.*times|mass.*times|masses|schedule', re.I))
-
-            service_lists = []
-            for header in service_headers:
-                next_sibling = header.find_next_sibling(['ul', 'div'])
-                if next_sibling:
-                    service_lists.append(next_sibling)
-
-            all_service_sections = service_sections + service_lists
-
-            for section in all_service_sections:
-                if section:
-                    service_text = section.get_text()
-                    lines = [line.strip() for line in service_text.split('\n') if line.strip()]
-                    schedule_lines = [line for line in lines if len(line) > 10 and
-                                    any(keyword in line.lower() for keyword in
-                                        ['sunday', 'saturday', 'daily', 'mass', 'service', 'am', 'pm'])]
-
-                    if schedule_lines:
-                        result['service_times'] = '; '.join(schedule_lines[:5])
-                        break
-
-        except Exception as e:
-            print(f"        ⚠️ Error extracting service times: {str(e)[:50]}")
-
-    def _extract_clergy_info(self, soup: BeautifulSoup, result: Dict):
-        """Extract clergy information from parish detail page"""
-        try:
-            clergy_sections = soup.find_all(['div', 'section'], class_=re.compile(r'clergy|pastor|priest', re.I))
-            directory_cards = soup.find_all(['div'], class_=re.compile(r'directory|card', re.I))
-            all_clergy_sections = clergy_sections + directory_cards
-
-            clergy_info = []
-            for section in all_clergy_sections:
-                titles = section.find_all(['h4', 'h5'], class_=re.compile(r'title|name', re.I))
-                for title in titles:
-                    title_text = title.get_text().strip()
-                    if any(clergy_word in title_text.lower() for clergy_word in
-                           ['reverend', 'father', 'pastor', 'deacon', 'rev.', 'fr.', 'dcn.']):
-
-                        role_elem = title.find_next_sibling(['p', 'div'])
-                        role_text = role_elem.get_text().strip() if role_elem else ""
-
-                        if role_text:
-                            clergy_info.append(f"{title_text}: {role_text}")
-                        else:
-                            clergy_info.append(title_text)
-
-            if clergy_info:
-                result['clergy_info'] = '; '.join(clergy_info[:3])
-
-        except Exception as e:
-            print(f"        ⚠️ Error extracting clergy info: {str(e)[:50]}")
 
 # =============================================================================
 # PARISH FINDER EXTRACTOR FOR ECATHOLIC SITES
@@ -1055,7 +977,7 @@ class ImprovedInteractiveMapExtractor(BaseExtractor):
 
         # Skip if it doesn't look like a parish name
         if not any(indicator in name.lower() for indicator in
-                  ['parish', 'church', 'st.', 'saint', 'our lady', 'holy', 'cathedral']):
+                   ['parish', 'church', 'st.', 'saint', 'our lady', 'holy', 'cathedral']):
             return None
 
         address = None

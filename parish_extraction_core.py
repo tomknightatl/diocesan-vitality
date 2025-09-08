@@ -25,6 +25,7 @@ from typing import List, Dict, Optional, Any
 from urllib.parse import urljoin, urlparse
 
 from core.logger import get_logger
+logger = get_logger(__name__)
 
 # Web scraping
 from bs4 import BeautifulSoup
