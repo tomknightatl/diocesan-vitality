@@ -12,3 +12,5 @@ jupyter
 matplotlib
 pytest
 pytest-mock
+fastapi
+uvicorn
