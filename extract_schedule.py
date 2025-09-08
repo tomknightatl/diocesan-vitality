@@ -137,6 +137,21 @@ def scrape_parish_data(url: str) -> dict:
     data['scraped_at'] = datetime.now(timezone.utc).isoformat()
     return data
 
+def get_url_for_parish(supabase: Client, parish_id: int) -> list[str]:
+    """Fetches the website URL for a single parish by its ID."""
+    try:
+        response = supabase.table('Parishes').select('Web').eq('id', parish_id).execute()
+        if response.data:
+            parish_url = response.data[0].get('Web')
+            if parish_url:
+                return [parish_url]
+            else:
+                logger.warning(f"Parish with ID {parish_id} found, but it has no website URL.")
+        else:
+            logger.warning(f"No parish found with ID {parish_id}.")
+    except Exception as e:
+        logger.error(f"Error fetching parish URL for ID {parish_id}: {e}")
+    return []
 
 def get_prioritized_urls(supabase: Client, num_parishes: int) -> list[str]:
     """Fetches parish URLs from Supabase and prioritizes them for scraping."""
@@ -179,7 +194,7 @@ def save_results_to_supabase(supabase: Client, results: list):
         logger.error(f"An unexpected error occurred during Supabase upsert: {e}", exc_info=True)
 
 
-def main(num_parishes: int):
+def main(num_parishes: int, parish_id: int = None):
     """Main function to run the scraping pipeline."""
     load_dotenv()
 
@@ -190,7 +205,15 @@ def main(num_parishes: int):
         return
     supabase: Client = create_client(supabase_url, supabase_key)
 
-    parish_urls = get_prioritized_urls(supabase, num_parishes)
+    if parish_id:
+        parish_urls = get_url_for_parish(supabase, parish_id)
+    else:
+        parish_urls = get_prioritized_urls(supabase, num_parishes)
+
+    if not parish_urls:
+        logger.info("No parish URLs to process. Exiting.")
+        return
+
     logger.info(f"Processing {len(parish_urls)} parishes based on priority.")
 
     results = []
@@ -216,5 +239,11 @@ if __name__ == '__main__':
         default=config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE,
         help=f"Maximum number of parishes to extract from. Set to 0 for no limit. Defaults to {config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE}."
     )
+    parser.add_argument(
+        "--parish_id",
+        type=int,
+        default=None,
+        help="ID of a specific parish to process. Overrides --num_parishes."
+    )
     args = parser.parse_args()
-    main(args.num_parishes)
+    main(args.num_parishes, args.parish_id)
