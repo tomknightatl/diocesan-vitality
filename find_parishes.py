@@ -345,7 +345,7 @@ def get_page_with_retry(driver_instance, url):
     driver_instance.get(url)
 
 
-def find_parish_directories(max_dioceses_to_process=config.DEFAULT_MAX_DIOCESES):
+def find_parish_directories(diocese_id=None, max_dioceses_to_process=config.DEFAULT_MAX_DIOCESES):
     """Main function to run the parish directory finder."""
     
     if config.GENAI_API_KEY:
@@ -363,53 +363,64 @@ def find_parish_directories(max_dioceses_to_process=config.DEFAULT_MAX_DIOCESES)
 
     dioceses_to_scan = []
     try:
-        response_dioceses = supabase.table("Dioceses").select("Website, Name").execute()
-        all_dioceses_list = (
-            response_dioceses.data if response_dioceses.data is not None else []
-        )
+        # Base query for all dioceses
+        query = supabase.table("Dioceses").select("id, Website, Name")
+
+        # Filter by a single diocese if an ID is provided
+        if diocese_id:
+            query = query.eq('id', diocese_id)
+        
+        response_dioceses = query.execute()
+        all_dioceses_list = response_dioceses.data if response_dioceses.data else []
         logger.info(f"Fetched {len(all_dioceses_list)} total records from Dioceses table.")
         
-        diocese_url_to_name = {d["Website"]: d["Name"] for d in all_dioceses_list}
+        if not all_dioceses_list:
+            logger.info("No dioceses found to process.")
+            return
 
-        response_processed_dioceses = (
-            supabase.table("DiocesesParishDirectory")
-            .select("diocese_url")
-            .execute()
-        )
-        processed_diocese_urls = (
-            {item["diocese_url"] for item in response_processed_dioceses.data}
-            if response_processed_dioceses.data is not None
-            else set()
-        )
-        
-        unprocessed_dioceses_urls = set(diocese_url_to_name.keys()) - processed_diocese_urls
-        
-        dioceses_to_scan_urls = []
-
-        if unprocessed_dioceses_urls:
-            logger.info(f"Found {len(unprocessed_dioceses_urls)} dioceses needing parish directory URLs.")
-            limit = max_dioceses_to_process if max_dioceses_to_process != 0 else len(unprocessed_dioceses_urls)
-            dioceses_to_scan_urls = random.sample(list(unprocessed_dioceses_urls), limit)
+        # If a specific diocese is provided, we scan it regardless of whether it was processed before.
+        if diocese_id:
+            dioceses_to_scan_urls = [d['Website'] for d in all_dioceses_list if d.get('Website')]
         else:
-            logger.info("All dioceses have been scanned. Rescanning the oldest entries based on 'updated_at'.")
-            limit = max_dioceses_to_process if max_dioceses_to_process != 0 else 5
-            response_oldest_scanned = (
+            # Logic to find unprocessed or outdated dioceses if no specific one is targeted
+            diocese_url_to_name = {d["Website"]: d["Name"] for d in all_dioceses_list}
+            response_processed_dioceses = (
                 supabase.table("DiocesesParishDirectory")
                 .select("diocese_url")
-                .order("updated_at", desc=False)
-                .limit(limit)
                 .execute()
             )
-            if response_oldest_scanned.data:
-                dioceses_to_scan_urls = [item["diocese_url"] for item in response_oldest_scanned.data]
-                logger.info(f"Selected {len(dioceses_to_scan_urls)} oldest dioceses for rescanning.")
+            processed_diocese_urls = (
+                {item["diocese_url"] for item in response_processed_dioceses.data}
+                if response_processed_dioceses.data is not None
+                else set()
+            )
+            unprocessed_dioceses_urls = set(diocese_url_to_name.keys()) - processed_diocese_urls
+            
+            if unprocessed_dioceses_urls:
+                logger.info(f"Found {len(unprocessed_dioceses_urls)} dioceses needing parish directory URLs.")
+                limit = max_dioceses_to_process if max_dioceses_to_process != 0 else len(unprocessed_dioceses_urls)
+                dioceses_to_scan_urls = random.sample(list(unprocessed_dioceses_urls), limit)
             else:
-                logger.info("Could not find any previously scanned dioceses to rescan.")
+                logger.info("All dioceses have been scanned. Rescanning the oldest entries based on 'updated_at'.")
+                limit = max_dioceses_to_process if max_dioceses_to_process != 0 else 5
+                response_oldest_scanned = (
+                    supabase.table("DiocesesParishDirectory")
+                    .select("diocese_url")
+                    .order("updated_at", desc=False)
+                    .limit(limit)
+                    .execute()
+                )
+                if response_oldest_scanned.data:
+                    dioceses_to_scan_urls = [item["diocese_url"] for item in response_oldest_scanned.data]
+                    logger.info(f"Selected {len(dioceses_to_scan_urls)} oldest dioceses for rescanning.")
+                else:
+                    logger.info("Could not find any previously scanned dioceses to rescan.")
 
+        # Construct the final list of dioceses to scan
         dioceses_to_scan = [
-            {"url": url, "name": diocese_url_to_name.get(url, "Unknown Diocese")}
-            for url in dioceses_to_scan_urls
-            if url in diocese_url_to_name
+            {"url": d['Website'], "name": d['Name']}
+            for d in all_dioceses_list
+            if d.get('Website') in dioceses_to_scan_urls
         ]
 
     except Exception as e:
@@ -583,6 +594,12 @@ if __name__ == "__main__":
         description="Find parish directory URLs on diocesan websites."
     )
     parser.add_argument(
+        "--diocese_id",
+        type=int,
+        default=None,
+        help="ID of a specific diocese to process. If not provided, processes all.",
+    )
+    parser.add_argument(
         "--max_dioceses_to_process",
         type=int,
         default=5,
@@ -591,4 +608,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     config.validate_config()
-    find_parish_directories(args.max_dioceses_to_process)
+    find_parish_directories(args.diocese_id, args.max_dioceses_to_process)

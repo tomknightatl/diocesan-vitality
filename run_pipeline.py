@@ -16,7 +16,7 @@ def main():
     parser.add_argument("--skip_parishes", action="store_true", help="Skip the parish extraction step.")
     parser.add_argument("--skip_schedules", action="store_true", help="Skip the schedule extraction step.")
     parser.add_argument("--skip_reporting", action="store_true", help="Skip the reporting step.")
-    parser.add_argument("--max_dioceses", type=int, default=config.DEFAULT_MAX_DIOCESES, help="Max number of dioceses to extract.")
+    parser.add_argument("--diocese_id", type=int, default=2024, help="ID of a specific diocese to process. Defaults to 2024 (Archdiocese of Atlanta).")
     parser.add_argument("--max_parishes_per_diocese", type=int, default=config.DEFAULT_MAX_PARISHES_PER_DIOCESE, help="Max parishes to extract per diocese.")
     parser.add_argument("--num_parishes_for_schedule", type=int, default=config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE, help="Number of parishes to extract schedules for.")
     args = parser.parse_args()
@@ -27,10 +27,15 @@ def main():
         logger.error("Exiting due to missing configuration.")
         return
 
+    # If a specific diocese is targeted, we can skip the full diocese extraction
+    if args.diocese_id and not args.skip_dioceses:
+        logger.info(f"--diocese_id is set to {args.diocese_id}, skipping full diocese extraction.")
+        args.skip_dioceses = True
+
     if not args.skip_dioceses:
         try:
             logger.info("\n--- Running Diocese Extraction ---")
-            extract_dioceses_main(args.max_dioceses)
+            extract_dioceses_main(0) # Setting max_dioceses to 0 to run for all
         except Exception as e:
             logger.error(f"Diocese extraction failed: {e}", exc_info=True)
     else:
@@ -39,7 +44,7 @@ def main():
     if not args.skip_parish_directories:
         try:
             logger.info("\n--- Finding Parish Directories ---")
-            find_parish_directories(args.max_dioceses)
+            find_parish_directories(diocese_id=args.diocese_id)
         except Exception as e:
             logger.error(f"Parish directory search failed: {e}", exc_info=True)
     else:
@@ -48,7 +53,7 @@ def main():
     if not args.skip_parishes:
         try:
             logger.info("\n--- Running Parish Extraction ---")
-            extract_parishes_main(args.max_dioceses, args.max_parishes_per_diocese)
+            extract_parishes_main(diocese_id=args.diocese_id, num_parishes_per_diocese=args.max_parishes_per_diocese)
         except Exception as e:
             logger.error(f"Parish extraction failed: {e}", exc_info=True)
     else:
