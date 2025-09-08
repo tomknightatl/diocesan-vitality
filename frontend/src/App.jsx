@@ -8,7 +8,8 @@ function App() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-        fetch('https://api.diocesevitality.org/api/dioceses')
+    // Use relative URL - Vite proxy will forward to localhost:8000 in development
+    fetch('/api/dioceses')
       .then(response => {
         if (!response.ok) {
           throw new Error('Network response was not ok');
@@ -46,18 +47,18 @@ function App() {
             <thead>
               <tr>
                 <th>ID</th>
-                <th>Diocese Name</th>
-                <th>City</th>
-                <th>State</th>
+                <th>Name</th>
+                <th>Address</th>
+                <th>Website</th>
               </tr>
             </thead>
             <tbody>
-              {dioceses.map(diocese => (
-                <tr key={diocese.id}>
+              {dioceses.map((diocese, index) => (
+                <tr key={diocese.id || index}>
                   <td>{diocese.id}</td>
-                  <td>{diocese.diocese_name}</td>
-                  <td>{diocese.city}</td>
-                  <td>{diocese.state}</td>
+                  <td>{diocese.Name}</td>
+                  <td>{diocese.Address}</td>
+                  <td>{diocese.Website}</td>
                 </tr>
               ))}
             </tbody>
