@@ -67,20 +67,23 @@ def extract_dioceses_data(soup):
         diocese_name = name_div.get_text(strip=True) if name_div else "N/A"
         logger.info(f"Diocese name: {diocese_name}")
 
-        address_div = da_wrap.find('div', class_='da-address')
-        address_parts = []
-        if address_div:
-            for div in address_div.find_all('div', recursive=False):
-                text = div.get_text(strip=True)
-                if text:
-                    address_parts.append(text)
-
-        address = ", ".join(address_parts)
-        logger.info(f"Address: {address}")
-
         website_div = da_wrap.find('div', class_='site')
         website_url = website_div.find('a')['href'] if website_div and website_div.find('a') else "N/A"
         logger.info(f"Website: {website_url}")
+
+        address_div = da_wrap.find('div', class_='da-address')
+        address = ""
+        if address_div:
+            full_address_text = address_div.get_text(separator=" ", strip=True)
+            # Remove website URL from the address text if it's present
+            if website_url != "N/A" and website_url in full_address_text:
+                full_address_text = full_address_text.replace(website_url, "").strip()
+            
+            # Clean up multiple spaces and newlines
+            address = re.sub(r'\s+', ' ', full_address_text).strip()
+            # Further refinement: remove common address separators if they appear at start/end
+            address = address.strip(',').strip()
+        logger.info(f"Address: {address}")
 
         dioceses.append({
             'Name': diocese_name,
