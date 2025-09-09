@@ -68,15 +68,25 @@ def get_dioceses(
     page: int = 1,
     page_size: int = 20,
     sort_by: str = "Name",
-    sort_order: str = "asc"
+    sort_order: str = "asc",
+    search_query: str = None
 ):
     """
-    Fetches records from the 'Dioceses' table with pagination and sorting.
+    Fetches records from the 'Dioceses' table with pagination, sorting, and filtering.
     """
     try:
         offset = (page - 1) * page_size
         
         query = supabase.table('Dioceses').select('*')
+
+        # Apply filtering
+        if search_query:
+            search_pattern = f"%{search_query}%"
+            query = query.or_(
+                f"Name.ilike.{search_pattern},"
+                f"Address.ilike.{search_pattern},"
+                f"Website.ilike.{search_pattern}"
+            )
 
         # Apply sorting
         if sort_order.lower() == "desc":
@@ -87,8 +97,17 @@ def get_dioceses(
         # Apply pagination
         response = query.range(offset, offset + page_size - 1).execute()
         
-        # To get total count for pagination metadata
-        count_response = supabase.table('Dioceses').select('count', count='exact').execute()
+        # To get total count for pagination metadata (with filter applied)
+        # Need to re-apply filter to the count query
+        count_query = supabase.table('Dioceses').select('count', count='exact')
+        if search_query:
+            search_pattern = f"%{search_query}%"
+            count_query = count_query.or_(
+                f"Name.ilike.{search_pattern},"
+                f"Address.ilike.{search_pattern},"
+                f"Website.ilike.{search_pattern}"
+            )
+        count_response = count_query.execute()
         total_count = count_response.count
 
         return {
