@@ -82,6 +82,7 @@ def extract_dioceses_data(soup):
             
             # Clean up multiple spaces and newlines
             address = re.sub(r'\s+', ' ', full_address_text).strip()
+            address = re.sub(r' ,', ',', address).strip() # Add this line
             # Further refinement: remove common address separators if they appear at start/end
             address = address.strip(',').strip()
         logger.info(f"Address: {address}")
