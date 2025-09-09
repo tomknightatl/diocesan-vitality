@@ -23,8 +23,8 @@ graph TD
     L --> M{Fetch & Parse Page};
     M -- Error --> K;
     M -- Success --> N{Page Text Contains Keywords?};
-    N -- 'reconciliation'/'confession' --> O[Add to Reconciliation Candidates];
-    N -- 'adoration' --> P[Add to Adoration Candidates];
+    N -- "reconciliation / confession" --> O[Add to Reconciliation Candidates];
+    N -- "adoration" --> P[Add to Adoration Candidates];
     O --> Q;
     P --> Q;
     N --> Q{Find All Links on Page};
