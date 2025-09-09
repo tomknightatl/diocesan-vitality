@@ -11,17 +11,30 @@ from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
+from bs4.element import Tag
 from dotenv import load_dotenv
 from supabase import Client, create_client
 
 import config
 from core.logger import get_logger
+from core.db import get_supabase_client # Import the get_supabase_client function
 
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
 logger = get_logger(__name__)
 
 MAX_PAGES_TO_SCAN = 100 # Limit the number of pages to scan per parish
+
+def get_suppression_urls(supabase: Client) -> set[str]:
+    """Fetches all URLs from the ParishFactsSuppressionURLs table."""
+    try:
+        response = supabase.table('ParishFactsSuppressionURLs').select('url').execute()
+        if response.data:
+            return {item['url'] for item in response.data}
+        return set()
+    except Exception as e:
+        logger.error(f"Error fetching suppression URLs: {e}")
+        return set()
 
 
 def get_sitemap_urls(url: str) -> list[str]:
@@ -44,28 +57,49 @@ def get_sitemap_urls(url: str) -> list[str]:
 def extract_time_info_from_soup(soup: BeautifulSoup, keyword: str) -> tuple[str, str | None]:
     """Extracts schedule information from a BeautifulSoup object."""
     
-    # Try to find the main content area
-    content_div = soup.find('main') or soup.find('article') or \
-                  soup.find('div', id='content') or soup.find('div', class_='content') or \
-                  soup.find('div', id='main') or soup.find('div', class_='main')
+    # Find all elements that contain the keyword
+    elements_with_keyword = soup.find_all(string=re.compile(keyword, re.IGNORECASE))
 
-    if content_div:
-        text = content_div.get_text(separator='\n', strip=True)
-    else:
-        text = soup.get_text(separator='\n', strip=True) # Fallback to full text
-    
-    time_pattern = re.compile(r'(\d+)\s*hours?\s*per\s*(week|month)', re.IGNORECASE)
-    match = time_pattern.search(text)
-    if match:
-        hours = int(match.group(1))
-        period = match.group(2).lower()
-        return f"{hours} hours per {period}", match.group(0)
+    best_snippet = None
+    best_snippet_score = -1
 
-    lines = text.split('\n')
-    for i, line in enumerate(lines):
-        if keyword.lower() in line.lower():
-            snippet = '\n'.join(lines[i:i+5])
-            return snippet, snippet
+    for element in elements_with_keyword:
+        # Get the parent element that is likely to contain the relevant text
+        # This is a heuristic, might need tuning
+        parent = element.find_parent(['p', 'li', 'div', 'span', 'td', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'])
+        
+        if parent:
+            current_snippet_parts = [parent.get_text(separator='\n', strip=True)]
+            
+            # Look at next siblings for more schedule information
+            for sibling in parent.next_siblings:
+                if isinstance(sibling, Tag): # Only process Tag objects
+                    # Limit the number of siblings to check to avoid grabbing too much
+                    if len(current_snippet_parts) > 5: # Heuristic: check up to 5 siblings
+                        break
+                    current_snippet_parts.append(sibling.get_text(separator='\n', strip=True))
+            
+            snippet = '\n'.join(current_snippet_parts).strip()
+            
+            # Score the snippet based on length and presence of schedule-like words
+            score = len(snippet)
+            if "schedule" in snippet.lower() or "hours" in snippet.lower() or "am" in snippet.lower() or "pm" in snippet.lower() or "confessionals" in snippet.lower() or "by appointment" in snippet.lower():
+                score += 100 # Boost score for schedule-like words
+
+            if score > best_snippet_score:
+                best_snippet_score = score
+                best_snippet = snippet
+
+    if best_snippet:
+        # Now, try to extract the time pattern from the best snippet
+        time_pattern = re.compile(r'(\d+)\s*hours?\s*per\s*(week|month)', re.IGNORECASE)
+        match = time_pattern.search(best_snippet)
+        if match:
+            hours = int(match.group(1))
+            period = match.group(2).lower()
+            return f"{hours} hours per {period}", match.group(0)
+        else:
+            return best_snippet, best_snippet # If no specific time pattern, return the snippet as is
             
     return "Information not found", None
 
@@ -136,11 +170,16 @@ def calculate_priority(url: str, keywords: dict, negative_keywords: list[str]) -
     return score
 
 
-def scrape_parish_data(url: str, parish_id: int, supabase: Client) -> dict:
+def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_urls: set[str]) -> dict:
     """
     Scrapes a parish website to find the best pages for Reconciliation and Adoration info.
     Uses a priority queue to visit more promising URLs first.
     """
+    # Initial check for the starting URL
+    if url in suppression_urls:
+        logger.info(f"Skipping initial URL {url} as it is in the suppression list.")
+        return {'url': url, 'scraped_at': datetime.now(timezone.utc).isoformat(), 'offers_reconciliation': False, 'offers_adoration': False}
+
     urls_to_visit = []
     visited_urls = set()
     candidate_pages = {'reconciliation': [], 'adoration': []}
@@ -157,6 +196,9 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client) -> dict:
     sitemap_urls = get_sitemap_urls(url)
     if sitemap_urls:
         for s_url in sitemap_urls:
+            if s_url in suppression_urls:
+                logger.info(f"Skipping sitemap URL {s_url} as it is in the suppression list.")
+                continue
             priority = calculate_priority(s_url, all_keywords, [])
             heapq.heappush(urls_to_visit, (-priority, s_url))
 
@@ -169,6 +211,11 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client) -> dict:
         if current_url in visited_urls:
             continue
         
+        if current_url in suppression_urls:
+            logger.info(f"Skipping {current_url} as it is in the suppression list.")
+            visited_urls.add(current_url) # Mark as visited to avoid re-processing
+            continue
+
         if re.search(r'\.(pdf|jpg|jpeg|png|gif|svg|zip|docx|xlsx|pptx|mp3|mp4|avi|mov)$', current_url, re.IGNORECASE):
             visited_urls.add(current_url)
             continue
@@ -206,6 +253,9 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client) -> dict:
             for a in soup.find_all('a', href=True):
                 link = urljoin(current_url, a['href']).split('#')[0]
                 if link.startswith(('http://', 'https://')) and link not in visited_urls:
+                    if link in suppression_urls:
+                        logger.debug(f"Skipping discovered link {link} as it is in the suppression list.")
+                        continue
                     link_priority = calculate_priority(link, all_keywords, [])
                     heapq.heappush(urls_to_visit, (-link_priority, link))
                     key = (link, parish_id)
@@ -331,12 +381,13 @@ def main(num_parishes: int, parish_id: int = None):
     """Main function to run the scraping pipeline."""
     load_dotenv()
 
-    supabase_url = os.getenv("SUPABASE_URL")
-    supabase_key = os.getenv("SUPABASE_KEY")
-    if not supabase_url or not supabase_key:
-        logger.error("SUPABASE_URL and SUPABASE_KEY must be set in the environment.")
+    supabase: Client = get_supabase_client()
+    if not supabase:
+        logger.error("Supabase client could not be initialized.")
         return
-    supabase: Client = create_client(supabase_url, supabase_key)
+
+    suppression_urls = get_suppression_urls(supabase)
+    logger.info(f"Loaded {len(suppression_urls)} suppression URLs.")
 
     parishes_to_process = get_parishes_to_process(supabase, num_parishes, parish_id)
 
@@ -349,7 +400,7 @@ def main(num_parishes: int, parish_id: int = None):
     results = []
     for url, p_id in parishes_to_process:
         logger.info(f"Scraping {url} for parish {p_id}...")
-        result = scrape_parish_data(url, p_id, supabase)
+        result = scrape_parish_data(url, p_id, supabase, suppression_urls)
         result['parish_id'] = p_id
         try:
             parish_name = urlparse(url).netloc.replace('www.','')
