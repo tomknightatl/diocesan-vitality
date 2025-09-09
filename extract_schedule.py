@@ -41,25 +41,27 @@ def get_sitemap_urls(url: str) -> list[str]:
         return []
 
 
-def extract_time_info_from_soup(soup: BeautifulSoup, keyword: str) -> str:
+def extract_time_info_from_soup(soup: BeautifulSoup, keyword: str) -> tuple[str, str | None]:
     """Extracts schedule information from a BeautifulSoup object."""
-    text = soup.get_text()
+    text = soup.get_text(separator='\n', strip=True)
     
     time_pattern = re.compile(r'(\d+)\s*hours?\s*per\s*(week|month)', re.IGNORECASE)
     match = time_pattern.search(text)
     if match:
         hours = int(match.group(1))
         period = match.group(2).lower()
-        return f"{hours} hours per {period}"
+        return f"{hours} hours per {period}", match.group(0)
 
-    for p in soup.find_all('p'):
-        if keyword.lower() in p.text.lower():
-            return p.text.strip()
+    lines = text.split('\n')
+    for i, line in enumerate(lines):
+        if keyword.lower() in line.lower():
+            snippet = '\n'.join(lines[i:i+5])
+            return snippet, snippet
             
-    return "Information not found"
+    return "Information not found", None
 
 
-def extract_time_info(url: str, keyword: str) -> str:
+def extract_time_info(url: str, keyword: str) -> tuple[str, str | None]:
     """Fetches a URL and extracts schedule information related to a keyword."""
     try:
         response = requests.get(url, timeout=10)
@@ -68,7 +70,7 @@ def extract_time_info(url: str, keyword: str) -> str:
         return extract_time_info_from_soup(soup, keyword)
     except requests.exceptions.RequestException as e:
         logger.warning(f"Could not fetch {url} for time info extraction: {e}")
-        return "Information not found"
+        return "Information not found", None
 
 
 def choose_best_url(urls: list[str], keywords: dict, negative_keywords: list[str]) -> str:
@@ -228,21 +230,23 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client) -> dict:
         best_page = choose_best_url(candidate_pages['reconciliation'], recon_keywords, recon_negative_keywords)
         result['reconciliation_page'] = best_page
         result['offers_reconciliation'] = True
-        result['reconciliation_info'] = extract_time_info(best_page, 'Reconciliation')
+        result['reconciliation_info'], result['reconciliation_fact_string'] = extract_time_info(best_page, 'Reconciliation')
     else:
         result['offers_reconciliation'] = False
         result['reconciliation_info'] = "No relevant page found"
         result['reconciliation_page'] = ""
+        result['reconciliation_fact_string'] = None
 
     if candidate_pages['adoration']:
         best_page = choose_best_url(candidate_pages['adoration'], adoration_keywords, adoration_negative_keywords)
         result['adoration_page'] = best_page
         result['offers_adoration'] = True
-        result['adoration_info'] = extract_time_info(best_page, 'Adoration')
+        result['adoration_info'], result['adoration_fact_string'] = extract_time_info(best_page, 'Adoration')
     else:
         result['offers_adoration'] = False
         result['adoration_info'] = "No relevant page found"
         result['adoration_page'] = ""
+        result['adoration_fact_string'] = None
         
     return result
 
@@ -290,7 +294,8 @@ def save_facts_to_supabase(supabase: Client, results: list):
                 'parish_id': parish_id,
                 'fact_type': 'ReconciliationSchedule',
                 'fact_value': result.get('reconciliation_info'),
-                'fact_source_url': result.get('reconciliation_page')
+                'fact_source_url': result.get('reconciliation_page'),
+                'fact_string': result.get('reconciliation_fact_string')
             })
         
         if result.get('offers_adoration') and result.get('adoration_info') != "Information not found":
@@ -298,7 +303,8 @@ def save_facts_to_supabase(supabase: Client, results: list):
                 'parish_id': parish_id,
                 'fact_type': 'AdorationSchedule',
                 'fact_value': result.get('adoration_info'),
-                'fact_source_url': result.get('adoration_page')
+                'fact_source_url': result.get('adoration_page'),
+                'fact_string': result.get('adoration_fact_string')
             })
 
     if not facts_to_save:
