@@ -18,12 +18,33 @@ function App() {
   const [sortBy, setSortBy] = useState('Name');
   const [sortOrder, setSortOrder] = useState('asc'); // 'asc' or 'desc'
 
-  useEffect(() => {
+  // State for per-column filtering
+  const [filterName, setFilterName] = useState('');
+  const [filterAddress, setFilterAddress] = useState('');
+  const [filterWebsite, setFilterWebsite] = useState('');
+
+  // State for per-column filtering
+  const [filterName, setFilterName] = useState('');
+  const [filterAddress, setFilterAddress] = useState('');
+  const [filterWebsite, setFilterWebsite] = useState('');
+
+    useEffect(() => {
     const fetchDioceses = async () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`/api/dioceses?page=${currentPage}&page_size=${itemsPerPage}&sort_by=${sortBy}&sort_order=${sortOrder}`);
+        const params = new URLSearchParams({
+          page: currentPage,
+          page_size: itemsPerPage,
+          sort_by: sortBy,
+          sort_order: sortOrder,
+        });
+
+        if (filterName) params.append('filter_name', filterName);
+        if (filterAddress) params.append('filter_address', filterAddress);
+        if (filterWebsite) params.append('filter_website', filterWebsite);
+
+        const response = await fetch(`/api/dioceses?${params.toString()}`);
         if (!response.ok) {
           throw new Error('Network response was not ok');
         }
@@ -61,7 +82,7 @@ function App() {
         setSummaryError(error.message);
         setSummaryLoading(false);
       });
-  }, [currentPage, sortBy, sortOrder]); // Dependencies for re-fetching dioceses data
+  }, [currentPage, sortBy, sortOrder, filterName, filterAddress, filterWebsite]); // Dependencies for re-fetching dioceses data
 
   // Function to handle sorting
   const handleSort = (column) => {
@@ -124,14 +145,44 @@ function App() {
           <Table striped bordered hover responsive>
             <thead>
               <tr>
-                <th onClick={() => handleSort('Name')} style={{ cursor: 'pointer' }}>
-                  Name {sortBy === 'Name' && (sortOrder === 'asc' ? '▲' : '▼')}
+                <th style={{ cursor: 'pointer' }}>
+                  <div onClick={() => handleSort('Name')}>
+                    Name {sortBy === 'Name' && (sortOrder === 'asc' ? '▲' : '▼')}
+                  </div>
+                  <Form.Control
+                    type="text"
+                    placeholder="Filter Name"
+                    value={filterName}
+                    onChange={(e) => setFilterName(e.target.value)}
+                    onClick={(e) => e.stopPropagation()} // Prevent sorting when clicking input
+                    className="mt-1"
+                  />
                 </th>
-                <th onClick={() => handleSort('Address')} style={{ cursor: 'pointer' }}>
-                  Address {sortBy === 'Address' && (sortOrder === 'asc' ? '▲' : '▼')}
+                <th style={{ cursor: 'pointer' }}>
+                  <div onClick={() => handleSort('Address')}>
+                    Address {sortBy === 'Address' && (sortOrder === 'asc' ? '▲' : '▼')}
+                  </div>
+                  <Form.Control
+                    type="text"
+                    placeholder="Filter Address"
+                    value={filterAddress}
+                    onChange={(e) => setFilterAddress(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="mt-1"
+                  />
                 </th>
-                <th onClick={() => handleSort('Website')} style={{ cursor: 'pointer' }}>
-                  Website {sortBy === 'Website' && (sortOrder === 'asc' ? '▲' : '▼')}
+                <th style={{ cursor: 'pointer' }}>
+                  <div onClick={() => handleSort('Website')}>
+                    Website {sortBy === 'Website' && (sortOrder === 'asc' ? '▲' : '▼')}
+                  </div>
+                  <Form.Control
+                    type="text"
+                    placeholder="Filter Website"
+                    value={filterWebsite}
+                    onChange={(e) => setFilterWebsite(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="mt-1"
+                  />
                 </th>
               </tr>
             </thead>
