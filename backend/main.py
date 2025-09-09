@@ -17,6 +17,7 @@ origins = [
     "https://usccb.diocesevitality.org",
     "http://localhost:8080",
     "http://localhost:8081",
+    "http://localhost:5173",
 ]
 
 app.add_middleware(
