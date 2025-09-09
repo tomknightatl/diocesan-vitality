@@ -43,7 +43,16 @@ def get_sitemap_urls(url: str) -> list[str]:
 
 def extract_time_info_from_soup(soup: BeautifulSoup, keyword: str) -> tuple[str, str | None]:
     """Extracts schedule information from a BeautifulSoup object."""
-    text = soup.get_text(separator='\n', strip=True)
+    
+    # Try to find the main content area
+    content_div = soup.find('main') or soup.find('article') or \
+                  soup.find('div', id='content') or soup.find('div', class_='content') or \
+                  soup.find('div', id='main') or soup.find('div', class_='main')
+
+    if content_div:
+        text = content_div.get_text(separator='\n', strip=True)
+    else:
+        text = soup.get_text(separator='\n', strip=True) # Fallback to full text
     
     time_pattern = re.compile(r'(\d+)\s*hours?\s*per\s*(week|month)', re.IGNORECASE)
     match = time_pattern.search(text)
