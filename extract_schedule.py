@@ -24,6 +24,7 @@ warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
 logger = get_logger(__name__)
 
+_sitemap_cache = {}
 MAX_PAGES_TO_SCAN = 100 # Limit the number of pages to scan per parish
 
 def get_suppression_urls(supabase: Client) -> set[str]:
@@ -40,18 +41,26 @@ def get_suppression_urls(supabase: Client) -> set[str]:
 
 def get_sitemap_urls(url: str) -> list[str]:
     """Fetches sitemap.xml and extracts URLs."""
+    normalized_url = normalize_url(url) # Normalize URL for consistent caching key
+    if normalized_url in _sitemap_cache:
+        logger.debug(f"Returning sitemap from cache for {url}")
+        return _sitemap_cache[normalized_url]
+
     try:
         sitemap_url = urljoin(url, '/sitemap.xml')
         response = requests.get(sitemap_url, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'xml')
-        return [
+        sitemap_links = [
             loc.text
             for loc in soup.find_all('loc')
             if loc.text and loc.text.startswith(('http://', 'https://')) and 'default' not in loc.text
         ]
+        _sitemap_cache[normalized_url] = sitemap_links # Cache the result
+        return sitemap_links
     except requests.exceptions.RequestException as e:
         logger.warning(f"Could not fetch or parse sitemap for {url}: {e}")
+        _sitemap_cache[normalized_url] = [] # Cache empty list on failure to avoid repeated attempts
         return []
 
 
@@ -168,7 +177,7 @@ def calculate_priority(url: str, keywords: dict, negative_keywords: list[str], b
     return score
 
 
-def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_urls: set[str]) -> dict:
+def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_urls: set[str], max_pages_to_scan: int) -> dict:
     """
     Scrapes a parish website to find the best pages for Reconciliation and Adoration info.
     Uses a priority queue to visit more promising URLs first.
@@ -204,7 +213,7 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_u
 
     logger.info(f"Starting scan with {len(urls_to_visit)} initial URLs in priority queue.")
 
-    while urls_to_visit and len(visited_urls) < MAX_PAGES_TO_SCAN:
+    while urls_to_visit and len(visited_urls) < max_pages_to_scan:
         priority, current_url = heapq.heappop(urls_to_visit)
         priority = -priority
 
@@ -272,8 +281,8 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_u
         except requests.exceptions.RequestException as e:
             logger.warning(f"Could not fetch or process {current_url}: {e}")
 
-    if len(visited_urls) >= MAX_PAGES_TO_SCAN:
-        logger.warning(f"Reached scan limit of {MAX_PAGES_TO_SCAN} pages for {url}.")
+    if len(visited_urls) >= max_pages_to_scan:
+        logger.warning(f"Reached scan limit of {max_pages_to_scan} pages for {url}.")
 
     if discovered_urls:
         urls_to_insert = list(discovered_urls.values())
@@ -377,7 +386,7 @@ def save_facts_to_supabase(supabase: Client, results: list):
         logger.error(f"An unexpected error occurred during Supabase upsert: {e}", exc_info=True)
 
 
-def main(num_parishes: int, parish_id: int = None):
+def main(num_parishes: int, parish_id: int = None, max_pages_to_scan: int = MAX_PAGES_TO_SCAN):
     """Main function to run the scraping pipeline."""
     load_dotenv()
 
@@ -400,7 +409,7 @@ def main(num_parishes: int, parish_id: int = None):
     results = []
     for url, p_id in parishes_to_process:
         logger.info(f"Scraping {url} for parish {p_id}...")
-        result = scrape_parish_data(url, p_id, supabase, suppression_urls)
+        result = scrape_parish_data(url, p_id, supabase, suppression_urls, max_pages_to_scan=max_pages_to_scan)
         result['parish_id'] = p_id
         try:
             parish_name = urlparse(url).netloc.replace('www.','')
@@ -427,5 +436,11 @@ if __name__ == '__main__':
         default=None,
         help="ID of a specific parish to process. Overrides --num_parishes."
     )
+    parser.add_argument(
+        "--max_pages_to_scan",
+        type=int,
+        default=MAX_PAGES_TO_SCAN, # Use the existing constant as default
+        help=f"Maximum number of pages to scan per parish. Defaults to {MAX_PAGES_TO_SCAN}."
+    )
     args = parser.parse_args()
-    main(args.num_parishes, args.parish_id)
+    main(args.num_parishes, args.parish_id, args.max_pages_to_scan)
