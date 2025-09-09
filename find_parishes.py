@@ -144,7 +144,9 @@ def analyze_links_with_genai(candidate_links, diocese_name=None):
         Link Text: "{link_info['text']}"
         Link URL: "{link_info['href']}"
         Surrounding Text: "{link_info['surrounding_text']}"
-        Does this link likely lead to a parish directory, a list of churches, or a way to find parishes?
+        Does this link lead to a comprehensive parish directory, a list of churches, or a tool to find parishes by location?
+        Prioritize links that offer a direct list or search for parishes.
+        Do NOT select links primarily focused on clergy, staff, or general contact information unless they explicitly contain a parish listing.
         Respond with a confidence score from 0 (not likely) to 10 (very likely) and a brief justification.
         Format as: Score: [score], Justification: [text]"""
         try:
@@ -226,7 +228,9 @@ def analyze_search_snippet_with_genai(search_results, diocese_name):
         Title: "{title}"
         Snippet: "{snippet}"
         URL: "{link}"
-        Does this link likely lead to a parish directory, church locator, or list of churches?
+        Does this link lead to a comprehensive parish directory, a list of churches, or a tool to find parishes by location?
+        Prioritize links that offer a direct list or search for parishes.
+        Do NOT select links primarily focused on clergy, staff, or general contact information unless they explicitly contain a parish listing.
         Respond with a confidence score from 0 (not likely) to 10 (very likely) and a brief justification.
         Format as: Score: [score], Justification: [text]"""
         try:
