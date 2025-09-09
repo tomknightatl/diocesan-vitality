@@ -19,7 +19,7 @@ graph TD
     I -- Failure --> G[Error: WebDriver Setup Failed];
 
     J --> K{Process Diocese};
-    K --> L[Fetch Diocese Website (Selenium)]
+    K --> L[Fetch Diocese Website]
     L -- Success --> M[Find Candidate URLs on Page];
     L -- Failure --> N[Handle Page Load Error];
 
