@@ -274,15 +274,41 @@ def get_parishes_to_process(supabase: Client, num_parishes: int, parish_id: int 
         return []
 
 
-def save_results_to_supabase(supabase: Client, results: list):
-    """Saves the scraping results to the Supabase 'ParishSchedules' table."""
+def save_facts_to_supabase(supabase: Client, results: list):
+    """Saves the scraping results to the new ParishData table."""
     if not results:
         logger.info("No results to save to Supabase.")
         return
 
+    facts_to_save = []
+    for result in results:
+        parish_id = result.get('parish_id')
+        if not parish_id:
+            continue
+
+        if result.get('offers_reconciliation') and result.get('reconciliation_info') != "Information not found":
+            facts_to_save.append({
+                'parish_id': parish_id,
+                'fact_type': 'ReconciliationSchedule',
+                'fact_value': result.get('reconciliation_info'),
+                'fact_source_url': result.get('reconciliation_page')
+            })
+        
+        if result.get('offers_adoration') and result.get('adoration_info') != "Information not found":
+            facts_to_save.append({
+                'parish_id': parish_id,
+                'fact_type': 'AdorationSchedule',
+                'fact_value': result.get('adoration_info'),
+                'fact_source_url': result.get('adoration_page')
+            })
+
+    if not facts_to_save:
+        logger.info("No facts to save to Supabase.")
+        return
+
     try:
-        supabase.table('ParishSchedules').upsert(results, on_conflict='url').execute()
-        logger.info(f"Successfully saved {len(results)} records to Supabase table 'ParishSchedules'.")
+        supabase.table('ParishData').upsert(facts_to_save, on_conflict='parish_id,fact_type').execute()
+        logger.info(f"Successfully saved {len(facts_to_save)} facts to Supabase table 'ParishData'.")
     except Exception as e:
         logger.error(f"An unexpected error occurred during Supabase upsert: {e}", exc_info=True)
 
@@ -310,6 +336,7 @@ def main(num_parishes: int, parish_id: int = None):
     for url, p_id in parishes_to_process:
         logger.info(f"Scraping {url} for parish {p_id}...")
         result = scrape_parish_data(url, p_id, supabase)
+        result['parish_id'] = p_id
         try:
             parish_name = urlparse(url).netloc.replace('www.','')
         except IndexError:
@@ -318,7 +345,7 @@ def main(num_parishes: int, parish_id: int = None):
         results.append(result)
         logger.info(f"Completed scraping {url}")
 
-    save_results_to_supabase(supabase, results)
+    save_facts_to_supabase(supabase, results)
 
 
 if __name__ == '__main__':
