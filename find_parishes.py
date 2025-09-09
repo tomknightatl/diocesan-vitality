@@ -491,6 +491,35 @@ def find_parish_directories(diocese_id=None, max_dioceses_to_process=config.DEFA
                     f"    Result: No Parish Directory URL definitively found for {current_url} (Final method: {method})"
                 )
             
+            # --- Post-processing/Validation of found URL ---
+            if parish_dir_url_found:
+                undesirable_keywords = ["clergy", "staff", "social-media", "contact", "about", "news", "events", "calendar"]
+                parsed_url = urlparse(parish_dir_url_found)
+                path_lower = parsed_url.path.lower()
+                
+                is_undesirable = False
+                for keyword in undesirable_keywords:
+                    if keyword in path_lower:
+                        is_undesirable = True
+                        break
+                
+                if is_undesirable:
+                    logger.info(f"    Validation: Found undesirable keyword in URL: {parish_dir_url_found}. Marking as not found.")
+                    parish_dir_url_found = None
+                    status_text = "Invalid URL (Post-validation)"
+                    method = "invalid_post_validation"
+                    # If it was found by GenAI direct page analysis, try search engine fallback again
+                    if method == "genai_direct_page_analysis":
+                        logger.info(f"    Re-attempting search engine fallback after post-validation failure for {current_url}.")
+                        parish_dir_url_found = search_for_directory_link(diocese_name, current_url)
+                        if parish_dir_url_found:
+                            method = "search_engine_snippet_genai_reattempt"
+                            status_text = "Success (Re-attempt)"
+                        else:
+                            logger.info(f"    Search engine fallback re-attempt also failed for {current_url}.")
+                            status_text = "Not Found (Re-attempt Failed)"
+                            method = "not_found_re_attempt_failed"
+
             data_to_upsert = {
                 "diocese_id": current_diocese_id,
                 "diocese_url": current_url,
