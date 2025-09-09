@@ -64,14 +64,38 @@ async def get_summary():
         return {"error": str(e)}
 
 @app.get("/api/dioceses")
-def get_dioceses():
+def get_dioceses(
+    page: int = 1,
+    page_size: int = 20,
+    sort_by: str = "Name",
+    sort_order: str = "asc"
+):
     """
-    Fetches the first 20 records from the 'Dioceses' table.
+    Fetches records from the 'Dioceses' table with pagination and sorting.
     """
     try:
-        response = supabase.table('Dioceses').select('*').limit(20).execute()
-        # The actual data is in response.data
-        return response.data
+        offset = (page - 1) * page_size
+        
+        query = supabase.table('Dioceses').select('*')
+
+        # Apply sorting
+        if sort_order.lower() == "desc":
+            query = query.order(sort_by, desc=True)
+        else:
+            query = query.order(sort_by, desc=False)
+
+        # Apply pagination
+        response = query.range(offset, offset + page_size - 1).execute()
+        
+        # To get total count for pagination metadata
+        count_response = supabase.table('Dioceses').select('count', count='exact').execute()
+        total_count = count_response.count
+
+        return {
+            "data": response.data,
+            "total_count": total_count,
+            "page": page,
+            "page_size": page_size
+        }
     except Exception as e:
-        # In a real app, you'd want more robust error handling and logging
         return {"error": str(e)}
