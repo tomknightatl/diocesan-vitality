@@ -15,7 +15,7 @@ graph TD
     G --> H{Initialize Priority Queue & Visited Set};
     H --> I{Fetch sitemap.xml};
     I -- Sitemap Found --> J[Add Sitemap URLs to Queue];
-    I -- Sitemap Not Found/Error --> K[Start Scraping Loop (Max 100 pages)];
+    I -- No Sitemap --> K[Start Scraping Loop];
     J --> K;
     K -- URLs in Queue --> L{Pop Highest Priority URL};
     K -- Queue Empty or Limit Reached --> V;
@@ -23,7 +23,7 @@ graph TD
     M -- Error --> K;
     M -- Success --> N{Page Text Contains Keywords?};
     N --> Q{Find All Links on Page};
-    N -- "reconciliation / confession" --> O[Add to Reconciliation Candidates];
+    N -- "reconciliation/confession" --> O[Add to Reconciliation Candidates];
     N -- "adoration" --> P[Add to Adoration Candidates];
     O --> Q;
     P --> Q;
