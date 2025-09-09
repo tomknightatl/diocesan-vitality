@@ -10,7 +10,7 @@ graph TD
     B --> C[Validate Configuration];
     C --> D[Construct USCCB Dioceses URL];
     D --> E{Fetch Page Content (get_soup)};
-    E -- Success --> F[Parse HTML (BeautifulSoup)];
+    E -- Success --> F[Parse HTML];
     E -- Failure --> G[Error: Failed to Fetch Page];
 
     F --> H[Extract Dioceses Data];
