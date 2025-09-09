@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Container, Table, Spinner, Alert, Navbar } from 'react-bootstrap';
+import { Container, Table, Spinner, Alert, Navbar, Pagination } from 'react-bootstrap';
 import './App.css';
 
 function App() {
@@ -11,28 +11,38 @@ function App() {
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [summaryError, setSummaryError] = useState(null);
 
+  // State for pagination and sorting
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20); // Fixed items per page
+  const [totalDioceses, setTotalDioceses] = useState(0);
+  const [sortBy, setSortBy] = useState('Name');
+  const [sortOrder, setSortOrder] = useState('asc'); // 'asc' or 'desc'
+
   useEffect(() => {
-    // Fetch dioceses data
-    fetch('/api/dioceses')
-      .then(response => {
+    const fetchDioceses = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(`/api/dioceses?page=${currentPage}&page_size=${itemsPerPage}&sort_by=${sortBy}&sort_order=${sortOrder}`);
         if (!response.ok) {
           throw new Error('Network response was not ok');
         }
-        return response.json();
-      })
-      .then(data => {
-        if (data.error) {
-          throw new Error(data.error);
+        const result = await response.json();
+        if (result.error) {
+          throw new Error(result.error);
         }
-        setDioceses(data);
+        setDioceses(result.data);
+        setTotalDioceses(result.total_count);
+      } catch (err) {
+        setError(err.message);
+      } finally {
         setLoading(false);
-      })
-      .catch(error => {
-        setError(error.message);
-        setLoading(false);
-      });
+      }
+    };
 
-    // Fetch summary data
+    fetchDioceses();
+
+    // Fetch summary data (this part remains the same, but moved outside the async function)
     fetch('/api/summary')
       .then(response => {
         if (!response.ok) {
@@ -51,7 +61,30 @@ function App() {
         setSummaryError(error.message);
         setSummaryLoading(false);
       });
-  }, []); // The empty dependency array ensures this effect runs only once on mount
+  }, [currentPage, sortBy, sortOrder]); // Dependencies for re-fetching dioceses data
+
+  // Function to handle sorting
+  const handleSort = (column) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
+  };
+
+  // Calculate total pages for pagination
+  const totalPages = Math.ceil(totalDioceses / itemsPerPage);
+
+  // Generate pagination items
+  let paginationItems = [];
+  for (let number = 1; number <= totalPages; number++) {
+    paginationItems.push(
+      <Pagination.Item key={number} active={number === currentPage} onClick={() => setCurrentPage(number)}>
+        {number}
+      </Pagination.Item>,
+    );
+  }
 
   return (
     <>
@@ -91,16 +124,20 @@ function App() {
           <Table striped bordered hover responsive>
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Address</th>
-                <th>Website</th>
+                <th onClick={() => handleSort('Name')} style={{ cursor: 'pointer' }}>
+                  Name {sortBy === 'Name' && (sortOrder === 'asc' ? '▲' : '▼')}
+                </th>
+                <th onClick={() => handleSort('Address')} style={{ cursor: 'pointer' }}>
+                  Address {sortBy === 'Address' && (sortOrder === 'asc' ? '▲' : '▼')}
+                </th>
+                <th onClick={() => handleSort('Website')} style={{ cursor: 'pointer' }}>
+                  Website {sortBy === 'Website' && (sortOrder === 'asc' ? '▲' : '▼')}
+                </th>
               </tr>
             </thead>
             <tbody>
               {dioceses.map((diocese, index) => (
                 <tr key={diocese.id || index}>
-                  <td>{diocese.id}</td>
                   <td>{diocese.Name}</td>
                   <td>{diocese.Address}</td>
                   <td>{diocese.Website}</td>
@@ -109,26 +146,43 @@ function App() {
             </tbody>
           </Table>
         )}
+
+        {/* Pagination Controls */}
+        {!loading && !error && totalPages > 1 && (
+          <div className="d-flex justify-content-center mt-3">
+            <Pagination>
+              <Pagination.Prev onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} disabled={currentPage === 1} />
+              {paginationItems}
+              <Pagination.Next onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages} />
+            </Pagination>
+          </div>
+        )}
       </Container>
 
       <Container className="mt-4">
         <h2>Reports</h2>
-        <div className="d-flex flex-wrap justify-content-around">
-          <div className="p-2">
-            <h3>Dioceses Records Over Time</h3>
-            <img src="/dioceses_records_over_time.png" alt="Dioceses Records Over Time" className="img-fluid" />
+        <div className="row">
+          {/* Dioceses Charts (Left Side) */}
+          <div className="col-md-6">
+            <div className="p-2">
+              <h3>Dioceses Records Over Time</h3>
+              <img src="/dioceses_records_over_time.png" alt="Dioceses Records Over Time" className="img-fluid mb-3" />
+            </div>
+            <div className="p-2">
+              <h3>Dioceses Parish Directory Records Over Time</h3>
+              <img src="/diocesesparishdirectory_records_over_time.png" alt="Dioceses Parish Directory Records Over Time" className="img-fluid mb-3" />
+            </div>
           </div>
-          <div className="p-2">
-            <h3>Dioceses Parish Directory Records Over Time</h3>
-            <img src="/diocesesparishdirectory_records_over_time.png" alt="Dioceses Parish Directory Records Over Time" className="img-fluid" />
-          </div>
-          <div className="p-2">
-            <h3>Parishes Records Over Time</h3>
-            <img src="/parishes_records_over_time.png" alt="Parishes Records Over Time" className="img-fluid" />
-          </div>
-          <div className="p-2">
-            <h3>Parish Schedules Records Over Time</h3>
-            <img src="/parishschedules_records_over_time.png" alt="Parish Schedules Records Over Time" className="img-fluid" />
+          {/* Parishes Charts (Right Side) */}
+          <div className="col-md-6">
+            <div className="p-2">
+              <h3>Parishes Records Over Time</h3>
+              <img src="/parishes_records_over_time.png" alt="Parishes Records Over Time" className="img-fluid mb-3" />
+            </div>
+            <div className="p-2">
+              <h3>Parish Schedules Records Over Time</h3>
+              <img src="/parishschedules_records_over_time.png" alt="Parish Schedules Records Over Time" className="img-fluid mb-3" />
+            </div>
           </div>
         </div>
       </Container>
