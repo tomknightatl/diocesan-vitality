@@ -18,6 +18,7 @@ from supabase import Client, create_client
 import config
 from core.logger import get_logger
 from core.db import get_supabase_client # Import the get_supabase_client function
+from core.utils import normalize_url # Import normalize_url
 
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
@@ -28,9 +29,9 @@ MAX_PAGES_TO_SCAN = 100 # Limit the number of pages to scan per parish
 def get_suppression_urls(supabase: Client) -> set[str]:
     """Fetches all URLs from the ParishFactsSuppressionURLs table."""
     try:
-        response = supabase.table('ParishFactsSuppressionURLs').select('url').execute()
+        response = supabase.table('parishfactssuppressionurls').select('url').execute()
         if response.data:
-            return {item['url'] for item in response.data}
+            return {normalize_url(item['url']) for item in response.data}
         return set()
     except Exception as e:
         logger.error(f"Error fetching suppression URLs: {e}")
@@ -104,8 +105,11 @@ def extract_time_info_from_soup(soup: BeautifulSoup, keyword: str) -> tuple[str,
     return "Information not found", None
 
 
-def extract_time_info(url: str, keyword: str) -> tuple[str, str | None]:
+def extract_time_info(url: str, keyword: str, suppression_urls: set[str]) -> tuple[str, str | None]:
     """Fetches a URL and extracts schedule information related to a keyword."""
+    if url in suppression_urls:
+        logger.info(f"Skipping extraction for {url} as it is in the suppression list.")
+        return "Information not found", None
     try:
         response = requests.get(url, timeout=10)
         response.raise_for_status()
@@ -116,7 +120,7 @@ def extract_time_info(url: str, keyword: str) -> tuple[str, str | None]:
         return "Information not found", None
 
 
-def choose_best_url(urls: list[str], keywords: dict, negative_keywords: list[str]) -> str:
+def choose_best_url(urls: list[str], keywords: dict, negative_keywords: list[str], base_domain: str) -> str:
     """Chooses the best URL from a list based on a scoring system."""
     if not urls:
         return ""
@@ -127,19 +131,7 @@ def choose_best_url(urls: list[str], keywords: dict, negative_keywords: list[str
     max_score = -1
 
     for url in urls:
-        score = 0
-        url_path = urlparse(url).path.lower()
-
-        for kw, kw_score in keywords.items():
-            if kw in url_path:
-                score += kw_score
-
-        for neg_kw in negative_keywords:
-            if neg_kw in url_path:
-                score -= 2
-
-        if len(url_path.split('/')) > 2:
-            score += 1
+        score = calculate_priority(url, keywords, negative_keywords, base_domain)
 
         if score > max_score:
             max_score = score
@@ -152,10 +144,11 @@ def choose_best_url(urls: list[str], keywords: dict, negative_keywords: list[str
     return best_url
 
 
-def calculate_priority(url: str, keywords: dict, negative_keywords: list[str]) -> int:
-    """Calculates the priority of a URL based on keywords in its path."""
+def calculate_priority(url: str, keywords: dict, negative_keywords: list[str], base_domain: str = None) -> int:
+    """Calculates the priority of a URL based on keywords in its path and domain relevance."""
     score = 0
     url_path = urlparse(url).path.lower()
+    url_domain = urlparse(url).netloc.lower().replace('www.', '')
 
     for kw, kw_score in keywords.items():
         if kw in url_path:
@@ -167,6 +160,11 @@ def calculate_priority(url: str, keywords: dict, negative_keywords: list[str]) -
 
     if len(url_path.split('/')) > 2:
         score += 1
+
+    # Boost score if the URL is from the same base domain as the parish website
+    if base_domain and url_domain == base_domain:
+        score += 10 # Significant boost for local relevance
+
     return score
 
 
@@ -176,7 +174,7 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_u
     Uses a priority queue to visit more promising URLs first.
     """
     # Initial check for the starting URL
-    if url in suppression_urls:
+    if normalize_url(url) in suppression_urls:
         logger.info(f"Skipping initial URL {url} as it is in the suppression list.")
         return {'url': url, 'scraped_at': datetime.now(timezone.utc).isoformat(), 'offers_reconciliation': False, 'offers_adoration': False}
 
@@ -185,21 +183,23 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_u
     candidate_pages = {'reconciliation': [], 'adoration': []}
     discovered_urls = {}
 
-    recon_keywords = {'reconciliation': 5, 'confession': 5, 'schedule': 3, 'times': 3, 'sacrament': 1}
+    recon_keywords = {'reconciliation': 5, 'confession': 5, 'schedule': 8, 'times': 3, 'sacrament': 1}
     recon_negative_keywords = ['adoration', 'baptism', 'donate', 'giving']
     adoration_keywords = {'adoration': 5, 'eucharist': 5, 'schedule': 3, 'times': 3}
     adoration_negative_keywords = ['reconciliation', 'confession', 'baptism', 'donate', 'giving']
     all_keywords = {**recon_keywords, **adoration_keywords}
+
+    base_domain = urlparse(url).netloc.lower().replace('www.', '')
 
     heapq.heappush(urls_to_visit, (0, url))
 
     sitemap_urls = get_sitemap_urls(url)
     if sitemap_urls:
         for s_url in sitemap_urls:
-            if s_url in suppression_urls:
+            if normalize_url(s_url) in suppression_urls:
                 logger.info(f"Skipping sitemap URL {s_url} as it is in the suppression list.")
                 continue
-            priority = calculate_priority(s_url, all_keywords, [])
+            priority = calculate_priority(s_url, all_keywords, [], base_domain)
             heapq.heappush(urls_to_visit, (-priority, s_url))
 
     logger.info(f"Starting scan with {len(urls_to_visit)} initial URLs in priority queue.")
@@ -211,7 +211,7 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_u
         if current_url in visited_urls:
             continue
         
-        if current_url in suppression_urls:
+        if normalize_url(current_url) in suppression_urls:
             logger.info(f"Skipping {current_url} as it is in the suppression list.")
             visited_urls.add(current_url) # Mark as visited to avoid re-processing
             continue
@@ -253,10 +253,10 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_u
             for a in soup.find_all('a', href=True):
                 link = urljoin(current_url, a['href']).split('#')[0]
                 if link.startswith(('http://', 'https://')) and link not in visited_urls:
-                    if link in suppression_urls:
+                    if normalize_url(link) in suppression_urls:
                         logger.debug(f"Skipping discovered link {link} as it is in the suppression list.")
                         continue
-                    link_priority = calculate_priority(link, all_keywords, [])
+                    link_priority = calculate_priority(link, all_keywords, [], base_domain)
                     heapq.heappush(urls_to_visit, (-link_priority, link))
                     key = (link, parish_id)
                     if key not in discovered_urls:
@@ -286,10 +286,10 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_u
     result = {'url': url, 'scraped_at': datetime.now(timezone.utc).isoformat()}
     
     if candidate_pages['reconciliation']:
-        best_page = choose_best_url(candidate_pages['reconciliation'], recon_keywords, recon_negative_keywords)
+        best_page = choose_best_url(candidate_pages['reconciliation'], recon_keywords, recon_negative_keywords, base_domain)
         result['reconciliation_page'] = best_page
         result['offers_reconciliation'] = True
-        result['reconciliation_info'], result['reconciliation_fact_string'] = extract_time_info(best_page, 'Reconciliation')
+        result['reconciliation_info'], result['reconciliation_fact_string'] = extract_time_info(best_page, 'Reconciliation', suppression_urls)
     else:
         result['offers_reconciliation'] = False
         result['reconciliation_info'] = "No relevant page found"
@@ -297,10 +297,10 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_u
         result['reconciliation_fact_string'] = None
 
     if candidate_pages['adoration']:
-        best_page = choose_best_url(candidate_pages['adoration'], adoration_keywords, adoration_negative_keywords)
+        best_page = choose_best_url(candidate_pages['adoration'], adoration_keywords, adoration_negative_keywords, base_domain)
         result['adoration_page'] = best_page
         result['offers_adoration'] = True
-        result['adoration_info'], result['adoration_fact_string'] = extract_time_info(best_page, 'Adoration')
+        result['adoration_info'], result['adoration_fact_string'] = extract_time_info(best_page, 'Adoration', suppression_urls)
     else:
         result['offers_adoration'] = False
         result['adoration_info'] = "No relevant page found"
