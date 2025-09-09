@@ -9,7 +9,7 @@ graph TD
     A[Start] --> B{Parse CLI Args};
     B --> C[Validate Configuration];
     C --> D[Construct USCCB Dioceses URL];
-    D --> E{Fetch Page Content (get_soup)};
+    D --> E{Fetch Page Content};
     E -- Success --> F[Parse HTML];
     E -- Failure --> G[Error: Failed to Fetch Page];
 
