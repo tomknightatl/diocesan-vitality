@@ -10,6 +10,8 @@ from datetime import datetime, timezone
 from urllib.parse import urljoin, urlparse
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
 from bs4.element import Tag
 from dotenv import load_dotenv
@@ -25,7 +27,19 @@ warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 logger = get_logger(__name__)
 
 _sitemap_cache = {}
-MAX_PAGES_TO_SCAN = 100 # Limit the number of pages to scan per parish
+MAX_PAGES_TO_SCAN = 200 # Limit the number of pages to scan per parish
+
+# Configure requests to retry on common transient errors
+retry_strategy = Retry(
+    total=3,
+    backoff_factor=1,
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["HEAD", "GET", "OPTIONS"]
+)
+adapter = HTTPAdapter(max_retries=retry_strategy)
+requests_session = requests.Session()
+requests_session.mount("https://", adapter)
+requests_session.mount("http://", adapter)
 
 def get_suppression_urls(supabase: Client) -> set[str]:
     """Fetches all URLs from the ParishFactsSuppressionURLs table."""
@@ -48,7 +62,7 @@ def get_sitemap_urls(url: str) -> list[str]:
 
     try:
         sitemap_url = urljoin(url, '/sitemap.xml')
-        response = requests.get(sitemap_url, timeout=10)
+        response = requests_session.get(sitemap_url, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'xml')
         sitemap_links = [
@@ -120,7 +134,7 @@ def extract_time_info(url: str, keyword: str, suppression_urls: set[str]) -> tup
         logger.info(f"Skipping extraction for {url} as it is in the suppression list.")
         return "Information not found", None
     try:
-        response = requests.get(url, timeout=10)
+        response = requests_session.get(url, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'html.parser')
         return extract_time_info_from_soup(soup, keyword)
@@ -245,7 +259,7 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_u
             }
 
         try:
-            response = requests.get(current_url, timeout=10)
+            response = requests_session.get(current_url, timeout=10)
             response.raise_for_status()
             soup = BeautifulSoup(response.content, 'html.parser')
             
@@ -261,7 +275,7 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_u
 
             for a in soup.find_all('a', href=True):
                 link = urljoin(current_url, a['href']).split('#')[0]
-                if link.startswith(('http://', 'https://')) and link not in visited_urls:
+                if link.startswith(('http://', 'https://')) and link not in visited_urls and '@' not in link:
                     if normalize_url(link) in suppression_urls:
                         logger.debug(f"Skipping discovered link {link} as it is in the suppression list.")
                         continue
