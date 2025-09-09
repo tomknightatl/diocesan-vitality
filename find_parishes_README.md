@@ -24,7 +24,7 @@ graph TD
     L -- Failure --> N[Handle Page Load Error];
 
     M --> O{Candidate URLs Found?};
-    O -- Yes --> P[Analyze Links with GenAI (Direct Page)];
+    O -- Yes --> P[Analyze Links with GenAI];
     O -- No --> Q[Fallback to Search Engine];
 
     P --> R{GenAI Found Best Link?};
