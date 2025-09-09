@@ -133,7 +133,7 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client) -> dict:
     urls_to_visit = []
     visited_urls = set()
     candidate_pages = {'reconciliation': [], 'adoration': []}
-    discovered_urls_to_save = []
+    discovered_urls = {}
 
     recon_keywords = {'reconciliation': 5, 'confession': 5, 'schedule': 3, 'times': 3, 'sacrament': 1}
     recon_negative_keywords = ['adoration', 'baptism', 'donate', 'giving']
@@ -165,13 +165,17 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client) -> dict:
         logger.debug(f"Checking {current_url} (Priority: {priority}, Visited: {len(visited_urls) + 1}/{MAX_PAGES_TO_SCAN})")
         visited_urls.add(current_url)
 
-        discovered_urls_to_save.append({
-            'parish_id': parish_id,
-            'url': current_url,
-            'score': priority,
-            'visited': True,
-            'created_at': datetime.now(timezone.utc).isoformat()
-        })
+        key = (current_url, parish_id)
+        if key in discovered_urls:
+            discovered_urls[key]['visited'] = True
+        else:
+            discovered_urls[key] = {
+                'parish_id': parish_id,
+                'url': current_url,
+                'score': priority,
+                'visited': True,
+                'created_at': datetime.now(timezone.utc).isoformat()
+            }
 
         try:
             response = requests.get(current_url, timeout=10)
@@ -193,14 +197,16 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client) -> dict:
                 if link.startswith(('http://', 'https://')) and link not in visited_urls:
                     link_priority = calculate_priority(link, all_keywords, [])
                     heapq.heappush(urls_to_visit, (-link_priority, link))
-                    discovered_urls_to_save.append({
-                        'parish_id': parish_id,
-                        'url': link,
-                        'score': link_priority,
-                        'source_url': current_url,
-                        'visited': False,
-                        'created_at': datetime.now(timezone.utc).isoformat()
-                    })
+                    key = (link, parish_id)
+                    if key not in discovered_urls:
+                        discovered_urls[key] = {
+                            'parish_id': parish_id,
+                            'url': link,
+                            'score': link_priority,
+                            'source_url': current_url,
+                            'visited': False,
+                            'created_at': datetime.now(timezone.utc).isoformat()
+                        }
 
         except requests.exceptions.RequestException as e:
             logger.warning(f"Could not fetch or process {current_url}: {e}")
@@ -208,15 +214,8 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client) -> dict:
     if len(visited_urls) >= MAX_PAGES_TO_SCAN:
         logger.warning(f"Reached scan limit of {MAX_PAGES_TO_SCAN} pages for {url}.")
 
-    if discovered_urls_to_save:
-        unique_urls = {}
-        for url_data in discovered_urls_to_save:
-            key = (url_data['url'], url_data['parish_id'])
-            if key not in unique_urls or url_data['score'] > unique_urls[key]['score']:
-                unique_urls[key] = url_data
-        
-        urls_to_insert = list(unique_urls.values())
-
+    if discovered_urls:
+        urls_to_insert = list(discovered_urls.values())
         try:
             supabase.table('DiscoveredUrls').upsert(urls_to_insert, on_conflict='url,parish_id').execute()
             logger.info(f"Saved {len(urls_to_insert)} discovered URLs to Supabase.")
