@@ -4,6 +4,7 @@
 import argparse
 import time
 from datetime import datetime, timezone
+import re # Added this line
 
 import pandas as pd
 import requests
