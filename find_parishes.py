@@ -505,11 +505,12 @@ def find_parish_directories(diocese_id=None, max_dioceses_to_process=config.DEFA
                 
                 if is_undesirable:
                     logger.info(f"    Validation: Found undesirable keyword in URL: {parish_dir_url_found}. Marking as not found.")
+                    original_method = method # Store the original method
                     parish_dir_url_found = None
                     status_text = "Invalid URL (Post-validation)"
                     method = "invalid_post_validation"
                     # If it was found by GenAI direct page analysis, try search engine fallback again
-                    if method == "genai_direct_page_analysis":
+                    if original_method == "genai_direct_page_analysis": # Check original method
                         logger.info(f"    Re-attempting search engine fallback after post-validation failure for {current_url}.")
                         parish_dir_url_found = search_for_directory_link(diocese_name, current_url)
                         if parish_dir_url_found:
