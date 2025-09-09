@@ -2,6 +2,7 @@
 # coding: utf-8
 
 import argparse
+import heapq
 import os
 import re
 import warnings
@@ -70,51 +71,90 @@ def extract_time_info(url: str, keyword: str) -> str:
         return "Information not found"
 
 
-def choose_best_url(urls: list[str], keywords: list[str]) -> str:
-    """Chooses the best URL from a list based on keyword matching in the URL path."""
+def choose_best_url(urls: list[str], keywords: dict, negative_keywords: list[str]) -> str:
+    """Chooses the best URL from a list based on a scoring system."""
     if not urls:
         return ""
     if len(urls) == 1:
         return urls[0]
 
-    best_url = urls[0]
+    best_url = ""
     max_score = -1
 
     for url in urls:
         score = 0
         url_path = urlparse(url).path.lower()
-        for kw in keywords:
+
+        for kw, kw_score in keywords.items():
             if kw in url_path:
-                score += 2 # Higher score for keyword in path
-        
-        # Bonus for being a more specific path
+                score += kw_score
+
+        for neg_kw in negative_keywords:
+            if neg_kw in url_path:
+                score -= 2
+
         if len(url_path.split('/')) > 2:
             score += 1
 
         if score > max_score:
             max_score = score
             best_url = url
-            
-    logger.info(f"Selected best URL from {len(urls)} candidates: {best_url}")
+
+    if not best_url:
+        best_url = urls[0]
+
+    logger.info(f"Selected best URL from {len(urls)} candidates: {best_url} with score {max_score}")
     return best_url
 
 
-def scrape_parish_data(url: str) -> dict:
+def calculate_priority(url: str, keywords: dict, negative_keywords: list[str]) -> int:
+    """Calculates the priority of a URL based on keywords in its path."""
+    score = 0
+    url_path = urlparse(url).path.lower()
+
+    for kw, kw_score in keywords.items():
+        if kw in url_path:
+            score += kw_score
+
+    for neg_kw in negative_keywords:
+        if neg_kw in url_path:
+            score -= 2
+
+    if len(url_path.split('/')) > 2:
+        score += 1
+    return score
+
+
+def scrape_parish_data(url: str, parish_id: int, supabase: Client) -> dict:
     """
     Scrapes a parish website to find the best pages for Reconciliation and Adoration info.
+    Uses a priority queue to visit more promising URLs first.
     """
-    urls_to_visit = {url}
+    urls_to_visit = []
     visited_urls = set()
     candidate_pages = {'reconciliation': [], 'adoration': []}
+    discovered_urls_to_save = []
+
+    recon_keywords = {'reconciliation': 5, 'confession': 5, 'schedule': 3, 'times': 3, 'sacrament': 1}
+    recon_negative_keywords = ['adoration', 'baptism', 'donate', 'giving']
+    adoration_keywords = {'adoration': 5, 'eucharist': 5, 'schedule': 3, 'times': 3}
+    adoration_negative_keywords = ['reconciliation', 'confession', 'baptism', 'donate', 'giving']
+    all_keywords = {**recon_keywords, **adoration_keywords}
+
+    heapq.heappush(urls_to_visit, (0, url))
 
     sitemap_urls = get_sitemap_urls(url)
     if sitemap_urls:
-        urls_to_visit.update(sitemap_urls)
+        for s_url in sitemap_urls:
+            priority = calculate_priority(s_url, all_keywords, [])
+            heapq.heappush(urls_to_visit, (-priority, s_url))
 
-    logger.info(f"Starting scan with {len(urls_to_visit)} initial URLs.")
+    logger.info(f"Starting scan with {len(urls_to_visit)} initial URLs in priority queue.")
 
     while urls_to_visit and len(visited_urls) < MAX_PAGES_TO_SCAN:
-        current_url = urls_to_visit.pop()
+        priority, current_url = heapq.heappop(urls_to_visit)
+        priority = -priority
+
         if current_url in visited_urls:
             continue
         
@@ -122,19 +162,22 @@ def scrape_parish_data(url: str) -> dict:
             visited_urls.add(current_url)
             continue
 
-        logger.debug(f"Checking {current_url} ({len(visited_urls) + 1}/{MAX_PAGES_TO_SCAN})")
+        logger.debug(f"Checking {current_url} (Priority: {priority}, Visited: {len(visited_urls) + 1}/{MAX_PAGES_TO_SCAN})")
         visited_urls.add(current_url)
+
+        discovered_urls_to_save.append({
+            'parish_id': parish_id,
+            'url': current_url,
+            'score': priority,
+            'visited': True,
+            'created_at': datetime.now(timezone.utc).isoformat()
+        })
 
         try:
             response = requests.get(current_url, timeout=10)
             response.raise_for_status()
             soup = BeautifulSoup(response.content, 'html.parser')
             
-            for a in soup.find_all('a', href=True):
-                link = urljoin(current_url, a['href']).split('#')[0]
-                if link.startswith(('http://', 'https://')) and link not in visited_urls:
-                    urls_to_visit.add(link)
-
             page_text_lower = soup.get_text().lower()
 
             if any(kw in page_text_lower for kw in ['reconciliation', 'confession']):
@@ -145,17 +188,45 @@ def scrape_parish_data(url: str) -> dict:
                 logger.info(f"Found 'Adoration' keyword on {current_url}")
                 candidate_pages['adoration'].append(current_url)
 
+            for a in soup.find_all('a', href=True):
+                link = urljoin(current_url, a['href']).split('#')[0]
+                if link.startswith(('http://', 'https://')) and link not in visited_urls:
+                    link_priority = calculate_priority(link, all_keywords, [])
+                    heapq.heappush(urls_to_visit, (-link_priority, link))
+                    discovered_urls_to_save.append({
+                        'parish_id': parish_id,
+                        'url': link,
+                        'score': link_priority,
+                        'source_url': current_url,
+                        'visited': False,
+                        'created_at': datetime.now(timezone.utc).isoformat()
+                    })
+
         except requests.exceptions.RequestException as e:
             logger.warning(f"Could not fetch or process {current_url}: {e}")
 
     if len(visited_urls) >= MAX_PAGES_TO_SCAN:
         logger.warning(f"Reached scan limit of {MAX_PAGES_TO_SCAN} pages for {url}.")
 
-    # --- Analysis Step ---
+    if discovered_urls_to_save:
+        unique_urls = {}
+        for url_data in discovered_urls_to_save:
+            key = (url_data['url'], url_data['parish_id'])
+            if key not in unique_urls or url_data['score'] > unique_urls[key]['score']:
+                unique_urls[key] = url_data
+        
+        urls_to_insert = list(unique_urls.values())
+
+        try:
+            supabase.table('DiscoveredUrls').upsert(urls_to_insert, on_conflict='url,parish_id').execute()
+            logger.info(f"Saved {len(urls_to_insert)} discovered URLs to Supabase.")
+        except Exception as e:
+            logger.error(f"Error saving discovered URLs to Supabase: {e}")
+
     result = {'url': url, 'scraped_at': datetime.now(timezone.utc).isoformat()}
     
     if candidate_pages['reconciliation']:
-        best_page = choose_best_url(candidate_pages['reconciliation'], ['reconciliation', 'confession', 'sacrament'])
+        best_page = choose_best_url(candidate_pages['reconciliation'], recon_keywords, recon_negative_keywords)
         result['reconciliation_page'] = best_page
         result['offers_reconciliation'] = True
         result['reconciliation_info'] = extract_time_info(best_page, 'Reconciliation')
@@ -165,7 +236,7 @@ def scrape_parish_data(url: str) -> dict:
         result['reconciliation_page'] = ""
 
     if candidate_pages['adoration']:
-        best_page = choose_best_url(candidate_pages['adoration'], ['adoration', 'eucharist'])
+        best_page = choose_best_url(candidate_pages['adoration'], adoration_keywords, adoration_negative_keywords)
         result['adoration_page'] = best_page
         result['offers_adoration'] = True
         result['adoration_info'] = extract_time_info(best_page, 'Adoration')
@@ -177,48 +248,29 @@ def scrape_parish_data(url: str) -> dict:
     return result
 
 
-def get_url_for_parish(supabase: Client, parish_id: int) -> list[str]:
-    """Fetches the website URL for a single parish by its ID."""
+def get_parishes_to_process(supabase: Client, num_parishes: int, parish_id: int = None) -> list[tuple[str, int]]:
+    """Fetches parish URLs and IDs to process."""
+    if parish_id:
+        try:
+            response = supabase.table('Parishes').select('id, Web').eq('id', parish_id).execute()
+            if response.data:
+                parish = response.data[0]
+                if parish.get('Web'):
+                    return [(parish['Web'], parish['id'])]
+            return []
+        except Exception as e:
+            logger.error(f"Error fetching parish for ID {parish_id}: {e}")
+            return []
+
     try:
-        response = supabase.table('Parishes').select('Web').eq('id', parish_id).execute()
-        if response.data:
-            parish_url = response.data[0].get('Web')
-            if parish_url:
-                return [parish_url]
-            else:
-                logger.warning(f"Parish with ID {parish_id} found, but it has no website URL.")
-        else:
-            logger.warning(f"No parish found with ID {parish_id}.")
-    except Exception as e:
-        logger.error(f"Error fetching parish URL for ID {parish_id}: {e}")
-    return []
-
-
-def get_prioritized_urls(supabase: Client, num_parishes: int) -> list[str]:
-    """Fetches parish URLs from Supabase and prioritizes them for scraping."""
-    try:
-        all_parishes_response = supabase.table('Parishes').select('Web').not_.is_('Web', 'null').execute()
-        all_parish_urls = {p['Web'] for p in all_parishes_response.data if p['Web']}
-        logger.info(f"Found {len(all_parish_urls)} parishes with websites in 'Parishes' table.")
-
-        schedules_response = supabase.table('ParishSchedules').select('url, scraped_at').order('scraped_at').execute()
-        parishes_with_schedules = {item['url'] for item in schedules_response.data}
-        sorted_schedules = [item['url'] for item in schedules_response.data]
-        logger.info(f"Found {len(parishes_with_schedules)} parishes in 'ParishSchedules' table.")
-
-        parishes_to_scrape_new = [url for url in all_parish_urls if url not in parishes_with_schedules]
-        logger.info(f"Found {len(parishes_to_scrape_new)} new parishes to scrape.")
-
-        parishes_to_rescrape = [url for url in sorted_schedules if url in all_parish_urls]
+        response = supabase.table('Parishes').select('id, Web').not_.is_('Web', 'null').execute()
+        all_parishes = [(p['Web'], p['id']) for p in response.data if p['Web']]
         
-        prioritized_urls = parishes_to_scrape_new + parishes_to_rescrape
-
-        if num_parishes != 0:
-            return prioritized_urls[:num_parishes]
-        return prioritized_urls
-
+        if num_parishes > 0:
+            return all_parishes[:num_parishes]
+        return all_parishes
     except Exception as e:
-        logger.error(f"Error fetching and prioritizing parish URLs from Supabase: {e}")
+        logger.error(f"Error fetching parishes: {e}")
         return []
 
 
@@ -246,21 +298,18 @@ def main(num_parishes: int, parish_id: int = None):
         return
     supabase: Client = create_client(supabase_url, supabase_key)
 
-    if parish_id:
-        parish_urls = get_url_for_parish(supabase, parish_id)
-    else:
-        parish_urls = get_prioritized_urls(supabase, num_parishes)
+    parishes_to_process = get_parishes_to_process(supabase, num_parishes, parish_id)
 
-    if not parish_urls:
+    if not parishes_to_process:
         logger.info("No parish URLs to process. Exiting.")
         return
 
-    logger.info(f"Processing {len(parish_urls)} parishes.")
+    logger.info(f"Processing {len(parishes_to_process)} parishes.")
 
     results = []
-    for url in parish_urls:
-        logger.info(f"Scraping {url}...")
-        result = scrape_parish_data(url)
+    for url, p_id in parishes_to_process:
+        logger.info(f"Scraping {url} for parish {p_id}...")
+        result = scrape_parish_data(url, p_id, supabase)
         try:
             parish_name = urlparse(url).netloc.replace('www.','')
         except IndexError:
