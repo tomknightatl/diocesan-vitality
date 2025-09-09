@@ -140,7 +140,7 @@ function App() {
                 <tr key={diocese.id || index}>
                   <td>{diocese.Name}</td>
                   <td>{diocese.Address}</td>
-                  <td>{diocese.Website}</td>
+                  
                 </tr>
               ))}
             </tbody>
