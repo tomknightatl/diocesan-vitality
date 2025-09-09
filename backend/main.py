@@ -40,6 +40,28 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 def read_root():
     return {"message": "Hello from the Python backend!"}
 
+@app.get("/api/summary")
+async def get_summary():
+    """
+    Provides a summary of dioceses and their parish directory URLs.
+    """
+    try:
+        # Fetch all records from DiocesesParishDirectory to calculate summary
+        response = supabase.table('DiocesesParishDirectory').select('parish_directory_url').execute()
+        data = response.data
+
+        total_dioceses_processed = len(data)
+        found_parish_directories = sum(1 for item in data if item['parish_directory_url'] is not None)
+        not_found_parish_directories = total_dioceses_processed - found_parish_directories
+
+        return {
+            "total_dioceses_processed": total_dioceses_processed,
+            "found_parish_directories": found_parish_directories,
+            "not_found_parish_directories": not_found_parish_directories
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.get("/api/dioceses")
 def get_dioceses():
     """
