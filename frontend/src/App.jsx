@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Container, Table, Spinner, Alert, Navbar, Pagination } from 'react-bootstrap';
+import { Container, Table, Spinner, Alert, Navbar, Pagination, Form } from 'react-bootstrap';
 import './App.css';
 
 function App() {
@@ -17,11 +17,6 @@ function App() {
   const [totalDioceses, setTotalDioceses] = useState(0);
   const [sortBy, setSortBy] = useState('Name');
   const [sortOrder, setSortOrder] = useState('asc'); // 'asc' or 'desc'
-
-  // State for per-column filtering
-  const [filterName, setFilterName] = useState('');
-  const [filterAddress, setFilterAddress] = useState('');
-  const [filterWebsite, setFilterWebsite] = useState('');
 
   // State for per-column filtering
   const [filterName, setFilterName] = useState('');

@@ -27,7 +27,6 @@ warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 logger = get_logger(__name__)
 
 _sitemap_cache = {}
-MAX_PAGES_TO_SCAN = 200 # Limit the number of pages to scan per parish
 
 # Configure requests to retry on common transient errors
 retry_strategy = Retry(
@@ -191,7 +190,7 @@ def calculate_priority(url: str, keywords: dict, negative_keywords: list[str], b
     return score
 
 
-def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_urls: set[str], max_pages_to_scan: int) -> dict:
+def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_urls: set[str], max_pages_to_scan: int = config.DEFAULT_MAX_PAGES_TO_SCAN) -> dict:
     """
     Scrapes a parish website to find the best pages for Reconciliation and Adoration info.
     Uses a priority queue to visit more promising URLs first.
@@ -199,6 +198,11 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_u
     # Initial check for the starting URL
     if normalize_url(url) in suppression_urls:
         logger.info(f"Skipping initial URL {url} as it is in the suppression list.")
+        return {'url': url, 'scraped_at': datetime.now(timezone.utc).isoformat(), 'offers_reconciliation': False, 'offers_adoration': False}
+
+    # Temporary workaround for saintbrigid.org network issues
+    if url == "http://www.saintbrigid.org/":
+        logger.warning(f"Temporarily skipping {url} due to persistent network issues.")
         return {'url': url, 'scraped_at': datetime.now(timezone.utc).isoformat(), 'offers_reconciliation': False, 'offers_adoration': False}
 
     urls_to_visit = []
@@ -243,7 +247,7 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_u
             visited_urls.add(current_url)
             continue
 
-        logger.debug(f"Checking {current_url} (Priority: {priority}, Visited: {len(visited_urls) + 1}/{MAX_PAGES_TO_SCAN})")
+        logger.debug(f"Checking {current_url} (Priority: {priority}, Visited: {len(visited_urls) + 1}/{max_pages_to_scan})")
         visited_urls.add(current_url)
 
         key = (current_url, parish_id)
@@ -275,7 +279,8 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_u
 
             for a in soup.find_all('a', href=True):
                 link = urljoin(current_url, a['href']).split('#')[0]
-                if link.startswith(('http://', 'https://')) and link not in visited_urls and '@' not in link:
+                # Check if the link is a valid HTTP/HTTPS URL and does not contain an email pattern
+                if link.startswith(('http://', 'https://')) and link not in visited_urls and not re.search(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', link):
                     if normalize_url(link) in suppression_urls:
                         logger.debug(f"Skipping discovered link {link} as it is in the suppression list.")
                         continue
@@ -400,7 +405,7 @@ def save_facts_to_supabase(supabase: Client, results: list):
         logger.error(f"An unexpected error occurred during Supabase upsert: {e}", exc_info=True)
 
 
-def main(num_parishes: int, parish_id: int = None, max_pages_to_scan: int = MAX_PAGES_TO_SCAN):
+def main(num_parishes: int, parish_id: int = None, max_pages_to_scan: int = config.DEFAULT_MAX_PAGES_TO_SCAN):
     """Main function to run the scraping pipeline."""
     load_dotenv()
 
@@ -453,7 +458,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--max_pages_to_scan",
         type=int,
-        default=MAX_PAGES_TO_SCAN, # Use the existing constant as default
+        default=config.DEFAULT_MAX_PAGES_TO_SCAN, # Use the existing constant as default
         help=f"Maximum number of pages to scan per parish. Defaults to {MAX_PAGES_TO_SCAN}."
     )
     args = parser.parse_args()

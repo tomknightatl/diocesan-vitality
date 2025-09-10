@@ -21,6 +21,7 @@ SEARCH_CX = os.getenv("SEARCH_CX_USCCB")
 DEFAULT_MAX_DIOCESES = 5
 DEFAULT_MAX_PARISHES_PER_DIOCESE = 5
 DEFAULT_NUM_PARISHES_FOR_SCHEDULE = 5
+DEFAULT_MAX_PAGES_TO_SCAN = 200
 
 def validate_config():
     """Validates that all necessary environment variables are loaded."""
