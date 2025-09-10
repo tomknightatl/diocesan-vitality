@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from dotenv import load_dotenv
 from supabase import create_client, Client
 from pathlib import Path
@@ -96,9 +96,21 @@ def get_dioceses(
 
         # Apply pagination
         response = query.range(offset, offset + page_size - 1).execute()
-        
+        dioceses = response.data
+
+        # For each diocese, fetch additional data
+        for diocese in dioceses:
+            # Get parish directory URL
+            # Get parish directory URL (temporary debug: fetch all and filter in Python)
+            all_dir_response = supabase.table('DiocesesParishDirectory').select('diocese_id, parish_directory_url').execute()
+            matching_dir = next((item for item in all_dir_response.data if item['diocese_id'] == diocese['id']), None)
+            diocese['parish_directory_url'] = matching_dir['parish_directory_url'] if matching_dir else None
+
+            # Get count of parishes in the database
+            count_response = supabase.table('Parishes').select('count', count='exact').eq('diocese_url', diocese['Website']).execute()
+            diocese['parishes_in_db_count'] = count_response.count
+
         # To get total count for pagination metadata (with filter applied)
-        # Need to re-apply filter to the count query
         count_query = supabase.table('Dioceses').select('count', count='exact')
         if search_query:
             search_pattern = f"%{search_query}%"
@@ -111,10 +123,55 @@ def get_dioceses(
         total_count = count_response.count
 
         return {
-            "data": response.data,
+            "data": dioceses,
             "total_count": total_count,
             "page": page,
             "page_size": page_size
         }
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/dioceses/{diocese_id}")
+def get_diocese(diocese_id: int):
+    """
+    Fetches a single diocese by its ID.
+    """
+    try:
+        response = supabase.table('Dioceses').select('*').eq('id', diocese_id).execute()
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Diocese not found")
+        return {"data": response.data[0]}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/dioceses/{diocese_id}/parishes")
+def get_parishes_for_diocese(diocese_id: int):
+    """
+    Fetches all parishes for a given diocese ID.
+    """
+    try:
+        # First, get the diocese's website using its ID
+        diocese_response = supabase.table('Dioceses').select('Website').eq('id', diocese_id).execute()
+        if not diocese_response.data:
+            raise HTTPException(status_code=404, detail="Diocese not found")
+        diocese_website = diocese_response.data[0]['Website']
+
+        parishes_response = supabase.table('Parishes').select('*').eq('diocese_url', diocese_website).execute()
+        parishes = parishes_response.data
+
+        # For each parish, fetch reconciliation and adoration facts
+        for parish in parishes:
+            # For each parish, fetch reconciliation and adoration facts from ParishData
+            reconciliation_response = supabase.table('ParishData').select('fact_value').eq('parish_id', parish['id']).eq('fact_type', 'ReconciliationSchedule').execute()
+            reconciliation_fact = reconciliation_response.data[0]['fact_value'] if reconciliation_response.data else None
+            parish['reconciliation_facts'] = reconciliation_fact
+            print(f"Parish {parish['id']} Reconciliation Fact: {reconciliation_fact}")
+
+            adoration_response = supabase.table('ParishData').select('fact_value').eq('parish_id', parish['id']).eq('fact_type', 'AdorationSchedule').execute()
+            adoration_fact = adoration_response.data[0]['fact_value'] if adoration_response.data else None
+            parish['adoration_facts'] = adoration_fact
+            print(f"Parish {parish['id']} Adoration Fact: {adoration_fact}")
+
+        return {"data": parishes}
     except Exception as e:
         return {"error": str(e)}
