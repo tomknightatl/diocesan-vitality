@@ -371,7 +371,7 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
 
             all_service_sections = service_sections + service_lists
 
-            for section in all_service_sections:
+            for section in all_contact_sections:
                 if section:
                     service_text = section.get_text()
                     lines = [line.strip() for line in service_text.split('\n') if line.strip()]
@@ -867,7 +867,7 @@ def process_diocese_with_detailed_extraction(diocese_info: Dict, driver, max_par
             ('EnhancedDiocesesCardExtractor', EnhancedDiocesesCardExtractor(pattern)),
             ('TableExtractor', TableExtractor(pattern)),
             ('ImprovedInteractiveMapExtractor', ImprovedInteractiveMapExtractor(pattern)),
-            ('ImprovedInteractiveMapExtractor', ImprovedInteractiveMapExtractor(pattern))
+            ('ImprovedGenericExtractor', ImprovedGenericExtractor(pattern))
         ]
 
         # Add fallbacks that aren't already in the list
