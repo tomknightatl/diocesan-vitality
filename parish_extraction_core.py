@@ -441,7 +441,18 @@ def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_name: s
                 continue
 
             # Use existing upsert logic
-            response = supabase.table('Parishes').upsert(clean_data).execute()
+            # Check if parish already exists based on diocese_url and Name
+            existing_parish_response = supabase.table('Parishes').select('id').eq('diocese_url', clean_data['diocese_url']).eq('Name', clean_data['Name']).execute()
+            
+            if existing_parish_response.data:
+                # Parish exists, update it
+                parish_id = existing_parish_response.data[0]['id']
+                response = supabase.table('Parishes').update(clean_data).eq('id', parish_id).execute()
+                logger.info(f"    🔄 Updated: {parish.name}")
+            else:
+                # Parish does not exist, insert new record
+                response = supabase.table('Parishes').insert(clean_data).execute()
+                logger.info(f"    ➕ Inserted: {parish.name}")
 
             if hasattr(response, 'error') and response.error:
                 logger.error(f"    ❌ Database error for {parish.name}: {response.error}")

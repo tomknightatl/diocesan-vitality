@@ -100,6 +100,7 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
 
             # Find all parish cards using more general selectors
             parish_card_selectors = [
+                "li.prettylink",
                 '.site-item',
                 'div.col-lg.location', # Original specific selector
                 'div[class*="parish-card"]',
@@ -370,7 +371,7 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
 
             all_service_sections = service_sections + service_lists
 
-            for section in all_contact_sections:
+            for section in all_service_sections:
                 if section:
                     service_text = section.get_text()
                     lines = [line.strip() for line in service_text.split('\n') if line.strip()]
@@ -426,7 +427,18 @@ class ParishFinderExtractor(BaseExtractor):
 
         try:
             logger.info("    📍 Parish finder interface detected")
-            print(f"Parish selectors: {parish_selectors}")
+            print(soup.prettify())
+
+            # Try different selectors for parish items
+            parish_selectors = [
+                "li.prettylink",
+                ".site-item",
+                ".parish-item",
+                "li.site",
+                ".site",
+                "li[data-latitude]",
+                "[class*='parish']"
+            ]
 
             parish_elements = []
             for selector in parish_selectors:
@@ -435,8 +447,6 @@ class ParishFinderExtractor(BaseExtractor):
                     parish_elements = elements
                     logger.info(f"    📊 Found {len(parish_elements)} parish elements using {selector}")
                     break
-
-            print(f"Selected parish elements: {[str(e) for e in parish_elements]}") # Debug print
 
             if not parish_elements:
                 logger.warning("    ⚠️ No parish elements found")
@@ -668,7 +678,7 @@ class TableExtractor(BaseExtractor):
 # =============================================================================
 
 class ImprovedInteractiveMapExtractor(BaseExtractor):
-    """Improved extractor for JavaScript-powered maps with better error handling"""
+    """Improved generic extractor as fallback"""
 
     def extract(self, driver, soup: BeautifulSoup, url: str) -> List[ParishData]:
         parishes = []
@@ -678,6 +688,7 @@ class ImprovedInteractiveMapExtractor(BaseExtractor):
 
             # Look for common parish container patterns
             selectors = [
+                "li.prettylink",
                 "[class*='parish-item']",
                 "[class*='church']",
                 "[class*='location']",
@@ -775,7 +786,7 @@ def process_diocese_with_detailed_extraction(diocese_info: Dict, driver, max_par
     print(f"🔍 ENHANCED DETAILED PROCESSING: {diocese_name}")
     print(f"📍 Main URL: {diocese_url}")
     print(f"📂 Parish Directory URL: {parish_directory_url}")
-    print(f"{ '='*60}")
+    print(f"{'='*60}")
 
     result = {
         'diocese_name': diocese_name,
@@ -856,7 +867,7 @@ def process_diocese_with_detailed_extraction(diocese_info: Dict, driver, max_par
             ('EnhancedDiocesesCardExtractor', EnhancedDiocesesCardExtractor(pattern)),
             ('TableExtractor', TableExtractor(pattern)),
             ('ImprovedInteractiveMapExtractor', ImprovedInteractiveMapExtractor(pattern)),
-            ('ImprovedGenericExtractor', ImprovedGenericExtractor(pattern))
+            ('ImprovedInteractiveMapExtractor', ImprovedInteractiveMapExtractor(pattern))
         ]
 
         # Add fallbacks that aren't already in the list
