@@ -98,8 +98,33 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
         try:
             logger.info("    📍 Enhanced diocese card layout detected - extracting with detail pages")
 
-            # Find all parish cards using the specific Salt Lake City structure
-            parish_cards = soup.find_all('div', class_='col-lg location')
+            # Find all parish cards using more general selectors
+            parish_card_selectors = [
+                'div.col-lg.location', # Original specific selector
+                'div[class*="parish-card"]',
+                'div[class*="church-card"]',
+                'div[class*="location-card"]',
+                'div[class*="listing-item"]',
+                'article[class*="parish"]',
+                'div.card:has(h4.card-title)' # Generic card with a title
+            ]
+            parish_cards = []
+            for selector in parish_card_selectors:
+                found_cards = soup.select(selector)
+                if found_cards:
+                    parish_cards.extend(found_cards)
+            
+            # Remove duplicates from parish_cards if any
+            unique_parish_cards = []
+            seen_cards = set()
+            for card in parish_cards:
+                # Use a hash of the card's HTML or a unique attribute if available
+                card_hash = hash(str(card))
+                if card_hash not in seen_cards:
+                    unique_parish_cards.append(card)
+                    seen_cards.add(card_hash)
+            parish_cards = unique_parish_cards
+
             logger.info(f"    📊 Found {len(parish_cards)} parish cards")
 
             for i, card in enumerate(parish_cards, 1):
@@ -447,7 +472,10 @@ class ParishFinderExtractor(BaseExtractor):
         try:
             # Extract parish name
             name = None
-            name_selectors = ['.name', '.parish-name', 'h3', 'h4', '.title']
+            name_selectors = [
+                '.name', '.parish-name', 'h3', 'h4', '.title',
+                '[class*="name"]', '[class*="title"]', '[itemprop="name"]'
+            ]
 
             for selector in name_selectors:
                 name_elem = element.select_one(selector)
@@ -456,25 +484,34 @@ class ParishFinderExtractor(BaseExtractor):
                     break
 
             if not name:
-                name_div = element.find('div', class_='name')
-                if name_div:
-                    name = self.clean_text(name_div.get_text())
+                # Fallback: try to find a strong or bold tag, or the first non-empty text
+                strong_tag = element.find('strong')
+                if strong_tag:
+                    name = self.clean_text(strong_tag.get_text())
+                elif element.get_text(strip=True):
+                    lines = [line.strip() for line in element.get_text().split('\n') if line.strip()]
+                    if lines:
+                        name = lines[0]
 
             if not name or len(name) < 3:
                 return None
 
-            # Skip non-parish entries
-            skip_terms = [
-                'no parish registration', 'contact', 'chancery', 'pastoral center',
-                'tv mass', 'directory', 'finder', 'diocese', 'bishop', 'office',
-                'search', 'filter', 'map'
-            ]
-            if any(term in name.lower() for term in skip_terms):
+            # Add more robust validation for the name
+            # Check if the name contains typical parish indicators
+            is_parish_name = any(indicator in name.lower() for indicator in
+                                 ['parish', 'church', 'st.', 'saint', 'our lady', 'holy', 'cathedral', 'mission', 'chapel'])
+            
+            # Check if the name looks like a phone number
+            looks_like_phone = re.search(r'^\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$', name)
+            if looks_like_phone:
                 return None
 
             # Extract city
             city = None
-            city_selectors = ['.city', '.location', '.parish-city']
+            city_selectors = [
+                '.city', '.location', '.parish-city',
+                '[class*="city"]', '[class*="location"]', '[itemprop="addressLocality"]'
+            ]
 
             for selector in city_selectors:
                 city_elem = element.select_one(selector)
@@ -483,9 +520,11 @@ class ParishFinderExtractor(BaseExtractor):
                     break
 
             if not city:
-                city_div = element.find('div', class_='city')
-                if city_div:
-                    city = self.clean_text(city_div.get_text())
+                # Fallback: try to find city in the element's text content using regex
+                text_content = element.get_text()
+                city_match = re.search(r'([A-Z][a-z]+(?:\s[A-Z][a-z]+)*),\s*[A-Z]{2}\s*\d{5}', text_content)
+                if city_match:
+                    city = city_match.group(1)
 
             # Extract detailed information from siteInfo if available
             site_info = element.find('div', class_='siteInfo')
@@ -500,7 +539,10 @@ class ParishFinderExtractor(BaseExtractor):
             longitude = None
 
             # Extract address
-            address_selectors = ['.address', '.street-address', '.location']
+            address_selectors = [
+                '.address', '.street-address', '.location',
+                '[class*="address"]', '[itemprop="streetAddress"]', '[itemprop="address"]'
+            ]
             for selector in address_selectors:
                 addr_elem = element.select_one(selector)
                 if addr_elem:
@@ -508,8 +550,18 @@ class ParishFinderExtractor(BaseExtractor):
                     if address and len(address) > 5:
                         break
 
+            # Fallback for address: look for common address patterns in the element's text
+            if not address:
+                text_content = element.get_text()
+                address_match = re.search(r'\d+\s+[A-Za-z0-9\s]+\s+(?:street|st|avenue|ave|road|rd|drive|dr|lane|ln|blvd|boulevard|court|ct|place|pl|square|sq|terrace|ter|way|wy)\b', text_content, re.IGNORECASE)
+                if address_match:
+                    address = address_match.group(0)
+
             # Extract phone
-            phone_selectors = ['.phone', '.telephone', 'a[href^="tel:"]']
+            phone_selectors = [
+                '.phone', '.telephone', 'a[href^="tel:"]',
+                '[class*="phone"]', '[itemprop="telephone"]'
+            ]
             for selector in phone_selectors:
                 phone_elem = element.select_one(selector)
                 if phone_elem:
@@ -519,12 +571,15 @@ class ParishFinderExtractor(BaseExtractor):
                         break
 
             # Extract website
-            website_selectors = ['a[href^="http"]', '.website', '.url']
+            website_selectors = [
+                'a[href^="http"]', '.website', '.url',
+                '[class*="website"]', '[itemprop="url"]'
+            ]
             for selector in website_selectors:
                 web_elem = element.select_one(selector)
                 if web_elem:
                     href = web_elem.get('href', '')
-                    if href.startswith('http') and not any(skip in href.lower() for skip in ['facebook', 'twitter', 'instagram']):
+                    if href.startswith('http') and not any(skip in href.lower() for skip in ['facebook', 'twitter', 'instagram', 'youtube', 'google.com/maps']):
                         website = href
                         break
 
@@ -540,6 +595,11 @@ class ParishFinderExtractor(BaseExtractor):
                     longitude = float(element.get('data-longitude'))
                 except (ValueError, TypeError):
                     pass
+
+            # Ensure at least one key contact field is present for a valid parish entry
+            if not (address or phone or website):
+                logger.warning(f"        ⚠️ Skipping element {element_num}: No valid address, phone, or website found for '{name}'")
+                return None
 
             return ParishData(
                 name=name,
@@ -828,7 +888,7 @@ class ImprovedInteractiveMapExtractor(BaseExtractor):
                     }} catch(e) {{
                         return null;
                     }}
-                """)
+                """ )
 
                 if js_data and isinstance(js_data, list) and len(js_data) > 0:
                     print(f"    📊 Found data in window.{var_name}: {len(js_data)} items")
@@ -1210,14 +1270,11 @@ def process_diocese_with_detailed_extraction(diocese_info: Dict, driver, max_par
                     result['extraction_methods_used'].append(extractor_name)
                     print(f"    ✅ {extractor_name} found {len(current_parishes)} parishes")
 
-                    # If we found parishes with a specialized extractor, prefer those results
-                    if extractor_name in ['ParishFinderExtractor', 'EnhancedDiocesesCardExtractor'] and len(current_parishes) > 3:
-                        print(f"    🎯 Using {extractor_name} - stopping extraction")
-                        break
+                    # If we found a good number of parishes with any method, continue to next extractor
+                    # to gather as many as possible, then deduplicate later.
+                    # The previous logic to break early if a specific extractor found >3 parishes is removed
+                    # to allow more comprehensive data gathering.
 
-                    # If we found a good number of parishes with any method, stop
-                    if len(parishes) > 10:
-                        break
                 else:
                     print(f"    ⚠️ {extractor_name} found no parishes")
 

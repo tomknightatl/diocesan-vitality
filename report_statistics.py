@@ -114,7 +114,7 @@ def plot_time_series(time_series_data: dict, table_name: str):
     plt.close(fig) # Close the figure to free memory
 
 def main():
-    tables_to_report = ['Dioceses', 'DiocesesParishDirectory', 'Parishes', 'ParishSchedules']
+    tables_to_report = ['Dioceses', 'DiocesesParishDirectory', 'Parishes', 'Parishes']
     
     for table_name in tables_to_report:
         df, time_series_data = fetch_and_process_table(table_name, supabase)
