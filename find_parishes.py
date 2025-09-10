@@ -533,7 +533,7 @@ def find_parish_directories(diocese_id=None, max_dioceses_to_process=config.DEFA
             try:
                 response = (
                     supabase.table("DiocesesParishDirectory")
-                    .upsert(data_to_upsert)
+                    .upsert(data_to_upsert, on_conflict="diocese_id")
                     .execute()
                 )
                 if hasattr(response, "error") and response.error:
@@ -569,7 +569,7 @@ def find_parish_directories(diocese_id=None, max_dioceses_to_process=config.DEFA
             try:
                 response = (
                     supabase.table("DiocesesParishDirectory")
-                    .upsert(data_to_upsert)
+                    .upsert(data_to_upsert, on_conflict="diocese_id")
                     .execute()
                 )
                 if hasattr(response, "error") and response.error:
@@ -604,7 +604,7 @@ def find_parish_directories(diocese_id=None, max_dioceses_to_process=config.DEFA
             try:
                 response = (
                     supabase.table("DiocesesParishDirectory")
-                    .upsert(data_to_upsert)
+                    .upsert(data_to_upsert, on_conflict="diocese_id")
                     .execute()
                 )
                 if hasattr(response, "error") and response.error:
