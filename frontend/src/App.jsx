@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Container, Table, Spinner, Alert, Navbar, Pagination, Form } from 'react-bootstrap';
 import './App.css';
 
@@ -179,6 +180,8 @@ function App() {
                     className="mt-1"
                   />
                 </th>
+                <th>Parishes</th>
+                <th>Parishes in Database</th>
               </tr>
             </thead>
             <tbody>
@@ -187,6 +190,14 @@ function App() {
                   <td>{diocese.Name}</td>
                   <td>{diocese.Address}</td>
                   <td><a href={diocese.Website} target="_blank" rel="noopener noreferrer">{diocese.Website}</a></td>
+                  <td>
+                    {diocese.parish_directory_url && 
+                        <a href={diocese.parish_directory_url} target="_blank" rel="noopener noreferrer">Link</a>
+                    }
+                  </td>
+                  <td>
+                    <Link to={`/diocese/${diocese.id}`}>{diocese.parishes_in_db_count}</Link>
+                  </td>
                 </tr>
               ))}
             </tbody>
