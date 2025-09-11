@@ -365,7 +365,7 @@ def _clean_supabase_data(data: Dict) -> Dict:
             cleaned_data[k] = v
     return cleaned_data
 
-def prepare_parish_for_supabase(parish_data: ParishData, diocese_name: str, diocese_url: str, parish_directory_url: str) -> Dict:
+def prepare_parish_for_supabase(parish_data: ParishData, diocese_id: int, diocese_name: str, diocese_url: str, parish_directory_url: str) -> Dict:
     """Convert ParishData to format compatible with Supabase schema"""
 
     # Use street address if available, otherwise fall back to full address or address
@@ -393,7 +393,8 @@ def prepare_parish_for_supabase(parish_data: ParishData, diocese_name: str, dioc
         'full_address': parish_data.full_address,
         'latitude': parish_data.latitude,
         'longitude': parish_data.longitude,
-        'extracted_at': datetime.now(timezone.utc).isoformat()
+        'extracted_at': datetime.now(timezone.utc).isoformat(),
+        'diocese_id': diocese_id
     }
 
 PARISH_SKIP_TERMS = [
@@ -402,7 +403,7 @@ PARISH_SKIP_TERMS = [
     'office', 'center', 'no parish registration', 'archdiocese'
 ]
 
-def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_name: str, diocese_url: str, 
+def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_id: int, diocese_name: str, diocese_url: str, 
                                      parish_directory_url: str, supabase):
     """Enhanced version of Supabase upsert function with Parish Finder support"""
 
@@ -430,7 +431,7 @@ def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_name: s
                 continue
 
             # Convert to schema format
-            supabase_data = prepare_parish_for_supabase(parish, diocese_name, diocese_url, parish_directory_url)
+            supabase_data = prepare_parish_for_supabase(parish, diocese_id, diocese_name, diocese_url, parish_directory_url)
 
             clean_data = _clean_supabase_data(supabase_data)
 

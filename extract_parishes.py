@@ -87,6 +87,7 @@ def main(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MAX_PARISHES_P
             if result['parishes_found']:
                 enhanced_safe_upsert_to_supabase(
                     result['parishes_found'],
+                    diocese_info['id'],
                     diocese_info['name'],
                     diocese_info['url'],
                     diocese_info['parish_directory_url'],
