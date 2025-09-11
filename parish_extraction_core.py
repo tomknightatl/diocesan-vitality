@@ -89,6 +89,7 @@ class ParishData:
     parish_directory_url: Optional[str] = None
     detail_extraction_success: bool = False
     detail_extraction_error: Optional[str] = None
+    distance_miles: Optional[float] = None
 
 @dataclass
 class DioceseSitePattern:
@@ -100,6 +101,87 @@ class DioceseSitePattern:
     javascript_required: bool
     pagination_pattern: Optional[str] = None
     notes: str = ""
+
+def clean_parish_name_and_extract_address(raw_name: str) -> Dict:
+    """
+    Cleans a raw parish name string, extracting the true name, distance,
+    and address components if present.
+    """
+    # Handle None or empty input
+    if not raw_name or not isinstance(raw_name, str):
+        return {
+            "name": "",
+            "street_address": None,
+            "city": None,
+            "state": None,
+            "zip_code": None,
+            "full_address": None,
+            "distance_miles": None
+        }
+    
+    cleaned_data = {
+        "name": raw_name,
+        "street_address": None,
+        "city": None,
+        "state": None,
+        "zip_code": None,
+        "full_address": None,
+        "distance_miles": None
+    }
+
+    # Regex to find distance (e.g., (203.7 Miles))
+    distance_match = re.search(r'\((\d+\.?\d*)\s*Miles\)', raw_name, re.IGNORECASE)
+    if distance_match:
+        try:
+            cleaned_data["distance_miles"] = float(distance_match.group(1))
+            # Remove distance from raw_name
+            raw_name = raw_name.replace(distance_match.group(0), '').strip()
+        except ValueError:
+            pass # Keep distance as None if conversion fails
+
+    # Regex to find common address patterns at the end of the string
+    # This pattern looks for:
+    # - A number at the start of the address (street number)
+    # - Followed by street name components (words, possibly with periods or hyphens)
+    # - Followed by city, state, and zip code (optional)
+    # - It's anchored to the end of the string ($)
+    address_pattern = re.compile(
+        r'(\d+\s+[\w\s\.\-]+(?:street|st|avenue|ave|road|rd|drive|dr|way|lane|ln|boulevard|blvd|court|ct|plaza|pl|terrace|ter|circle|cir|parkway|pkwy|highway|hwy|route|rte|blvd)\.?,?\s*.*?\s*\w{2}\s*\d{5}(?:-\d{4})?)$',
+        re.IGNORECASE
+    )
+    address_match = address_pattern.search(raw_name)
+
+    if address_match:
+        full_address = address_match.group(1).strip()
+        cleaned_data["full_address"] = full_address
+
+        # Remove the extracted address from the raw_name to get the clean name
+        cleaned_data["name"] = raw_name.replace(full_address, '').strip()
+
+        # Attempt to parse address components from full_address
+        # City, State, Zip Code
+        city_state_zip_match = re.search(r'([A-Za-z\s\.]+),\s*([A-Za-z]{2})\s*(\d{5}(?:-\d{4})?)$', full_address)
+        if city_state_zip_match:
+            cleaned_data["city"] = city_state_zip_match.group(1).strip()
+            cleaned_data["state"] = city_state_zip_match.group(2).strip()
+            cleaned_data["zip_code"] = city_state_zip_match.group(3).strip()
+            # The street address is everything before the city, state, zip
+            street_address_raw = full_address.replace(city_state_zip_match.group(0), '').strip()
+            cleaned_data["street_address"] = street_address_raw.rstrip(',').strip()
+        else:
+            # Fallback for just street and zip if city/state not clearly parsed
+            zip_match = re.search(r'(\d{5}(?:-\d{4})?)$', full_address)
+            if zip_match:
+                cleaned_data["zip_code"] = zip_match.group(1)
+                cleaned_data["street_address"] = full_address.replace(zip_match.group(0), '').strip().rstrip(',').strip()
+            else:
+                cleaned_data["street_address"] = full_address # If no clear components, treat as street
+
+    # Final clean up of the name (remove trailing commas, extra spaces)
+    cleaned_data["name"] = re.sub(r',\s*$', '', cleaned_data["name"]).strip()
+    cleaned_data["name"] = re.sub(r'\s+', ' ', cleaned_data["name"]).strip()
+
+    return cleaned_data
 
 # =============================================================================
 # PATTERN DETECTION SYSTEM

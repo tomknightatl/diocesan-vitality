@@ -32,9 +32,10 @@ from selenium.webdriver.support import expected_conditions as EC
 
 # Import core components from the companion module
 from parish_extraction_core import (
-    BaseExtractor, ParishData, DioceseSitePattern,
+    BaseExtractor, ParishData,
+    DioceseSitePattern,
     ParishListingType, DiocesePlatform, PatternDetector,
-    setup_enhanced_driver, enhanced_safe_upsert_to_supabase
+    setup_enhanced_driver, enhanced_safe_upsert_to_supabase, clean_parish_name_and_extract_address
 )
 
 # =============================================================================
@@ -132,16 +133,26 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
             if not card_link:
                 return None
 
-            # Extract parish name from card title
+            # Extract raw name from card title
             title_elem = card_link.find('h4', class_='card-title')
             if not title_elem:
                 return None
 
-            name = self.clean_text(title_elem.get_text())
-            if not name or len(name) < 3:
+            raw_name = self.clean_text(title_elem.get_text())
+            if not raw_name or len(raw_name) < 3:
                 return None
 
-            # Skip non-parish entries
+            # Use the new cleaning function to separate name and address components
+            cleaned_data = clean_parish_name_and_extract_address(raw_name)
+            name = cleaned_data["name"]
+            street_address = cleaned_data["street_address"]
+            city = cleaned_data["city"]
+            state = cleaned_data["state"]
+            zip_code = cleaned_data["zip_code"]
+            full_address = cleaned_data["full_address"]
+            distance_miles = cleaned_data["distance_miles"]
+
+            # Skip non-parish entries based on the cleaned name
             skip_terms = [
                 'no parish registration', 'contact', 'chancery', 'pastoral center',
                 'tv mass', 'directory', 'finder', 'diocese', 'bishop', 'office'
@@ -149,19 +160,25 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
             if any(term in name.lower() for term in skip_terms):
                 return None
 
-            # Extract city from card body
-            card_body = card_link.find('div', class_='card-body')
-            city = None
-            state = None
-            if card_body:
-                body_text = card_body.get_text()
-                lines = [line.strip() for line in body_text.split('\n') if line.strip()]
+            # Extract city from card body (if not already extracted by clean_parish_name_and_extract_address)
+            if not city:
+                card_body = card_link.find('div', class_='card-body')
+                if card_body:
+                    body_text = card_body.get_text()
+                    lines = [line.strip() for line in body_text.split('\n') if line.strip()]
 
-                # The city is usually the second line (after the parish name)
-                if len(lines) >= 2:
-                    city_line = lines[1]
-                    if city_line and not city_line.startswith('Learn More'):
-                        city = self.clean_text(city_line)
+                    # The city is usually the second line (after the parish name)
+                    if len(lines) >= 2:
+                        city_line = lines[1]
+                        if city_line and not city_line.startswith('Learn More'):
+                            city = self.clean_text(city_line)
+
+            # Extract state from city if present (format: "City, ST")
+            if city and not state and ', ' in city:
+                city_parts = city.split(', ')
+                if len(city_parts) == 2:
+                    city = city_parts[0].strip()
+                    state = city_parts[1].strip()
 
             # Extract parish detail URL
             parish_detail_url = None
@@ -172,13 +189,6 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
                 else:
                     parish_detail_url = href
 
-            # Extract state from city if present (format: "City, ST")
-            if city and ', ' in city:
-                city_parts = city.split(', ')
-                if len(city_parts) == 2:
-                    city = city_parts[0].strip()
-                    state = city_parts[1].strip()
-
             # Step 2: Navigate to detail page and extract additional information
             detailed_info = self._extract_details_from_parish_page(driver, parish_detail_url, name)
 
@@ -187,6 +197,10 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
                 name=name,
                 city=city,
                 state=state,
+                street_address=street_address,
+                full_address=full_address,
+                zip_code=zip_code,
+                distance_miles=distance_miles,
                 parish_detail_url=parish_detail_url,
                 confidence_score=0.9,
                 extraction_method="enhanced_diocese_card_extraction"
@@ -194,9 +208,9 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
 
             # Add detailed information if extraction was successful
             if detailed_info['success']:
-                parish_data.street_address = detailed_info.get('street_address')
-                parish_data.full_address = detailed_info.get('full_address')
-                parish_data.zip_code = detailed_info.get('zip_code')
+                parish_data.street_address = parish_data.street_address or detailed_info.get('street_address')
+                parish_data.full_address = parish_data.full_address or detailed_info.get('full_address')
+                parish_data.zip_code = parish_data.zip_code or detailed_info.get('zip_code')
                 parish_data.phone = detailed_info.get('phone')
                 parish_data.website = detailed_info.get('website')
                 parish_data.clergy_info = detailed_info.get('clergy_info')
@@ -226,7 +240,10 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
 
             # Navigate to the parish detail page
             driver.get(parish_url)
-            time.sleep(2)  # Wait for page to load
+            # Wait for page content to load
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
+            )
 
             # Get the page source and parse it
             detail_html = driver.page_source
@@ -255,8 +272,6 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
             error_msg = f"Failed to extract details: {str(e)[:100]}"
             print(f"      ❌ {parish_name}: {error_msg}")
             return {'success': False, 'error': error_msg}
-
-    
 
     def _extract_contact_info(self, soup: BeautifulSoup, result: Dict):
         """Extract contact information from parish detail page"""
@@ -403,10 +418,12 @@ class ParishFinderExtractor(BaseExtractor):
 
             # Try different selectors for parish items
             parish_selectors = [
+                "li.location.parishes",  # eCatholic specific
                 "li.site",
                 ".site",
                 "li[data-latitude]",
                 ".parish-item",
+                "[class*='parish'][class*='location']",  # More specific for eCatholic
                 "[class*='parish']"
             ]
 
@@ -445,110 +462,112 @@ class ParishFinderExtractor(BaseExtractor):
     def _extract_parish_from_finder_element(self, element, base_url: str, element_num: int) -> Optional[ParishData]:
         """Extract parish data from a single parish finder element"""
         try:
-            # Extract parish name
+            # Extract parish name - handle eCatholic specific structure
             name = None
-            name_selectors = ['.name', '.parish-name', 'h3', 'h4', '.title']
-
-            for selector in name_selectors:
-                name_elem = element.select_one(selector)
-                if name_elem:
-                    name = self.clean_text(name_elem.get_text())
-                    break
-
+            
+            # First try eCatholic specific selectors
+            title_span = element.find('span', {'data-bind': lambda x: x and 'title' in x})
+            if title_span:
+                name = self.clean_text(title_span.get_text())
+            
+            # Fallback to standard selectors
             if not name:
-                name_div = element.find('div', class_='name')
-                if name_div:
-                    name = self.clean_text(name_div.get_text())
+                name_selectors = ['.name', '.parish-name', 'h3', 'h4', '.title', 'span']
+                for selector in name_selectors:
+                    name_elem = element.select_one(selector)
+                    if name_elem:
+                        name = self.clean_text(name_elem.get_text())
+                        break
 
-            if not name or len(name) < 3:
+            # Another fallback - extract from the anchor text if present
+            if not name:
+                anchor = element.find('a')
+                if anchor:
+                    # Try to get text from first span in anchor
+                    first_span = anchor.find('span')
+                    if first_span:
+                        name = self.clean_text(first_span.get_text())
+
+            # Use the new cleaning function to separate name and address components
+            cleaned_data = clean_parish_name_and_extract_address(name)
+            clean_name = cleaned_data["name"]
+            street_address = cleaned_data["street_address"]
+            city = cleaned_data["city"]
+            state = cleaned_data["state"]
+            zip_code = cleaned_data["zip_code"]
+            full_address = cleaned_data["full_address"]
+            distance_miles = cleaned_data["distance_miles"]
+
+            # Re-evaluate name after cleaning
+            if not clean_name or len(clean_name) < 3:
                 return None
 
-            # Skip non-parish entries
-            skip_terms = [
-                'no parish registration', 'contact', 'chancery', 'pastoral center',
-                'tv mass', 'directory', 'finder', 'diocese', 'bishop', 'office',
-                'search', 'filter', 'map'
-            ]
-            if any(term in name.lower() for term in skip_terms):
+            # Skip non-parish entries based on the cleaned name
+            if any(skip_word in clean_name.lower() for skip_word in
+                   ['finder', 'directory', 'map', 'search', 'filter']):
                 return None
 
-            # Extract city
-            city = None
-            city_selectors = ['.city', '.location', '.parish-city']
+            # Extract other fields from the DOM element
+            address = street_address  # Use cleaned address from name parsing
+            
+            # Try to find additional address info in element text
+            element_text = element.get_text() if element else ""
+            if not address and element_text:
+                # Look for address patterns in the element text
+                address_match = re.search(r'\d+[A-Za-z0-9\s\.,\-]+(?:street|st|avenue|ave|road|rd|drive|dr|way|lane|ln|boulevard|blvd|court|ct)', element_text, re.IGNORECASE)
+                if address_match:
+                    address = address_match.group().strip()
 
-            for selector in city_selectors:
-                city_elem = element.select_one(selector)
-                if city_elem:
-                    city = self.clean_text(city_elem.get_text())
-                    break
-
-            if not city:
-                city_div = element.find('div', class_='city')
-                if city_div:
-                    city = self.clean_text(city_div.get_text())
-
-            # Extract detailed information from siteInfo if available
-            site_info = element.find('div', class_='siteInfo')
-            if site_info:
-                return self._extract_from_site_info(name, city, site_info, element, base_url)
-
-            # Extract other fields
-            address = None
+            # Extract phone from element text
             phone = None
+            if element_text:
+                phone_match = re.search(r'\(?(\d{3})\)?[-.\s]?(\d{3})[-.\s]?(\d{4})', element_text)
+                if phone_match:
+                    phone = f"({phone_match.group(1)}) {phone_match.group(2)}-{phone_match.group(3)}"
+
+            # Extract website from links in element
             website = None
-            latitude = None
-            longitude = None
+            website_link = element.find('a') if element else None
+            if website_link and website_link.get('href'):
+                href = website_link.get('href')
+                if href.startswith('http') or href.startswith('www'):
+                    website = href
 
-            # Extract address
-            address_selectors = ['.address', '.street-address', '.location']
-            for selector in address_selectors:
-                addr_elem = element.select_one(selector)
-                if addr_elem:
-                    address = self.clean_text(addr_elem.get_text())
-                    if address and len(address) > 5:
-                        break
-
-            # Extract phone
-            phone_selectors = ['.phone', '.telephone', 'a[href^="tel:"]']
-            for selector in phone_selectors:
-                phone_elem = element.select_one(selector)
-                if phone_elem:
-                    phone_text = phone_elem.get('href') if phone_elem.get('href', '').startswith('tel:') else phone_elem.get_text()
-                    phone = self.extract_phone(phone_text)
-                    if phone:
-                        break
-
-            # Extract website
-            website_selectors = ['a[href^="http"]', '.website', '.url']
-            for selector in website_selectors:
-                web_elem = element.select_one(selector)
-                if web_elem:
-                    href = web_elem.get('href', '')
-                    if href.startswith('http') and not any(skip in href.lower() for skip in ['facebook', 'twitter', 'instagram']):
-                        website = href
-                        break
-
-            # Extract coordinates if available
-            if element.get('data-latitude'):
-                try:
-                    latitude = float(element.get('data-latitude'))
-                except (ValueError, TypeError):
-                    pass
-
-            if element.get('data-longitude'):
-                try:
-                    longitude = float(element.get('data-longitude'))
-                except (ValueError, TypeError):
-                    pass
+            # For parish finder, coordinates might be in data attributes
+            lat = lng = None
+            if element:
+                lat_attrs = ['data-lat', 'data-latitude', 'lat', 'latitude']
+                lng_attrs = ['data-lng', 'data-longitude', 'data-lon', 'lng', 'longitude', 'lon']
+                
+                for attr in lat_attrs:
+                    if element.get(attr):
+                        try:
+                            lat = float(element.get(attr))
+                            break
+                        except (ValueError, TypeError):
+                            continue
+                            
+                for attr in lng_attrs:
+                    if element.get(attr):
+                        try:
+                            lng = float(element.get(attr))
+                            break
+                        except (ValueError, TypeError):
+                            continue
 
             return ParishData(
-                name=name,
+                name=clean_name,
                 city=city,
                 address=address,
+                street_address=street_address,
+                state=state,
+                zip_code=zip_code,
+                full_address=full_address,
                 phone=phone,
                 website=website,
-                latitude=latitude,
-                longitude=longitude,
+                latitude=float(lat) if lat else None,
+                longitude=float(lng) if lng else None,
+                distance_miles=distance_miles,
                 confidence_score=0.8,
                 extraction_method="parish_finder_extraction"
             )
@@ -672,9 +691,22 @@ class TableExtractor(BaseExtractor):
         if not name or len(name) < 3:
             return None
 
+        # Use the new cleaning function to separate name and address components
+        cleaned_data = clean_parish_name_and_extract_address(name)
+        clean_name = cleaned_data["name"]
+        street_address = cleaned_data["street_address"]
+        city = cleaned_data["city"]
+        state = cleaned_data["state"]
+        zip_code = cleaned_data["zip_code"]
+        full_address = cleaned_data["full_address"]
+        distance_miles = cleaned_data["distance_miles"]
+
+        # Re-evaluate name after cleaning
+        if not clean_name or len(clean_name) < 3:
+            return None
+
         # Extract other information from remaining cells
         address = None
-        city = None
         phone = None
         website = None
 
@@ -699,11 +731,16 @@ class TableExtractor(BaseExtractor):
                 city = self.clean_text(cell_text)
 
         return ParishData(
-            name=name,
+            name=clean_name,
             address=address,
             city=city,
+            street_address=street_address,
+            state=state,
+            zip_code=zip_code,
+            full_address=full_address,
             phone=phone,
             website=website,
+            distance_miles=distance_miles,
             confidence_score=0.85,
             extraction_method="table_extraction"
         )
@@ -828,7 +865,7 @@ class ImprovedInteractiveMapExtractor(BaseExtractor):
                     }} catch(e) {{
                         return null;
                     }}
-                """)
+                """ ) # Fixed f-string braces
 
                 if js_data and isinstance(js_data, list) and len(js_data) > 0:
                     print(f"    📊 Found data in window.{var_name}: {len(js_data)} items")
@@ -862,8 +899,19 @@ class ImprovedInteractiveMapExtractor(BaseExtractor):
         if not name or len(name) < 3:
             return None
 
-        # Skip non-parish entries
-        if any(skip_word in name.lower() for skip_word in
+        # Use the new cleaning function to separate name and address components
+        cleaned_data = clean_parish_name_and_extract_address(name)
+        clean_name = cleaned_data["name"]
+        street_address = cleaned_data["street_address"]
+        city = cleaned_data["city"] or data.get('city', data.get('location', data.get('City'))) # Prioritize cleaned city, then data
+        state = cleaned_data["state"]
+        zip_code = cleaned_data["zip_code"]
+        full_address = cleaned_data["full_address"]
+        distance_miles = cleaned_data["distance_miles"]
+
+
+        # Skip non-parish entries based on the cleaned name
+        if any(skip_word in clean_name.lower() for skip_word in
                ['finder', 'directory', 'map', 'search', 'filter']):
             return None
 
@@ -891,12 +939,18 @@ class ImprovedInteractiveMapExtractor(BaseExtractor):
         lng = data.get('lng', data.get('longitude', data.get('lon', data.get('Lng'))))
 
         return ParishData(
-            name=name,
+            name=clean_name,
+            city=city,
             address=address,
+            street_address=street_address,
+            state=state,
+            zip_code=zip_code,
+            full_address=full_address,
             phone=phone,
             website=website,
             latitude=float(lat) if lat else None,
             longitude=float(lng) if lng else None,
+            distance_miles=distance_miles,
             confidence_score=0.8,
             extraction_method="improved_js_extraction"
         )
@@ -932,11 +986,17 @@ class ImprovedInteractiveMapExtractor(BaseExtractor):
                 try:
                     # Scroll marker into view
                     driver.execute_script("arguments[0].scrollIntoView(true);", marker)
-                    time.sleep(0.5)
+                    # Wait for scroll to complete
+                    WebDriverWait(driver, 3).until(
+                        lambda d: d.execute_script("return arguments[0].getBoundingClientRect().top < window.innerHeight;", marker)
+                    )
 
                     # Click marker
                     driver.execute_script("arguments[0].click();", marker)
-                    time.sleep(1)
+                    # Wait for potential popup or content change
+                    WebDriverWait(driver, 5).until(
+                        lambda d: len(d.find_elements(By.CSS_SELECTOR, ".popup, .info-window, .marker-popup")) > 0 or True
+                    )
 
                     # Look for popup content
                     popup_selectors = [
@@ -973,9 +1033,19 @@ class ImprovedInteractiveMapExtractor(BaseExtractor):
         if not lines:
             return None
 
-        name = lines[0]  # First line is usually the name
+        raw_name = lines[0]  # First line is usually the name
 
-        # Skip if it doesn't look like a parish name
+        # Use the new cleaning function to separate name and address components
+        cleaned_data = clean_parish_name_and_extract_address(raw_name)
+        name = cleaned_data["name"]
+        street_address = cleaned_data["street_address"]
+        city = cleaned_data["city"]
+        state = cleaned_data["state"]
+        zip_code = cleaned_data["zip_code"]
+        full_address = cleaned_data["full_address"]
+        distance_miles = cleaned_data["distance_miles"]
+
+        # Skip if it doesn't look like a parish name (based on cleaned name)
         if not any(indicator in name.lower() for indicator in
                    ['parish', 'church', 'st.', 'saint', 'our lady', 'holy', 'cathedral']):
             return None
@@ -993,7 +1063,13 @@ class ImprovedInteractiveMapExtractor(BaseExtractor):
         return ParishData(
             name=name,
             address=address,
+            street_address=street_address,
+            city=city,
+            state=state,
+            zip_code=zip_code,
+            full_address=full_address,
             phone=phone,
+            distance_miles=distance_miles,
             confidence_score=0.6,
             extraction_method="marker_popup_extraction"
         )
@@ -1058,20 +1134,29 @@ class ImprovedGenericExtractor(BaseExtractor):
                 if lines:
                     name = lines[0]
 
-            if not name or len(name) < 3:
+            # Use the new cleaning function to separate name and address components
+            cleaned_data = clean_parish_name_and_extract_address(name)
+            clean_name = cleaned_data["name"]
+            street_address = cleaned_data["street_address"]
+            city = cleaned_data["city"]
+            state = cleaned_data["state"]
+            zip_code = cleaned_data["zip_code"]
+            full_address = cleaned_data["full_address"]
+            distance_miles = cleaned_data["distance_miles"]
+
+            # Re-evaluate name after cleaning
+            if not clean_name or len(clean_name) < 3:
                 return None
 
-            # Skip non-parish entries
-            if not any(indicator in name.lower() for indicator in
+            # Skip non-parish entries based on the cleaned name
+            if not any(indicator in clean_name.lower() for indicator in
                       ['parish', 'church', 'st.', 'saint', 'our lady', 'holy', 'cathedral']):
                 return None
 
-            # Extract other information
-            element_text = element.get_text()
-
+            # Extract other information (phone, website) from the original element_text
+            # as they might be separate from the name/address block
             phone = self.extract_phone(element_text)
 
-            # Look for website
             website = None
             links = element.find_all('a', href=True)
             for link in links:
@@ -1082,9 +1167,15 @@ class ImprovedGenericExtractor(BaseExtractor):
                     break
 
             return ParishData(
-                name=name,
+                name=clean_name,
+                street_address=street_address,
+                city=city,
+                state=state,
+                zip_code=zip_code,
+                full_address=full_address,
                 phone=phone,
                 website=website,
+                distance_miles=distance_miles,
                 confidence_score=0.4,
                 extraction_method="improved_generic_extraction"
             )
@@ -1145,7 +1236,16 @@ def process_diocese_with_detailed_extraction(diocese_info: Dict, driver, max_par
         # Step 1: Load the parish directory page
         print("  📥 Loading parish directory page...")
         driver.get(parish_directory_url)
-        time.sleep(3)  # Give time for JS to load
+        # Wait for JavaScript content to load - check for common parish directory elements
+        try:
+            WebDriverWait(driver, 15).until(
+                lambda d: len(d.find_elements(By.CSS_SELECTOR, 
+                    "li.site, .parish-item, .parish-card, .location, table tr, .finder-result")) > 0
+            )
+        except:
+            # Fallback: wait for body and give JS a moment
+            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+            time.sleep(1)  # Minimal fallback delay
 
         html_content = driver.page_source
         soup = BeautifulSoup(html_content, 'html.parser')
