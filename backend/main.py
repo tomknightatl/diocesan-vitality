@@ -162,6 +162,7 @@ def get_parishes_for_diocese(diocese_id: int):
         # For each parish, fetch reconciliation and adoration facts
         for parish in parishes:
             # For each parish, fetch reconciliation and adoration facts from ParishData
+            reconciliation_response = supabase.table('ParishData').select('fact_value').eq('parish_id', parish['id']).eq('fact_type', 'ReconciliationSchedule').execute()
             parish['reconciliation_facts'] = reconciliation_response.data[0]['fact_value'] if reconciliation_response.data else None
 
             adoration_response = supabase.table('ParishData').select('fact_value').eq('parish_id', parish['id']).eq('fact_type', 'AdorationSchedule').execute()
