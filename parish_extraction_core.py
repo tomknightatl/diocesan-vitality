@@ -104,8 +104,8 @@ class DioceseSitePattern:
 
 def clean_parish_name_and_extract_address(raw_name: str) -> Dict:
     """
-    Cleans a raw parish name string, extracting the true name, distance,
-    and address components if present.
+    Enhanced address parsing using both usaddress library and regex fallbacks.
+    Extracts parish name, distance, and professional-grade address components.
     """
     # Handle None or empty input
     if not raw_name or not isinstance(raw_name, str):
@@ -129,7 +129,7 @@ def clean_parish_name_and_extract_address(raw_name: str) -> Dict:
         "distance_miles": None
     }
 
-    # Regex to find distance (e.g., (203.7 Miles))
+    # Step 1: Extract distance (e.g., (203.7 Miles))
     distance_match = re.search(r'\((\d+\.?\d*)\s*Miles\)', raw_name, re.IGNORECASE)
     if distance_match:
         try:
@@ -139,12 +139,120 @@ def clean_parish_name_and_extract_address(raw_name: str) -> Dict:
         except ValueError:
             pass # Keep distance as None if conversion fails
 
+    # Step 2: Try enhanced address parsing with usaddress library
+    enhanced_result = enhanced_address_parsing(raw_name)
+    if enhanced_result["success"]:
+        # Use enhanced parsing results
+        cleaned_data.update({
+            "name": enhanced_result["parish_name"],
+            "street_address": enhanced_result["street_address"],
+            "city": enhanced_result["city"],
+            "state": enhanced_result["state"],
+            "zip_code": enhanced_result["zip_code"],
+            "full_address": enhanced_result["full_address"]
+        })
+        return cleaned_data
+
+    # Step 3: Fallback to original regex-based parsing
+    return legacy_address_parsing(raw_name, cleaned_data)
+
+
+def enhanced_address_parsing(raw_name: str) -> Dict:
+    """
+    Professional address parsing using usaddress library with intelligent fallbacks.
+    """
+    try:
+        import usaddress
+        
+        # Look for address patterns in the string
+        # Address patterns typically start with a number
+        address_pattern = re.search(r'(\d+\s+[A-Za-z0-9\s\.\-\,]+(?:street|st|avenue|ave|road|rd|drive|dr|way|lane|ln|boulevard|blvd|court|ct|plaza|pl|terrace|ter|circle|cir|parkway|pkwy|highway|hwy|route|rte|blvd).*?)$', raw_name, re.IGNORECASE)
+        
+        if not address_pattern:
+            return {"success": False}
+            
+        potential_address = address_pattern.group(1).strip()
+        parish_name = raw_name.replace(potential_address, '').strip().rstrip(',').strip()
+        
+        # Parse the address with usaddress
+        parsed_components, address_type = usaddress.tag(potential_address)
+        
+        # Only proceed if we got a valid street address
+        if address_type != 'Street Address':
+            return {"success": False}
+        
+        # Extract components using usaddress labels
+        street_parts = []
+        
+        # Build street address from components
+        if parsed_components.get('AddressNumber'):
+            street_parts.append(parsed_components['AddressNumber'])
+            
+        if parsed_components.get('StreetNamePreDirectional'):
+            street_parts.append(parsed_components['StreetNamePreDirectional'])
+            
+        if parsed_components.get('StreetNamePreType'):
+            street_parts.append(parsed_components['StreetNamePreType'])
+            
+        if parsed_components.get('StreetName'):
+            street_parts.append(parsed_components['StreetName'])
+            
+        if parsed_components.get('StreetNamePostType'):
+            street_parts.append(parsed_components['StreetNamePostType'])
+            
+        if parsed_components.get('StreetNamePostDirectional'):
+            street_parts.append(parsed_components['StreetNamePostDirectional'])
+            
+        # Handle unit/apartment info
+        unit_parts = []
+        for unit_key in ['OccupancyType', 'OccupancyIdentifier']:
+            if parsed_components.get(unit_key):
+                unit_parts.append(parsed_components[unit_key])
+        
+        street_address = ' '.join(street_parts)
+        if unit_parts:
+            street_address += ' ' + ' '.join(unit_parts)
+            
+        city = parsed_components.get('PlaceName', '')
+        state = parsed_components.get('StateName', '')
+        zip_code = parsed_components.get('ZipCode', '')
+        
+        # Build full address
+        full_address_parts = [street_address]
+        if city:
+            full_address_parts.append(city)
+        if state:
+            if city:
+                full_address_parts[-1] = f"{city}, {state}"
+            else:
+                full_address_parts.append(state)
+        if zip_code:
+            full_address_parts.append(zip_code)
+            
+        full_address = ' '.join(full_address_parts)
+        
+        return {
+            "success": True,
+            "parish_name": parish_name,
+            "street_address": street_address,
+            "city": city,
+            "state": state,
+            "zip_code": zip_code,
+            "full_address": full_address,
+            "parsing_method": "usaddress_enhanced"
+        }
+        
+    except Exception as e:
+        # If usaddress fails, return failure to trigger fallback
+        logger.debug(f"Enhanced address parsing failed: {e}")
+        return {"success": False}
+
+
+def legacy_address_parsing(raw_name: str, cleaned_data: Dict) -> Dict:
+    """
+    Legacy regex-based address parsing as fallback.
+    """
     # Regex to find common address patterns at the end of the string
-    # This pattern looks for:
-    # - A number at the start of the address (street number)
-    # - Followed by street name components (words, possibly with periods or hyphens)
-    # - Followed by city, state, and zip code (optional)
-    # - It's anchored to the end of the string ($)
     address_pattern = re.compile(
         r'(\d+\s+[\w\s\.\-]+(?:street|st|avenue|ave|road|rd|drive|dr|way|lane|ln|boulevard|blvd|court|ct|plaza|pl|terrace|ter|circle|cir|parkway|pkwy|highway|hwy|route|rte|blvd)\.?,?\s*.*?\s*\w{2}\s*\d{5}(?:-\d{4})?)$',
         re.IGNORECASE

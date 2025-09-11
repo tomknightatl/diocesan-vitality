@@ -84,8 +84,8 @@ function Diocese() {
           {parishes.map((parish, index) => (
             <tr key={parish.id || index}>
               <td>{parish.Name}</td>
-              <td>{parish.Address}</td>
-              <td><a href={parish.Website} target="_blank" rel="noopener noreferrer">{parish.Website}</a></td>
+              <td>{parish['Street Address']}</td>
+              <td><a href={parish.Web} target="_blank" rel="noopener noreferrer">{parish.Web}</a></td>
               <td>{parish.reconciliation_facts ? 'Yes' : 'No'}</td>
               <td>{parish.adoration_facts ? 'Yes' : 'No'}</td>
             </tr>
