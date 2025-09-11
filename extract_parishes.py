@@ -4,6 +4,9 @@ Main script to extract parish data from U.S. Catholic dioceses
 """
 
 import argparse
+import gc
+import psutil
+import os
 
 import config
 from core.db import get_supabase_client
@@ -16,6 +19,29 @@ from parish_extractors import (ensure_chrome_installed,
 from core.logger import get_logger
 
 logger = get_logger(__name__)
+
+def get_memory_usage():
+    """Get current memory usage in MB"""
+    process = psutil.Process(os.getpid())
+    return process.memory_info().rss / 1024 / 1024
+
+def force_garbage_collection():
+    """Force garbage collection and log memory usage"""
+    initial_memory = get_memory_usage()
+    
+    # Force garbage collection
+    collected = gc.collect()
+    
+    final_memory = get_memory_usage()
+    memory_freed = initial_memory - final_memory
+    
+    if memory_freed > 0:
+        logger.info(f"  🧹 Memory cleanup: Freed {memory_freed:.1f} MB (collected {collected} objects)")
+        logger.info(f"  💾 Current memory usage: {final_memory:.1f} MB")
+    else:
+        logger.debug(f"  💾 Current memory usage: {final_memory:.1f} MB (collected {collected} objects)")
+    
+    return final_memory
 
 def main(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MAX_PARISHES_PER_DIOCESE):
     """
@@ -79,8 +105,13 @@ def main(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MAX_PARISHES_P
         return
 
     try:
-        for diocese_info in dioceses_to_process:
+        initial_memory = get_memory_usage()
+        logger.info(f"  🚀 Starting parish extraction with {initial_memory:.1f} MB memory usage")
+        
+        for i, diocese_info in enumerate(dioceses_to_process):
             logger.info(f"Processing {diocese_info['name']} (ID: {diocese_info['id']})...")
+            
+            # Process the diocese
             result = process_diocese_with_detailed_extraction(diocese_info, driver, num_parishes_per_diocese)
 
             # Save parishes to database
@@ -93,7 +124,28 @@ def main(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MAX_PARISHES_P
                     diocese_info['parish_directory_url'],
                     supabase
                 )
+            
+            # Strategic garbage collection after each diocese
+            if len(dioceses_to_process) > 1:  # Only log for multi-diocese runs
+                logger.info(f"  📊 Completed diocese {i+1}/{len(dioceses_to_process)}")
+                force_garbage_collection()
+                
+                # Additional cleanup for large runs
+                if (i + 1) % 5 == 0:  # Every 5 dioceses
+                    logger.info(f"  🔄 Deep cleanup after {i+1} dioceses...")
+                    # Force more aggressive cleanup
+                    for generation in range(3):
+                        gc.collect(generation)
+                    
+                    current_memory = get_memory_usage()
+                    memory_growth = current_memory - initial_memory
+                    if memory_growth > 100:  # More than 100MB growth
+                        logger.warning(f"  ⚠️ Memory usage has grown by {memory_growth:.1f} MB - consider restarting")
+                        
     finally:
+        # Final cleanup before closing
+        logger.info("  🧹 Final memory cleanup...")
+        force_garbage_collection()
         close_driver()
 
 if __name__ == "__main__":
