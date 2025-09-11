@@ -460,7 +460,7 @@ class ParishFinderExtractor(BaseExtractor):
         return parishes
 
     def _extract_parish_from_finder_element(self, element, base_url: str, element_num: int) -> Optional[ParishData]:
-        """Extract parish data from a single parish finder element"""
+        """Extract parish data from a single parish finder element with enhanced detail extraction"""
         try:
             # Extract parish name - handle eCatholic specific structure
             name = None
@@ -491,11 +491,11 @@ class ParishFinderExtractor(BaseExtractor):
             # Use the new cleaning function to separate name and address components
             cleaned_data = clean_parish_name_and_extract_address(name)
             clean_name = cleaned_data["name"]
-            street_address = cleaned_data["street_address"]
-            city = cleaned_data["city"]
-            state = cleaned_data["state"]
-            zip_code = cleaned_data["zip_code"]
-            full_address = cleaned_data["full_address"]
+            base_street_address = cleaned_data["street_address"]
+            base_city = cleaned_data["city"]
+            base_state = cleaned_data["state"]
+            base_zip_code = cleaned_data["zip_code"]
+            base_full_address = cleaned_data["full_address"]
             distance_miles = cleaned_data["distance_miles"]
 
             # Re-evaluate name after cleaning
@@ -507,31 +507,21 @@ class ParishFinderExtractor(BaseExtractor):
                    ['finder', 'directory', 'map', 'search', 'filter']):
                 return None
 
-            # Extract other fields from the DOM element
-            address = street_address  # Use cleaned address from name parsing
+            # Enhanced data extraction from expandable detail sections
+            enhanced_data = self._extract_enhanced_parish_details(element)
             
-            # Try to find additional address info in element text
-            element_text = element.get_text() if element else ""
-            if not address and element_text:
-                # Look for address patterns in the element text
-                address_match = re.search(r'\d+[A-Za-z0-9\s\.,\-]+(?:street|st|avenue|ave|road|rd|drive|dr|way|lane|ln|boulevard|blvd|court|ct)', element_text, re.IGNORECASE)
-                if address_match:
-                    address = address_match.group().strip()
-
-            # Extract phone from element text
-            phone = None
-            if element_text:
-                phone_match = re.search(r'\(?(\d{3})\)?[-.\s]?(\d{3})[-.\s]?(\d{4})', element_text)
-                if phone_match:
-                    phone = f"({phone_match.group(1)}) {phone_match.group(2)}-{phone_match.group(3)}"
-
-            # Extract website from links in element
-            website = None
-            website_link = element.find('a') if element else None
-            if website_link and website_link.get('href'):
-                href = website_link.get('href')
-                if href.startswith('http') or href.startswith('www'):
-                    website = href
+            # Merge base data with enhanced data (enhanced takes priority)
+            street_address = enhanced_data.get('street_address') or base_street_address
+            city = enhanced_data.get('city') or base_city
+            state = enhanced_data.get('state') or base_state
+            zip_code = enhanced_data.get('zip_code') or base_zip_code
+            full_address = enhanced_data.get('full_address') or base_full_address
+            phone = enhanced_data.get('phone')
+            fax = enhanced_data.get('fax')
+            website = enhanced_data.get('website')
+            
+            # Use enhanced address as primary, fallback to base
+            address = street_address or base_street_address
 
             # For parish finder, coordinates might be in data attributes
             lat = lng = None
@@ -568,13 +558,134 @@ class ParishFinderExtractor(BaseExtractor):
                 latitude=float(lat) if lat else None,
                 longitude=float(lng) if lng else None,
                 distance_miles=distance_miles,
-                confidence_score=0.8,
-                extraction_method="parish_finder_extraction"
+                confidence_score=0.85,  # Increased confidence with enhanced data
+                extraction_method="parish_finder_enhanced_extraction"
             )
 
         except Exception as e:
             logger.warning(f"        ⚠️ Error parsing parish element {element_num}: {str(e)[:50]}...")
             return None
+
+    def _extract_enhanced_parish_details(self, soup_element) -> Dict:
+        """Extract enhanced parish details from expandable detail sections"""
+        enhanced_data = {}
+        
+        try:
+            # Look for the expandable detail container
+            detail_section = soup_element.find('div', class_='mapLocationDetail')
+            if not detail_section:
+                return enhanced_data
+            
+            # Get all text content from the detail section
+            detail_text = detail_section.get_text() if detail_section else ""
+            
+            if detail_text:
+                # Extract phone number with more comprehensive patterns
+                phone_patterns = [
+                    r'Phone:\s*(\(?(?:\d{3})\)?\s*[-.\s]?\d{3}[-.\s]?\d{4})',
+                    r'P:\s*(\(?(?:\d{3})\)?\s*[-.\s]?\d{3}[-.\s]?\d{4})',
+                    r'\b(\d{3}[-.\s]?\d{3}[-.\s]?\d{4})\b'
+                ]
+                
+                for pattern in phone_patterns:
+                    phone_match = re.search(pattern, detail_text, re.IGNORECASE)
+                    if phone_match:
+                        phone_raw = phone_match.group(1).strip()
+                        # Standardize phone format
+                        phone_clean = re.sub(r'[^\d]', '', phone_raw)
+                        if len(phone_clean) == 10:
+                            enhanced_data['phone'] = f"({phone_clean[:3]}) {phone_clean[3:6]}-{phone_clean[6:]}"
+                        break
+
+                # Extract fax number
+                fax_match = re.search(r'Fax:\s*(\(?(?:\d{3})\)?\s*[-.\s]?\d{3}[-.\s]?\d{4})', detail_text, re.IGNORECASE)
+                if fax_match:
+                    fax_raw = fax_match.group(1).strip()
+                    fax_clean = re.sub(r'[^\d]', '', fax_raw)
+                    if len(fax_clean) == 10:
+                        enhanced_data['fax'] = f"({fax_clean[:3]}) {fax_clean[3:6]}-{fax_clean[6:]}"
+
+                # Extract website from detail section
+                website_link = detail_section.find('a')
+                if website_link and website_link.get('href'):
+                    href = website_link.get('href').strip()
+                    if href.startswith('http') or href.startswith('www'):
+                        enhanced_data['website'] = href
+
+                # Extract enhanced address with zip code
+                # Look for complete address patterns in the detail text
+                address_patterns = [
+                    # Full address with zip: "123 Main St City, ST 12345"
+                    r'(\d+\s+[A-Za-z0-9\s\.\-]+(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Way|Lane|Ln|Boulevard|Blvd|Court|Ct|Plaza|Pl|Terrace|Ter|Circle|Cir|Parkway|Pkwy|Highway|Hwy|Route|Rte)\.?,?\s*[A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5}(?:-\d{4})?)',
+                    # Address with zip on new line: "123 Main St\nCity, ST 12345"
+                    r'(\d+\s+[A-Za-z0-9\s\.\-]+(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Way|Lane|Ln|Boulevard|Blvd|Court|Ct|Plaza|Pl|Terrace|Ter|Circle|Cir|Parkway|Pkwy|Highway|Hwy|Route|Rte)\.?)\s*\n?\s*([A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5}(?:-\d{4})?)'
+                ]
+                
+                for pattern in address_patterns:
+                    addr_match = re.search(pattern, detail_text, re.IGNORECASE | re.MULTILINE)
+                    if addr_match:
+                        if len(addr_match.groups()) == 1:
+                            # Single group - complete address
+                            full_addr = addr_match.group(1).strip()
+                            enhanced_data['full_address'] = full_addr
+                            
+                            # Parse components
+                            self._parse_address_components(full_addr, enhanced_data)
+                        else:
+                            # Two groups - street + city/state/zip
+                            street = addr_match.group(1).strip()
+                            city_state_zip = addr_match.group(2).strip()
+                            full_addr = f"{street} {city_state_zip}"
+                            enhanced_data['full_address'] = full_addr
+                            enhanced_data['street_address'] = street
+                            
+                            # Parse city, state, zip from second group
+                            self._parse_city_state_zip(city_state_zip, enhanced_data)
+                        break
+
+        except Exception as e:
+            logger.debug(f"Error extracting enhanced details: {e}")
+        
+        return enhanced_data
+
+    def _parse_address_components(self, full_address: str, enhanced_data: Dict):
+        """Parse address components from full address string"""
+        # City, State, Zip pattern
+        city_state_zip_match = re.search(r'(.+?),\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)$', full_address)
+        if city_state_zip_match:
+            before_city = city_state_zip_match.group(1)
+            state = city_state_zip_match.group(2)
+            zip_code = city_state_zip_match.group(3)
+            
+            # Split before_city into street and city
+            parts = before_city.strip().split()
+            if len(parts) >= 4:  # At least "123 Main St CityName"
+                # Find where street ends and city begins (look for street suffixes)
+                street_suffixes = ['Street', 'St', 'Avenue', 'Ave', 'Road', 'Rd', 'Drive', 'Dr', 'Way', 'Lane', 'Ln', 'Boulevard', 'Blvd', 'Court', 'Ct']
+                
+                for i, part in enumerate(parts):
+                    if any(suffix.lower() == part.lower() for suffix in street_suffixes):
+                        street_address = ' '.join(parts[:i+1])
+                        city = ' '.join(parts[i+1:])
+                        enhanced_data['street_address'] = street_address
+                        enhanced_data['city'] = city
+                        break
+                else:
+                    # No clear street suffix, assume last 1-2 words are city
+                    if len(parts) >= 2:
+                        enhanced_data['street_address'] = ' '.join(parts[:-1])
+                        enhanced_data['city'] = parts[-1]
+            
+            enhanced_data['state'] = state
+            enhanced_data['zip_code'] = zip_code
+
+    def _parse_city_state_zip(self, city_state_zip: str, enhanced_data: Dict):
+        """Parse city, state, and zip from city/state/zip string"""
+        match = re.search(r'([A-Za-z\s]+),\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)$', city_state_zip)
+        if match:
+            enhanced_data['city'] = match.group(1).strip()
+            enhanced_data['state'] = match.group(2).strip()
+            enhanced_data['zip_code'] = match.group(3).strip()
 
     def _extract_from_site_info(self, name: str, city: str, site_info, element, base_url: str) -> Optional[ParishData]:
         """Extract detailed information from siteInfo section"""
