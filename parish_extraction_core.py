@@ -487,82 +487,144 @@ PARISH_SKIP_TERMS = [
 
 def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_id: int, diocese_name: str, diocese_url: str, 
                                      parish_directory_url: str, supabase):
-    """Enhanced version of Supabase upsert function with Parish Finder support"""
+    """Enhanced version of Supabase upsert function with batch operations and Parish Finder support"""
 
     if not supabase:
         logger.error("  ❌ Supabase not available")
         return False
 
-    success_count = 0
-    detail_success_count = 0
+    if not parishes:
+        logger.info("  📝 No parishes to process")
+        return True
+
+    # Phase 1: Filter and prepare data for batch processing
+    valid_parishes = []
     skipped_count = 0
+    detail_success_count = 0
+
+    logger.info(f"  🔄 Preparing {len(parishes)} parishes for batch upload...")
 
     for parish in parishes:
         try:
             # Enhanced filtering for non-parish items
-            # Use the constant
             if any(skip_word in parish.name.lower() for skip_word in PARISH_SKIP_TERMS):
-                logger.info(f"    ⏭️ Skipped: {parish.name} (not a parish)")
+                logger.debug(f"    ⏭️ Skipped: {parish.name} (not a parish)")
                 skipped_count += 1
                 continue
 
             # Must have a meaningful name to proceed
             if not parish.name or len(parish.name.strip()) < 3:
-                logger.info(f"    ⏭️ Skipped: Invalid name for parish")
+                logger.debug(f"    ⏭️ Skipped: Invalid name for parish")
                 skipped_count += 1
                 continue
 
             # Convert to schema format
             supabase_data = prepare_parish_for_supabase(parish, diocese_id, diocese_name, diocese_url, parish_directory_url)
-
             clean_data = _clean_supabase_data(supabase_data)
 
             # Must have a name to proceed
             if not clean_data.get('Name') or len(clean_data.get('Name', '')) < 3:
-                logger.info(f"    ⏭️ Skipped: Invalid name after cleaning")
+                logger.debug(f"    ⏭️ Skipped: Invalid name after cleaning")
                 skipped_count += 1
                 continue
 
-            # Use existing upsert logic
-            response = supabase.table('Parishes').upsert(clean_data).execute()
+            valid_parishes.append({
+                'data': clean_data,
+                'original': parish
+            })
 
-            if hasattr(response, 'error') and response.error:
-                logger.error(f"    ❌ Database error for {parish.name}: {response.error}")
-            else:
-                success_count += 1
-                if parish.detail_extraction_success:
-                    detail_success_count += 1
-                    detail_indicator = "📍"
-                else:
-                    detail_indicator = "📌"
-
-                # Show confidence and extraction method
-                method_short = parish.extraction_method.replace('_extraction', '').replace('_', ' ')
-                logger.info(f"    ✅ {detail_indicator} Saved: {parish.name}")
-                logger.info(f"        📊 Method: {method_short}, Confidence: {parish.confidence_score:.2f}")
-
-                # Show what fields were captured
-                captured_fields = []
-                if parish.city: captured_fields.append("city")
-                if parish.address or parish.street_address or parish.full_address: captured_fields.append("address")
-                if parish.phone: captured_fields.append("phone")
-                if parish.website: captured_fields.append("website")
-                if parish.latitude and parish.longitude: captured_fields.append("coordinates")
-                if parish.clergy_info: captured_fields.append("clergy")
-                if parish.service_times: captured_fields.append("schedule")
-
-                if captured_fields:
-                    logger.info(f"        📋 Fields: {', '.join(captured_fields)}")
+            if parish.detail_extraction_success:
+                detail_success_count += 1
 
         except Exception as e:
-            logger.error(f"    ❌ Error saving {parish.name}: {e}")
+            logger.warning(f"    ⚠️ Error preparing {parish.name}: {e}")
+            skipped_count += 1
 
+    if not valid_parishes:
+        logger.info(f"  📊 Results: 0 saved, {skipped_count} skipped, 0 with detailed info")
+        return False
+
+    # Phase 2: Batch upsert with optimized batch size
+    batch_size = min(50, len(valid_parishes))  # Optimal batch size for Supabase
+    success_count = 0
+    total_batches = (len(valid_parishes) + batch_size - 1) // batch_size
+
+    logger.info(f"  🚀 Processing {len(valid_parishes)} parishes in {total_batches} batch(es) of {batch_size}...")
+
+    for batch_num in range(total_batches):
+        start_idx = batch_num * batch_size
+        end_idx = min(start_idx + batch_size, len(valid_parishes))
+        batch = valid_parishes[start_idx:end_idx]
+        
+        try:
+            # Prepare batch data
+            batch_data = [item['data'] for item in batch]
+            
+            # Execute batch upsert
+            logger.info(f"    📦 Batch {batch_num + 1}/{total_batches}: Upserting {len(batch_data)} parishes...")
+            response = supabase.table('Parishes').upsert(batch_data, on_conflict='Name,diocese_id').execute()
+
+            if hasattr(response, 'error') and response.error:
+                logger.error(f"    ❌ Batch {batch_num + 1} database error: {response.error}")
+                # Try individual upserts as fallback for this batch
+                logger.info(f"    🔄 Falling back to individual upserts for batch {batch_num + 1}...")
+                batch_success = _fallback_individual_upserts(batch, supabase)
+                success_count += batch_success
+            else:
+                batch_success = len(batch_data)
+                success_count += batch_success
+                logger.info(f"    ✅ Batch {batch_num + 1}: Successfully saved {batch_success} parishes")
+                
+                # Log sample of saved parishes for verification
+                for i, item in enumerate(batch[:3]):  # Show first 3 parishes in batch
+                    parish = item['original']
+                    detail_indicator = "📍" if parish.detail_extraction_success else "📌"
+                    method_short = parish.extraction_method.replace('_extraction', '').replace('_', ' ')
+                    logger.info(f"      {detail_indicator} {parish.name} ({method_short}, {parish.confidence_score:.2f})")
+                
+                if len(batch) > 3:
+                    logger.info(f"      ... and {len(batch) - 3} more parishes")
+
+        except Exception as e:
+            logger.error(f"    ❌ Batch {batch_num + 1} failed: {e}")
+            # Try individual upserts as fallback
+            logger.info(f"    🔄 Falling back to individual upserts for batch {batch_num + 1}...")
+            batch_success = _fallback_individual_upserts(batch, supabase)
+            success_count += batch_success
+
+    # Phase 3: Summary reporting
     logger.info(f"  📊 Results: {success_count} saved, {skipped_count} skipped, {detail_success_count} with detailed info")
     if success_count > 0:
         success_rate = (success_count / (success_count + skipped_count)) * 100
         logger.info(f"  📈 Success rate: {success_rate:.1f}%")
+        
+        # Performance improvement calculation
+        individual_calls_would_be = success_count + skipped_count
+        actual_db_calls = total_batches + (skipped_count if success_count < len(valid_parishes) else 0)
+        performance_improvement = ((individual_calls_would_be - actual_db_calls) / individual_calls_would_be) * 100
+        logger.info(f"  ⚡ Performance: {actual_db_calls} DB calls vs {individual_calls_would_be} individual ({performance_improvement:.0f}% reduction)")
 
     return success_count > 0
+
+
+def _fallback_individual_upserts(batch: List[Dict], supabase) -> int:
+    """Fallback function for individual upserts when batch fails"""
+    success_count = 0
+    
+    for item in batch:
+        try:
+            response = supabase.table('Parishes').upsert(item['data']).execute()
+            if not (hasattr(response, 'error') and response.error):
+                success_count += 1
+                parish = item['original']
+                logger.info(f"      ✅ 📌 Individually saved: {parish.name}")
+            else:
+                logger.error(f"      ❌ Individual upsert error: {response.error}")
+        except Exception as e:
+            parish = item['original']
+            logger.error(f"      ❌ Individual upsert failed for {parish.name}: {e}")
+    
+    return success_count
 
 def analyze_parish_finder_quality(parishes: List[ParishData]) -> Dict:
     """Analyze the quality of Parish Finder extraction"""
