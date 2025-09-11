@@ -16,3 +16,4 @@ fastapi
 uvicorn
 lxml
 psutil
+usaddress
