@@ -16,6 +16,9 @@ from google.api_core.exceptions import (DeadlineExceeded, GoogleAPIError,
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from selenium.common.exceptions import TimeoutException, WebDriverException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from tenacity import RetryError, retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 import config
@@ -300,7 +303,8 @@ def search_for_directory_link(diocese_name, diocese_website_url):
                     if link and link not in unique_links:
                         search_results_items.append(item)
                         unique_links.add(link)
-                time.sleep(0.2)
+                # Brief pause between API calls to be respectful
+                time.sleep(0.1)  # Reduced from 0.2 to 0.1
             except RetryError as e:
                 logger.info(f"    Search API call failed after retries for query '{q}': {e}")
                 continue
@@ -448,7 +452,10 @@ def find_parish_directories(diocese_id=None, max_dioceses_to_process=config.DEFA
         method = "not_found_all_stages"
         try:
             get_page_with_retry(driver_instance, current_url)
-            time.sleep(0.5)
+            # Wait for page to fully load
+            WebDriverWait(driver_instance, 10).until(
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
+            )
             page_source = driver_instance.page_source
             soup = BeautifulSoup(page_source, "html.parser")
             candidate_links = find_candidate_urls(soup, current_url)
