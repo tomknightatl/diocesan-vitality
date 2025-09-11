@@ -16,6 +16,7 @@ This module contains:
 # DEPENDENCIES AND IMPORTS
 # =============================================================================
 
+import gc
 import time
 import re
 import subprocess
@@ -1365,6 +1366,9 @@ def process_diocese_with_detailed_extraction(diocese_info: Dict, driver, max_par
         print("  🔍 Detecting website pattern...")
         detector = PatternDetector()
         pattern = detector.detect_pattern(html_content, parish_directory_url)
+        
+        # Clean up detector after pattern detection
+        del detector
 
         result['pattern_detected'] = {
             'platform': pattern.platform.value,
@@ -1504,6 +1508,23 @@ def process_diocese_with_detailed_extraction(diocese_info: Dict, driver, max_par
         print(f"  ❌ Processing error: {error_msg}")
 
     finally:
+        # Strategic memory cleanup after processing
+        # Clean up large objects that accumulate during processing
+        
+        # Clear local variables that might hold references
+        if 'soup' in locals():
+            soup.decompose()  # Release BeautifulSoup memory
+            del soup
+        if 'html_content' in locals():
+            del html_content
+        if 'parishes' in locals():
+            del parishes
+        
+        # Force garbage collection to free up memory
+        collected = gc.collect()
+        if collected > 0:
+            logger.debug(f"  🧹 Freed {collected} objects during diocese processing cleanup")
+            
         result['processing_time'] = time.time() - start_time
         print(f"  ⏱️ Completed in {result['processing_time']:.1f}s")
 
