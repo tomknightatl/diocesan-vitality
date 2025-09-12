@@ -21,6 +21,7 @@ import config
 from core.logger import get_logger
 from core.db import get_supabase_client # Import the get_supabase_client function
 from core.utils import normalize_url # Import normalize_url
+from core.schedule_keywords import load_keywords_from_database, get_all_keywords_for_priority_calculation
 
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
@@ -210,11 +211,9 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_u
     candidate_pages = {'reconciliation': [], 'adoration': []}
     discovered_urls = {}
 
-    recon_keywords = {'reconciliation': 5, 'confession': 5, 'schedule': 8, 'times': 3, 'sacrament': 1}
-    recon_negative_keywords = ['adoration', 'baptism', 'donate', 'giving']
-    adoration_keywords = {'adoration': 5, 'eucharist': 5, 'schedule': 3, 'times': 3}
-    adoration_negative_keywords = ['reconciliation', 'confession', 'baptism', 'donate', 'giving']
-    all_keywords = {**recon_keywords, **adoration_keywords}
+    # Load keywords from database
+    recon_keywords, recon_negative_keywords, adoration_keywords, adoration_negative_keywords = load_keywords_from_database(supabase)
+    all_keywords = get_all_keywords_for_priority_calculation(supabase)
 
     base_domain = urlparse(url).netloc.lower().replace('www.', '')
 
