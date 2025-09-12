@@ -1,5 +1,12 @@
 import os
-from fastapi import FastAPI, HTTPException
+import json
+import asyncio
+import psutil
+import time
+from datetime import datetime, timezone
+from typing import Dict, List, Set
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.websockets import WebSocketState
 from dotenv import load_dotenv
 from supabase import create_client, Client
 from pathlib import Path
@@ -36,6 +43,181 @@ if not SUPABASE_URL or not SUPABASE_KEY:
     raise RuntimeError("Supabase credentials not found in .env file")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# Global monitoring state
+class MonitoringManager:
+    def __init__(self):
+        self.websocket_connections: Set[WebSocket] = set()
+        self.start_time = time.time()
+        self.extraction_status = {
+            "status": "idle",
+            "current_diocese": None,
+            "parishes_processed": 0,
+            "total_parishes": 0,
+            "success_rate": 0,
+            "started_at": None,
+            "progress_percentage": 0,
+            "estimated_completion": None
+        }
+        self.circuit_breakers = {}
+        self.performance_metrics = {
+            "parishes_per_minute": 0,
+            "queue_size": 0,
+            "pool_utilization": 0,
+            "total_requests": 0,
+            "successful_requests": 0
+        }
+        self.recent_errors = []
+        self.extraction_history = []
+        self.max_errors = 50
+
+    async def add_connection(self, websocket: WebSocket):
+        """Add a new WebSocket connection"""
+        self.websocket_connections.add(websocket)
+        print(f"New WebSocket connection added. Total: {len(self.websocket_connections)}")
+        
+        # Send initial state to new connection
+        await self.send_to_connection(websocket, {
+            "type": "system_health",
+            "payload": self.get_system_health()
+        })
+        await self.send_to_connection(websocket, {
+            "type": "extraction_status", 
+            "payload": self.extraction_status
+        })
+        await self.send_to_connection(websocket, {
+            "type": "circuit_breaker_status",
+            "payload": self.circuit_breakers
+        })
+        await self.send_to_connection(websocket, {
+            "type": "performance_metrics",
+            "payload": self.performance_metrics
+        })
+
+    async def remove_connection(self, websocket: WebSocket):
+        """Remove a WebSocket connection"""
+        self.websocket_connections.discard(websocket)
+        print(f"WebSocket connection removed. Total: {len(self.websocket_connections)}")
+
+    async def send_to_connection(self, websocket: WebSocket, message: Dict):
+        """Send message to a specific WebSocket connection"""
+        try:
+            if websocket.client_state == WebSocketState.CONNECTED:
+                await websocket.send_text(json.dumps(message))
+        except Exception as e:
+            print(f"Error sending message to WebSocket: {e}")
+            await self.remove_connection(websocket)
+
+    async def broadcast(self, message: Dict):
+        """Broadcast message to all connected WebSocket clients"""
+        if not self.websocket_connections:
+            return
+        
+        disconnected = set()
+        for websocket in self.websocket_connections.copy():
+            try:
+                if websocket.client_state == WebSocketState.CONNECTED:
+                    await websocket.send_text(json.dumps(message))
+                else:
+                    disconnected.add(websocket)
+            except Exception as e:
+                print(f"Error broadcasting to WebSocket: {e}")
+                disconnected.add(websocket)
+        
+        # Remove disconnected connections
+        for ws in disconnected:
+            await self.remove_connection(ws)
+
+    def get_system_health(self):
+        """Get current system health metrics"""
+        try:
+            cpu_percent = psutil.cpu_percent(interval=1)
+            memory = psutil.virtual_memory()
+            uptime = time.time() - self.start_time
+            
+            status = "healthy"
+            if cpu_percent > 80 or memory.percent > 85:
+                status = "warning"
+            
+            return {
+                "status": status,
+                "cpu_usage": round(cpu_percent, 1),
+                "memory_usage": round(memory.percent, 1),
+                "uptime": round(uptime),
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "error": str(e),
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+
+    async def update_extraction_status(self, status_data: Dict):
+        """Update and broadcast extraction status"""
+        self.extraction_status.update(status_data)
+        await self.broadcast({
+            "type": "extraction_status",
+            "payload": self.extraction_status
+        })
+
+    async def update_circuit_breakers(self, circuit_data: Dict):
+        """Update and broadcast circuit breaker status"""
+        self.circuit_breakers.update(circuit_data)
+        await self.broadcast({
+            "type": "circuit_breaker_status",
+            "payload": self.circuit_breakers
+        })
+
+    async def update_performance_metrics(self, metrics_data: Dict):
+        """Update and broadcast performance metrics"""
+        self.performance_metrics.update(metrics_data)
+        await self.broadcast({
+            "type": "performance_metrics",
+            "payload": self.performance_metrics
+        })
+
+    async def add_error(self, error_data: Dict):
+        """Add error to recent errors and broadcast"""
+        error_entry = {
+            **error_data,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        self.recent_errors.insert(0, error_entry)
+        self.recent_errors = self.recent_errors[:self.max_errors]
+        
+        await self.broadcast({
+            "type": "error_alert",
+            "payload": error_entry
+        })
+
+    async def add_extraction_complete(self, extraction_data: Dict):
+        """Add completed extraction to history"""
+        extraction_entry = {
+            **extraction_data,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        self.extraction_history.insert(0, extraction_entry)
+        self.extraction_history = self.extraction_history[:20]  # Keep last 20
+        
+        await self.broadcast({
+            "type": "extraction_complete",
+            "payload": extraction_entry
+        })
+
+    async def send_live_log(self, log_data: Dict):
+        """Send live log entry to all connections"""
+        log_entry = {
+            **log_data,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        await self.broadcast({
+            "type": "live_log",
+            "payload": log_entry
+        })
+
+# Global monitoring manager instance
+monitoring_manager = MonitoringManager()
 
 @app.get("/api")
 def read_root():
@@ -171,3 +353,122 @@ def get_parishes_for_diocese(diocese_id: int):
         return {"data": parishes}
     except Exception as e:
         return {"error": str(e)}
+
+# WebSocket endpoint for real-time monitoring
+@app.websocket("/ws/monitoring")
+async def websocket_monitoring(websocket: WebSocket):
+    """WebSocket endpoint for real-time monitoring updates"""
+    await websocket.accept()
+    await monitoring_manager.add_connection(websocket)
+    
+    try:
+        while True:
+            # Keep connection alive and handle any incoming messages
+            try:
+                data = await websocket.receive_text()
+                # Handle any client messages if needed
+                message = json.loads(data)
+                if message.get("type") == "ping":
+                    await websocket.send_text(json.dumps({"type": "pong"}))
+            except WebSocketDisconnect:
+                break
+            except Exception as e:
+                print(f"WebSocket error: {e}")
+                break
+            
+    except WebSocketDisconnect:
+        pass
+    finally:
+        await monitoring_manager.remove_connection(websocket)
+
+# Monitoring API endpoints
+@app.get("/api/monitoring/status")
+async def get_monitoring_status():
+    """Get current monitoring status"""
+    return {
+        "system_health": monitoring_manager.get_system_health(),
+        "extraction_status": monitoring_manager.extraction_status,
+        "circuit_breakers": monitoring_manager.circuit_breakers,
+        "performance_metrics": monitoring_manager.performance_metrics,
+        "recent_errors": monitoring_manager.recent_errors[:10],  # Last 10 errors
+        "extraction_history": monitoring_manager.extraction_history[:10],  # Last 10 extractions
+        "websocket_connections": len(monitoring_manager.websocket_connections)
+    }
+
+@app.post("/api/monitoring/extraction_status")
+async def update_extraction_status_endpoint(status_data: dict):
+    """Update extraction status (for async extraction scripts to call)"""
+    try:
+        await monitoring_manager.update_extraction_status(status_data)
+        return {"status": "success"}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/monitoring/circuit_breakers")
+async def update_circuit_breakers_endpoint(circuit_data: dict):
+    """Update circuit breaker status (for async extraction scripts to call)"""
+    try:
+        await monitoring_manager.update_circuit_breakers(circuit_data)
+        return {"status": "success"}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/monitoring/performance")
+async def update_performance_metrics_endpoint(metrics_data: dict):
+    """Update performance metrics (for async extraction scripts to call)"""
+    try:
+        await monitoring_manager.update_performance_metrics(metrics_data)
+        return {"status": "success"}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/monitoring/error")
+async def report_error_endpoint(error_data: dict):
+    """Report an error (for async extraction scripts to call)"""
+    try:
+        await monitoring_manager.add_error(error_data)
+        return {"status": "success"}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/monitoring/extraction_complete")
+async def report_extraction_complete_endpoint(extraction_data: dict):
+    """Report completed extraction (for async extraction scripts to call)"""
+    try:
+        await monitoring_manager.add_extraction_complete(extraction_data)
+        return {"status": "success"}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/monitoring/log")
+async def send_log_endpoint(log_data: dict):
+    """Send live log entry (for async extraction scripts to call)"""
+    try:
+        await monitoring_manager.send_live_log(log_data)
+        return {"status": "success"}
+    except Exception as e:
+        return {"error": str(e)}
+
+# Background task to periodically update system health
+async def periodic_health_update():
+    """Periodically broadcast system health updates"""
+    while True:
+        try:
+            health_data = monitoring_manager.get_system_health()
+            await monitoring_manager.broadcast({
+                "type": "system_health",
+                "payload": health_data
+            })
+            await asyncio.sleep(10)  # Update every 10 seconds
+        except Exception as e:
+            print(f"Error in periodic health update: {e}")
+            await asyncio.sleep(10)
+
+# Start background task when app starts
+@app.on_event("startup")
+async def startup_event():
+    """Start background tasks when app starts"""
+    asyncio.create_task(periodic_health_update())
+    print("🖥️ Real-time monitoring dashboard backend started")
+    print(f"📊 WebSocket monitoring available at: /ws/monitoring")
+    print(f"🔧 API monitoring endpoints available at: /api/monitoring/*")
