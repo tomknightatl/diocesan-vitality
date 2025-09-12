@@ -83,7 +83,7 @@ def plot_time_series(time_series_data: dict, table_name: str):
     min_date, max_date = None, None
 
     for col_name, df_ts in time_series_data.items():
-        ax.plot(df_ts['date'], df_ts['count'], marker='o', linestyle='-', label=f'Cumulative Records by {col_name}')
+        ax.plot(df_ts['date'], df_ts['count'], marker='o', linestyle='-', label=f'Records by {col_name}')
         
         # Update min and max dates
         if not df_ts.empty:
@@ -99,9 +99,9 @@ def plot_time_series(time_series_data: dict, table_name: str):
         from datetime import timedelta
         ax.set_xlim(min_date - timedelta(days=10), max_date + timedelta(days=10))
 
-    ax.set_title(f'Cumulative Number of Records in {table_name} Over Time')
-    ax.set_xlabel('Date')
-    ax.set_ylabel('Cumulative Number of Records')
+    ax.set_title(f'Number of Records in {table_name} Over Time')
+    ax.set_xlabel('Date', fontsize=14)
+    ax.set_ylabel('Number of Records', fontsize=14)
     ax.grid(True)
     ax.legend()
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
