@@ -27,8 +27,48 @@ from core.db import get_supabase_client
 from core.driver import close_driver, setup_driver
 from core.utils import normalize_url_join
 from core.logger import get_logger
+from core.db_batch_operations import get_batch_manager
 
 logger = get_logger(__name__)
+
+# Global batch manager for database operations
+_batch_manager = None
+
+def get_current_batch_manager():
+    """Get the current batch manager instance."""
+    global _batch_manager
+    return _batch_manager
+
+def batch_upsert_parish_directory(data_to_upsert, current_url):
+    """Helper function to batch upsert parish directory data."""
+    batch_manager = get_current_batch_manager()
+    if batch_manager:
+        logger.info(f"    Adding to batch queue: {data_to_upsert}")
+        success = batch_manager.add_record("DiocesesParishDirectory", data_to_upsert)
+        if success:
+            logger.info(f"    Batch flushed during processing of {current_url}")
+        else:
+            logger.info(f"    Added to batch queue for {current_url}")
+    else:
+        # Fallback to direct upsert if batch manager not available
+        logger.warning(f"    Batch manager not available, using direct upsert for {current_url}")
+        try:
+            supabase = get_supabase_client()
+            response = (
+                supabase.table("DiocesesParishDirectory")
+                .upsert(data_to_upsert, on_conflict="diocese_id")
+                .execute()
+            )
+            if hasattr(response, "error") and response.error:
+                error_detail = (
+                    response.error.message
+                    if hasattr(response.error, "message")
+                    else str(response.error)
+                )
+                raise Exception(f"Supabase upsert error: {error_detail}")
+            logger.info(f"    Successfully upserted data for {current_url} to Supabase.")
+        except Exception as e:
+            logger.info(f"    Error upserting data to Supabase for {current_url}: {e}")
 
 # --- Global Variables ---
 use_mock_genai_direct_page = False
@@ -578,6 +618,11 @@ def find_parish_directories(diocese_id=None, max_dioceses_to_process=config.DEFA
     supabase = get_supabase_client()
     if not supabase:
         return
+    
+    # Initialize batch manager for efficient database operations
+    global _batch_manager
+    _batch_manager = get_batch_manager(supabase, batch_size=20)
+    _batch_manager.configure_table("DiocesesParishDirectory", "diocese_id")
 
     dioceses_to_scan = []
     try:
@@ -656,6 +701,8 @@ def find_parish_directories(diocese_id=None, max_dioceses_to_process=config.DEFA
         return
 
     logger.info(f"Processing {len(dioceses_to_scan)} dioceses with Selenium...")
+    
+    # Process dioceses and automatically flush batches at the end
     for diocese_info in dioceses_to_scan:
         current_url = diocese_info["url"]
         diocese_name = diocese_info["name"]
@@ -750,27 +797,7 @@ def find_parish_directories(diocese_id=None, max_dioceses_to_process=config.DEFA
                 "found_method": method,
                 "updated_at": datetime.now(timezone.utc).isoformat(),
             }
-            logger.info(f"    Attempting to upsert data: {data_to_upsert}")
-            try:
-                response = (
-                    supabase.table("DiocesesParishDirectory")
-                    .upsert(data_to_upsert, on_conflict="diocese_id")
-                    .execute()
-                )
-                if hasattr(response, "error") and response.error:
-                    error_detail = (
-                        response.error.message
-                        if hasattr(response.error, "message")
-                        else str(response.error)
-                    )
-                    raise Exception(f"Supabase upsert error: {error_detail}")
-                logger.info(
-                    f"    Successfully upserted data for {current_url} to Supabase."
-                )
-            except Exception as supa_error:
-                logger.info(
-                    f"    Error upserting data to Supabase for {current_url}: {supa_error}"
-                )
+            batch_upsert_parish_directory(data_to_upsert, current_url)
         
         except RetryError as e:
             error_message = str(e).replace('"', "''")
@@ -787,25 +814,7 @@ def find_parish_directories(diocese_id=None, max_dioceses_to_process=config.DEFA
                 "found_method": method,
                 "updated_at": datetime.now(timezone.utc).isoformat(),
             }
-            try:
-                response = (
-                    supabase.table("DiocesesParishDirectory")
-                    .upsert(data_to_upsert, on_conflict="diocese_id")
-                    .execute()
-                )
-                if hasattr(response, "error") and response.error:
-                    error_detail = (
-                        response.error.message
-                        if hasattr(response.error, "message")
-                        else str(response.error)
-                    )
-                    raise Exception(
-                        f"Supabase upsert error (on page load fail): {error_detail}"
-                    )
-            except Exception as supa_error:
-                logger.info(
-                    f"    Error upserting error data to Supabase for {current_url}: {supa_error}"
-                )
+            batch_upsert_parish_directory(data_to_upsert, current_url)
         
         except Exception as e:
             error_message = str(e).replace('"', "''")
@@ -822,25 +831,13 @@ def find_parish_directories(diocese_id=None, max_dioceses_to_process=config.DEFA
                 "found_method": method,
                 "updated_at": datetime.now(timezone.utc).isoformat(),
             }
-            try:
-                response = (
-                    supabase.table("DiocesesParishDirectory")
-                    .upsert(data_to_upsert, on_conflict="diocese_id")
-                    .execute()
-                )
-                if hasattr(response, "error") and response.error:
-                    error_detail = (
-                        response.error.message
-                        if hasattr(response.error, "message")
-                        else str(response.error)
-                    )
-                    raise Exception(
-                        f"Supabase upsert error (on general error): {error_detail}"
-                    )
-            except Exception as supa_error:
-                logger.info(
-                    f"    Error upserting error data to Supabase for {current_url}: {supa_error}"
-                )
+            batch_upsert_parish_directory(data_to_upsert, current_url)
+    
+    # Flush any remaining batched records
+    if _batch_manager:
+        _batch_manager.flush_all()
+        stats = _batch_manager.get_stats()
+        logger.info(f"📊 Batch operations summary: {stats}")
     
     close_driver()
 
