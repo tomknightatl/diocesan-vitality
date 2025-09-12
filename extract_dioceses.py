@@ -13,29 +13,22 @@ from bs4 import BeautifulSoup
 import config
 from core.db import get_supabase_client
 from core.logger import get_logger
+from core.http_client import get_http_client
 
 logger = get_logger(__name__)
 
 def get_soup(url, retries=3, backoff_factor=1.0):
     """
     Fetches the content at the given URL and returns a BeautifulSoup object.
-    Implements retries with exponential backoff in case of request failures.
+    Uses connection pooling for improved performance and implements retries with exponential backoff.
     """
-    headers = {
-        'User-Agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                       'AppleWebKit/537.36 (KHTML, like Gecko) '
-                       'Chrome/58.0.3029.110 Safari/537.3'),
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate',
-        'Connection': 'keep-alive'
-    }
-
+    http_client = get_http_client()
+    
     for attempt in range(1, retries + 1):
         try:
             logger.info(f"Attempt {attempt}: Fetching URL: {url}")
-            response = requests.get(url, headers=headers, timeout=20)
+            response = http_client.get(url)
             logger.info(f"Received status code: {response.status_code}")
-            response.raise_for_status()
             return BeautifulSoup(response.text, 'html.parser')
         except requests.RequestException as e:
             logger.warning(f"Attempt {attempt} failed with error: {e}")
