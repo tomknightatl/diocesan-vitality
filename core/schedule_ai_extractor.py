@@ -22,8 +22,8 @@ class ScheduleAIExtractor:
     def __init__(self):
         """Initialize the AI extractor with Gemini API."""
         try:
-            genai.configure(api_key=config.GENAI_API_KEY_USCCB)
-            self.model = genai.GenerativeModel('gemini-pro')
+            genai.configure(api_key=config.GENAI_API_KEY)
+            self.model = genai.GenerativeModel('gemini-1.5-flash')
             logger.info("AI Schedule Extractor initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize AI Schedule Extractor: {e}")
@@ -235,7 +235,7 @@ def save_ai_schedule_results(supabase, results: List[Dict]):
             continue
             
         # Only save if schedule was found with reasonable confidence
-        if result.get('schedule_found') and result.get('confidence_score', 0) >= 60:
+        if result.get('schedule_found') and result.get('confidence_score', 0) >= 20:
             
             # Create structured fact value
             fact_value = {

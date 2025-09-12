@@ -42,11 +42,12 @@ SELECT
     p.diocese_id as diocese_id,
     
     -- Adoration schedule info (AI and keyword-based)
-    MAX(CASE 
+    BOOL_OR(CASE 
         WHEN pd.fact_type::text LIKE '%Adoration%' AND pd.extraction_method = 'ai_gemini' AND pd.confidence_score >= 70 
         THEN (pd.ai_structured_data->>'has_weekly_schedule')::boolean 
         WHEN pd.fact_type::text LIKE '%Adoration%' AND pd.extraction_method != 'ai_gemini'
         THEN (pd.fact_value IS NOT NULL AND pd.fact_value != 'Information not found')
+        ELSE false
     END) as has_weekly_adoration,
     
     MAX(CASE 
@@ -63,11 +64,12 @@ SELECT
     END) as adoration_frequency,
     
     -- Reconciliation schedule info (AI and keyword-based)
-    MAX(CASE 
+    BOOL_OR(CASE 
         WHEN pd.fact_type::text LIKE '%Reconciliation%' AND pd.extraction_method = 'ai_gemini' AND pd.confidence_score >= 70 
         THEN (pd.ai_structured_data->>'has_weekly_schedule')::boolean 
         WHEN pd.fact_type::text LIKE '%Reconciliation%' AND pd.extraction_method != 'ai_gemini'
         THEN (pd.fact_value IS NOT NULL AND pd.fact_value != 'Information not found')
+        ELSE false
     END) as has_weekly_reconciliation,
     
     MAX(CASE 
