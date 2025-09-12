@@ -2,6 +2,7 @@
 # coding: utf-8
 
 import argparse
+import asyncio
 import random
 import re
 import time
@@ -113,8 +114,117 @@ def _invoke_genai_model_with_retry(prompt):
     return model.generate_content(prompt)
 
 
+async def _invoke_genai_model_async(prompt):
+    """Async wrapper for GenAI model invocation."""
+    loop = asyncio.get_event_loop()
+    try:
+        # Run the sync GenAI call in a thread pool to avoid blocking the event loop
+        response = await loop.run_in_executor(None, _invoke_genai_model_with_retry, prompt)
+        return response
+    except Exception as e:
+        # Re-raise the exception to maintain the same error handling
+        raise e
+
+
+async def _analyze_single_link_async(link_info, diocese_name):
+    """Analyze a single link asynchronously."""
+    prompt = f"""Given the following information about a link from the {diocese_name or 'a diocesan'} website:
+    Link Text: "{link_info['text']}"
+    Link URL: "{link_info['href']}"
+    Surrounding Text: "{link_info['surrounding_text']}"
+    Does this link likely lead to a parish directory, a list of churches, or a way to find parishes?
+    Respond with a confidence score from 0 (not likely) to 10 (very likely) and a brief justification.
+    Format as: Score: [score], Justification: [text]"""
+    
+    try:
+        response = await _invoke_genai_model_async(prompt)
+        response_text = response.text
+        score_match = re.search(r"Score: (\d+)", response_text, re.IGNORECASE)
+        if score_match:
+            score = int(score_match.group(1))
+            return {"href": link_info["href"], "score": score}
+    except RetryError as e:
+        logger.info(f"    GenAI API call (Direct Link) failed after multiple retries for {link_info['href']}: {e}")
+    except Exception as e:
+        logger.info(f"    Error calling GenAI (Direct Link) for {link_info['href']}: {e}. No score assigned.")
+    
+    return {"href": link_info["href"], "score": 0}
+
+
+async def analyze_links_with_genai_async(candidate_links, diocese_name=None):
+    """Analyzes candidate links using GenAI concurrently to find the best parish directory URL."""
+    best_link_found = None
+    highest_score = -1
+    current_use_mock_direct = use_mock_genai_direct_page if config.GENAI_API_KEY else True
+    
+    if not current_use_mock_direct:
+        logger.info(
+            f"Attempting LIVE GenAI analysis (CONCURRENT) for {len(candidate_links)} direct page links for {diocese_name or 'Unknown Diocese'}."
+        )
+        
+        # Create concurrent tasks for all links
+        tasks = [_analyze_single_link_async(link_info, diocese_name) for link_info in candidate_links]
+        
+        # Execute all tasks concurrently with a reasonable semaphore to limit concurrent requests
+        semaphore = asyncio.Semaphore(5)  # Limit to 5 concurrent GenAI calls
+        
+        async def analyze_with_semaphore(task):
+            async with semaphore:
+                return await task
+                
+        # Wait for all tasks to complete
+        results = await asyncio.gather(*[analyze_with_semaphore(task) for task in tasks], return_exceptions=True)
+        
+        # Find the best result
+        for result in results:
+            if isinstance(result, dict) and result.get("score", 0) >= 7:
+                if result["score"] > highest_score:
+                    highest_score = result["score"]
+                    best_link_found = result["href"]
+        
+        return best_link_found
+    
+    # Mock implementation (unchanged)
+    mock_keywords = [
+        "parish", "church", "directory", "location", "finder", "search",
+        "map", "listing", "sacrament", "mass", "worship",
+    ]
+    for link_info in candidate_links:
+        current_score = 0
+        text_to_check = (
+            link_info["text"] + " " + link_info["href"] + " " + link_info["surrounding_text"]
+        ).lower()
+        for kw in mock_keywords:
+            if kw in text_to_check:
+                current_score += 3
+        if diocese_name and diocese_name.lower() in text_to_check:
+            current_score += 1
+        current_score = min(current_score, 10)
+        if current_score >= 7 and current_score > highest_score:
+            highest_score = current_score
+            best_link_found = link_info["href"]
+    return best_link_found
+
+
 def analyze_links_with_genai(candidate_links, diocese_name=None):
-    """Analyzes candidate links using GenAI (or mock) to find the best parish directory URL."""
+    """Synchronous wrapper for backwards compatibility."""
+    # If there are no candidate links or only one, use the old sequential method
+    if len(candidate_links) <= 1:
+        return _analyze_links_with_genai_sequential(candidate_links, diocese_name)
+    
+    # Use the async version for multiple links
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        # No event loop exists, create a new one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
+    return loop.run_until_complete(analyze_links_with_genai_async(candidate_links, diocese_name))
+
+
+def _analyze_links_with_genai_sequential(candidate_links, diocese_name=None):
+    """Original sequential implementation - kept as fallback."""
     best_link_found = None
     highest_score = -1
     current_use_mock_direct = use_mock_genai_direct_page if config.GENAI_API_KEY else True
@@ -188,8 +298,112 @@ def _invoke_search_api_with_retry(service, query, cx_id):
     return service.cse().list(q=query, cx=cx_id, num=3).execute()
 
 
+async def _analyze_single_snippet_async(result, diocese_name):
+    """Analyze a single search result snippet asynchronously."""
+    title = result.get("title", "")
+    snippet = result.get("snippet", "")
+    link = result.get("link", "")
+    prompt = f"""Given the following search result from {diocese_name}'s website:
+    Title: "{title}"
+    Snippet: "{snippet}"
+    URL: "{link}"
+    Does this link likely lead to a parish directory, church locator, or list of churches?
+    Respond with a confidence score from 0 (not likely) to 10 (very likely) and a brief justification.
+    Format as: Score: [score], Justification: [text]"""
+    
+    try:
+        response = await _invoke_genai_model_async(prompt)
+        response_text = response.text
+        score_match = re.search(r"Score: (\d+)", response_text, re.IGNORECASE)
+        if score_match:
+            score = int(score_match.group(1))
+            return {"link": link, "score": score}
+    except RetryError as e:
+        logger.info(f"    GenAI API call (Snippet) for {link} failed after multiple retries: {e}")
+    except Exception as e:
+        logger.info(f"    Error calling GenAI for snippet analysis of {link}: {e}")
+    
+    return {"link": link, "score": 0}
+
+
+async def analyze_search_snippet_with_genai_async(search_results, diocese_name):
+    """Analyzes search result snippets using GenAI concurrently to find the best parish directory URL."""
+    best_link_from_snippet = None
+    highest_score = -1
+    current_use_mock_snippet = use_mock_genai_snippet if config.GENAI_API_KEY else True
+    
+    if not current_use_mock_snippet:
+        logger.info(
+            f"Attempting LIVE GenAI analysis (CONCURRENT) for {len(search_results)} snippets for {diocese_name}."
+        )
+        
+        # Create concurrent tasks for all search results
+        tasks = [_analyze_single_snippet_async(result, diocese_name) for result in search_results]
+        
+        # Execute all tasks concurrently with a semaphore
+        semaphore = asyncio.Semaphore(3)  # Limit to 3 concurrent GenAI calls for snippets
+        
+        async def analyze_with_semaphore(task):
+            async with semaphore:
+                return await task
+                
+        # Wait for all tasks to complete
+        results = await asyncio.gather(*[analyze_with_semaphore(task) for task in tasks], return_exceptions=True)
+        
+        # Find the best result
+        for result in results:
+            if isinstance(result, dict) and result.get("score", 0) >= 7:
+                if result["score"] > highest_score:
+                    highest_score = result["score"]
+                    best_link_from_snippet = result["link"]
+        
+        return best_link_from_snippet
+    
+    # Mock implementation (unchanged)
+    mock_keywords = [
+        "parish", "church", "directory", "location", "finder",
+        "search", "map", "listing", "mass times",
+    ]
+    for result in search_results:
+        current_score = 0
+        text_to_check = (
+            result.get("title", "")
+            + " "
+            + result.get("snippet", "")
+            + " "
+            + result.get("link", "")
+        ).lower()
+        for kw in mock_keywords:
+            if kw in text_to_check:
+                current_score += 3
+        if diocese_name and diocese_name.lower() in text_to_check:
+            current_score += 1
+        current_score = min(current_score, 10)
+        if current_score >= 7 and current_score > highest_score:
+            highest_score = current_score
+            best_link_from_snippet = result.get("link")
+    return best_link_from_snippet
+
+
 def analyze_search_snippet_with_genai(search_results, diocese_name):
-    """Analyzes search result snippets using GenAI (or mock) to find the best parish directory URL."""
+    """Synchronous wrapper for backwards compatibility."""
+    # If there are no results or only one, use the old sequential method
+    if len(search_results) <= 1:
+        return _analyze_search_snippet_with_genai_sequential(search_results, diocese_name)
+    
+    # Use the async version for multiple results
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        # No event loop exists, create a new one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
+    return loop.run_until_complete(analyze_search_snippet_with_genai_async(search_results, diocese_name))
+
+
+def _analyze_search_snippet_with_genai_sequential(search_results, diocese_name):
+    """Original sequential implementation - kept as fallback."""
     best_link_from_snippet = None
     highest_score = -1
     current_use_mock_snippet = use_mock_genai_snippet if config.GENAI_API_KEY else True
@@ -644,8 +858,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--max_dioceses_to_process",
         type=int,
-        default=5,
-        help="Maximum number of dioceses to process. Set to 0 for no limit. Defaults to 5.",
+        default=20,
+        help="Maximum number of dioceses to process. Set to 0 for no limit. Defaults to 20.",
     )
     args = parser.parse_args()
     
