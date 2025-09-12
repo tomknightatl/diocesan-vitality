@@ -25,6 +25,9 @@ The USCCB Data Extraction Pipeline is a multi-step process that systematically c
 - **AI-Powered Parish Directory Detection**: Uses Google's Gemini AI to intelligently identify parish directory pages
 - **Advanced Web Scraping**: Employs Selenium with retry logic and pattern detection for robust data extraction
 - **Multi-Platform Parish Extraction**: Supports various website platforms including SquareSpace, WordPress, eCatholic, and custom implementations
+- **⚡ High-Performance Concurrent Processing**: Asyncio-based extraction with 60% performance improvement
+- **🛡️ Circuit Breaker Protection**: Automatic failure detection and recovery for external services
+- **🖥️ Real-time Monitoring Dashboard**: Live operational visibility with WebSocket updates
 - **Interactive Parish Finder Support**: Specialized extractors for JavaScript-based parish finder interfaces
 - **Cloud Database Integration**: Stores data in Supabase with automated upserts and conflict resolution
 - **Comprehensive Logging**: Detailed extraction statistics and error tracking
@@ -332,6 +335,7 @@ This script scrapes parish websites for Adoration and Reconciliation schedules. 
 - **[COMMANDS.md](docs/COMMANDS.md)**: Complete command reference for all scripts
 - **[Async Performance Guide](docs/ASYNC_PERFORMANCE_GUIDE.md)**: ⚡ **NEW** - Comprehensive guide to high-performance concurrent extraction
 - **[Async Extract Parishes README](async_extract_parishes_README.md)**: ⚡ **NEW** - Detailed documentation for concurrent processing
+- **[Monitoring Dashboard Guide](docs/MONITORING_DASHBOARD.md)**: 🖥️ **NEW** - Real-time monitoring and operational visibility
 
 ### Module-Specific Documentation
 - **[extract_dioceses_README.md](extract_dioceses_README.md)**: Diocese extraction workflow
