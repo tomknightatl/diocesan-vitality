@@ -23,6 +23,7 @@ import subprocess
 from typing import Dict, List, Optional
 from datetime import datetime, timezone
 from core.logger import get_logger
+from core.circuit_breaker import circuit_breaker, CircuitBreakerConfig, CircuitBreakerOpenError
 logger = get_logger(__name__)
 
 # Web scraping
@@ -231,7 +232,7 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
             return None
 
     def _extract_details_from_parish_page(self, driver, parish_url: str, parish_name: str) -> Dict:
-        """Navigate to parish detail page and extract detailed information"""
+        """Navigate to parish detail page and extract detailed information with circuit breaker protection"""
 
         if not parish_url:
             return {'success': False, 'error': 'No detail URL available'}
@@ -239,16 +240,16 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
         try:
             logger.info(f"      🔗 Navigating to: {parish_url}")
 
-            # Navigate to the parish detail page
-            driver.get(parish_url)
-            # Wait for page content to load
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.TAG_NAME, "body"))
-            )
-
-            # Get the page source and parse it
-            detail_html = driver.page_source
-            detail_soup = BeautifulSoup(detail_html, 'html.parser')
+            # Use protected loading with circuit breaker
+            try:
+                detail_html = _protected_load_parish_detail(driver, parish_url, parish_name)
+                detail_soup = BeautifulSoup(detail_html, 'html.parser')
+            except CircuitBreakerOpenError as e:
+                logger.warning(f"🚫 Circuit breaker OPEN for parish detail: {parish_name}")
+                return {'success': False, 'error': f'Circuit breaker blocked request: {str(e)}'}
+            except Exception as e:
+                logger.warning(f"❌ Failed to load parish detail page: {e}")
+                return {'success': False, 'error': f'Page load failed: {str(e)}'}
 
             # Initialize result dictionary
             result = {
@@ -1299,6 +1300,60 @@ class ImprovedGenericExtractor(BaseExtractor):
 # MAIN PROCESSING FUNCTION
 # =============================================================================
 
+@circuit_breaker('diocese_page_load', CircuitBreakerConfig(
+    failure_threshold=3,
+    recovery_timeout=60,
+    request_timeout=45,
+    max_retries=2,
+    retry_delay=3.0
+))
+def _protected_load_diocese_page(driver, url: str):
+    """Protected function to load diocese page with circuit breaker"""
+    logger.info(f"🌐 Loading diocese page: {url}")
+    
+    # Use protected driver if available
+    if hasattr(driver, 'get'):
+        driver.get(url)
+    else:
+        raise Exception("Invalid driver provided")
+    
+    # Wait for content with circuit breaker protection
+    try:
+        WebDriverWait(driver, 15).until(
+            lambda d: len(d.find_elements(By.CSS_SELECTOR, 
+                "li.site, .parish-item, .parish-card, .location, table tr, .finder-result")) > 0
+        )
+        logger.debug("✅ Parish content detected on page")
+    except:
+        # Fallback: wait for body and give JS a moment
+        logger.debug("⚠️ Parish content not detected, using fallback wait")
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+        time.sleep(1)  # Minimal fallback delay
+    
+    return driver.page_source
+
+
+@circuit_breaker('parish_detail_load', CircuitBreakerConfig(
+    failure_threshold=5,
+    recovery_timeout=30,
+    request_timeout=30,
+    max_retries=1,
+    retry_delay=2.0
+))
+def _protected_load_parish_detail(driver, parish_url: str, parish_name: str):
+    """Protected function to load parish detail page with circuit breaker"""
+    logger.debug(f"🔍 Loading parish detail: {parish_name} - {parish_url}")
+    
+    if hasattr(driver, 'get'):
+        driver.get(parish_url)
+    else:
+        raise Exception("Invalid driver provided")
+    
+    # Wait for page content
+    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+    return driver.page_source
+
+
 def process_diocese_with_detailed_extraction(diocese_info: Dict, driver, max_parishes: int = 0) -> Dict:
     """
     Enhanced processing function that extracts detailed parish information
@@ -1345,22 +1400,19 @@ def process_diocese_with_detailed_extraction(diocese_info: Dict, driver, max_par
     start_time = time.time()
 
     try:
-        # Step 1: Load the parish directory page
-        print("  📥 Loading parish directory page...")
-        driver.get(parish_directory_url)
-        # Wait for JavaScript content to load - check for common parish directory elements
+        # Step 1: Load the parish directory page with circuit breaker protection
+        print("  📥 Loading parish directory page with circuit breaker protection...")
         try:
-            WebDriverWait(driver, 15).until(
-                lambda d: len(d.find_elements(By.CSS_SELECTOR, 
-                    "li.site, .parish-item, .parish-card, .location, table tr, .finder-result")) > 0
-            )
-        except:
-            # Fallback: wait for body and give JS a moment
-            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-            time.sleep(1)  # Minimal fallback delay
-
-        html_content = driver.page_source
-        soup = BeautifulSoup(html_content, 'html.parser')
+            html_content = _protected_load_diocese_page(driver, parish_directory_url)
+            soup = BeautifulSoup(html_content, 'html.parser')
+        except CircuitBreakerOpenError as e:
+            logger.error(f"🚫 Circuit breaker OPEN for diocese page load: {e}")
+            result['errors'].append(f"Circuit breaker blocked diocese page load: {str(e)}")
+            return result
+        except Exception as e:
+            logger.error(f"❌ Failed to load diocese page: {e}")
+            result['errors'].append(f"Failed to load diocese page: {str(e)}")
+            return result
 
         # Step 2: Detect pattern
         print("  🔍 Detecting website pattern...")

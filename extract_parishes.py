@@ -10,7 +10,8 @@ import os
 
 import config
 from core.db import get_supabase_client
-from core.driver import close_driver, setup_driver
+from core.driver import close_driver, setup_driver, get_protected_driver
+from core.circuit_breaker import circuit_manager
 from parish_extraction_core import (PatternDetector,
                                     analyze_parish_finder_quality,
                                     enhanced_safe_upsert_to_supabase)
@@ -98,15 +99,16 @@ def main(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MAX_PARISHES_P
         logger.info("No dioceses to process.")
         return
 
-    # Process each diocese
-    driver = setup_driver()
+    # Process each diocese with protected driver
+    driver = get_protected_driver(timeout=45)
     if not driver:
-        logger.error("Failed to setup WebDriver.")
+        logger.error("Failed to setup Protected WebDriver.")
         return
 
     try:
         initial_memory = get_memory_usage()
         logger.info(f"  🚀 Starting parish extraction with {initial_memory:.1f} MB memory usage")
+        logger.info(f"  🛡️ Circuit breaker protection enabled for all external requests")
         
         for i, diocese_info in enumerate(dioceses_to_process):
             logger.info(f"Processing {diocese_info['name']} (ID: {diocese_info['id']})...")
@@ -143,9 +145,14 @@ def main(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MAX_PARISHES_P
                         logger.warning(f"  ⚠️ Memory usage has grown by {memory_growth:.1f} MB - consider restarting")
                         
     finally:
-        # Final cleanup before closing
+        # Final cleanup and circuit breaker reporting
         logger.info("  🧹 Final memory cleanup...")
         force_garbage_collection()
+        
+        # Log circuit breaker statistics
+        logger.info("  📊 Circuit Breaker Final Report:")
+        circuit_manager.log_summary()
+        
         close_driver()
 
 if __name__ == "__main__":
