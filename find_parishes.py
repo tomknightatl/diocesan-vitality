@@ -8,6 +8,7 @@ import re
 import time
 from datetime import datetime, timezone
 from urllib.parse import urlparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import google.generativeai as genai
 from bs4 import BeautifulSoup
@@ -603,8 +604,142 @@ def get_page_with_retry(driver_instance, url):
     driver_instance.get(url)
 
 
+def process_single_diocese(diocese_info):
+    """
+    Process a single diocese in isolation with its own WebDriver instance.
+    This function is designed to be thread-safe for parallel processing.
+    
+    Args:
+        diocese_info: Dictionary containing diocese information (id, url, name)
+        
+    Returns:
+        String describing the processing result
+    """
+    current_url = diocese_info["url"]
+    diocese_name = diocese_info["name"]
+    current_diocese_id = diocese_info["id"]
+    
+    # Each worker gets its own WebDriver instance
+    worker_driver = setup_driver()
+    if not worker_driver:
+        error_msg = f"Failed to setup WebDriver for {diocese_name}"
+        logger.error(error_msg)
+        return error_msg
+    
+    try:
+        logger.info(f"🔄 [{diocese_name}] Starting parallel processing...")
+        parish_dir_url_found = None
+        status_text = "Not Found"
+        method = "not_found_all_stages"
+        
+        try:
+            get_page_with_retry(worker_driver, current_url)
+            # Wait for page to fully load
+            WebDriverWait(worker_driver, 10).until(
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
+            )
+            page_source = worker_driver.page_source
+            soup = BeautifulSoup(page_source, "html.parser")
+            candidate_links = find_candidate_urls(soup, current_url)
+            
+            if candidate_links:
+                logger.info(f"🔍 [{diocese_name}] Found {len(candidate_links)} candidates from direct page. Analyzing...")
+                parish_dir_url_found = analyze_links_with_genai(
+                    candidate_links, diocese_name
+                )
+                if parish_dir_url_found:
+                    method = "genai_direct_page_analysis"
+                    status_text = "Success"
+                else:
+                    logger.info(f"⚠️ [{diocese_name}] GenAI (direct page) did not find a suitable URL.")
+            else:
+                logger.info(f"⚠️ [{diocese_name}] No candidate links found by direct page scan.")
+            
+            if not parish_dir_url_found:
+                search_query = "site:" + current_url.replace("http://", "").replace("https://", "") + " parish directory churches mass times"
+                search_snippets = search_and_extract_urls(search_query)
+                
+                if search_snippets:
+                    logger.info(f"🔍 [{diocese_name}] Found {len(search_snippets)} search results. Analyzing with AI...")
+                    parish_dir_url_found = analyze_search_snippets_with_genai_async(
+                        search_snippets, diocese_name
+                    )
+                    if parish_dir_url_found:
+                        method = "search_engine_snippet_genai"
+                        status_text = "Success"
+                    else:
+                        logger.info(f"⚠️ [{diocese_name}] GenAI (search snippets) did not find a suitable URL.")
+                else:
+                    logger.info(f"⚠️ [{diocese_name}] No search results found.")
+            
+            # Log final result
+            if parish_dir_url_found:
+                result_msg = f"SUCCESS - {parish_dir_url_found} (method: {method})"
+                logger.info(f"✅ [{diocese_name}] Result: {result_msg}")
+            else:
+                result_msg = f"NOT FOUND after trying all methods"
+                logger.info(f"❌ [{diocese_name}] Result: {result_msg}")
+            
+            # Prepare data for batch upsert
+            data_to_upsert = {
+                "diocese_id": current_diocese_id,
+                "diocese_url": current_url,
+                "parish_directory_url": parish_dir_url_found,
+                "found": status_text,
+                "found_method": method,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+            batch_upsert_parish_directory(data_to_upsert, current_url)
+            
+            return result_msg
+            
+        except RetryError as e:
+            error_message = str(e).replace('"', "''")
+            error_msg = f"Page load failed after multiple retries: {error_message[:100]}"
+            logger.error(f"❌ [{diocese_name}] {error_msg}")
+            
+            status_text = f"Error: Page load failed - {error_message[:60]}"
+            method = "error_page_load_failed"
+            data_to_upsert = {
+                "diocese_id": current_diocese_id,
+                "diocese_url": current_url,
+                "parish_directory_url": None,
+                "found": status_text,
+                "found_method": method,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+            batch_upsert_parish_directory(data_to_upsert, current_url)
+            return error_msg
+            
+        except Exception as e:
+            error_message = str(e).replace('"', "''")
+            error_msg = f"General error processing: {error_message[:100]}"
+            logger.error(f"❌ [{diocese_name}] {error_msg}")
+            
+            status_text = f"Error: {error_message[:100]}"
+            method = "error_processing_general"
+            data_to_upsert = {
+                "diocese_id": current_diocese_id,
+                "diocese_url": current_url,
+                "parish_directory_url": None,
+                "found": status_text,
+                "found_method": method,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+            batch_upsert_parish_directory(data_to_upsert, current_url)
+            return error_msg
+            
+    finally:
+        # Always clean up the worker's WebDriver
+        if worker_driver:
+            try:
+                worker_driver.quit()
+            except Exception as cleanup_error:
+                logger.warning(f"⚠️ [{diocese_name}] WebDriver cleanup error: {str(cleanup_error)}")
+
+
 def find_parish_directories(diocese_id=None, max_dioceses_to_process=config.DEFAULT_MAX_DIOCESES):
-    """Main function to run the parish directory finder."""
+    """Main function to run the parish directory finder with parallel processing."""
     
     if config.GENAI_API_KEY:
         try:
@@ -695,143 +830,31 @@ def find_parish_directories(diocese_id=None, max_dioceses_to_process=config.DEFA
         logger.info("No dioceses to scan.")
         return
 
-    driver_instance = setup_driver()
-    if not driver_instance:
-        logger.info("Selenium WebDriver not available. Skipping URL processing.")
-        return
-
-    logger.info(f"Processing {len(dioceses_to_scan)} dioceses with Selenium...")
+    # Skip the global driver setup since each worker will have its own
+    logger.info(f"Processing {len(dioceses_to_scan)} dioceses with parallel Selenium instances...")
     
-    # Process dioceses and automatically flush batches at the end
-    for diocese_info in dioceses_to_scan:
-        current_url = diocese_info["url"]
-        diocese_name = diocese_info["name"]
-        current_diocese_id = diocese_info["id"]
-        logger.info(f"--- Processing: {current_url} ({diocese_name}) ---")
-        parish_dir_url_found = None
-        status_text = "Not Found"
-        method = "not_found_all_stages"
-        try:
-            get_page_with_retry(driver_instance, current_url)
-            # Wait for page to fully load
-            WebDriverWait(driver_instance, 10).until(
-                EC.presence_of_element_located((By.TAG_NAME, "body"))
-            )
-            page_source = driver_instance.page_source
-            soup = BeautifulSoup(page_source, "html.parser")
-            candidate_links = find_candidate_urls(soup, current_url)
-            if candidate_links:
-                logger.info(
-                    f"    Found {len(candidate_links)} candidates from direct page. Analyzing..."
-                )
-                parish_dir_url_found = analyze_links_with_genai(
-                    candidate_links, diocese_name
-                )
-                if parish_dir_url_found:
-                    method = "genai_direct_page_analysis"
-                    status_text = "Success"
-                else:
-                    logger.info(
-                        f"    GenAI (direct page) did not find a suitable URL for {current_url}."
-                    )
-            else:
-                logger.info(
-                    f"    No candidate links found by direct page scan for {current_url}."
-                )
-            if not parish_dir_url_found:
-                logger.info(
-                    f"    Direct page analysis failed for {current_url}. Trying search engine fallback..."
-                )
-                parish_dir_url_found = search_for_directory_link(
-                    diocese_name, current_url
-                )
-                if parish_dir_url_found:
-                    method = "search_engine_snippet_genai"
-                    status_text = "Success"
-                else:
-                    logger.info(f"    Search engine fallback also failed for {current_url}.")
-            if parish_dir_url_found:
-                logger.info(
-                    f"    Result: Parish Directory URL for {current_url}: {parish_dir_url_found} (Method: {method})"
-                )
-            else:
-                logger.info(
-                    f"    Result: No Parish Directory URL definitively found for {current_url} (Final method: {method})"
-                )
-            
-            # --- Post-processing/Validation of found URL ---
-            if parish_dir_url_found:
-                undesirable_keywords = ["clergy", "staff", "social-media", "contact", "about", "news", "events", "calendar"]
-                parsed_url = urlparse(parish_dir_url_found)
-                path_lower = parsed_url.path.lower()
-                
-                is_undesirable = False
-                for keyword in undesirable_keywords:
-                    if keyword in path_lower:
-                        is_undesirable = True
-                        break
-                
-                if is_undesirable:
-                    logger.info(f"    Validation: Found undesirable keyword in URL: {parish_dir_url_found}. Marking as not found.")
-                    original_method = method # Store the original method
-                    parish_dir_url_found = None
-                    status_text = "Invalid URL (Post-validation)"
-                    method = "invalid_post_validation"
-                    # If it was found by GenAI direct page analysis, try search engine fallback again
-                    if original_method == "genai_direct_page_analysis": # Check original method
-                        logger.info(f"    Re-attempting search engine fallback after post-validation failure for {current_url}.")
-                        parish_dir_url_found = search_for_directory_link(diocese_name, current_url)
-                        if parish_dir_url_found:
-                            method = "search_engine_snippet_genai_reattempt"
-                            status_text = "Success (Re-attempt)"
-                        else:
-                            logger.info(f"    Search engine fallback re-attempt also failed for {current_url}.")
-                            status_text = "Not Found (Re-attempt Failed)"
-                            method = "not_found_re_attempt_failed"
-
-            data_to_upsert = {
-                "diocese_id": current_diocese_id,
-                "diocese_url": current_url,
-                "parish_directory_url": parish_dir_url_found,
-                "found": status_text,
-                "found_method": method,
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-            }
-            batch_upsert_parish_directory(data_to_upsert, current_url)
+    # Determine optimal number of workers (max 4 to avoid resource exhaustion)
+    num_workers = min(4, max(1, len(dioceses_to_scan) // 2))
+    logger.info(f"🚀 Using {num_workers} parallel workers for diocese processing")
+    
+    # Process dioceses in parallel using ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=num_workers) as executor:
+        # Submit all diocese processing tasks
+        future_to_diocese = {executor.submit(process_single_diocese, diocese_info): diocese_info 
+                           for diocese_info in dioceses_to_scan}
         
-        except RetryError as e:
-            error_message = str(e).replace('"', "''")
-            logger.info(
-                f"    Result: Page load failed after multiple retries for {current_url}: {error_message[:100]}"
-            )
-            status_text = f"Error: Page load failed - {error_message[:60]}"
-            method = "error_page_load_failed"
-            data_to_upsert = {
-                "diocese_id": current_diocese_id,
-                "diocese_url": current_url,
-                "parish_directory_url": None,
-                "found": status_text,
-                "found_method": method,
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-            }
-            batch_upsert_parish_directory(data_to_upsert, current_url)
-        
-        except Exception as e:
-            error_message = str(e).replace('"', "''")
-            logger.info(
-                f"    Result: General error processing {current_url}: {error_message[:100]}"
-            )
-            status_text = f"Error: {error_message[:100]}"
-            method = "error_processing_general"
-            data_to_upsert = {
-                "diocese_id": current_diocese_id,
-                "diocese_url": current_url,
-                "parish_directory_url": None,
-                "found": status_text,
-                "found_method": method,
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-            }
-            batch_upsert_parish_directory(data_to_upsert, current_url)
+        # Process completed tasks as they finish
+        completed_count = 0
+        for future in as_completed(future_to_diocese):
+            diocese_info = future_to_diocese[future]
+            completed_count += 1
+            try:
+                result = future.result()
+                logger.info(f"✅ [{completed_count}/{len(dioceses_to_scan)}] Completed processing {diocese_info['name']}: {result}")
+            except Exception as e:
+                logger.error(f"❌ [{completed_count}/{len(dioceses_to_scan)}] Failed processing {diocese_info['name']}: {str(e)}")
+    
+    # All processing is now handled by parallel workers above
     
     # Flush any remaining batched records
     if _batch_manager:
@@ -839,7 +862,7 @@ def find_parish_directories(diocese_id=None, max_dioceses_to_process=config.DEFA
         stats = _batch_manager.get_stats()
         logger.info(f"📊 Batch operations summary: {stats}")
     
-    close_driver()
+    # No need to close a global driver since each worker manages its own WebDriver
 
 
 if __name__ == "__main__":
