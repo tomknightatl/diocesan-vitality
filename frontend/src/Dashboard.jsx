@@ -31,7 +31,8 @@ const Dashboard = () => {
   const connectWebSocket = () => {
     try {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws/monitoring`;
+      // Connect to backend server (port 8000) instead of frontend server
+      const wsUrl = `${protocol}//localhost:8000/ws/monitoring`;
       
       wsRef.current = new WebSocket(wsUrl);
       
