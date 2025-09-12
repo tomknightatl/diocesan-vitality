@@ -1,25 +1,5 @@
--- Add fields to ParishData table to support AI-extracted schedule information
--- This extends the existing table to store structured AI results
-
--- First, add new values to the fact_type enum if it exists
-DO $$ 
-BEGIN
-    -- Check if fact_type_enum exists and add new values
-    IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'fact_type_enum') THEN
-        -- Add new enum values for AI-extracted schedules
-        BEGIN
-            ALTER TYPE fact_type_enum ADD VALUE 'AdorationScheduleAI';
-        EXCEPTION WHEN duplicate_object THEN
-            -- Value already exists, continue
-        END;
-        
-        BEGIN
-            ALTER TYPE fact_type_enum ADD VALUE 'ReconciliationScheduleAI';
-        EXCEPTION WHEN duplicate_object THEN
-            -- Value already exists, continue
-        END;
-    END IF;
-END $$;
+-- Alternative approach: Add AI schedule fields without relying on enum constraints
+-- This approach uses existing fact_type values with AI indicators in other fields
 
 -- Add new columns for AI extraction metadata
 ALTER TABLE public."ParishData" 
@@ -32,7 +12,7 @@ CREATE INDEX IF NOT EXISTS idx_parish_data_confidence ON public."ParishData"(con
 CREATE INDEX IF NOT EXISTS idx_parish_data_extraction_method ON public."ParishData"(extraction_method);
 CREATE INDEX IF NOT EXISTS idx_parish_data_ai_structured_data ON public."ParishData" USING GIN (ai_structured_data);
 
--- Create a view for high-quality AI-extracted schedules
+-- Create a view for high-quality AI-extracted schedules (using existing fact_type values)
 CREATE OR REPLACE VIEW public."HighQualitySchedules" AS
 SELECT 
     pd.id,
@@ -50,7 +30,7 @@ FROM public."ParishData" pd
 LEFT JOIN public."Parishes" p ON pd.parish_id = p.id
 WHERE pd.extraction_method = 'ai_gemini' 
 AND pd.confidence_score >= 70
-AND pd.fact_type IN ('AdorationScheduleAI', 'ReconciliationScheduleAI')
+AND pd.fact_type IN ('AdorationSchedule', 'ReconciliationSchedule')
 ORDER BY pd.confidence_score DESC, pd.created_at DESC;
 
 -- Create a summary view for schedule availability
@@ -61,45 +41,56 @@ SELECT
     p."Web" as parish_website,
     p."Diocese_id" as diocese_id,
     
-    -- Adoration schedule info
+    -- Adoration schedule info (AI and keyword-based)
     MAX(CASE 
-        WHEN pd.fact_type LIKE '%Adoration%' AND pd.confidence_score >= 70 
-        THEN pd.ai_structured_data->>'has_weekly_schedule' 
-    END)::boolean as has_weekly_adoration,
+        WHEN pd.fact_type LIKE '%Adoration%' AND pd.extraction_method = 'ai_gemini' AND pd.confidence_score >= 70 
+        THEN (pd.ai_structured_data->>'has_weekly_schedule')::boolean 
+        WHEN pd.fact_type LIKE '%Adoration%' AND pd.extraction_method != 'ai_gemini'
+        THEN (pd.fact_value IS NOT NULL AND pd.fact_value != 'Information not found')
+    END) as has_weekly_adoration,
     
     MAX(CASE 
-        WHEN pd.fact_type LIKE '%Adoration%' AND pd.confidence_score >= 70 
+        WHEN pd.fact_type LIKE '%Adoration%' AND pd.extraction_method = 'ai_gemini'
         THEN pd.confidence_score 
+        WHEN pd.fact_type LIKE '%Adoration%' AND pd.extraction_method != 'ai_gemini'
+        THEN 50  -- Assign moderate confidence to keyword-based results
     END) as adoration_confidence,
     
     MAX(CASE 
-        WHEN pd.fact_type LIKE '%Adoration%' AND pd.confidence_score >= 70 
+        WHEN pd.fact_type LIKE '%Adoration%' AND pd.extraction_method = 'ai_gemini'
         THEN pd.ai_structured_data->>'frequency'
+        ELSE 'unknown'
     END) as adoration_frequency,
     
-    -- Reconciliation schedule info  
+    -- Reconciliation schedule info (AI and keyword-based)
     MAX(CASE 
-        WHEN pd.fact_type LIKE '%Reconciliation%' AND pd.confidence_score >= 70 
-        THEN pd.ai_structured_data->>'has_weekly_schedule' 
-    END)::boolean as has_weekly_reconciliation,
+        WHEN pd.fact_type LIKE '%Reconciliation%' AND pd.extraction_method = 'ai_gemini' AND pd.confidence_score >= 70 
+        THEN (pd.ai_structured_data->>'has_weekly_schedule')::boolean 
+        WHEN pd.fact_type LIKE '%Reconciliation%' AND pd.extraction_method != 'ai_gemini'
+        THEN (pd.fact_value IS NOT NULL AND pd.fact_value != 'Information not found')
+    END) as has_weekly_reconciliation,
     
     MAX(CASE 
-        WHEN pd.fact_type LIKE '%Reconciliation%' AND pd.confidence_score >= 70 
+        WHEN pd.fact_type LIKE '%Reconciliation%' AND pd.extraction_method = 'ai_gemini'
         THEN pd.confidence_score 
+        WHEN pd.fact_type LIKE '%Reconciliation%' AND pd.extraction_method != 'ai_gemini'
+        THEN 50  -- Assign moderate confidence to keyword-based results
     END) as reconciliation_confidence,
     
     MAX(CASE 
-        WHEN pd.fact_type LIKE '%Reconciliation%' AND pd.confidence_score >= 70 
+        WHEN pd.fact_type LIKE '%Reconciliation%' AND pd.extraction_method = 'ai_gemini'
         THEN pd.ai_structured_data->>'frequency'
+        ELSE 'unknown'
     END) as reconciliation_frequency,
     
-    -- Overall data quality
+    -- Data quality metrics
     COUNT(CASE WHEN pd.extraction_method = 'ai_gemini' THEN 1 END) as ai_extractions,
+    COUNT(CASE WHEN pd.extraction_method != 'ai_gemini' THEN 1 END) as keyword_extractions,
     MAX(pd.created_at) as last_updated
 
 FROM public."Parishes" p
 LEFT JOIN public."ParishData" pd ON p.id = pd.parish_id 
-WHERE pd.fact_type IN ('AdorationScheduleAI', 'ReconciliationScheduleAI', 'AdorationSchedule', 'ReconciliationSchedule')
+WHERE pd.fact_type IN ('AdorationSchedule', 'ReconciliationSchedule')
 GROUP BY p.id, p."Name", p."Web", p."Diocese_id"
 ORDER BY ai_extractions DESC, last_updated DESC;
 
@@ -121,12 +112,13 @@ SELECT
     has_weekly_reconciliation,
     reconciliation_confidence,
     ai_extractions,
+    keyword_extractions,
     last_updated
 FROM public."ParishScheduleSummary"
 WHERE has_weekly_adoration = true 
 AND has_weekly_reconciliation = true
-AND (adoration_confidence >= 80 OR reconciliation_confidence >= 80)
-ORDER BY adoration_confidence DESC, reconciliation_confidence DESC;
+AND (adoration_confidence >= 70 OR reconciliation_confidence >= 70)
+ORDER BY ai_extractions DESC, adoration_confidence DESC, reconciliation_confidence DESC;
 */
 
 -- Sample query to see AI extraction results
@@ -134,11 +126,12 @@ ORDER BY adoration_confidence DESC, reconciliation_confidence DESC;
 SELECT 
     parish_name,
     fact_type,
+    extraction_method,
     confidence_score,
     ai_structured_data->>'schedule_details' as schedule_details,
     ai_structured_data->>'days_offered' as days_offered,
     ai_structured_data->>'has_weekly_schedule' as has_weekly_schedule
 FROM public."HighQualitySchedules"
-WHERE confidence_score >= 80
+WHERE confidence_score >= 70
 ORDER BY confidence_score DESC;
 */

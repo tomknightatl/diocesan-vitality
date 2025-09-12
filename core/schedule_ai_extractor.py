@@ -249,12 +249,12 @@ def save_ai_schedule_results(supabase, results: List[Dict]):
             
             facts_to_save.append({
                 'parish_id': parish_id,
-                'fact_type': f'{schedule_type.title()}ScheduleAI',
+                'fact_type': f'{schedule_type.title()}Schedule',  # Use existing enum values
                 'fact_value': json.dumps(fact_value),
                 'fact_source_url': result.get('source_url'),
                 'fact_string': result.get('schedule_details', ''),
                 'confidence_score': result.get('confidence_score', 0),
-                'extraction_method': 'ai_gemini'
+                'extraction_method': 'ai_gemini'  # This field distinguishes AI vs keyword extraction
             })
             
     if facts_to_save:
