@@ -13,6 +13,7 @@ const Dashboard = () => {
   const [recentErrors, setRecentErrors] = useState([]);
   const [extractionHistory, setExtractionHistory] = useState([]);
   const [liveLog, setLiveLog] = useState([]);
+  const [pipelineStatus, setPipelineStatus] = useState(null);
   
   const wsRef = useRef(null);
   const maxLogEntries = 100;
@@ -113,6 +114,10 @@ const Dashboard = () => {
           ...prev.slice(0, maxLogEntries - 1)
         ]);
         break;
+
+      case 'pipeline_status':
+        setPipelineStatus(data.payload);
+        break;
         
       default:
         console.log('Unknown message type:', data.type);
@@ -143,8 +148,13 @@ const Dashboard = () => {
     return new Date(timestamp).toLocaleTimeString();
   };
 
+  const formatDecimal = (value) => {
+    if (typeof value !== 'number') return value;
+    return Number(value.toFixed(2));
+  };
+
   const formatDuration = (seconds) => {
-    if (seconds < 60) return `${seconds.toFixed(1)}s`;
+    if (seconds < 60) return `${formatDecimal(seconds)}s`;
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
     return `${minutes}m ${remainingSeconds}s`;
@@ -195,8 +205,8 @@ const Dashboard = () => {
                       {systemHealth.status === 'healthy' ? '✅' : '⚠️'}
                     </Badge>
                   </div>
-                  <p className="mb-1"><strong>CPU:</strong> {systemHealth.cpu_usage}%</p>
-                  <p className="mb-1"><strong>Memory:</strong> {systemHealth.memory_usage}%</p>
+                  <p className="mb-1"><strong>CPU:</strong> {formatDecimal(systemHealth.cpu_usage)}%</p>
+                  <p className="mb-1"><strong>Memory:</strong> {formatDecimal(systemHealth.memory_usage)}%</p>
                   <p className="mb-0"><strong>Uptime:</strong> {formatDuration(systemHealth.uptime)}</p>
                 </div>
               ) : (
@@ -224,7 +234,7 @@ const Dashboard = () => {
                   </div>
                   <p className="mb-1"><strong>Diocese:</strong> {extractionStatus.current_diocese || 'None'}</p>
                   <p className="mb-1"><strong>Parishes:</strong> {extractionStatus.parishes_processed || 0}</p>
-                  <p className="mb-0"><strong>Success Rate:</strong> {extractionStatus.success_rate || 0}%</p>
+                  <p className="mb-0"><strong>Success Rate:</strong> {formatDecimal(extractionStatus.success_rate || 0)}%</p>
                 </div>
               ) : (
                 <div className="text-center">
@@ -247,11 +257,11 @@ const Dashboard = () => {
               {performanceMetrics ? (
                 <div className="text-center">
                   <div className="display-6 mb-2 text-success">
-                    {performanceMetrics.parishes_per_minute}
+                    {formatDecimal(performanceMetrics.parishes_per_minute)}
                   </div>
                   <p className="mb-1"><strong>Parishes/min</strong></p>
                   <p className="mb-1"><strong>Queue:</strong> {performanceMetrics.queue_size || 0}</p>
-                  <p className="mb-0"><strong>Pool:</strong> {performanceMetrics.pool_utilization || 0}%</p>
+                  <p className="mb-0"><strong>Pool:</strong> {formatDecimal(performanceMetrics.pool_utilization || 0)}%</p>
                 </div>
               ) : (
                 <div className="text-center">
@@ -301,7 +311,7 @@ const Dashboard = () => {
                     <h6>Diocese: {extractionStatus.current_diocese}</h6>
                     <ProgressBar 
                       now={extractionStatus.progress_percentage || 0} 
-                      label={`${extractionStatus.progress_percentage || 0}%`}
+                      label={`${formatDecimal(extractionStatus.progress_percentage || 0)}%`}
                       variant="info"
                       className="mb-2"
                     />
@@ -312,7 +322,7 @@ const Dashboard = () => {
                   <Col md={6}>
                     <p><strong>Started:</strong> {formatTimestamp(extractionStatus.started_at)}</p>
                     <p><strong>ETA:</strong> {extractionStatus.estimated_completion || 'Calculating...'}</p>
-                    <p><strong>Speed:</strong> {performanceMetrics?.parishes_per_minute || 0} parishes/min</p>
+                    <p><strong>Speed:</strong> {formatDecimal(performanceMetrics?.parishes_per_minute || 0)} parishes/min</p>
                   </Col>
                 </Row>
               </Card.Body>
@@ -320,6 +330,83 @@ const Dashboard = () => {
           </Col>
         </Row>
       )}
+
+      {/* Pipeline Progress Overview */}
+      <Row className="mb-4">
+        <Col>
+          <Card>
+            <Card.Body>
+              <Card.Title>🔄 Pipeline Progress Overview</Card.Title>
+              <Row>
+                <Col md={6}>
+                  <h6>Pipeline Components</h6>
+                  <div className="pipeline-steps mb-3">
+                    <div className={`pipeline-step ${pipelineStatus?.current_step === 'extract_dioceses' ? 'active' : pipelineStatus?.completed_steps?.includes('extract_dioceses') ? 'completed' : 'pending'}`}>
+                      <div className="step-icon">1</div>
+                      <div className="step-content">
+                        <strong>Extract Dioceses</strong>
+                        <br />
+                        <small>Scrapes the USCCB website for all U.S. dioceses</small>
+                      </div>
+                    </div>
+                    <div className={`pipeline-step ${pipelineStatus?.current_step === 'find_parish_directories' ? 'active' : pipelineStatus?.completed_steps?.includes('find_parish_directories') ? 'completed' : 'pending'}`}>
+                      <div className="step-icon">2</div>
+                      <div className="step-content">
+                        <strong>Find Parish Directories</strong>
+                        <br />
+                        <small>Uses AI to locate parish directory pages on diocese websites</small>
+                      </div>
+                    </div>
+                    <div className={`pipeline-step ${pipelineStatus?.current_step === 'extract_parishes' ? 'active' : pipelineStatus?.completed_steps?.includes('extract_parishes') ? 'completed' : 'pending'}`}>
+                      <div className="step-icon">3</div>
+                      <div className="step-content">
+                        <strong>Extract Parishes</strong>
+                        <br />
+                        <small>Collects detailed parish information using specialized extractors</small>
+                      </div>
+                    </div>
+                    <div className={`pipeline-step ${pipelineStatus?.current_step === 'extract_schedules' ? 'active' : pipelineStatus?.completed_steps?.includes('extract_schedules') ? 'completed' : 'pending'}`}>
+                      <div className="step-icon">4</div>
+                      <div className="step-content">
+                        <strong>Extract Schedules</strong>
+                        <br />
+                        <small>Visits individual parish websites to gather mass and service times</small>
+                      </div>
+                    </div>
+                  </div>
+                </Col>
+                <Col md={6}>
+                  <h6>Diocese Processing Progress</h6>
+                  <div className="mb-3">
+                    <div className="d-flex justify-content-between align-items-center mb-2">
+                      <span>Dioceses Processed</span>
+                      <strong>{pipelineStatus?.dioceses_processed || 0} / {pipelineStatus?.total_dioceses || 0}</strong>
+                    </div>
+                    <ProgressBar 
+                      now={pipelineStatus?.dioceses_processed || 0}
+                      max={pipelineStatus?.total_dioceses || 100}
+                      label={`${formatDecimal((pipelineStatus?.dioceses_processed || 0) / (pipelineStatus?.total_dioceses || 1) * 100)}%`}
+                      variant="primary"
+                      className="mb-2"
+                    />
+                    <small className="text-muted">
+                      Current: {pipelineStatus?.current_diocese || 'None'}
+                    </small>
+                  </div>
+                  {pipelineStatus?.current_step && (
+                    <div>
+                      <strong>Currently Processing:</strong> 
+                      <Badge bg="info" className="ms-2">
+                        {pipelineStatus.current_step.replace(/_/g, ' ').toUpperCase()}
+                      </Badge>
+                    </div>
+                  )}
+                </Col>
+              </Row>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
 
       {/* Circuit Breaker Status */}
       <Row className="mb-4">
@@ -341,7 +428,7 @@ const Dashboard = () => {
                           </div>
                           <small className="text-muted">
                             <div>Requests: {status.total_requests}</div>
-                            <div>Success Rate: {status.success_rate}</div>
+                            <div>Success Rate: {formatDecimal(status.success_rate)}%</div>
                             <div>Failures: {status.total_failures}</div>
                             {status.total_blocked > 0 && (
                               <div className="text-warning">Blocked: {status.total_blocked}</div>
@@ -411,7 +498,7 @@ const Dashboard = () => {
                         <td>{extraction.parishes_extracted}</td>
                         <td>
                           <Badge bg={extraction.success_rate >= 90 ? 'success' : extraction.success_rate >= 70 ? 'warning' : 'danger'}>
-                            {extraction.success_rate}%
+                            {formatDecimal(extraction.success_rate)}%
                           </Badge>
                         </td>
                         <td>{formatDuration(extraction.duration)}</td>
@@ -445,7 +532,7 @@ const Dashboard = () => {
                 {liveLog.length > 0 ? (
                   liveLog.map((log, index) => (
                     <div key={log.id || index} className="mb-1">
-                      <span className="text-muted">[{formatTimestamp(log.timestamp)}]</span>
+                      <span className="text-secondary">[{formatTimestamp(log.timestamp)}]</span>
                       <span className={`ms-2 ${
                         log.level === 'ERROR' ? 'text-danger' :
                         log.level === 'WARNING' ? 'text-warning' :

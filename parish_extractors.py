@@ -1710,15 +1710,247 @@ class IframeExtractor(BaseExtractor):
         print("    🗺️ Extracting from Maptive interface...")
         
         try:
-            # Try JavaScript-based extraction first
-            parishes = self._extract_via_javascript(driver)
+            # Try new drag-to-select approach first (mimics manual copy-paste)
+            parishes = self._extract_via_drag_selection(driver)
             
             if not parishes:
-                # Fallback: try DOM-based extraction
+                # Fallback: try JavaScript-based extraction
+                parishes = self._extract_via_javascript(driver)
+            
+            if not parishes:
+                # Final fallback: try DOM-based extraction
                 parishes = self._extract_via_dom_parsing(driver)
                 
         except Exception as e:
             print(f"    ⚠️ Maptive extraction error: {str(e)[:100]}...")
+            
+        return parishes
+    
+    def _extract_via_drag_selection(self, driver) -> List[ParishData]:
+        """Extract parish data by mimicking manual drag-to-select and copy-paste"""
+        parishes = []
+        
+        try:
+            from selenium.webdriver.common.action_chains import ActionChains
+            from selenium.webdriver.common.keys import Keys
+            import time
+            
+            print("    🖱️ Attempting drag-to-select extraction (mimicking manual copy-paste)...")
+            
+            # Wait for page to fully load
+            time.sleep(5)
+            
+            # Method 1: Try Ctrl+A to select all content
+            print("    📋 Trying Ctrl+A selection...")
+            actions = ActionChains(driver)
+            actions.key_down(Keys.CONTROL).send_keys('a').key_up(Keys.CONTROL).perform()
+            time.sleep(1)
+            
+            # Get selected text using JavaScript
+            selected_text = driver.execute_script("""
+                var selection = window.getSelection();
+                if (selection.rangeCount > 0) {
+                    return selection.toString();
+                }
+                return '';
+            """)
+            
+            if selected_text and len(selected_text) > 1000:
+                print(f"    ✅ Ctrl+A extracted {len(selected_text)} characters of text")
+                parishes = self._parse_selected_text(selected_text)
+                if parishes:
+                    return parishes
+            
+            # Method 2: Try drag selection over the visible area
+            print("    🖱️ Trying drag selection over visible area...")
+            
+            # Find the main content area to drag across
+            body = driver.find_element("tag name", "body")
+            
+            # Perform drag selection from top-left to bottom-right of viewport
+            actions = ActionChains(driver)
+            actions.move_to_element_with_offset(body, 10, 10)  # Start at top-left
+            actions.click_and_hold()
+            actions.move_to_element_with_offset(body, 800, 600)  # Drag to bottom-right
+            actions.release()
+            actions.perform()
+            
+            time.sleep(2)
+            
+            # Get the selected text
+            selected_text = driver.execute_script("""
+                var selection = window.getSelection();
+                if (selection.rangeCount > 0) {
+                    return selection.toString();
+                }
+                return '';
+            """)
+            
+            if selected_text and len(selected_text) > 500:
+                print(f"    ✅ Drag selection extracted {len(selected_text)} characters of text")
+                parishes = self._parse_selected_text(selected_text)
+                if parishes:
+                    return parishes
+                    
+            # Method 3: Try getting all visible text content directly
+            print("    📄 Trying direct text content extraction...")
+            all_text = driver.execute_script("return document.body.innerText || document.body.textContent || '';")
+            
+            if all_text and len(all_text) > 1000:
+                print(f"    ✅ Direct text extraction got {len(all_text)} characters")
+                parishes = self._parse_selected_text(all_text)
+                if parishes:
+                    return parishes
+            
+        except Exception as e:
+            print(f"    ⚠️ Drag selection error: {str(e)[:100]}...")
+            
+        return parishes
+    
+    def _parse_selected_text(self, text: str) -> List[ParishData]:
+        """Parse selected text to extract parish data"""
+        parishes = []
+        
+        try:
+            lines = text.split('\n')
+            print(f"    📝 Parsing {len(lines)} lines of selected text...")
+            
+            # Step 1: Find and split concatenated parish names
+            processed_lines = []
+            for line in lines:
+                line = line.strip()
+                if not line or len(line) < 5:
+                    continue
+                
+                # Check for concatenated parish names (multiple "St." or religious terms in one line)
+                if self._is_concatenated_parish_line(line):
+                    split_parishes = self._split_concatenated_parishes(line)
+                    processed_lines.extend(split_parishes)
+                    print(f"    🔨 Split concatenated line into {len(split_parishes)} parishes")
+                else:
+                    processed_lines.append(line)
+            
+            print(f"    📋 Processing {len(processed_lines)} processed lines...")
+            
+            # Enhanced parish patterns including non-traditional names
+            parish_patterns = [
+                r'^(Saint|St\.|Sts\.|Holy|Blessed|Our Lady|Cathedral|Christ|Good Shepherd|Mother|Sacred|Immaculate|Assumption|Transfiguration)',
+                r'\b(Church|Parish|Chapel|Shrine|Basilica|Cathedral)\b',
+                r'^(All Saints|All Souls|Annunciation|Ascension|Nativity|Light of the World|Most Precious|Queen of|Spirit of|Cure|Curé)',
+                r'^(Guardian Angels|Notre Dame|Presentation)',
+                r'(Catholic|Inter|Ministry|Center)$'
+            ]
+            
+            for i, line in enumerate(processed_lines):
+                # Check if line looks like a parish name
+                is_parish = False
+                for pattern in parish_patterns:
+                    if re.search(pattern, line, re.IGNORECASE):
+                        is_parish = True
+                        break
+                
+                if is_parish:
+                    # Clean up the parish name
+                    name = re.sub(r'^[\d\.\s]*', '', line).strip()  # Remove leading numbers
+                    
+                    # Enhanced UI element filtering
+                    ui_terms = [
+                        'type', 'apply', 'select', 'open', 'load', 'hide', 'disable', 
+                        'enable', 'boundary', 'group', 'column', 'tool', 'drag', 'zoom',
+                        'calc.', 'averages', 'sums', 'filter', 'search', 'legend'
+                    ]
+                    
+                    if any(ui_term in name.lower() for ui_term in ui_terms):
+                        continue
+                    
+                    # Look for address in next few lines
+                    address = ''
+                    city = ''
+                    state = ''
+                    zip_code = ''
+                    
+                    for j in range(1, min(4, len(processed_lines) - i)):
+                        next_line = processed_lines[i + j].strip()
+                        
+                        # Check if this looks like an address (contains numbers and street words)
+                        if re.search(r'\d+.*\b(Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Boulevard|Blvd|Place|Way|Circle|Court)', next_line, re.IGNORECASE):
+                            address = next_line
+                            
+                            # Look for city, state, zip in the line after address
+                            if j + 1 < len(processed_lines) - i:
+                                city_line = processed_lines[i + j + 1].strip()
+                                # Parse "City, State Zip" format
+                                city_match = re.match(r'([^,]+),?\s*([A-Z]{2})\s*(\d{5})', city_line)
+                                if city_match:
+                                    city = city_match.group(1).strip()
+                                    state = city_match.group(2).strip()
+                                    zip_code = city_match.group(3).strip()
+                            break
+                    
+                    if name and len(name) > 3:
+                        # Parse using existing address extraction
+                        parsed = clean_parish_name_and_extract_address(f"{name} {address}")
+                        
+                        parish = ParishData(
+                            name=self.clean_text(name),
+                            address=self.clean_text(address) if address else None,
+                            street_address=parsed.get('street_address') or address,
+                            city=parsed.get('city') or city,
+                            state=parsed.get('state') or state,
+                            zip_code=parsed.get('zip_code') or zip_code
+                        )
+                        parishes.append(parish)
+                        
+                        if len(parishes) >= 200:  # Safety limit
+                            break
+            
+            print(f"    ✅ Parsed {len(parishes)} parishes from selected text")
+            
+        except Exception as e:
+            print(f"    ⚠️ Text parsing error: {str(e)[:100]}...")
+            
+        return parishes
+    
+    def _is_concatenated_parish_line(self, line: str) -> bool:
+        """Check if a line contains multiple concatenated parish names"""
+        # Count occurrences of parish name patterns
+        parish_indicators = ['St.', 'Saint', 'Holy', 'Our Lady', 'Sacred', 'Blessed', 'Christ']
+        count = 0
+        for indicator in parish_indicators:
+            count += line.count(indicator)
+        
+        # If we find more than 2 parish indicators, likely concatenated
+        return count > 2 and len(line) > 100
+    
+    def _split_concatenated_parishes(self, line: str) -> List[str]:
+        """Split concatenated parish names into individual parish names"""
+        parishes = []
+        
+        # Split on common parish name beginnings, but preserve the prefix
+        split_patterns = [
+            r'(?=St\. [A-Z])',  # Split before "St. [Capital Letter]"
+            r'(?=Saint [A-Z])',  # Split before "Saint [Capital Letter]" 
+            r'(?=Our Lady)',     # Split before "Our Lady"
+            r'(?=Holy [A-Z])',   # Split before "Holy [Capital Letter]"
+            r'(?=Sacred [A-Z])', # Split before "Sacred [Capital Letter]"
+            r'(?=Blessed [A-Z])', # Split before "Blessed [Capital Letter]"
+            r'(?=Christ [A-Z])'  # Split before "Christ [Capital Letter]"
+        ]
+        
+        current_line = line
+        for pattern in split_patterns:
+            parts = re.split(pattern, current_line)
+            if len(parts) > 1:
+                # First part might be empty or partial, filter and clean
+                for part in parts:
+                    part = part.strip()
+                    if len(part) > 5:  # Minimum length for a parish name
+                        parishes.append(part)
+                break
+        
+        # If no splitting worked, return original line
+        if not parishes:
+            parishes.append(line)
             
         return parishes
     
@@ -1734,22 +1966,100 @@ class IframeExtractor(BaseExtractor):
             "return window.locations || [];",
             "return window.markers || [];",
             
-            # Maptive-specific extraction
+            # Enhanced DOM text extraction - mimic browser copy-paste selection
             """
             var parishes = [];
             try {
-                if (window.map && window.map.markers) {
-                    window.map.markers.forEach(function(marker) {
-                        parishes.push({
-                            name: marker.title || marker.name || marker.label,
-                            address: marker.address || marker.description,
-                            lat: marker.lat || marker.latitude,
-                            lng: marker.lng || marker.longitude
-                        });
-                    });
+                // Method 1: Extract all visible text that looks like parish data
+                var allText = document.body.innerText || document.body.textContent || '';
+                var lines = allText.split('\\n');
+                var parishLines = [];
+                
+                // Look for lines that contain parish patterns
+                for (var i = 0; i < lines.length; i++) {
+                    var line = lines[i].trim();
+                    if (line.length > 5 && (
+                        line.match(/^(Saint|St\\.|Sts\\.|Holy|Blessed|Our Lady|Cathedral|Christ|Good Shepherd|Mother|Sacred|Immaculate|Assumption|Transfiguration)/i) ||
+                        line.match(/\\b(Church|Parish|Chapel|Shrine|Basilica)\\b/i)
+                    )) {
+                        // Clean up the line and look for address patterns
+                        var cleanLine = line.replace(/^\\s*\\d+\\.?\\s*/, ''); // Remove numbering
+                        if (cleanLine.length > 3 && !cleanLine.match(/^(TYPE|APPLY|SELECT|OPEN|LOAD|HIDE|DISABLE|ENABLE|BOUNDARY|GROUP|COLUMN)/i)) {
+                            parishLines.push(cleanLine);
+                        }
+                    }
                 }
-            } catch(e) {}
-            return parishes;
+                
+                // Method 2: Look for structured data in tables or lists
+                var tables = document.querySelectorAll('table, div[data-*], .data-row, .parish-row, .location-row');
+                tables.forEach(function(table) {
+                    var rows = table.querySelectorAll('tr, .row, .item, .entry');
+                    rows.forEach(function(row) {
+                        var cells = row.querySelectorAll('td, th, .cell, .field, span, div');
+                        if (cells.length >= 3) { // Likely has name, address, city
+                            var rowText = row.innerText || row.textContent || '';
+                            if (rowText.match(/\\b(Saint|St\\.|Holy|Church|Parish)\\b/i) && 
+                                rowText.match(/\\d+.*\\b(Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Boulevard|Blvd)\\b/i)) {
+                                parishLines.push(rowText.trim());
+                            }
+                        }
+                    });
+                });
+                
+                // Method 3: Extract from any element containing parish indicators
+                var allElements = document.querySelectorAll('*');
+                for (var i = 0; i < allElements.length && parishes.length < 200; i++) {
+                    var el = allElements[i];
+                    if (el.children.length === 0) { // Leaf nodes only
+                        var text = (el.innerText || el.textContent || '').trim();
+                        if (text.length > 10 && text.length < 200 &&
+                            text.match(/^(Saint|St\\.|Holy|Blessed|Our Lady|Cathedral|Christ|Sacred|Immaculate|Mother)/i) &&
+                            !text.match(/^(TYPE|APPLY|SELECT|OPEN|LOAD|HIDE|DISABLE|ENABLE|BOUNDARY|GROUP|COLUMN|Don't)/i)) {
+                            
+                            // Look for next sibling or nearby elements for address
+                            var address = '';
+                            var nextEl = el.nextElementSibling;
+                            if (nextEl) {
+                                var nextText = (nextEl.innerText || nextEl.textContent || '').trim();
+                                if (nextText.match(/\\d+.*\\b(Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Boulevard|Blvd)\\b/i)) {
+                                    address = nextText;
+                                }
+                            }
+                            
+                            parishes.push({
+                                name: text,
+                                address: address,
+                                source: 'dom_extraction'
+                            });
+                        }
+                    }
+                }
+                
+                // Process collected parish lines
+                parishLines.forEach(function(line) {
+                    if (line.length > 5) {
+                        var parts = line.split(/\\s{2,}|\\t/); // Split on multiple spaces or tabs
+                        if (parts.length >= 1) {
+                            var name = parts[0].trim();
+                            var address = parts.length > 1 ? parts[1].trim() : '';
+                            
+                            if (name.length > 3) {
+                                parishes.push({
+                                    name: name,
+                                    address: address,
+                                    source: 'text_extraction'
+                                });
+                            }
+                        }
+                    }
+                });
+                
+                console.log('Total extracted parish candidates:', parishes.length);
+                
+            } catch(e) {
+                console.log('DOM extraction error:', e);
+            }
+            return parishes.slice(0, 200); // Limit results
             """,
             
             # Generic marker extraction
@@ -1862,6 +2172,31 @@ class IframeExtractor(BaseExtractor):
                     name = text.split('\n')[0].strip()
             
             if not name or len(name) < 3:
+                return None
+            
+            # Filter out UI elements and non-parish content
+            name_lower = name.lower().strip()
+            ui_indicators = [
+                'enable', 'select', 'tool', 'directions', 'zoom', 'drag',
+                'grouping', 'search', 'filter', 'legend', 'don\'t group',
+                'location', 'name', 'type', 'address', 'city', 'state', 'zip code',
+                'phone number', 'deanery', 'website', 'latitude', 'longitude',
+                'apply to', 'distance radius', 'drive time polygon', 'individual location'
+            ]
+            
+            # Skip UI elements
+            if any(indicator in name_lower for indicator in ui_indicators):
+                return None
+            
+            # Only include items that look like parish names
+            parish_indicators = [
+                'saint', 'st.', 'st ', 'holy', 'blessed', 'our lady',
+                'cathedral', 'church', 'parish', 'chapel', 'shrine'
+            ]
+            
+            # Require parish indicators unless name is long and descriptive
+            has_parish_indicator = any(indicator in name_lower for indicator in parish_indicators)
+            if not has_parish_indicator and len(name) < 15:
                 return None
             
             # Get address

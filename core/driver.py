@@ -57,12 +57,61 @@ def close_driver():
     global driver
     if driver:
         logger.info("Closing WebDriver...")
-        driver.quit()
+        try:
+            driver.quit()
+        except Exception as e:
+            logger.warning(f"Error during WebDriver cleanup: {e}")
         driver = None
         logger.info("WebDriver closed.")
         
         # Log circuit breaker summary on close
         circuit_manager.log_summary()
+
+
+def recover_driver():
+    """Recovers WebDriver by closing current instance and creating a new one."""
+    global driver
+    logger.info("🔄 Attempting WebDriver recovery...")
+    
+    try:
+        # Force close existing driver
+        if driver:
+            try:
+                driver.quit()
+            except Exception as e:
+                logger.warning(f"Error closing driver during recovery: {e}")
+            driver = None
+        
+        # Create new driver instance
+        driver = _setup_driver_with_retry()
+        if driver:
+            logger.info("✅ WebDriver recovery successful")
+            return driver
+        else:
+            logger.error("❌ WebDriver recovery failed")
+            return None
+            
+    except Exception as e:
+        logger.error(f"❌ WebDriver recovery failed with error: {e}")
+        driver = None
+        return None
+
+
+def ensure_driver_available():
+    """Ensures WebDriver is available, recovers if necessary."""
+    global driver
+    
+    if driver is None:
+        logger.info("Driver is None, setting up new driver...")
+        return setup_driver()
+    
+    # Test if driver is responsive
+    try:
+        _ = driver.current_url
+        return driver
+    except Exception as e:
+        logger.warning(f"Driver not responsive ({e}), attempting recovery...")
+        return recover_driver()
 
 
 class ProtectedWebDriver:
