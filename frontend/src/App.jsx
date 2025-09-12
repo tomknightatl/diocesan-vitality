@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Container, Table, Spinner, Alert, Navbar, Pagination, Form } from 'react-bootstrap';
+import { Container, Table, Spinner, Alert, Pagination, Form } from 'react-bootstrap';
 import './App.css';
 
 function App() {
@@ -105,11 +105,7 @@ function App() {
 
   return (
     <>
-      <Navbar bg="dark" variant="dark">
-        <Container>
-          <Navbar.Brand href="#home">USCCB Diocese Vitality Index</Navbar.Brand>
-        </Container>
-      </Navbar>
+      
       <Container className="mt-4">
         <h2>Data Summary</h2>
         {summaryLoading && <Spinner animation="border" />}
@@ -216,33 +212,7 @@ function App() {
         )}
       </Container>
 
-      <Container className="mt-4">
-        <h2>Reports</h2>
-        <div className="row">
-          {/* Dioceses Charts (Left Side) */}
-          <div className="col-md-6">
-            <div className="p-2">
-              <h3>Dioceses Records Over Time</h3>
-              <img src="/dioceses_records_over_time.png" alt="Dioceses Records Over Time" className="img-fluid mb-3" />
-            </div>
-            <div className="p-2">
-              <h3>Dioceses Parish Directory Records Over Time</h3>
-              <img src="/diocesesparishdirectory_records_over_time.png" alt="Dioceses Parish Directory Records Over Time" className="img-fluid mb-3" />
-            </div>
-          </div>
-          {/* Parishes Charts (Right Side) */}
-          <div className="col-md-6">
-            <div className="p-2">
-              <h3>Parishes Records Over Time</h3>
-              <img src="/parishes_records_over_time.png" alt="Parishes Records Over Time" className="img-fluid mb-3" />
-            </div>
-            <div className="p-2">
-              <h3>Parish Schedules Records Over Time</h3>
-              <img src="/parishschedules_records_over_time.png" alt="Parish Schedules Records Over Time" className="img-fluid mb-3" />
-            </div>
-          </div>
-        </div>
-      </Container>
+      
     </>
   );
 }

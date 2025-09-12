@@ -6,14 +6,26 @@ import Diocese from './Diocese.jsx';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './index.css';
 
+import Reports from './Reports.jsx';
+import Layout from './Layout.jsx';
+
 const router = createBrowserRouter([
   {
-    path: "/",
-    element: <App />,
-  },
-  {
-    path: "/diocese/:id",
-    element: <Diocese />,
+    element: <Layout />,
+    children: [
+      {
+        path: "/",
+        element: <App />,
+      },
+      {
+        path: "/diocese/:id",
+        element: <Diocese />,
+      },
+      {
+        path: "/reports",
+        element: <Reports />,
+      },
+    ],
   },
 ]);
 
