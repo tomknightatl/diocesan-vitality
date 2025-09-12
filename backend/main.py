@@ -270,42 +270,37 @@ def get_dioceses(
                 f"Website.ilike.{search_pattern}"
             )
 
-        # Apply sorting
-        if sort_order.lower() == "desc":
-            query = query.order(sort_by, desc=True)
-        else:
-            query = query.order(sort_by, desc=False)
+        dioceses = query.execute().data
+        total_count = len(dioceses)
 
-        # Apply pagination
-        response = query.range(offset, offset + page_size - 1).execute()
-        dioceses = response.data
-
-        # Fetch all parish directory URLs once
+        # Fetch additional data
         all_dir_response = supabase.table('DiocesesParishDirectory').select('diocese_id, parish_directory_url').execute()
         dir_url_map = {item['diocese_id']: item['parish_directory_url'] for item in all_dir_response.data}
 
-        # For each diocese, fetch additional data
+        parishes_response = supabase.table('Parishes').select('diocese_url').execute()
+        parish_counts = {}
+        for parish in parishes_response.data:
+            url = parish['diocese_url']
+            parish_counts[url] = parish_counts.get(url, 0) + 1
+
         for diocese in dioceses:
             diocese['parish_directory_url'] = dir_url_map.get(diocese['id'])
+            diocese['parishes_in_db_count'] = parish_counts.get(diocese['Website'], 0)
 
-            # Get count of parishes in the database
-            count_response = supabase.table('Parishes').select('count', count='exact').eq('diocese_url', diocese['Website']).execute()
-            diocese['parishes_in_db_count'] = count_response.count
+        # Sort in Python
+        reverse = sort_order.lower() == 'desc'
+        if sort_by == 'parishes_in_db_count':
+            dioceses.sort(key=lambda d: d.get('parishes_in_db_count', 0), reverse=reverse)
+        else:
+            # Use .get for safer access and handle None values
+            dioceses.sort(key=lambda d: (d.get(sort_by) is None, d.get(sort_by, '')), reverse=reverse)
 
-        # To get total count for pagination metadata (with filter applied)
-        count_query = supabase.table('Dioceses').select('count', count='exact')
-        if search_query:
-            search_pattern = f"%{search_query}%"
-            count_query = count_query.or_(
-                f"Name.ilike.{search_pattern},"
-                f"Address.ilike.{search_pattern},"
-                f"Website.ilike.{search_pattern}"
-            )
-        count_response = count_query.execute()
-        total_count = count_response.count
+
+        # Paginate the sorted list
+        paginated_dioceses = dioceses[offset:offset + page_size]
 
         return {
-            "data": dioceses,
+            "data": paginated_dioceses,
             "total_count": total_count,
             "page": page,
             "page_size": page_size
