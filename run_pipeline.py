@@ -16,7 +16,7 @@ def main():
     parser.add_argument("--skip_parishes", action="store_true", help="Skip the parish extraction step.")
     parser.add_argument("--skip_schedules", action="store_true", help="Skip the schedule extraction step.")
     parser.add_argument("--skip_reporting", action="store_true", help="Skip the reporting step.")
-    parser.add_argument("--diocese_id", type=int, default=2024, help="ID of a specific diocese to process. Defaults to 2024 (Archdiocese of Atlanta).")
+    parser.add_argument("--diocese_id", type=int, help="ID of a specific diocese to process.")
     parser.add_argument("--max_parishes_per_diocese", type=int, default=config.DEFAULT_MAX_PARISHES_PER_DIOCESE, help="Max parishes to extract per diocese.")
     parser.add_argument("--num_parishes_for_schedule", type=int, default=config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE, help="Number of parishes to extract schedules for.")
     args = parser.parse_args()

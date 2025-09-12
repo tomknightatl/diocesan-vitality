@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import App from './App.jsx';
 import Diocese from './Diocese.jsx';
+import Dashboard from './Dashboard.jsx';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './index.css';
 
@@ -24,6 +25,10 @@ const router = createBrowserRouter([
       {
         path: "/reports",
         element: <Reports />,
+      },
+      {
+        path: "/dashboard",
+        element: <Dashboard />,
       },
     ],
   },
