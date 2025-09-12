@@ -976,17 +976,20 @@ class ImprovedInteractiveMapExtractor(BaseExtractor):
 
                 # Look for JSON-like data containing parish information
                 if any(keyword in script_content.lower() for keyword in
-                       ['parish', 'church', 'location', 'marker']):
+                       ['parish', 'church', 'location', 'marker', 'lat', 'popup']):
 
                     # Try to extract JSON objects
                     import json
 
-                    # Look for common patterns
+                    # Look for common patterns, including eCatholic/Leaflet patterns
                     patterns = [
                         r'parishes\s*[:=]\s*(\[.*?\])',
                         r'locations\s*[:=]\s*(\[.*?\])',
                         r'markers\s*[:=]\s*(\[.*?\])',
-                        r'churches\s*[:=]\s*(\[.*?\])'
+                        r'churches\s*[:=]\s*(\[.*?\])',
+                        r'(\[.*?\{.*?"type"\s*:\s*"point".*?\}.*?\])',  # eCatholic pattern
+                        r'(\[.*?\{.*?"lat"\s*:\s*[\d.-]+.*?\}.*?\])',   # Lat/lon array pattern
+                        r'(\[.*?\{.*?"popup"\s*:\s*\{.*?\}.*?\])'       # Popup data pattern
                     ]
 
                     for pattern in patterns:
@@ -1055,13 +1058,43 @@ class ImprovedInteractiveMapExtractor(BaseExtractor):
         if not isinstance(data, dict):
             return None
 
-        # Field mapping for name
+        # Field mapping for name - handle eCatholic format
         name = None
-        for field in ['name', 'title', 'parishName', 'churchName', 'parish_name',
-                      'church_name', 'label', 'text', 'Name', 'Title']:
-            if field in data and data[field]:
-                name = str(data[field]).strip()
-                break
+        
+        # Check for eCatholic format with popup HTML
+        if 'popup' in data and isinstance(data['popup'], dict) and 'value' in data['popup']:
+            popup_html = data['popup']['value']
+            from bs4 import BeautifulSoup
+            popup_soup = BeautifulSoup(popup_html, 'html.parser')
+            
+            # Extract name from the popup HTML
+            name_link = popup_soup.find('a')
+            if name_link:
+                name = name_link.get_text(strip=True)
+            
+            if not name:
+                # Try other elements in the popup
+                for tag in ['h1', 'h2', 'h3', 'h4', '.field--name-field-name']:
+                    elem = popup_soup.find(tag)
+                    if elem:
+                        name = elem.get_text(strip=True)
+                        break
+                        
+        # Check title field (eCatholic also uses this)
+        if not name and 'title' in data:
+            title_text = str(data['title'])
+            # Strip HTML tags from title
+            from bs4 import BeautifulSoup
+            title_soup = BeautifulSoup(title_text, 'html.parser')
+            name = title_soup.get_text(strip=True)
+            
+        # Fallback to standard field mapping
+        if not name:
+            for field in ['name', 'parishName', 'churchName', 'parish_name',
+                          'church_name', 'label', 'text', 'Name']:
+                if field in data and data[field]:
+                    name = str(data[field]).strip()
+                    break
 
         if not name or len(name) < 3:
             return None
@@ -1101,9 +1134,9 @@ class ImprovedInteractiveMapExtractor(BaseExtractor):
                 website = str(data[field]).strip()
                 break
 
-        # Coordinates
+        # Coordinates - handle eCatholic format (lat/lon instead of lat/lng)
         lat = data.get('lat', data.get('latitude', data.get('Lat')))
-        lng = data.get('lng', data.get('longitude', data.get('lon', data.get('Lng'))))
+        lng = data.get('lng', data.get('lon', data.get('longitude', data.get('Lng'))))
 
         return ParishData(
             name=clean_name,
