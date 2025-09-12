@@ -40,6 +40,9 @@ from parish_extraction_core import (
     setup_enhanced_driver, enhanced_safe_upsert_to_supabase, clean_parish_name_and_extract_address
 )
 
+# PDF extraction components
+from pdf_parish_extractor import PDFParishExtractor
+
 # =============================================================================
 # CHROME INSTALLATION FOR GOOGLE COLAB
 # =============================================================================
@@ -82,6 +85,57 @@ def ensure_chrome_installed():
     except Exception as e:
         logger.error(f"❌ Error during Chrome installation: {e}")
         return False
+
+# =============================================================================
+# PDF PARISH DIRECTORY EXTRACTOR
+# =============================================================================
+
+class PDFDirectoryExtractor(BaseExtractor):
+    """Wrapper extractor for PDF-based parish directories"""
+    
+    def __init__(self, pattern: DioceseSitePattern):
+        super().__init__(pattern)
+        self.pdf_extractor = PDFParishExtractor()
+    
+    def can_extract(self, driver) -> bool:
+        """Determine if this extractor can handle the current page"""
+        try:
+            current_url = driver.current_url
+            page_source = driver.page_source
+            confidence = self.pdf_extractor.can_handle(current_url, page_source)
+            return confidence > 0.5
+        except:
+            return False
+    
+    def extract_parishes_from_page(self, driver) -> List[ParishData]:
+        """Extract parishes using PDF extraction methods"""
+        try:
+            current_url = driver.current_url
+            logger.info(f"    🎯 PDF Directory Extractor processing: {current_url}")
+            
+            # Use the PDF extractor to get parishes
+            pdf_parishes = self.pdf_extractor.extract_parishes(current_url)
+            
+            # Convert to ParishData objects compatible with the infrastructure
+            parishes = []
+            for pdf_parish in pdf_parishes:
+                parish = ParishData(
+                    name=pdf_parish.name,
+                    city=pdf_parish.city,
+                    state=pdf_parish.state,
+                    address=pdf_parish.address,
+                    phone=pdf_parish.phone,
+                    website=pdf_parish.website,
+                    pastor=pdf_parish.pastor
+                )
+                parishes.append(parish)
+            
+            logger.info(f"    📊 Successfully extracted {len(parishes)} parishes from PDF")
+            return parishes
+            
+        except Exception as e:
+            logger.error(f"    ❌ PDF Directory extraction failed: {e}")
+            return []
 
 # =============================================================================
 # ENHANCED DIOCESE CARD EXTRACTOR WITH DETAIL PAGE NAVIGATION
@@ -1456,6 +1510,7 @@ def process_diocese_with_detailed_extraction(diocese_info: Dict, driver, max_par
 
         # Add other extractors as fallbacks in priority order
         fallback_extractors = [
+            ('PDFDirectoryExtractor', PDFDirectoryExtractor(pattern)),
             ('IframeExtractor', IframeExtractor(pattern)),
             ('ParishFinderExtractor', ParishFinderExtractor(pattern)),
             ('EnhancedDiocesesCardExtractor', EnhancedDiocesesCardExtractor(pattern)),
