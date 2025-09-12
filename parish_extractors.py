@@ -1443,7 +1443,9 @@ def process_diocese_with_detailed_extraction(diocese_info: Dict, driver, max_par
         extractors_to_try = []
 
         # Primary extractor based on detected pattern
-        if pattern.listing_type == ParishListingType.PARISH_FINDER:
+        if pattern.listing_type == ParishListingType.IFRAME_EMBEDDED:
+            extractors_to_try.append(('IframeExtractor', IframeExtractor(pattern)))
+        elif pattern.listing_type == ParishListingType.PARISH_FINDER:
             extractors_to_try.append(('ParishFinderExtractor', ParishFinderExtractor(pattern)))
         elif pattern.listing_type == ParishListingType.DIOCESE_CARD_LAYOUT:
             extractors_to_try.append(('EnhancedDiocesesCardExtractor', EnhancedDiocesesCardExtractor(pattern)))
@@ -1454,6 +1456,7 @@ def process_diocese_with_detailed_extraction(diocese_info: Dict, driver, max_par
 
         # Add other extractors as fallbacks in priority order
         fallback_extractors = [
+            ('IframeExtractor', IframeExtractor(pattern)),
             ('ParishFinderExtractor', ParishFinderExtractor(pattern)),
             ('EnhancedDiocesesCardExtractor', EnhancedDiocesesCardExtractor(pattern)),
             ('TableExtractor', TableExtractor(pattern)),
@@ -1581,6 +1584,360 @@ def process_diocese_with_detailed_extraction(diocese_info: Dict, driver, max_par
         print(f"  ⏱️ Completed in {result['processing_time']:.1f}s")
 
     return result
+
+# =============================================================================
+# IFRAME EXTRACTOR FOR EMBEDDED PARISH DIRECTORIES
+# =============================================================================
+
+class IframeExtractor(BaseExtractor):
+    """Specialized extractor for iframe-embedded parish directories like Maptive"""
+    
+    def extract(self, driver, soup: BeautifulSoup, url: str) -> List[ParishData]:
+        parishes = []
+        try:
+            print("  📍 Iframe-embedded directory detected - switching context...")
+            
+            # Find iframe(s) with parish directory content
+            iframes = soup.find_all('iframe')
+            target_iframe = None
+            
+            for iframe in iframes:
+                src = iframe.get('src', '')
+                if self._is_parish_directory_iframe(src):
+                    target_iframe = iframe
+                    print(f"    🎯 Found parish directory iframe: {src[:100]}...")
+                    break
+            
+            if not target_iframe:
+                print("    ⚠️ No parish directory iframe found")
+                return parishes
+            
+            # Try direct iframe URL approach first (most reliable)
+            iframe_src = target_iframe.get('src')
+            if iframe_src:
+                parishes = self._extract_from_direct_iframe_url(driver, iframe_src)
+                if parishes:
+                    return parishes
+            
+            # Fallback: Switch to iframe context
+            parishes = self._extract_from_iframe_context(driver, soup)
+            
+        except Exception as e:
+            print(f"    ❌ Iframe extraction error: {str(e)[:100]}...")
+            
+        return parishes
+    
+    def _is_parish_directory_iframe(self, src: str) -> bool:
+        """Check if iframe source contains parish directory content"""
+        if not src:
+            return False
+            
+        src_lower = src.lower()
+        
+        # Specific services known to host parish directories
+        mapping_services = [
+            'maptive.com', 'google.com/maps', 'mapbox.com',
+            'arcgis.com', 'openstreetmap'
+        ]
+        
+        parish_indicators = ['parish', 'church', 'directory', 'locator', 'finder']
+        
+        # Check for known mapping services
+        if any(service in src_lower for service in mapping_services):
+            return True
+            
+        # Check for parish-related keywords in URL
+        if any(indicator in src_lower for indicator in parish_indicators):
+            return True
+            
+        return False
+    
+    def _extract_from_direct_iframe_url(self, driver, iframe_src: str) -> List[ParishData]:
+        """Extract parishes by navigating directly to iframe URL"""
+        parishes = []
+        
+        try:
+            print(f"    🌐 Loading iframe URL directly: {iframe_src[:100]}...")
+            
+            # Navigate directly to the iframe URL
+            driver.get(iframe_src)
+            
+            # Wait for dynamic content to load
+            self._wait_for_dynamic_content(driver)
+            
+            # Check if this is a Maptive interface
+            if 'maptive.com' in iframe_src:
+                parishes = self._extract_from_maptive(driver)
+            else:
+                # Try generic iframe extraction
+                parishes = self._extract_from_generic_iframe(driver)
+                
+        except Exception as e:
+            print(f"    ⚠️ Direct iframe URL extraction failed: {str(e)[:100]}...")
+            
+        return parishes
+    
+    def _extract_from_iframe_context(self, driver, soup: BeautifulSoup) -> List[ParishData]:
+        """Extract parishes by switching to iframe context"""
+        parishes = []
+        
+        try:
+            # Find and switch to iframe
+            iframe_element = driver.find_element(By.TAG_NAME, "iframe")
+            driver.switch_to.frame(iframe_element)
+            
+            # Wait for content to load
+            self._wait_for_dynamic_content(driver)
+            
+            # Try extraction methods
+            parishes = self._extract_from_generic_iframe(driver)
+            
+        except Exception as e:
+            print(f"    ⚠️ Iframe context extraction failed: {str(e)[:100]}...")
+        finally:
+            # Always switch back to default content
+            try:
+                driver.switch_to.default_content()
+            except:
+                pass
+                
+        return parishes
+    
+    def _extract_from_maptive(self, driver) -> List[ParishData]:
+        """Extract parishes from Maptive mapping interface"""
+        parishes = []
+        
+        print("    🗺️ Extracting from Maptive interface...")
+        
+        try:
+            # Try JavaScript-based extraction first
+            parishes = self._extract_via_javascript(driver)
+            
+            if not parishes:
+                # Fallback: try DOM-based extraction
+                parishes = self._extract_via_dom_parsing(driver)
+                
+        except Exception as e:
+            print(f"    ⚠️ Maptive extraction error: {str(e)[:100]}...")
+            
+        return parishes
+    
+    def _extract_via_javascript(self, driver) -> List[ParishData]:
+        """Extract parish data using JavaScript APIs"""
+        parishes = []
+        
+        # Common JavaScript data structures in mapping applications
+        js_extractors = [
+            # Standard parish data arrays
+            "return window.parishData || [];",
+            "return window.mapData || [];",
+            "return window.locations || [];",
+            "return window.markers || [];",
+            
+            # Maptive-specific extraction
+            """
+            var parishes = [];
+            try {
+                if (window.map && window.map.markers) {
+                    window.map.markers.forEach(function(marker) {
+                        parishes.push({
+                            name: marker.title || marker.name || marker.label,
+                            address: marker.address || marker.description,
+                            lat: marker.lat || marker.latitude,
+                            lng: marker.lng || marker.longitude
+                        });
+                    });
+                }
+            } catch(e) {}
+            return parishes;
+            """,
+            
+            # Generic marker extraction
+            """
+            var parishes = [];
+            var elements = document.querySelectorAll('[data-name], [data-title], .marker, .parish, .church');
+            elements.forEach(function(el) {
+                var name = el.dataset.name || el.dataset.title || el.textContent;
+                var address = el.dataset.address || el.title;
+                if (name && name.trim().length > 2) {
+                    parishes.push({
+                        name: name.trim(),
+                        address: address ? address.trim() : ''
+                    });
+                }
+            });
+            return parishes;
+            """
+        ]
+        
+        for js_code in js_extractors:
+            try:
+                data = driver.execute_script(js_code)
+                if data and isinstance(data, list) and len(data) > 0:
+                    print(f"    ✅ JavaScript extracted {len(data)} parish records")
+                    
+                    for item in data:
+                        if isinstance(item, dict):
+                            name = item.get('name', item.get('title', ''))
+                            address = item.get('address', item.get('description', ''))
+                            
+                            if name and len(name.strip()) > 2:
+                                # Parse address components
+                                parsed = clean_parish_name_and_extract_address(f"{name} {address}")
+                                
+                                parish = ParishData(
+                                    name=self.clean_text(name),
+                                    address=self.clean_text(address) if address else None,
+                                    street_address=parsed.get('street_address'),
+                                    city=parsed.get('city'),
+                                    state=parsed.get('state'),
+                                    zip_code=parsed.get('zip_code')
+                                )
+                                parishes.append(parish)
+                    
+                    if parishes:
+                        break
+                        
+            except Exception as e:
+                print(f"    ⚠️ JavaScript extraction attempt failed: {str(e)[:50]}...")
+                continue
+        
+        return parishes
+    
+    def _extract_via_dom_parsing(self, driver) -> List[ParishData]:
+        """Extract parishes by parsing DOM elements"""
+        parishes = []
+        
+        try:
+            # Get page source and parse with BeautifulSoup
+            soup = BeautifulSoup(driver.page_source, 'html.parser')
+            
+            # Look for common parish listing patterns in iframe content
+            selectors = [
+                '[data-parish]', '[data-church]', '[data-name]',
+                '.parish', '.church', '.location', '.marker',
+                'article', 'li', '.entry'
+            ]
+            
+            for selector in selectors:
+                elements = soup.select(selector)
+                if elements:
+                    print(f"    📊 Found {len(elements)} elements with selector: {selector}")
+                    
+                    for element in elements[:50]:  # Limit to prevent timeout
+                        parish_data = self._extract_parish_from_iframe_element(element)
+                        if parish_data:
+                            parishes.append(parish_data)
+                    
+                    if parishes:
+                        break
+                        
+        except Exception as e:
+            print(f"    ⚠️ DOM parsing error: {str(e)[:100]}...")
+            
+        return parishes
+    
+    def _extract_parish_from_iframe_element(self, element) -> Optional[ParishData]:
+        """Extract parish data from iframe DOM element"""
+        try:
+            # Get name from various sources
+            name = None
+            for attr in ['data-name', 'data-title', 'title']:
+                name = element.get(attr)
+                if name:
+                    break
+            
+            if not name:
+                # Try text content of headings or strong elements
+                for tag in ['h1', 'h2', 'h3', 'h4', 'strong']:
+                    heading = element.find(tag)
+                    if heading:
+                        name = heading.get_text().strip()
+                        break
+            
+            if not name:
+                # Use first significant text
+                text = element.get_text().strip()
+                if text and len(text) > 2 and len(text) < 200:
+                    name = text.split('\n')[0].strip()
+            
+            if not name or len(name) < 3:
+                return None
+            
+            # Get address
+            address = element.get('data-address') or element.get('title', '')
+            if not address:
+                # Look for address in text content
+                text_content = element.get_text()
+                lines = [line.strip() for line in text_content.split('\n') if line.strip()]
+                for line in lines[1:4]:  # Skip first line (likely name)
+                    if any(indicator in line.lower() for indicator in ['st ', 'ave', 'rd ', 'blvd', 'street', 'avenue']):
+                        address = line
+                        break
+            
+            # Parse address components
+            parsed = clean_parish_name_and_extract_address(f"{name} {address}")
+            
+            return ParishData(
+                name=self.clean_text(name),
+                address=self.clean_text(address) if address else None,
+                street_address=parsed.get('street_address'),
+                city=parsed.get('city'),
+                state=parsed.get('state'),
+                zip_code=parsed.get('zip_code')
+            )
+            
+        except Exception as e:
+            print(f"    ⚠️ Element extraction error: {str(e)[:50]}...")
+            return None
+    
+    def _extract_from_generic_iframe(self, driver) -> List[ParishData]:
+        """Generic extraction method for unknown iframe types"""
+        parishes = []
+        
+        try:
+            # Try JavaScript extraction first
+            parishes = self._extract_via_javascript(driver)
+            
+            if not parishes:
+                # Fallback to DOM parsing
+                parishes = self._extract_via_dom_parsing(driver)
+                
+        except Exception as e:
+            print(f"    ⚠️ Generic iframe extraction error: {str(e)[:100]}...")
+        
+        return parishes
+    
+    def _wait_for_dynamic_content(self, driver, timeout: int = 30):
+        """Wait for dynamic content to load in iframe"""
+        try:
+            # Wait for page to be ready
+            WebDriverWait(driver, timeout).until(
+                lambda d: d.execute_script("return document.readyState") == "complete"
+            )
+            
+            # Wait for common content indicators
+            wait_selectors = [
+                "[data-parish], [data-church]",
+                ".parish, .church, .marker",
+                "article, .location, .entry"
+            ]
+            
+            for selector in wait_selectors:
+                try:
+                    WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, selector))
+                    )
+                    print(f"    ✅ Dynamic content loaded: {selector}")
+                    break
+                except:
+                    continue
+                    
+            # Additional wait for JavaScript execution
+            time.sleep(3)
+            
+        except Exception as e:
+            print(f"    ⚠️ Dynamic content wait timeout: {str(e)[:50]}...")
 
 # =============================================================================
 # MAIN EXECUTION EXAMPLE

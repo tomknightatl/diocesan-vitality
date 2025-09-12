@@ -61,6 +61,7 @@ class ParishListingType(Enum):
     PARISH_FINDER = "parish_finder"
     DIOCESE_CARD_LAYOUT = "diocese_card_layout"
     PDF_DIRECTORY = "pdf_directory"
+    IFRAME_EMBEDDED = "iframe_embedded"
     UNKNOWN = "unknown"
 
 @dataclass
@@ -345,6 +346,11 @@ class PatternDetector:
     def _detect_listing_type(self, html_lower: str, soup: BeautifulSoup, url: str) -> ParishListingType:
         """Detect how parishes are listed"""
 
+        # Check for iframe-embedded parish directories (HIGHEST PRIORITY)
+        iframe_indicators = self._check_for_iframe_content(soup, html_lower, url)
+        if iframe_indicators:
+            return ParishListingType.IFRAME_EMBEDDED
+
         # Check for Salt Lake City style card layout
         if ('col-lg location' in html_lower and 'card-title' in html_lower and
             'dioslc.org' in url):
@@ -387,6 +393,36 @@ class PatternDetector:
 
         return ParishListingType.SIMPLE_LIST
 
+    def _check_for_iframe_content(self, soup: BeautifulSoup, html_lower: str, url: str) -> bool:
+        """Check if parish directory content is loaded via iframe"""
+        iframes = soup.find_all('iframe')
+        
+        for iframe in iframes:
+            src = iframe.get('src', '') or ''
+            src_lower = src.lower()
+            
+            # Check for mapping/parish directory services in iframes
+            mapping_services = [
+                'maptive.com', 'google.com/maps', 'mapbox.com', 
+                'arcgis.com', 'leaflet', 'openstreetmap'
+            ]
+            
+            parish_indicators = ['parish', 'church', 'directory', 'locator', 'finder']
+            
+            # Check if iframe source contains mapping services or parish-related content
+            if any(service in src_lower for service in mapping_services):
+                return True
+            
+            # Specific check for Archdiocese of Denver Maptive iframe
+            if 'fortress.maptive.com' in src_lower and 'archden' in src_lower:
+                return True
+                
+            # Check for parish-related content in iframe
+            if any(indicator in src_lower for indicator in parish_indicators):
+                return True
+        
+        return False
+
     def _requires_javascript(self, html_lower: str) -> bool:
         """Check if JavaScript is required"""
         js_indicators = ['react', 'angular', 'vue', 'leaflet', 'google.maps', 'ajax', 'finder.js']
@@ -395,7 +431,20 @@ class PatternDetector:
     def _determine_extraction_strategy(self, platform, listing_type, soup, html_lower, url):
         """Determine the best extraction strategy"""
 
-        if listing_type == ParishListingType.DIOCESE_CARD_LAYOUT:
+        if listing_type == ParishListingType.IFRAME_EMBEDDED:
+            return (
+                "iframe_extraction",
+                0.95,
+                {
+                    "iframe_selector": "iframe[src*='maptive'], iframe[src*='parish'], iframe[src*='church']",
+                    "maptive_url": "fortress.maptive.com",
+                    "wait_selectors": "[data-parish], .parish, .church, .marker",
+                    "data_extractors": ["window.parishData", "window.mapData", "window.locations"]
+                },
+                "Iframe-embedded parish directory detected - will extract from embedded content"
+            )
+
+        elif listing_type == ParishListingType.DIOCESE_CARD_LAYOUT:
             return (
                 "diocese_card_extraction_with_details",
                 0.95,
