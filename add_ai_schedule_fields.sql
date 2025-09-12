@@ -63,33 +63,33 @@ SELECT
     
     -- Adoration schedule info
     MAX(CASE 
-        WHEN pd.fact_type LIKE '%Adoration%' AND pd.confidence_score >= 70 
+        WHEN pd.fact_type::text LIKE '%Adoration%' AND pd.confidence_score >= 70 
         THEN pd.ai_structured_data->>'has_weekly_schedule' 
     END)::boolean as has_weekly_adoration,
     
     MAX(CASE 
-        WHEN pd.fact_type LIKE '%Adoration%' AND pd.confidence_score >= 70 
+        WHEN pd.fact_type::text LIKE '%Adoration%' AND pd.confidence_score >= 70 
         THEN pd.confidence_score 
     END) as adoration_confidence,
     
     MAX(CASE 
-        WHEN pd.fact_type LIKE '%Adoration%' AND pd.confidence_score >= 70 
+        WHEN pd.fact_type::text LIKE '%Adoration%' AND pd.confidence_score >= 70 
         THEN pd.ai_structured_data->>'frequency'
     END) as adoration_frequency,
     
     -- Reconciliation schedule info  
     MAX(CASE 
-        WHEN pd.fact_type LIKE '%Reconciliation%' AND pd.confidence_score >= 70 
+        WHEN pd.fact_type::text LIKE '%Reconciliation%' AND pd.confidence_score >= 70 
         THEN pd.ai_structured_data->>'has_weekly_schedule' 
     END)::boolean as has_weekly_reconciliation,
     
     MAX(CASE 
-        WHEN pd.fact_type LIKE '%Reconciliation%' AND pd.confidence_score >= 70 
+        WHEN pd.fact_type::text LIKE '%Reconciliation%' AND pd.confidence_score >= 70 
         THEN pd.confidence_score 
     END) as reconciliation_confidence,
     
     MAX(CASE 
-        WHEN pd.fact_type LIKE '%Reconciliation%' AND pd.confidence_score >= 70 
+        WHEN pd.fact_type::text LIKE '%Reconciliation%' AND pd.confidence_score >= 70 
         THEN pd.ai_structured_data->>'frequency'
     END) as reconciliation_frequency,
     

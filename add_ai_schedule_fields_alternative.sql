@@ -43,42 +43,42 @@ SELECT
     
     -- Adoration schedule info (AI and keyword-based)
     MAX(CASE 
-        WHEN pd.fact_type LIKE '%Adoration%' AND pd.extraction_method = 'ai_gemini' AND pd.confidence_score >= 70 
+        WHEN pd.fact_type::text LIKE '%Adoration%' AND pd.extraction_method = 'ai_gemini' AND pd.confidence_score >= 70 
         THEN (pd.ai_structured_data->>'has_weekly_schedule')::boolean 
-        WHEN pd.fact_type LIKE '%Adoration%' AND pd.extraction_method != 'ai_gemini'
+        WHEN pd.fact_type::text LIKE '%Adoration%' AND pd.extraction_method != 'ai_gemini'
         THEN (pd.fact_value IS NOT NULL AND pd.fact_value != 'Information not found')
     END) as has_weekly_adoration,
     
     MAX(CASE 
-        WHEN pd.fact_type LIKE '%Adoration%' AND pd.extraction_method = 'ai_gemini'
+        WHEN pd.fact_type::text LIKE '%Adoration%' AND pd.extraction_method = 'ai_gemini'
         THEN pd.confidence_score 
-        WHEN pd.fact_type LIKE '%Adoration%' AND pd.extraction_method != 'ai_gemini'
+        WHEN pd.fact_type::text LIKE '%Adoration%' AND pd.extraction_method != 'ai_gemini'
         THEN 50  -- Assign moderate confidence to keyword-based results
     END) as adoration_confidence,
     
     MAX(CASE 
-        WHEN pd.fact_type LIKE '%Adoration%' AND pd.extraction_method = 'ai_gemini'
+        WHEN pd.fact_type::text LIKE '%Adoration%' AND pd.extraction_method = 'ai_gemini'
         THEN pd.ai_structured_data->>'frequency'
         ELSE 'unknown'
     END) as adoration_frequency,
     
     -- Reconciliation schedule info (AI and keyword-based)
     MAX(CASE 
-        WHEN pd.fact_type LIKE '%Reconciliation%' AND pd.extraction_method = 'ai_gemini' AND pd.confidence_score >= 70 
+        WHEN pd.fact_type::text LIKE '%Reconciliation%' AND pd.extraction_method = 'ai_gemini' AND pd.confidence_score >= 70 
         THEN (pd.ai_structured_data->>'has_weekly_schedule')::boolean 
-        WHEN pd.fact_type LIKE '%Reconciliation%' AND pd.extraction_method != 'ai_gemini'
+        WHEN pd.fact_type::text LIKE '%Reconciliation%' AND pd.extraction_method != 'ai_gemini'
         THEN (pd.fact_value IS NOT NULL AND pd.fact_value != 'Information not found')
     END) as has_weekly_reconciliation,
     
     MAX(CASE 
-        WHEN pd.fact_type LIKE '%Reconciliation%' AND pd.extraction_method = 'ai_gemini'
+        WHEN pd.fact_type::text LIKE '%Reconciliation%' AND pd.extraction_method = 'ai_gemini'
         THEN pd.confidence_score 
-        WHEN pd.fact_type LIKE '%Reconciliation%' AND pd.extraction_method != 'ai_gemini'
+        WHEN pd.fact_type::text LIKE '%Reconciliation%' AND pd.extraction_method != 'ai_gemini'
         THEN 50  -- Assign moderate confidence to keyword-based results
     END) as reconciliation_confidence,
     
     MAX(CASE 
-        WHEN pd.fact_type LIKE '%Reconciliation%' AND pd.extraction_method = 'ai_gemini'
+        WHEN pd.fact_type::text LIKE '%Reconciliation%' AND pd.extraction_method = 'ai_gemini'
         THEN pd.ai_structured_data->>'frequency'
         ELSE 'unknown'
     END) as reconciliation_frequency,
