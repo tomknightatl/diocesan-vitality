@@ -59,7 +59,7 @@ SELECT
     p.id as parish_id,
     p."Name" as parish_name,
     p."Web" as parish_website,
-    p."Diocese_id" as diocese_id,
+    p.diocese_id as diocese_id,
     
     -- Adoration schedule info
     MAX(CASE 
@@ -100,7 +100,7 @@ SELECT
 FROM public."Parishes" p
 LEFT JOIN public."ParishData" pd ON p.id = pd.parish_id 
 WHERE pd.fact_type IN ('AdorationScheduleAI', 'ReconciliationScheduleAI', 'AdorationSchedule', 'ReconciliationSchedule')
-GROUP BY p.id, p."Name", p."Web", p."Diocese_id"
+GROUP BY p.id, p."Name", p."Web", p.diocese_id
 ORDER BY ai_extractions DESC, last_updated DESC;
 
 -- Add comments for documentation
