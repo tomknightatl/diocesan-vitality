@@ -177,7 +177,9 @@ function App() {
                   />
                 </th>
                 <th>Parishes</th>
-                <th>Parishes in Database</th>
+                <th style={{ cursor: 'pointer' }} onClick={() => handleSort('parishes_in_db_count')}>
+                  Parishes in Database {sortBy === 'parishes_in_db_count' && (sortOrder === 'asc' ? '▲' : '▼')}
+                </th>
               </tr>
             </thead>
             <tbody>
