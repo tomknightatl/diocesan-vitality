@@ -318,6 +318,7 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_u
         result['reconciliation_page'] = best_page
         result['offers_reconciliation'] = True
         result['reconciliation_info'], result['reconciliation_fact_string'] = extract_time_info(best_page, 'Reconciliation', suppression_urls)
+        logger.info(f"Reconciliation extraction result: '{result['reconciliation_info']}'")
     else:
         result['offers_reconciliation'] = False
         result['reconciliation_info'] = "No relevant page found"
@@ -329,6 +330,7 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_u
         result['adoration_page'] = best_page
         result['offers_adoration'] = True
         result['adoration_info'], result['adoration_fact_string'] = extract_time_info(best_page, 'Adoration', suppression_urls)
+        logger.info(f"Adoration extraction result: '{result['adoration_info']}'")
     else:
         result['offers_adoration'] = False
         result['adoration_info'] = "No relevant page found"
@@ -370,11 +372,16 @@ def save_facts_to_supabase(supabase: Client, results: list):
         logger.info("No results to save to Supabase.")
         return
 
+    logger.info(f"Processing {len(results)} results for database saving")
     facts_to_save = []
     for result in results:
         parish_id = result.get('parish_id')
         if not parish_id:
+            logger.warning(f"Skipping result with no parish_id: {result}")
             continue
+
+        logger.info(f"Parish {parish_id}: Reconciliation offers={result.get('offers_reconciliation')}, info='{result.get('reconciliation_info')}'")
+        logger.info(f"Parish {parish_id}: Adoration offers={result.get('offers_adoration')}, info='{result.get('adoration_info')}'")
 
         if result.get('offers_reconciliation') and result.get('reconciliation_info') != "Information not found":
             facts_to_save.append({
@@ -384,6 +391,7 @@ def save_facts_to_supabase(supabase: Client, results: list):
                 'fact_source_url': result.get('reconciliation_page'),
                 'fact_string': result.get('reconciliation_fact_string')
             })
+            logger.info(f"Added reconciliation fact for parish {parish_id}")
         
         if result.get('offers_adoration') and result.get('adoration_info') != "Information not found":
             facts_to_save.append({
@@ -393,7 +401,9 @@ def save_facts_to_supabase(supabase: Client, results: list):
                 'fact_source_url': result.get('adoration_page'),
                 'fact_string': result.get('adoration_fact_string')
             })
+            logger.info(f"Added adoration fact for parish {parish_id}")
 
+    logger.info(f"Prepared {len(facts_to_save)} facts to save to database")
     if not facts_to_save:
         logger.info("No facts to save to Supabase.")
         return
