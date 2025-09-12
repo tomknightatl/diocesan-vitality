@@ -447,7 +447,13 @@ def main(num_parishes: int, parish_id: int = None, max_pages_to_scan: int = conf
         result['parish_name'] = parish_name
         results.append(result)
         logger.info(f"Completed scraping {url}")
+        
+        # Save results after each parish to avoid data loss if script is interrupted
+        logger.info(f"Saving results for parish {p_id} immediately...")
+        save_facts_to_supabase(supabase, [result])
 
+    # Also save all results at the end (in case any individual saves failed)
+    logger.info("Final batch save of all results...")
     save_facts_to_supabase(supabase, results)
 
 
