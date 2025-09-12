@@ -459,7 +459,7 @@ if __name__ == '__main__':
         "--max_pages_to_scan",
         type=int,
         default=config.DEFAULT_MAX_PAGES_TO_SCAN, # Use the existing constant as default
-        help=f"Maximum number of pages to scan per parish. Defaults to {MAX_PAGES_TO_SCAN}."
+        help=f"Maximum number of pages to scan per parish. Defaults to {config.DEFAULT_MAX_PAGES_TO_SCAN}."
     )
     args = parser.parse_args()
     main(args.num_parishes, args.parish_id, args.max_pages_to_scan)
