@@ -280,13 +280,13 @@ def get_dioceses(
         response = query.range(offset, offset + page_size - 1).execute()
         dioceses = response.data
 
+        # Fetch all parish directory URLs once
+        all_dir_response = supabase.table('DiocesesParishDirectory').select('diocese_id, parish_directory_url').execute()
+        dir_url_map = {item['diocese_id']: item['parish_directory_url'] for item in all_dir_response.data}
+
         # For each diocese, fetch additional data
         for diocese in dioceses:
-            # Get parish directory URL
-            # Get parish directory URL (temporary debug: fetch all and filter in Python)
-            all_dir_response = supabase.table('DiocesesParishDirectory').select('diocese_id, parish_directory_url').execute()
-            matching_dir = next((item for item in all_dir_response.data if item['diocese_id'] == diocese['id']), None)
-            diocese['parish_directory_url'] = matching_dir['parish_directory_url'] if matching_dir else None
+            diocese['parish_directory_url'] = dir_url_map.get(diocese['id'])
 
             # Get count of parishes in the database
             count_response = supabase.table('Parishes').select('count', count='exact').eq('diocese_url', diocese['Website']).execute()
@@ -341,14 +341,31 @@ def get_parishes_for_diocese(diocese_id: int):
         parishes_response = supabase.table('Parishes').select('*').eq('diocese_url', diocese_website).execute()
         parishes = parishes_response.data
 
-        # For each parish, fetch reconciliation and adoration facts
-        for parish in parishes:
-            # For each parish, fetch reconciliation and adoration facts from ParishData
-            reconciliation_response = supabase.table('ParishData').select('fact_value').eq('parish_id', parish['id']).eq('fact_type', 'ReconciliationSchedule').execute()
-            parish['reconciliation_facts'] = reconciliation_response.data[0]['fact_value'] if reconciliation_response.data else None
+        if not parishes:
+            return {"data": []}
 
-            adoration_response = supabase.table('ParishData').select('fact_value').eq('parish_id', parish['id']).eq('fact_type', 'AdorationSchedule').execute()
-            parish['adoration_facts'] = adoration_response.data[0]['fact_value'] if adoration_response.data else None
+        parish_ids = [parish['id'] for parish in parishes]
+
+        # Fetch all reconciliation and adoration facts for all parishes in a single query
+        parish_data_response = supabase.table('ParishData').select('parish_id, fact_type, fact_value').in_('parish_id', parish_ids).in_('fact_type', ['ReconciliationSchedule', 'AdorationSchedule']).execute()
+        parish_data = parish_data_response.data
+
+        # Create a lookup for parish facts
+        parish_facts = {}
+        for fact in parish_data:
+            pid = fact['parish_id']
+            if pid not in parish_facts:
+                parish_facts[pid] = {}
+            if fact['fact_type'] == 'ReconciliationSchedule':
+                parish_facts[pid]['reconciliation_facts'] = fact['fact_value']
+            elif fact['fact_type'] == 'AdorationSchedule':
+                parish_facts[pid]['adoration_facts'] = fact['fact_value']
+
+        # Add facts to parishes
+        for parish in parishes:
+            facts = parish_facts.get(parish['id'], {})
+            parish['reconciliation_facts'] = facts.get('reconciliation_facts')
+            parish['adoration_facts'] = facts.get('adoration_facts')
 
         return {"data": parishes}
     except Exception as e:
