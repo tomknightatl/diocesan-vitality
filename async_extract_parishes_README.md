@@ -73,14 +73,20 @@ graph TB
 
 ### Basic Usage
 ```bash
+# Activate virtual environment
+source venv/bin/activate
+
 # Extract 20 parishes with default settings
-python async_extract_parishes.py --diocese_id 2024 --num_parishes_per_diocese 20
+python3 async_extract_parishes.py --diocese_id 2024 --num_parishes_per_diocese 20
 ```
 
 ### High-Performance Configuration
 ```bash
+# Activate virtual environment
+source venv/bin/activate
+
 # Large diocese with optimized settings
-python async_extract_parishes.py \
+python3 async_extract_parishes.py \
   --diocese_id 2024 \
   --num_parishes_per_diocese 50 \
   --pool_size 6 \
@@ -90,8 +96,11 @@ python async_extract_parishes.py \
 
 ### Maximum Performance
 ```bash
+# Activate virtual environment
+source venv/bin/activate
+
 # Process all parishes with maximum concurrency
-python async_extract_parishes.py \
+python3 async_extract_parishes.py \
   --diocese_id 2024 \
   --num_parishes_per_diocese 0 \
   --pool_size 8 \
@@ -100,8 +109,11 @@ python async_extract_parishes.py \
 
 ### Multiple Diocese Processing
 ```bash
+# Activate virtual environment
+source venv/bin/activate
+
 # Process multiple dioceses without diocese_id (processes all)
-python async_extract_parishes.py \
+python3 async_extract_parishes.py \
   --num_parishes_per_diocese 30 \
   --pool_size 4 \
   --batch_size 8 \

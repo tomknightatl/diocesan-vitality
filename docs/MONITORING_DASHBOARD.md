@@ -60,20 +60,36 @@ The real-time monitoring dashboard provides **live operational visibility** into
 
 ### Accessing the Dashboard
 
-1. **Start the Backend Server**:
+**Complete Setup Instructions:**
+
+1. **Activate Virtual Environment** (if using monitored pipeline):
+   ```bash
+   source venv/bin/activate
+   ```
+
+2. **Start the Backend Server** (in separate terminal):
    ```bash
    cd backend
    uvicorn main:app --reload --host 0.0.0.0 --port 8000
    ```
 
-2. **Start the Frontend Server**:
+3. **Start the Frontend Server** (in separate terminal):
    ```bash
    cd frontend
    npm run dev
    ```
 
-3. **Open Dashboard**:
+4. **Open Dashboard**:
    Navigate to `http://localhost:5173/dashboard`
+
+5. **Run Monitoring-Enabled Pipeline**:
+   ```bash
+   # Basic run with monitoring and 2-hour timeout
+   source venv/bin/activate && timeout 7200 python3 run_pipeline_monitored.py --max_parishes_per_diocese 10 --num_parishes_for_schedule 10
+   
+   # Or test dashboard functionality
+   python3 test_dashboard.py --mode extraction
+   ```
 
 ### Integration with Extraction Scripts
 
@@ -210,15 +226,20 @@ client.update_circuit_breakers(circuit_status)
 
 ### Test Dashboard Functionality
 ```bash
-# Basic monitoring test
-python test_dashboard.py --mode basic
+# Activate virtual environment first
+source venv/bin/activate
 
-# Extraction simulation test
-python test_dashboard.py --mode extraction
+# Basic monitoring test
+python3 test_dashboard.py --mode basic
+
+# Extraction simulation test (recommended)
+python3 test_dashboard.py --mode extraction
 
 # Continuous monitoring demo
-python test_dashboard.py --mode continuous
+python3 test_dashboard.py --mode continuous
 ```
+
+**Note:** Ensure backend server is running before testing dashboard functionality.
 
 ### Manual Testing
 1. Open dashboard in browser

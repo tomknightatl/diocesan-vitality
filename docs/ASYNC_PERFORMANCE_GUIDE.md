@@ -8,19 +8,34 @@ The async concurrent parish extraction system provides **60% faster processing**
 
 ### Basic Usage (Recommended for Most Cases)
 ```bash
+# Activate virtual environment
+source venv/bin/activate
+
 # Extract up to 20 parishes with default concurrency
-python async_extract_parishes.py --diocese_id 2024 --num_parishes_per_diocese 20
+python3 async_extract_parishes.py --diocese_id 2024 --num_parishes_per_diocese 20
 ```
 
 ### High-Performance Configuration
 ```bash
+# Activate virtual environment
+source venv/bin/activate
+
 # For large dioceses (50+ parishes)
-python async_extract_parishes.py \
+python3 async_extract_parishes.py \
   --diocese_id 2024 \
   --num_parishes_per_diocese 50 \
   --pool_size 6 \
   --batch_size 12 \
   --max_concurrent_dioceses 2
+```
+
+### Monitoring-Enabled Async Processing 🖥️
+The async extraction integrates seamlessly with the monitoring dashboard:
+```bash
+# Run monitoring-enabled pipeline (includes async processing)
+source venv/bin/activate && timeout 7200 python3 run_pipeline_monitored.py \
+  --max_parishes_per_diocese 50 \
+  --num_parishes_for_schedule 25
 ```
 
 ## Performance Parameters
@@ -225,8 +240,11 @@ The system provides comprehensive monitoring:
 
 ### Development and Testing
 ```bash
+# Activate virtual environment
+source venv/bin/activate
+
 # Conservative settings for development
-python async_extract_parishes.py \
+python3 async_extract_parishes.py \
   --diocese_id 2024 \
   --num_parishes_per_diocese 5 \
   --pool_size 2 \
@@ -235,8 +253,11 @@ python async_extract_parishes.py \
 
 ### Production Environments
 ```bash
+# Activate virtual environment
+source venv/bin/activate
+
 # Balanced production settings
-python async_extract_parishes.py \
+python3 async_extract_parishes.py \
   --diocese_id 2024 \
   --num_parishes_per_diocese 50 \
   --pool_size 6 \
@@ -246,15 +267,31 @@ python async_extract_parishes.py \
 
 ### Bulk Processing
 ```bash
+# Activate virtual environment
+source venv/bin/activate
+
 # Process all dioceses with rate limiting
 for diocese_id in $(seq 2001 2200); do
-  python async_extract_parishes.py \
+  python3 async_extract_parishes.py \
     --diocese_id $diocese_id \
     --num_parishes_per_diocese 0 \
     --pool_size 4 \
     --batch_size 8
   sleep 30  # Respectful delay between dioceses
 done
+```
+
+### Integration with Pipeline and Monitoring
+```bash
+# Run full pipeline with async processing and monitoring
+source venv/bin/activate && timeout 7200 python3 run_pipeline_monitored.py \
+  --max_parishes_per_diocese 25 \
+  --num_parishes_for_schedule 15
+
+# Background processing with monitoring logs
+source venv/bin/activate && nohup python3 run_pipeline_monitored.py \
+  --max_parishes_per_diocese 0 \
+  --num_parishes_for_schedule 50 > pipeline_async.log 2>&1 &
 ```
 
 ## Resource Requirements

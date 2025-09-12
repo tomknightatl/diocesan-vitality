@@ -244,28 +244,70 @@ If you encounter errors like "Permission denied" or "Chrome not found" when runn
 
 ## Running the System
 
-The primary method for running the data collection process is via the `run_pipeline.py` script. This script orchestrates the entire workflow, from diocese extraction to schedule collection, and includes options to skip specific stages.
+The primary method for running the data collection process is via the pipeline scripts. These orchestrate the entire workflow, from diocese extraction to schedule collection, with optional real-time monitoring.
 
 ### Running the Full Pipeline
 
-To run the entire pipeline with default settings (processing 5 of each item), simply run:
+**IMPORTANT:** Always activate your virtual environment first:
+```bash
+source venv/bin/activate
+```
 
+#### Option 1: Standard Pipeline (Without Monitoring)
 ```bash
 python run_pipeline.py
 ```
+
+#### Option 2: Monitoring-Enabled Pipeline (Recommended) 🖥️
+For real-time operational visibility and dashboard monitoring:
+
+```bash
+# Run with monitoring and extended timeout (2 hours)
+source venv/bin/activate && timeout 7200 python3 run_pipeline_monitored.py --max_parishes_per_diocese 10 --num_parishes_for_schedule 10
+```
+
+**To use the monitoring dashboard:**
+1. **Start Backend Server** (in separate terminal):
+   ```bash
+   cd backend && uvicorn main:app --reload --host 0.0.0.0 --port 8000
+   ```
+2. **Start Frontend Server** (in separate terminal):
+   ```bash
+   cd frontend && npm run dev
+   ```
+3. **Open Dashboard**: Navigate to `http://localhost:5173/dashboard`
+4. **Run Pipeline**: Execute the monitoring-enabled command above
+
+#### Option 3: Background Processing
+For long-running extractions:
+```bash
+source venv/bin/activate && nohup python3 run_pipeline_monitored.py --max_parishes_per_diocese 10 --num_parishes_for_schedule 10 > pipeline.log 2>&1 &
+```
+
+### Pipeline Parameters
 
 You can customize the run with the following parameters:
 - `--skip_dioceses`: Skip the diocese extraction step.
 - `--skip_parish_directories`: Skip finding parish directories.
 - `--skip_parishes`: Skip the parish extraction step.
 - `--skip_schedules`: Skip the schedule extraction step.
-- `--max_dioceses <number>`: Set the maximum number of dioceses to process.
+- `--skip_reporting`: Skip the reporting step.
+- `--diocese_id <number>`: Process only a specific diocese ID.
 - `--max_parishes_per_diocese <number>`: Set the maximum number of parishes to extract per diocese.
 - `--num_parishes_for_schedule <number>`: Set the number of parishes to extract schedules for.
+- `--monitoring_url <url>`: Monitoring backend URL (default: http://localhost:8000).
+- `--disable_monitoring`: Disable monitoring integration.
 
-For example, to run the entire pipeline without any limits, you would use:
+**Examples:**
 ```bash
-python run_pipeline.py --max_dioceses 0 --max_parishes_per_diocese 0 --num_parishes_for_schedule 0
+# Full pipeline with no limits and monitoring
+source venv/bin/activate && timeout 7200 python3 run_pipeline_monitored.py --max_parishes_per_diocese 0 --num_parishes_for_schedule 0
+
+# Process specific diocese with monitoring
+source venv/bin/activate && python3 run_pipeline_monitored.py --diocese_id 2024 --max_parishes_per_diocese 25
+
+# Standard pipeline without monitoring
+python run_pipeline.py --max_parishes_per_diocese 0 --num_parishes_for_schedule 0
 ```
 
 ### Running Individual Scripts (for Testing or Debugging)
