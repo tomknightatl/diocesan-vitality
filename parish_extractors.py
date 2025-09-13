@@ -1589,23 +1589,27 @@ def process_diocese_with_detailed_extraction(diocese_info: Dict, driver, max_par
 
         # Step 4: Process results and calculate statistics
         if parishes:
-            # Remove duplicates and validate
-            unique_parishes = []
-            seen_names = set()
-            parish_count = 0
-
+            # Import the enhanced deduplication system
+            from core.deduplication import ParishDeduplicator
+            
+            # Set source URLs for all parishes first
             for parish in parishes:
-                if max_parishes != 0 and parish_count >= max_parishes:
-                    break
-
-                name_key = parish.name.lower().strip()
-                if name_key not in seen_names and len(parish.name) > 2:
-                    # Set the source URLs for each parish
-                    parish.diocese_url = diocese_url
-                    parish.parish_directory_url = parish_directory_url
-                    unique_parishes.append(parish)
-                    seen_names.add(name_key)
-                    parish_count += 1
+                parish.diocese_url = diocese_url
+                parish.parish_directory_url = parish_directory_url
+            
+            # Apply enhanced deduplication
+            deduplicator = ParishDeduplicator()
+            unique_parishes, dedup_metrics = deduplicator.deduplicate_parishes(parishes)
+            
+            print(f"    📊 Deduplication: {dedup_metrics.original_count} → {dedup_metrics.deduplicated_count} parishes ({dedup_metrics.duplicates_removed} duplicates removed, {dedup_metrics.deduplication_rate:.1f}%)")
+            
+            # Apply max parishes limit after deduplication
+            if max_parishes != 0 and len(unique_parishes) > max_parishes:
+                unique_parishes = unique_parishes[:max_parishes]
+                print(f"    ✂️  Limited to first {max_parishes} parishes")
+            
+            # Filter out parishes with very short names (likely extraction errors)
+            unique_parishes = [p for p in unique_parishes if len(p.name.strip()) > 2]
 
             result['parishes_found'] = unique_parishes
             result['success'] = True
@@ -2743,7 +2747,15 @@ class NavigationExtractor(BaseExtractor):
             list_selectors = [
                 '.parish-list li', '.church-list li', 
                 'ul.parishes li', 'ul.churches li',
-                '.directory-list .item', '.parish-directory .entry'
+                '.directory-list .item', '.parish-directory .entry',
+                # WordPress category/archive page selectors
+                'article.post', 'article[class*="post"]',
+                '.entry-title', '.post-title', '.entry-header',
+                # General content containers
+                '.content-area article', '.main-content .post',
+                '.site-content article', '.primary-content .entry',
+                # Generic article/content selectors
+                'main article', 'section article', '.content article'
             ]
             
             for selector in list_selectors:
@@ -2845,7 +2857,16 @@ class NavigationExtractor(BaseExtractor):
             name = None
             
             # Try different ways to get the parish name
-            name_selectors = ['h1', 'h2', 'h3', 'h4', '.name', '.title', '.parish-name', 'strong']
+            name_selectors = [
+                'h1', 'h2', 'h3', 'h4', '.name', '.title', '.parish-name', 'strong',
+                # WordPress specific selectors
+                '.entry-title', '.post-title', '.entry-header h1', '.entry-header h2',
+                'header h1', 'header h2', 'header .title',
+                # Article title selectors
+                'article h1', 'article h2', 'article .title',
+                # Link text (for directory listings)
+                'a[href*="parish"]', 'a[href*="church"]', 'a[title*="parish"]', 'a[title*="church"]'
+            ]
             for selector in name_selectors:
                 name_elem = element.select_one(selector)
                 if name_elem:

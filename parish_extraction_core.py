@@ -394,10 +394,11 @@ class PatternDetector:
         if any(hover_navigation_indicators):
             return ParishListingType.HOVER_NAVIGATION
 
-        # Interactive map indicators
-        map_indicators = ['leaflet', 'google.maps', 'mapbox', 'parish-map', 'interactive']
-        if any(indicator in html_lower for indicator in map_indicators):
-            return ParishListingType.INTERACTIVE_MAP
+        # Interactive map indicators (but exclude known hover navigation sites)
+        if 'dwc.org' not in url.lower():  # Don't override hover navigation for known sites
+            map_indicators = ['leaflet', 'google.maps', 'mapbox', 'parish-map', 'interactive']
+            if any(indicator in html_lower for indicator in map_indicators):
+                return ParishListingType.INTERACTIVE_MAP
 
         # Table indicators
         if soup.find('table') and ('parish' in html_lower or 'church' in html_lower):
