@@ -191,11 +191,11 @@ function App() {
                 <OverlayTrigger
                   placement="bottom"
                   delay={{ show: 250, hide: 400 }}
-                  overlay={(props) => renderTooltip(props, 'The number of unique parishes that have been searched for schedule information.')}
+                  overlay={(props) => renderTooltip(props, 'The number of parishes for which schedule information (adoration or reconciliation) has been successfully extracted.')}
                 >
                   <div>
-                    <strong>Parishes Searched</strong>
-                    <div>{summary.parishes_searched}</div>
+                    <strong>Parishes with Data Extracted</strong>
+                    <div>{summary.parishes_with_data_extracted}</div>
                   </div>
                 </OverlayTrigger>
               </Col>
@@ -203,11 +203,11 @@ function App() {
                 <OverlayTrigger
                   placement="bottom"
                   delay={{ show: 250, hide: 400 }}
-                  overlay={(props) => renderTooltip(props, 'The number of parishes for which schedule information (adoration or reconciliation) has been successfully extracted.')}
+                  overlay={(props) => renderTooltip(props, 'The number of parishes for which schedule information could not be extracted.')}
                 >
                   <div>
-                    <strong>Parishes with Data Extracted</strong>
-                    <div>{summary.parishes_with_data_extracted}</div>
+                    <strong>Parishes with Data Not Extracted</strong>
+                    <div>{summary.parishes_with_data_not_extracted}</div>
                   </div>
                 </OverlayTrigger>
               </Col>
@@ -264,7 +264,10 @@ function App() {
                 </th>
                 <th>Parishes</th>
                 <th style={{ cursor: 'pointer' }} onClick={() => handleSort('parishes_in_db_count')}>
-                  Parishes in Database {sortBy === 'parishes_in_db_count' && (sortOrder === 'asc' ? '▲' : '▼')}
+                  Parishes Extracted {sortBy === 'parishes_in_db_count' && (sortOrder === 'asc' ? '▲' : '▼')}
+                </th>
+                <th style={{ cursor: 'pointer' }} onClick={() => handleSort('parishes_with_data_extracted_count')}>
+                  Parishes with Data Extracted {sortBy === 'parishes_with_data_extracted_count' && (sortOrder === 'asc' ? '▲' : '▼')}
                 </th>
               </tr>
             </thead>
@@ -280,7 +283,10 @@ function App() {
                     }
                   </td>
                   <td>
-                    <Link to={`/diocese/${diocese.id}`}>{diocese.parishes_in_db_count}</Link>
+                    <Link to={`/diocese?id=${diocese.id}`}>{diocese.parishes_in_db_count}</Link>
+                  </td>
+                  <td>
+                    <Link to={`/diocese?id=${diocese.id}&filter=with_data`}>{diocese.parishes_with_data_extracted_count}</Link>
                   </td>
                 </tr>
               ))}

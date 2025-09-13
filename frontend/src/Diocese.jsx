@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { Container, Table, Spinner, Alert, Card } from 'react-bootstrap';
 
 function Diocese() {
-  const { id } = useParams();
+  const { search } = useLocation();
+  const queryParams = new URLSearchParams(search);
+  const id = queryParams.get('id');
+
   const [diocese, setDiocese] = useState(null);
   const [parishes, setParishes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -11,6 +14,7 @@ function Diocese() {
 
   useEffect(() => {
     const fetchDioceseDetails = async () => {
+      if (!id) return; // Don't fetch if no id
       setLoading(true);
       setError(null);
       try {
@@ -26,7 +30,8 @@ function Diocese() {
         setDiocese(dioceseResult.data);
 
         // Fetch parishes
-        const parishesResponse = await fetch(`/api/dioceses/${id}/parishes`);
+        const filter = queryParams.get('filter');
+        const parishesResponse = await fetch(`/api/dioceses/${id}/parishes${filter ? `?filter=${filter}` : ''}`);
         if (!parishesResponse.ok) {
           throw new Error('Network response was not ok');
         }
@@ -43,7 +48,7 @@ function Diocese() {
     };
 
     fetchDioceseDetails();
-  }, [id]);
+  }, [id, search]);
 
   if (loading) {
     return <Spinner animation="border" />;
