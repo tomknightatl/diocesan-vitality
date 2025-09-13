@@ -251,7 +251,9 @@ def get_dioceses(
     page_size: int = 20,
     sort_by: str = "Name",
     sort_order: str = "asc",
-    search_query: str = None
+    filter_name: str = None,
+    filter_address: str = None,
+    filter_website: str = None
 ):
     """
     Fetches records from the 'Dioceses' table with pagination, sorting, and filtering.
@@ -260,17 +262,16 @@ def get_dioceses(
         offset = (page - 1) * page_size
         
         query = supabase.table('Dioceses').select('*')
-
-        # Apply filtering
-        if search_query:
-            search_pattern = f"%{search_query}%"
-            query = query.or_(
-                f"Name.ilike.{search_pattern},"
-                f"Address.ilike.{search_pattern},"
-                f"Website.ilike.{search_pattern}"
-            )
-
         dioceses = query.execute().data
+
+        # Apply filtering in Python
+        if filter_name:
+            dioceses = [d for d in dioceses if filter_name.lower() in d.get('Name', '').lower()]
+        if filter_address:
+            dioceses = [d for d in dioceses if filter_address.lower() in d.get('Address', '').lower()]
+        if filter_website:
+            dioceses = [d for d in dioceses if filter_website.lower() in d.get('Website', '').lower()]
+
         total_count = len(dioceses)
 
         # Fetch additional data

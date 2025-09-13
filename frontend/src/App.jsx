@@ -24,7 +24,25 @@ function App() {
   const [filterAddress, setFilterAddress] = useState('');
   const [filterWebsite, setFilterWebsite] = useState('');
 
-    useEffect(() => {
+  // State for debounced filters
+  const [debouncedFilterName, setDebouncedFilterName] = useState(filterName);
+  const [debouncedFilterAddress, setDebouncedFilterAddress] = useState(filterAddress);
+  const [debouncedFilterWebsite, setDebouncedFilterWebsite] = useState(filterWebsite);
+
+  // Debounce effect for filters
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedFilterName(filterName);
+      setDebouncedFilterAddress(filterAddress);
+      setDebouncedFilterWebsite(filterWebsite);
+    }, 500); // 500ms delay
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [filterName, filterAddress, filterWebsite]);
+
+  useEffect(() => {
     const fetchDioceses = async () => {
       setLoading(true);
       setError(null);
@@ -36,9 +54,9 @@ function App() {
           sort_order: sortOrder,
         });
 
-        if (filterName) params.append('filter_name', filterName);
-        if (filterAddress) params.append('filter_address', filterAddress);
-        if (filterWebsite) params.append('filter_website', filterWebsite);
+        if (debouncedFilterName) params.append('filter_name', debouncedFilterName);
+        if (debouncedFilterAddress) params.append('filter_address', debouncedFilterAddress);
+        if (debouncedFilterWebsite) params.append('filter_website', debouncedFilterWebsite);
 
         const response = await fetch(`/api/dioceses?${params.toString()}`);
         if (!response.ok) {
@@ -59,7 +77,7 @@ function App() {
 
     fetchDioceses();
 
-    // Fetch summary data (this part remains the same, but moved outside the async function)
+    // Fetch summary data
     fetch('/api/summary')
       .then(response => {
         if (!response.ok) {
@@ -78,7 +96,7 @@ function App() {
         setSummaryError(error.message);
         setSummaryLoading(false);
       });
-  }, [currentPage, sortBy, sortOrder, filterName, filterAddress, filterWebsite]); // Dependencies for re-fetching dioceses data
+  }, [currentPage, sortBy, sortOrder, debouncedFilterName, debouncedFilterAddress, debouncedFilterWebsite]);
 
   // Function to handle sorting
   const handleSort = (column) => {
