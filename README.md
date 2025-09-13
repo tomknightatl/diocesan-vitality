@@ -530,11 +530,16 @@ To use Docker Hub:
    cd backend
    docker build -t $DOCKER_USERNAME/usccb:backend .
    docker push $DOCKER_USERNAME/usccb:backend
-   
+
    # Build and push frontend
    cd ../frontend
    docker build -t $DOCKER_USERNAME/usccb:frontend .
    docker push $DOCKER_USERNAME/usccb:frontend
+
+   # Build and push pipeline
+   cd ..
+   docker build -f Dockerfile.pipeline -t $DOCKER_USERNAME/usccb:pipeline .
+   docker push $DOCKER_USERNAME/usccb:pipeline
    ```
 
 For detailed instructions on how to build and deploy the web application, please see the [**Deployment Guide (DEPLOYMENT.md)**](./DEPLOYMENT.md).

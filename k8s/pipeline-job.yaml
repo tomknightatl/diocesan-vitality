@@ -1,0 +1,63 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: usccb-pipeline-job
+  namespace: usccb
+spec:
+  template:
+    spec:
+      containers:
+      - name: pipeline
+        image: $DOCKER_USERNAME/usccb:pipeline
+        imagePullPolicy: Always
+        resources:
+          requests:
+            memory: "300Mi"
+            cpu: "100m"
+          limits:
+            memory: "400Mi"
+            cpu: "200m"
+        env:
+        - name: SUPABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: usccb-secrets
+              key: supabase-url
+        - name: SUPABASE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: usccb-secrets
+              key: supabase-key
+        - name: GENAI_API_KEY_USCCB
+          valueFrom:
+            secretKeyRef:
+              name: usccb-secrets
+              key: genai-api-key
+        - name: SEARCH_API_KEY_USCCB
+          valueFrom:
+            secretKeyRef:
+              name: usccb-secrets
+              key: search-api-key
+        - name: SEARCH_CX_USCCB
+          valueFrom:
+            secretKeyRef:
+              name: usccb-secrets
+              key: search-cx
+        # Add command line arguments for specific processing
+        args:
+        - "--max_parishes_per_diocese"
+        - "50"
+        - "--num_parishes_for_schedule"
+        - "100"
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: chrome-user-data
+          mountPath: /app/.chrome-user-data
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: chrome-user-data
+        emptyDir: {}
+      restartPolicy: Never
+  backoffLimit: 2
