@@ -1,91 +1,144 @@
 # USCCB Pipeline Kubernetes Deployment
 
-This directory contains Kubernetes manifests and deployment scripts for running the USCCB data extraction pipeline on your DOKS cluster.
+This directory contains Kubernetes manifests for running the USCCB data extraction pipeline on your DOKS cluster.
 
 ## Overview
 
-The pipeline runs as containerized jobs in Kubernetes, using the same Docker image naming convention as your backend and frontend:
-- **Backend**: `$DOCKER_USERNAME/usccb:backend`
-- **Frontend**: `$DOCKER_USERNAME/usccb:frontend`
-- **Pipeline**: `$DOCKER_USERNAME/usccb:pipeline`
+The pipeline runs as a **continuous Deployment** in Kubernetes, using the same Docker image naming convention as your backend and frontend:
+- **Backend**: `tomatl/usccb:backend`
+- **Frontend**: `tomatl/usccb:frontend`
+- **Pipeline**: `tomatl/usccb:pipeline`
 
 The pipeline provides:
-- **Scheduled execution** via CronJob (daily at 2 AM UTC)
-- **On-demand execution** via Job manifests
+- **Continuous execution** via Deployment (always running, auto-restart on completion)
+- **Real-time monitoring** via WebSocket dashboard integration
 - **Secure credential management** via Kubernetes Secrets
-- **Resource management** with CPU and memory limits
+- **Resource management** with minimal CPU and memory usage (optimized for s-1vcpu-2gb node)
 - **Scalability** and **reliability** in cloud environment
 
 ## Quick Start
 
-### Option 1: Deploy with ArgoCD (Recommended)
-Since the pipeline manifests are in the `k8s/` directory, they will be automatically deployed by your existing ArgoCD ApplicationSet to the `usccb` namespace.
+### Deploy with ArgoCD (Recommended)
+Since the pipeline manifests are in the `k8s/` directory, they will be automatically deployed by your ArgoCD Application to the `usccb` namespace.
 
 1. **Build and push the pipeline image**:
    ```bash
-   docker build -f Dockerfile.pipeline -t $DOCKER_USERNAME/usccb:pipeline .
-   docker push $DOCKER_USERNAME/usccb:pipeline
+   docker build -f Dockerfile.pipeline -t tomatl/usccb:pipeline .
+   docker push tomatl/usccb:pipeline
    ```
 
-2. **Create secrets** (in usccb namespace):
+2. **Ensure Docker registry secret exists**:
    ```bash
-   kubectl create secret generic usccb-secrets -n usccb \
-     --from-literal=supabase-url='your-supabase-url' \
-     --from-literal=supabase-key='your-supabase-key' \
-     --from-literal=genai-api-key='your-genai-key' \
-     --from-literal=search-api-key='your-search-key' \
-     --from-literal=search-cx='your-search-cx'
+   kubectl create secret docker-registry dockerhub-secret \
+     --docker-server=docker.io \
+     --docker-username=tomatl \
+     --docker-password=YOUR_PERSONAL_ACCESS_TOKEN \
+     --docker-email=your-email@example.com \
+     -n usccb
    ```
 
-3. **Sync ArgoCD** - The pipeline will be deployed automatically
-
-### Option 2: Manual Deployment
+3. **Ensure application secrets exist** (created by ArgoCD):
    ```bash
-   ./scripts/deploy-pipeline.sh
+   kubectl get secret usccb-secrets -n usccb  # Should contain supabase-url, supabase-key, etc.
    ```
+
+4. **Deploy via ArgoCD** - Pipeline will be deployed automatically as a Deployment
+
+### Deploying Updated Pipeline Image
+
+When you make changes to the pipeline code and need to deploy a new version:
+
+1. **Update requirements.txt** (if adding new dependencies):
+   ```bash
+   # Add any new Python packages to requirements.txt
+   echo "new-package-name" >> requirements.txt
+   ```
+
+2. **Build and push new image**:
+   ```bash
+   # Build the updated pipeline image
+   docker build -f Dockerfile.pipeline -t tomatl/usccb:pipeline .
+
+   # Push to Docker Hub
+   docker push tomatl/usccb:pipeline
+   ```
+
+3. **Deploy to Kubernetes**:
+   ```bash
+   # Restart deployment to pull latest image
+   kubectl rollout restart deployment pipeline-deployment -n usccb
+
+   # Monitor the deployment
+   kubectl rollout status deployment pipeline-deployment -n usccb
+
+   # Check new pod is running
+   kubectl get pods -n usccb -l app=pipeline
+   ```
+
+4. **Verify deployment**:
+   ```bash
+   # Check logs for successful startup
+   kubectl logs -f deployment/pipeline-deployment -n usccb
+
+   # Monitor via dashboard
+   # Visit: https://usccb.diocesevitality.org/dashboard
+   ```
+
+### Manual Pipeline Restart
+To restart the pipeline without rebuilding (triggers fresh execution):
+```bash
+kubectl rollout restart deployment pipeline-deployment -n usccb
+```
 
 ## Files Explained
 
 ### Core Files
 - `Dockerfile.pipeline` - Container image for the pipeline
-- `pipeline-cronjob.yaml` - Scheduled daily execution
-- `pipeline-job.yaml` - On-demand execution template
+- `pipeline-deployment.yaml` - Continuous pipeline deployment
+- `backend-deployment.yaml` - Backend API deployment
+- `frontend-deployment.yaml` - Frontend web application
+- `*-service.yaml` - Kubernetes services for each component
 - `pipeline-secrets.yaml` - Secret template (DO NOT commit with real values)
 - `pipeline-configmap.yaml` - Non-sensitive configuration
 
-### Scripts
-- `scripts/deploy-pipeline.sh` - Automated deployment script
+### ArgoCD Files
+- `usccb-app.yaml` - ArgoCD Application definition (in root directory)
 
 ## Usage
 
-### Running Scheduled Jobs
-The CronJob runs automatically daily at 2 AM UTC. Monitor with:
+### Monitoring Pipeline
+The pipeline runs continuously and can be monitored via:
+
+**Dashboard (Recommended):**
+- Visit https://usccb.diocesevitality.org/dashboard
+- Real-time WebSocket monitoring with live logs, circuit breaker status, and progress
+
+**Command Line:**
 ```bash
-kubectl get cronjobs
-kubectl get jobs
+# Check pod status
+kubectl get pods -n usccb -l app=pipeline
+
+# Watch live logs
+kubectl logs -f deployment/pipeline-deployment -n usccb
+
+# Check ArgoCD application health
+kubectl get applications -n argocd
 ```
 
-### Running Manual Jobs
-Create a one-time job:
+### Restarting Pipeline
+To manually restart the pipeline (triggers fresh execution):
 ```bash
-kubectl apply -f k8s/pipeline-job.yaml
-```
-
-Monitor job progress:
-```bash
-kubectl get jobs
-kubectl logs -l job-name=usccb-pipeline-job
+kubectl rollout restart deployment pipeline-deployment -n usccb
 ```
 
 ### Customizing Pipeline Arguments
-Edit `pipeline-job.yaml` to modify the `args` section:
+Edit `pipeline-deployment.yaml` to modify the `args` section:
 ```yaml
 args:
-- "--diocese_id"
-- "123"
-- "--skip_schedules"
 - "--max_parishes_per_diocese"
-- "25"
+- "50"
+- "--num_parishes_for_schedule"
+- "100"
 ```
 
 Available arguments:
@@ -98,40 +151,52 @@ Available arguments:
 - `--max_parishes_per_diocese` - Limit parishes per diocese
 - `--num_parishes_for_schedule` - Number for schedule extraction
 
-### Monitoring and Troubleshooting
+### Troubleshooting
 
-**View running pods:**
+**Check deployment status:**
 ```bash
-kubectl get pods -n usccb -l job-name=usccb-pipeline-cronjob
+kubectl get deployments -n usccb
+kubectl describe deployment pipeline-deployment -n usccb
 ```
 
-**Check logs:**
+**Check pod issues:**
 ```bash
-kubectl logs -f <pod-name> -n usccb
+kubectl get pods -n usccb -l app=pipeline
+kubectl describe pod <pod-name> -n usccb
 ```
 
-**Describe job status:**
+**View detailed logs:**
 ```bash
-kubectl describe job usccb-pipeline-job -n usccb
+kubectl logs -f deployment/pipeline-deployment -n usccb --tail=50
 ```
 
-**View CronJob status:**
-```bash
-kubectl get cronjobs -n usccb
-```
+**Common Issues:**
+- **ImagePullBackOff**: Check dockerhub-secret exists and is valid
+- **CrashLoopBackOff**: Check logs for missing dependencies (e.g., PyPDF2)
+- **Pending**: Check node resources, may need to restart other pods
 
-**Clean up completed jobs:**
+**Force refresh pipeline image:**
 ```bash
-kubectl delete job usccb-pipeline-job -n usccb
+# Restart deployment to pull latest image
+kubectl rollout restart deployment pipeline-deployment -n usccb
+
+# Check rollout status
+kubectl rollout status deployment pipeline-deployment -n usccb
 ```
 
 ### Resource Configuration
 
-The containers are configured with:
-- **CPU**: 1 core (request) / 2 cores (limit)
-- **Memory**: 2GB (request) / 4GB (limit)
+The pipeline is optimized for resource-constrained environments:
+- **CPU**: 5m (request) / 50m (limit)
+- **Memory**: 32Mi (request) / 128Mi (limit)
 
-Adjust in the YAML files based on your cluster capacity and needs.
+This allows all three services (frontend, backend, pipeline) to run on a single s-1vcpu-2gb DOKS node.
+
+**Total Resource Usage:**
+- Frontend: 5m CPU, 32Mi memory
+- Backend: 5m CPU, 64Mi memory
+- Pipeline: 5m CPU, 32Mi memory
+- **Total**: ~15m CPU (~1.5%), ~128Mi memory (~8%)
 
 ### Security Notes
 
