@@ -34,39 +34,39 @@ def main():
 
     if not args.skip_dioceses:
         try:
-            logger.info("\n--- Running Diocese Extraction ---")
+            logger.info("\n--- Step 1: Extract Dioceses ---")
             extract_dioceses_main(0) # Setting max_dioceses to 0 to run for all
         except Exception as e:
             logger.error(f"Diocese extraction failed: {e}", exc_info=True)
     else:
-        logger.info("\n--- Skipping Diocese Extraction ---")
+        logger.info("\n--- Skipping Step 1: Extract Dioceses ---")
 
     if not args.skip_parish_directories:
         try:
-            logger.info("\n--- Finding Parish Directories ---")
+            logger.info("\n--- Step 2: Find Parish Directories ---")
             find_parish_directories(diocese_id=args.diocese_id)
         except Exception as e:
             logger.error(f"Parish directory search failed: {e}", exc_info=True)
     else:
-        logger.info("\n--- Skipping Parish Directory Search ---")
+        logger.info("\n--- Skipping Step 2: Find Parish Directories ---")
 
     if not args.skip_parishes:
         try:
-            logger.info("\n--- Running Parish Extraction ---")
+            logger.info("\n--- Step 3: Extract Parishes ---")
             extract_parishes_main(diocese_id=args.diocese_id, num_parishes_per_diocese=args.max_parishes_per_diocese)
         except Exception as e:
             logger.error(f"Parish extraction failed: {e}", exc_info=True)
     else:
-        logger.info("\n--- Skipping Parish Extraction ---")
+        logger.info("\n--- Skipping Step 3: Extract Parishes ---")
 
     if not args.skip_schedules:
         try:
-            logger.info("\n--- Running Schedule Extraction ---")
+            logger.info("\n--- Step 4: Extract Schedules ---")
             extract_schedule_main(args.num_parishes_for_schedule)
         except Exception as e:
             logger.error(f"Schedule extraction failed: {e}", exc_info=True)
     else:
-        logger.info("\n--- Skipping Schedule Extraction ---")
+        logger.info("\n--- Skipping Step 4: Extract Schedules ---")
 
     if not args.skip_reporting:
         try:
