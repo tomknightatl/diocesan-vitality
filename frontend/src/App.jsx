@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Container, Table, Spinner, Alert, Pagination, Form } from 'react-bootstrap';
+import { Container, Table, Spinner, Alert, Pagination, Form, Row, Col, OverlayTrigger, Tooltip } from 'react-bootstrap';
 import './App.css';
 
 function App() {
@@ -120,6 +120,11 @@ function App() {
       </Pagination.Item>,
     );
   }
+  const renderTooltip = (props, text) => (
+    <Tooltip id="button-tooltip" {...props}>
+      {text}
+    </Tooltip>
+  );
 
   return (
     <>
@@ -129,22 +134,85 @@ function App() {
         {summaryLoading && <Spinner animation="border" />}
         {summaryError && <Alert variant="danger">Error fetching summary: {summaryError}</Alert>}
         {!summaryLoading && !summaryError && summary && (
-          <Table striped bordered hover responsive className="mb-4">
-            <thead>
-              <tr>
-                <th>Total Dioceses Processed</th>
-                <th>Parish Directories Found</th>
-                <th>Parish Directories Not Found</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>{summary.total_dioceses_processed}</td>
-                <td>{summary.found_parish_directories}</td>
-                <td>{summary.not_found_parish_directories}</td>
-              </tr>
-            </tbody>
-          </Table>
+          <div className="mb-4">
+            <Row className="text-center">
+              <Col>
+                <OverlayTrigger
+                  placement="top"
+                  delay={{ show: 250, hide: 400 }}
+                  overlay={(props) => renderTooltip(props, 'The total number of dioceses that have been processed to find a parish directory.')}
+                >
+                  <div>
+                    <strong>Total Dioceses Processed</strong>
+                    <div>{summary.total_dioceses_processed}</div>
+                  </div>
+                </OverlayTrigger>
+              </Col>
+              <Col>
+                <OverlayTrigger
+                  placement="top"
+                  delay={{ show: 250, hide: 400 }}
+                  overlay={(props) => renderTooltip(props, 'The number of dioceses for which a parish directory URL was successfully found.')}
+                >
+                  <div>
+                    <strong>Parish Directories Found</strong>
+                    <div>{summary.found_parish_directories}</div>
+                  </div>
+                </OverlayTrigger>
+              </Col>
+              <Col>
+                <OverlayTrigger
+                  placement="top"
+                  delay={{ show: 250, hide: 400 }}
+                  overlay={(props) => renderTooltip(props, 'The number of dioceses for which a parish directory URL could not be found.')}
+                >
+                  <div>
+                    <strong>Parish Directories Not Found</strong>
+                    <div>{summary.not_found_parish_directories}</div>
+                  </div>
+                </OverlayTrigger>
+              </Col>
+            </Row>
+            <hr />
+            <Row className="text-center">
+              <Col>
+                <OverlayTrigger
+                  placement="bottom"
+                  delay={{ show: 250, hide: 400 }}
+                  overlay={(props) => renderTooltip(props, 'The total number of parishes extracted from all found parish directories.')}
+                >
+                  <div>
+                    <strong>Parishes Extracted</strong>
+                    <div>{summary.parishes_extracted}</div>
+                  </div>
+                </OverlayTrigger>
+              </Col>
+              <Col>
+                <OverlayTrigger
+                  placement="bottom"
+                  delay={{ show: 250, hide: 400 }}
+                  overlay={(props) => renderTooltip(props, 'The number of unique parishes that have been searched for schedule information.')}
+                >
+                  <div>
+                    <strong>Parishes Searched</strong>
+                    <div>{summary.parishes_searched}</div>
+                  </div>
+                </OverlayTrigger>
+              </Col>
+              <Col>
+                <OverlayTrigger
+                  placement="bottom"
+                  delay={{ show: 250, hide: 400 }}
+                  overlay={(props) => renderTooltip(props, 'The number of parishes for which schedule information (adoration or reconciliation) has been successfully extracted.')}
+                >
+                  <div>
+                    <strong>Parishes with Data Extracted</strong>
+                    <div>{summary.parishes_with_data_extracted}</div>
+                  </div>
+                </OverlayTrigger>
+              </Col>
+            </Row>
+          </div>
         )}
 
         <h2>Dioceses Data</h2>
