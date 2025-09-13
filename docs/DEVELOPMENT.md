@@ -201,10 +201,12 @@ source .env
 # Build production images
 docker build -t $DOCKER_USERNAME/usccb:backend ./backend
 docker build -t $DOCKER_USERNAME/usccb:frontend ./frontend
+docker build -f Dockerfile.pipeline -t $DOCKER_USERNAME/usccb:pipeline .
 
 # Push to registry
 docker push $DOCKER_USERNAME/usccb:backend
 docker push $DOCKER_USERNAME/usccb:frontend
+docker push $DOCKER_USERNAME/usccb:pipeline
 ```
 
 ### 2. Deploy via GitOps
@@ -408,8 +410,10 @@ kubectl get pod <pod-name> -n usccb -o jsonpath='{.status.containerStatuses[0].i
 # 1. Build and push (as before)
 docker build -t $DOCKER_USERNAME/usccb:backend ./backend
 docker build -t $DOCKER_USERNAME/usccb:frontend ./frontend
+docker build -f Dockerfile.pipeline -t $DOCKER_USERNAME/usccb:pipeline .
 docker push $DOCKER_USERNAME/usccb:backend
 docker push $DOCKER_USERNAME/usccb:frontend
+docker push $DOCKER_USERNAME/usccb:pipeline
 
 # 2. Sync ArgoCD (as before)
 # Use ArgoCD UI or CLI to sync the application

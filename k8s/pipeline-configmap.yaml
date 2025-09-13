@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: usccb-pipeline-config
+  namespace: usccb
+data:
+  # Chrome configuration for headless operation
+  DISPLAY: ":99"
+  CHROME_BIN: "/usr/bin/google-chrome"
+  CHROMEDRIVER_PATH: "/usr/bin/chromedriver"
+  # Application defaults
+  DEFAULT_MAX_PARISHES_PER_DIOCESE: "50"
+  DEFAULT_NUM_PARISHES_FOR_SCHEDULE: "100"
+  # Logging level
+  LOG_LEVEL: "INFO"

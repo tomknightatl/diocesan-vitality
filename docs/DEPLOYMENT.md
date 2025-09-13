@@ -117,6 +117,19 @@ docker build -t $DOCKER_USERNAME/usccb:frontend .
 docker push $DOCKER_USERNAME/usccb:frontend
 ```
 
+### Pipeline
+
+```bash
+# Navigate back to the root directory
+cd ..
+
+# Build the Docker image with tag
+docker build -f Dockerfile.pipeline -t $DOCKER_USERNAME/usccb:pipeline .
+
+# Push the pipeline image to Docker Hub
+docker push $DOCKER_USERNAME/usccb:pipeline
+```
+
 ## Step 2: Create Kubernetes Secret for Supabase
 
 Create a Kubernetes secret to securely store your Supabase URL and service key. This prevents storing sensitive information directly in your Git repository.
@@ -322,11 +335,17 @@ echo "Building and pushing frontend..."
 cd ../frontend
 docker build -t $DOCKER_USERNAME/usccb:frontend .
 docker push $DOCKER_USERNAME/usccb:frontend
+
+echo "Building and pushing pipeline..."
 cd ..
+docker build -f Dockerfile.pipeline -t $DOCKER_USERNAME/usccb:pipeline .
+docker push $DOCKER_USERNAME/usccb:pipeline
 
 # Update Kubernetes manifests with Docker Hub username
 sed -i "s|YOUR_DOCKERHUB_USERNAME|$DOCKER_USERNAME|g" k8s/backend-deployment.yaml
 sed -i "s|YOUR_DOCKERHUB_USERNAME|$DOCKER_USERNAME|g" k8s/frontend-deployment.yaml
+sed -i "s|\$DOCKER_USERNAME|$DOCKER_USERNAME|g" k8s/pipeline-cronjob.yaml
+sed -i "s|\$DOCKER_USERNAME|$DOCKER_USERNAME|g" k8s/pipeline-job.yaml
 
 # Create Kubernetes secrets
 kubectl create namespace usccb --dry-run=client -o yaml | kubectl apply -f -
