@@ -62,12 +62,14 @@ spec:
         - name: WDM_LOCAL_CACHE
           value: "/tmp/webdriver-cache"
         # Command line arguments for specific processing
-        command: ["python", "run_pipeline.py"]
+        command: ["python", "run_pipeline_monitored.py"]
         args:
         - "--max_parishes_per_diocese"
         - "50"
         - "--num_parishes_for_schedule"
         - "100"
+        - "--monitoring_url"
+        - "http://backend-service:8000"
         volumeMounts:
         - name: tmp
           mountPath: /tmp
