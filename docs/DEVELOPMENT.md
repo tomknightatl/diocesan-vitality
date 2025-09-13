@@ -376,4 +376,50 @@ docker build -t usccb-backend:test ./backend
 docker build -t usccb-frontend:test ./frontend
 ```
 
+## 🚨 Deployment Troubleshooting
+
+### Issue: Updated Docker Images Not Reflected in Production
+
+**Problem**: After building and pushing updated Docker images to Docker Hub and syncing ArgoCD, the application is still showing the old version.
+
+**Root Cause**: Kubernetes deployments using image tags without version numbers (e.g., `tomatl/usccb:frontend`) won't automatically pull updated images even with `imagePullPolicy: Always`, because Kubernetes considers images with the same tag to be identical.
+
+**Solution**: Force restart the deployments to pull the latest images:
+
+```bash
+# Force restart frontend deployment
+kubectl rollout restart deployment/frontend-deployment -n usccb
+
+# Force restart backend deployment  
+kubectl rollout restart deployment/backend-deployment -n usccb
+
+# Verify new pods are running with updated images
+kubectl get pods -n usccb
+
+# Check the image SHA of the new pods (optional verification)
+kubectl get pod <pod-name> -n usccb -o jsonpath='{.status.containerStatuses[0].imageID}'
+```
+
+**Prevention**: For future deployments, consider using versioned tags (e.g., `tomatl/usccb:frontend-v1.2.3`) to ensure Kubernetes always pulls the correct image version.
+
+### Updated Production Deployment Workflow
+
+```bash
+# 1. Build and push (as before)
+docker build -t $DOCKER_USERNAME/usccb:backend ./backend
+docker build -t $DOCKER_USERNAME/usccb:frontend ./frontend
+docker push $DOCKER_USERNAME/usccb:backend
+docker push $DOCKER_USERNAME/usccb:frontend
+
+# 2. Sync ArgoCD (as before)
+# Use ArgoCD UI or CLI to sync the application
+
+# 3. Force deployment restart (NEW STEP)
+kubectl rollout restart deployment/frontend-deployment -n usccb
+kubectl rollout restart deployment/backend-deployment -n usccb
+
+# 4. Verify deployment
+kubectl get pods -n usccb
+```
+
 This setup provides a complete local development environment that mirrors your production setup while allowing for rapid iteration and testing of changes before they reach production via ArgoCD.
