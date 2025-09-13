@@ -77,37 +77,103 @@ def fetch_and_process_table(table_name: str, supabase_client: Client):
         print(f"Error fetching or processing data from {table_name}: {e}")
         return None, None
 
-def plot_time_series(time_series_data: dict, table_name: str, global_min_date: datetime, global_max_date: datetime):
+def plot_time_series(time_series_data: dict, table_name: str, global_min_date: datetime, global_max_date: datetime, y_max_limits: dict):
     """Generates and saves time-series plots for record counts."""
     if not time_series_data:
         return
 
-    fig, ax = plt.subplots(figsize=(12, 6))
-    plt.rcParams.update({'font.size': 14}) # Set global font size
+    # Create responsive figure size that works well in Bootstrap cards
+    fig, ax = plt.subplots(figsize=(10, 6))
     
-    for col_name, df_ts in time_series_data.items():
-        ax.plot(df_ts['date'], df_ts['count'], marker='o', linestyle='-', label=f'Records by {col_name}')
+    # Set font sizes to match page text - no smaller than body text (14px)
+    plt.rcParams.update({
+        'font.size': 14,          # Base font size to match page text
+        'font.family': 'sans-serif',
+        'font.sans-serif': ['Arial', 'Helvetica', 'DejaVu Sans']
+    })
+    
+    # Use professional colors
+    colors = ['#007bff', '#6c757d', '#28a745', '#dc3545', '#ffc107', '#17a2b8']
+    
+    for i, (col_name, df_ts) in enumerate(time_series_data.items()):
+        color = colors[i % len(colors)]
+        ax.plot(df_ts['date'], df_ts['count'], 
+                marker='o', linestyle='-', 
+                color=color, linewidth=2, markersize=4,
+                label=f'Records by {col_name.replace("_", " ").title()}')
         
     # Set x-axis limits using global min/max dates
     if global_min_date and global_max_date:
         ax.set_xlim(global_min_date, global_max_date)
+    
+    # Set y-axis limits: start at 0, end at appropriate max value
+    if table_name in y_max_limits:
+        ax.set_ylim(0, y_max_limits[table_name])
+    
+    # Format y-axis to show only integers (no decimals)
+    from matplotlib.ticker import MaxNLocator
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
-    ax.set_title(f'Number of Records in {table_name} Over Time', fontsize=16)
-    ax.set_xlabel('Date', fontsize=14)
-    ax.set_ylabel('Number of Records', fontsize=14)
-    ax.grid(True)
-    ax.legend()
+    # Custom titles for each chart
+    custom_titles = {
+        'Dioceses': 'Dioceses',
+        'DiocesesParishDirectory': "Dioceses with a Parish Directory",
+        'Parishes': "Parishes Extracted from their Diocese's Parish Directory",
+        'ParishData': 'Parishes with Adoration or Reconcilation Schedules Extracted from their Website'
+    }
+    
+    # Use font sizes matching page text - minimum 14px
+    chart_title = custom_titles.get(table_name, f'Number of Records in {table_name} Over Time')
+    ax.set_title(chart_title, fontsize=16, fontweight='bold', pad=15)
+    # Remove axis labels as requested
+    ax.set_xlabel('')
+    ax.set_ylabel('')
+    
+    # Style the grid to be subtle
+    ax.grid(True, alpha=0.3, linestyle='-', linewidth=0.5)
+    ax.set_facecolor('#fafafa')
+    
+    # Remove legend as requested
+    # ax.legend(fontsize=14, loc='upper left', frameon=True, 
+    #           fancybox=True, shadow=True, framealpha=0.9)
+    
+    # Add text label showing the most recent data point value
+    for i, (col_name, df_ts) in enumerate(time_series_data.items()):
+        if not df_ts.empty:
+            latest_date = df_ts['date'].iloc[-1]
+            latest_count = df_ts['count'].iloc[-1]
+            color = colors[i % len(colors)]
+            
+            # Position the label near the end of the line
+            ax.annotate(f'{latest_count:,}', 
+                       xy=(latest_date, latest_count),
+                       xytext=(10, 5), textcoords='offset points',
+                       fontsize=14, fontweight='bold', color=color,
+                       bbox=dict(boxstyle='round,pad=0.3', facecolor='white', 
+                                edgecolor=color, alpha=0.8))
+    
+    # Format dates on x-axis
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
-    plt.xticks(rotation=45)
-    plt.tight_layout()
+    ax.tick_params(axis='x', rotation=45, labelsize=14)
+    ax.tick_params(axis='y', labelsize=14)
+    
+    # Remove top and right spines for cleaner look
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_color('#cccccc')
+    ax.spines['bottom'].set_color('#cccccc')
+    
+    # Use consistent subplot positioning instead of tight_layout for alignment
+    plt.subplots_adjust(left=0.1, right=0.95, top=0.9, bottom=0.25)
 
     filename = f"frontend/public/{table_name.lower()}_records_over_time.png"
-    plt.savefig(filename)
+    # Save with higher DPI for crisp display on modern screens
+    plt.savefig(filename, dpi=150, bbox_inches=None, facecolor='white', edgecolor='none')
     print(f"Chart saved to {filename}")
     plt.close(fig) # Close the figure to free memory
 
 def main():
-    tables_to_report = ['Dioceses', 'DiocesesParishDirectory', 'Parishes', 'ParishScheduleSummary']
+    tables_to_report = ['Dioceses', 'DiocesesParishDirectory', 'Parishes', 'ParishData']
     
     all_min_dates = []
     all_max_dates = []
@@ -135,8 +201,18 @@ def main():
     if global_max_date:
         global_max_date += timedelta(days=1)
 
+    # Calculate max values for y-axis alignment
+    # Top charts: Dioceses (196) and DiocesesParishDirectory (167) -> max 200
+    # Bottom charts: Parishes (383) and ParishData (20) -> max 400
+    y_max_limits = {
+        'Dioceses': 200,
+        'DiocesesParishDirectory': 200,
+        'Parishes': 400,
+        'ParishData': 400
+    }
+
     for table_name, time_series_data in all_time_series_data.items():
-        plot_time_series(time_series_data, table_name, global_min_date, global_max_date)
+        plot_time_series(time_series_data, table_name, global_min_date, global_max_date, y_max_limits)
 
 if __name__ == "__main__":
     main()
