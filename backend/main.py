@@ -243,17 +243,17 @@ async def get_summary():
         parish_data_response = supabase.table('ParishData').select('parish_id, fact_value').execute()
         parish_data = parish_data_response.data
         
-        parishes_searched = len(set(item['parish_id'] for item in parish_data))
-        
         parishes_with_data_extracted = len(set(item['parish_id'] for item in parish_data if item['fact_value'] and item['fact_value'] != 'Information not found'))
+        
+        parishes_with_data_not_extracted = parishes_extracted - parishes_with_data_extracted
 
         return {
             "total_dioceses_processed": total_dioceses_processed,
             "found_parish_directories": found_parish_directories,
             "not_found_parish_directories": not_found_parish_directories,
             "parishes_extracted": parishes_extracted,
-            "parishes_searched": parishes_searched,
             "parishes_with_data_extracted": parishes_with_data_extracted,
+            "parishes_with_data_not_extracted": parishes_with_data_not_extracted,
         }
     except Exception as e:
         return {"error": str(e)}
@@ -291,15 +291,26 @@ def get_dioceses(
         all_dir_response = supabase.table('DiocesesParishDirectory').select('diocese_id, parish_directory_url').execute()
         dir_url_map = {item['diocese_id']: item['parish_directory_url'] for item in all_dir_response.data}
 
-        parishes_response = supabase.table('Parishes').select('diocese_url').execute()
+        parishes_response = supabase.table('Parishes').select('id, diocese_url').execute()
+        parishes_map = {p['id']: p['diocese_url'] for p in parishes_response.data}
         parish_counts = {}
         for parish in parishes_response.data:
             url = parish['diocese_url']
             parish_counts[url] = parish_counts.get(url, 0) + 1
 
+        parish_data_response = supabase.table('ParishData').select('parish_id, fact_value').execute()
+        parishes_with_data = {item['parish_id'] for item in parish_data_response.data if item['fact_value'] and item['fact_value'] != 'Information not found'}
+
+        parishes_with_data_extracted_counts = {}
+        for parish_id in parishes_with_data:
+            if parish_id in parishes_map:
+                diocese_url = parishes_map[parish_id]
+                parishes_with_data_extracted_counts[diocese_url] = parishes_with_data_extracted_counts.get(diocese_url, 0) + 1
+
         for diocese in dioceses:
             diocese['parish_directory_url'] = dir_url_map.get(diocese['id'])
             diocese['parishes_in_db_count'] = parish_counts.get(diocese['Website'], 0)
+            diocese['parishes_with_data_extracted_count'] = parishes_with_data_extracted_counts.get(diocese['Website'], 0)
 
         # Sort in Python
         reverse = sort_order.lower() == 'desc'
@@ -375,6 +386,9 @@ def get_parishes_for_diocese(diocese_id: int):
             facts = parish_facts.get(parish['id'], {})
             parish['reconciliation_facts'] = facts.get('reconciliation_facts')
             parish['adoration_facts'] = facts.get('adoration_facts')
+
+        if filter == 'with_data':
+            parishes = [p for p in parishes if p['reconciliation_facts'] or p['adoration_facts']]
 
         return {"data": parishes}
     except Exception as e:

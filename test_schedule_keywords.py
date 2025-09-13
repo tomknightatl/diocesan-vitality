@@ -30,7 +30,7 @@ def main():
     
     # Test loading keywords
     print("\n1. Loading keywords from database...")
-    recon_kw, recon_neg, ador_kw, ador_neg = load_keywords_from_database(supabase)
+    recon_kw, recon_neg, ador_kw, ador_neg, mass_kw, mass_neg = load_keywords_from_database(supabase)
     
     print(f"Reconciliation keywords: {recon_kw}")
     print(f"Reconciliation negative: {recon_neg}")
@@ -59,7 +59,7 @@ def main():
     print(f"Update weight result: {success}")
     
     print("\n5. Reloading keywords after changes...")
-    recon_kw2, recon_neg2, ador_kw2, ador_neg2 = load_keywords_from_database(supabase)
+    recon_kw2, recon_neg2, ador_kw2, ador_neg2, mass_kw2, mass_neg2 = load_keywords_from_database(supabase)
     print(f"Updated adoration keywords: {ador_kw2}")
     
     print("\nSchedule keywords test completed!")

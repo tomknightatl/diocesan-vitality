@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Container, Table, Spinner, Alert, Card } from 'react-bootstrap';
+import ParishList from './ParishList';
 
 function Diocese() {
   const { search } = useLocation();
@@ -8,7 +9,6 @@ function Diocese() {
   const id = queryParams.get('id');
 
   const [diocese, setDiocese] = useState(null);
-  const [parishes, setParishes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -29,17 +29,7 @@ function Diocese() {
         }
         setDiocese(dioceseResult.data);
 
-        // Fetch parishes
-        const filter = queryParams.get('filter');
-        const parishesResponse = await fetch(`/api/dioceses/${id}/parishes${filter ? `?filter=${filter}` : ''}`);
-        if (!parishesResponse.ok) {
-          throw new Error('Network response was not ok');
-        }
-        const parishesResult = await parishesResponse.json();
-        if (parishesResult.error) {
-          throw new Error(parishesResult.error);
-        }
-        setParishes(parishesResult.data);
+
       } catch (err) {
         setError(err.message);
       } finally {
@@ -74,29 +64,7 @@ function Diocese() {
         </Card>
       )}
 
-      <h2>Parishes</h2>
-      <Table striped bordered hover responsive>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Address</th>
-            <th>Website</th>
-            <th>Reconciliation</th>
-            <th>Adoration</th>
-          </tr>
-        </thead>
-        <tbody>
-          {parishes.map((parish, index) => (
-            <tr key={parish.id || index}>
-              <td>{parish.Name}</td>
-              <td>{parish['Street Address']}</td>
-              <td><a href={parish.Web} target="_blank" rel="noopener noreferrer">{parish.Web}</a></td>
-              <td>{parish.reconciliation_facts ? 'Yes' : 'No'}</td>
-              <td>{parish.adoration_facts ? 'Yes' : 'No'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
+      <ParishList dioceseId={id} />
     </Container>
   );
 }

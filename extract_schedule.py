@@ -24,6 +24,7 @@ from core.logger import get_logger
 from core.db import get_supabase_client # Import the get_supabase_client function
 from core.utils import normalize_url # Import normalize_url
 from core.schedule_keywords import load_keywords_from_database, get_all_keywords_for_priority_calculation
+from core.stealth_browser import get_stealth_browser
 
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
@@ -73,7 +74,7 @@ def get_resilient_session() -> requests.Session:
     return session
 
 def make_request_with_delay(session: requests.Session, url: str, **kwargs) -> requests.Response:
-    """Make a request with random delay to appear more human-like."""
+    """Make a request with random delay and stealth browser fallback for blocked requests."""
     # Add random delay between requests (0.5 to 2 seconds)
     delay = random.uniform(0.5, 2.0)
     time.sleep(delay)
@@ -81,7 +82,59 @@ def make_request_with_delay(session: requests.Session, url: str, **kwargs) -> re
     # Rotate user agent for this request
     session.headers.update({'User-Agent': random.choice(USER_AGENTS)})
     
-    return session.get(url, **kwargs)
+    try:
+        response = session.get(url, **kwargs)
+        
+        # Check for severe bot detection (persistent 403s despite retries)
+        if response.status_code == 403:
+            # Check if this might be a site-wide bot block
+            domain = urlparse(url).netloc
+            if 'too many 403 error responses' in str(kwargs.get('_last_error', '')):
+                logger.warning(f"Detected severe bot blocking for {domain}, attempting stealth browser fallback")
+                
+                # Try stealth browser as fallback
+                stealth_browser = get_stealth_browser()
+                if stealth_browser.is_available:
+                    content = stealth_browser.get_page_content(url, timeout=30)
+                    if content:
+                        # Create mock response object for compatibility
+                        mock_response = type('MockResponse', (), {
+                            'status_code': 200,
+                            'content': content.encode(),
+                            'text': content,
+                            'headers': {'content-type': 'text/html'},
+                            'raise_for_status': lambda: None,
+                            'url': url
+                        })()
+                        logger.info(f"Successfully retrieved {url} using stealth browser")
+                        return mock_response
+        
+        return response
+        
+    except requests.exceptions.RequestException as e:
+        # Check if this is a persistent bot detection issue
+        if '403' in str(e) and 'too many' in str(e).lower():
+            logger.warning(f"Persistent 403 errors for {url}, attempting stealth browser fallback")
+            
+            # Try stealth browser as fallback
+            stealth_browser = get_stealth_browser()
+            if stealth_browser.is_available:
+                content = stealth_browser.get_page_content(url, timeout=30)
+                if content:
+                    # Create mock response object for compatibility
+                    mock_response = type('MockResponse', (), {
+                        'status_code': 200,
+                        'content': content.encode(),
+                        'text': content,
+                        'headers': {'content-type': 'text/html'},
+                        'raise_for_status': lambda: None,
+                        'url': url
+                    })()
+                    logger.info(f"Successfully retrieved {url} using stealth browser")
+                    return mock_response
+        
+        # Re-raise the original exception if stealth browser can't help
+        raise
 
 # Create a global resilient session
 requests_session = get_resilient_session()
@@ -367,7 +420,7 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_u
     discovered_urls = {}
 
     # Load keywords from database
-    recon_keywords, recon_negative_keywords, adoration_keywords, adoration_negative_keywords = load_keywords_from_database(supabase)
+    recon_keywords, recon_negative_keywords, adoration_keywords, adoration_negative_keywords, mass_keywords, mass_negative_keywords = load_keywords_from_database(supabase)
     all_keywords = get_all_keywords_for_priority_calculation(supabase)
 
     base_domain = urlparse(url).netloc.lower().replace('www.', '')
