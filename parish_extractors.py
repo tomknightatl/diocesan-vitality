@@ -1541,6 +1541,8 @@ def process_diocese_with_detailed_extraction(diocese_info: Dict, driver, max_par
             extractors_to_try.append(('TableExtractor', TableExtractor(pattern)))
         elif pattern.listing_type == ParishListingType.INTERACTIVE_MAP:
             extractors_to_try.append(('ImprovedInteractiveMapExtractor', ImprovedInteractiveMapExtractor(pattern)))
+        elif pattern.listing_type == ParishListingType.HOVER_NAVIGATION:
+            extractors_to_try.append(('NavigationExtractor', NavigationExtractor(pattern)))
 
         # Add other extractors as fallbacks in priority order
         fallback_extractors = [
@@ -1550,6 +1552,7 @@ def process_diocese_with_detailed_extraction(diocese_info: Dict, driver, max_par
             ('EnhancedDiocesesCardExtractor', EnhancedDiocesesCardExtractor(pattern)),
             ('TableExtractor', TableExtractor(pattern)),
             ('ImprovedInteractiveMapExtractor', ImprovedInteractiveMapExtractor(pattern)),
+            ('NavigationExtractor', NavigationExtractor(pattern)),
             ('ImprovedGenericExtractor', ImprovedGenericExtractor(pattern))
         ]
 
