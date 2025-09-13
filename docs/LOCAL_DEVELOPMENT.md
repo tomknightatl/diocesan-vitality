@@ -30,7 +30,7 @@ This guide provides everything you need to develop and test the USCCB extraction
 4. **Start Local Backend** (for monitoring)
    ```bash
    cd backend
-   python main.py
+   uvicorn main:app --reload --host 0.0.0.0 --port 8000
    ```
 
 5. **Run Extraction Scripts**
@@ -126,7 +126,7 @@ python run_pipeline_monitored.py \
 1. **Start Backend Server**
    ```bash
    cd backend
-   python main.py
+   uvicorn main:app --reload --host 0.0.0.0 --port 8000
    ```
    Server runs at http://localhost:8000
 
@@ -666,7 +666,7 @@ git push origin feature/your-feature-name
 ```bash
 # Daily development workflow
 source venv/bin/activate
-cd backend && python main.py &  # Start monitoring
+cd backend && uvicorn main:app --reload &  # Start monitoring
 python run_pipeline_monitored.py --diocese_id 123 --max_parishes_per_diocese 10
 
 # Quick test single parish
