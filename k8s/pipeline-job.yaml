@@ -6,6 +6,8 @@ metadata:
 spec:
   template:
     spec:
+      imagePullSecrets:
+      - name: dockerhub-secret
       containers:
       - name: pipeline
         image: tomatl/usccb:pipeline
