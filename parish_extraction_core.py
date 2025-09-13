@@ -62,6 +62,7 @@ class ParishListingType(Enum):
     DIOCESE_CARD_LAYOUT = "diocese_card_layout"
     PDF_DIRECTORY = "pdf_directory"
     IFRAME_EMBEDDED = "iframe_embedded"
+    HOVER_NAVIGATION = "hover_navigation"
     UNKNOWN = "unknown"
 
 @dataclass
@@ -374,6 +375,25 @@ class PatternDetector:
         if any(parish_finder_indicators):
             return ParishListingType.PARISH_FINDER
 
+        # Check for hover-based navigation patterns (Diocese of Wheeling-Charleston style)
+        hover_navigation_indicators = [
+            # Specific URL patterns for known hover navigation sites
+            'dwc.org' in url.lower(),
+            # Look for dropdown or hover navigation elements
+            soup.find('li', class_=re.compile(r'dropdown|hover', re.I)),
+            soup.find('ul', class_=re.compile(r'dropdown|nav|menu', re.I)),
+            soup.find('nav', class_=re.compile(r'dropdown|hover', re.I)),
+            # Navigation menus with hidden elements that appear on hover
+            'dropdown' in html_lower and 'nav' in html_lower,
+            # CSS indicators of hover-based menus
+            ':hover' in html_lower and 'menu' in html_lower,
+            # JavaScript navigation systems
+            'hover' in html_lower and ('parish' in html_lower or 'directory' in html_lower)
+        ]
+
+        if any(hover_navigation_indicators):
+            return ParishListingType.HOVER_NAVIGATION
+
         # Interactive map indicators
         map_indicators = ['leaflet', 'google.maps', 'mapbox', 'parish-map', 'interactive']
         if any(indicator in html_lower for indicator in map_indicators):
@@ -455,6 +475,19 @@ class PatternDetector:
                     "parish_link": "a.card"
                 },
                 "Diocese card layout detected - specialized extraction for Salt Lake City style with detail page navigation"
+            )
+
+        elif listing_type == ParishListingType.HOVER_NAVIGATION:
+            return (
+                "navigation_extraction",
+                0.9,
+                {
+                    "nav_selectors": ["nav", ".navbar", ".navigation", ".menu"],
+                    "hover_targets": ["a[href*='parish']", ".menu-item", ".nav-item", ".dropdown"],
+                    "dropdown_selectors": [".dropdown-menu a", ".submenu a", ".nav-dropdown a"],
+                    "parish_indicators": ["parish", "church", "directory", "find", "locate"]
+                },
+                "Hover-based navigation detected - will interact with dropdown menus to find parish directory"
             )
 
         elif listing_type == ParishListingType.PARISH_FINDER:

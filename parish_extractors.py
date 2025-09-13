@@ -31,6 +31,7 @@ from bs4 import BeautifulSoup
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
 
 # Import core components from the companion module
 from parish_extraction_core import (
@@ -2507,6 +2508,404 @@ class IframeExtractor(BaseExtractor):
         return parishes
 
 # =============================================================================
+# NAVIGATION EXTRACTOR - HOVER-BASED NAVIGATION
+# =============================================================================
+
+class NavigationExtractor(BaseExtractor):
+    """Extractor for diocese websites that use hover-based navigation to access parish directories"""
+
+    def extract(self, driver, soup: BeautifulSoup, url: str) -> List[ParishData]:
+        """Extract parishes from sites with hover-based navigation"""
+        parishes = []
+        
+        try:
+            logger.info("    🧭 Starting navigation-based extraction...")
+            
+            # First, try to detect navigation menus that might contain parish links
+            nav_found = self._detect_hover_navigation(driver)
+            
+            if nav_found:
+                parishes = self._extract_via_hover_navigation(driver)
+            
+            if not parishes:
+                # Fallback to searching for parish directory links
+                parishes = self._extract_via_directory_links(driver, soup)
+                
+        except Exception as e:
+            logger.error(f"    ⚠️ Navigation extraction error: {str(e)[:100]}...")
+            
+        return parishes
+
+    def _detect_hover_navigation(self, driver) -> bool:
+        """Detect if the page has hover-based navigation for parishes"""
+        try:
+            # Look for common navigation patterns
+            nav_selectors = [
+                "nav", ".navbar", ".navigation", ".menu",
+                "#navbar", "#navigation", "#menu", ".nav-menu"
+            ]
+            
+            for selector in nav_selectors:
+                try:
+                    nav_elements = driver.find_elements(By.CSS_SELECTOR, selector)
+                    for nav_element in nav_elements:
+                        nav_text = nav_element.text.lower()
+                        if any(term in nav_text for term in ['parish', 'church', 'directory', 'find']):
+                            logger.info(f"    📋 Found navigation element with parish-related content: {selector}")
+                            return True
+                except Exception:
+                    continue
+                    
+        except Exception as e:
+            logger.error(f"    ⚠️ Navigation detection error: {str(e)[:100]}...")
+            
+        return False
+
+    def _extract_via_hover_navigation(self, driver) -> List[ParishData]:
+        """Extract parishes by hovering over navigation menus to reveal dropdown links"""
+        parishes = []
+        
+        try:
+            # Look for elements that might trigger dropdown menus when hovered
+            hover_selectors = [
+                "a[href*='parish']", "a:contains('Parish')", 
+                ".menu-item", ".nav-item", ".dropdown",
+                "li:contains('Parish')", "li:contains('Churches')",
+                "li:contains('Directory')", "li:contains('Find')"
+            ]
+            
+            # Also try text-based selectors for common parish menu items
+            text_based_elements = driver.find_elements(By.XPATH, 
+                "//a[contains(text(), 'Parish') or contains(text(), 'Church') or contains(text(), 'Directory')]")
+            
+            all_elements = []
+            for selector in hover_selectors:
+                try:
+                    elements = driver.find_elements(By.CSS_SELECTOR, selector)
+                    all_elements.extend(elements)
+                except Exception:
+                    continue
+            
+            all_elements.extend(text_based_elements)
+            
+            logger.info(f"    🎯 Found {len(all_elements)} potential hover elements")
+            
+            for element in all_elements[:10]:  # Limit to prevent timeout
+                try:
+                    element_text = element.text.strip().lower()
+                    if not element_text or len(element_text) > 50:
+                        continue
+                        
+                    # Check if this looks like a parish-related menu item
+                    parish_terms = ['parish', 'church', 'directory', 'find', 'locate']
+                    if any(term in element_text for term in parish_terms):
+                        logger.info(f"    🖱️ Hovering over: {element_text}")
+                        
+                        # Perform hover action
+                        actions = ActionChains(driver)
+                        actions.move_to_element(element).perform()
+                        time.sleep(2)  # Wait for dropdown to appear
+                        
+                        # Look for dropdown links that appeared
+                        dropdown_links = self._extract_dropdown_links(driver)
+                        
+                        # Follow the most promising link
+                        if dropdown_links:
+                            parishes = self._follow_parish_directory_link(driver, dropdown_links[0])
+                            if parishes:
+                                return parishes
+                                
+                except Exception as e:
+                    logger.error(f"    ⚠️ Hover action error: {str(e)[:50]}...")
+                    continue
+                    
+        except Exception as e:
+            logger.error(f"    ⚠️ Hover navigation error: {str(e)[:100]}...")
+            
+        return parishes
+
+    def _extract_dropdown_links(self, driver) -> List[str]:
+        """Extract links from dropdown menus that appeared after hovering"""
+        links = []
+        
+        try:
+            # Look for dropdown menus or newly visible elements
+            dropdown_selectors = [
+                ".dropdown-menu a", ".submenu a", ".nav-dropdown a",
+                ".menu-dropdown a", "ul[style*='block'] a",
+                ".dropdown:not([style*='none']) a"
+            ]
+            
+            for selector in dropdown_selectors:
+                try:
+                    dropdown_links = driver.find_elements(By.CSS_SELECTOR, selector)
+                    for link in dropdown_links:
+                        href = link.get_attribute('href')
+                        text = link.text.strip()
+                        
+                        if href and text and any(term in text.lower() for term in ['parish', 'church', 'directory']):
+                            links.append(href)
+                            logger.info(f"    🔗 Found dropdown link: {text} -> {href}")
+                            
+                except Exception:
+                    continue
+                    
+        except Exception as e:
+            logger.error(f"    ⚠️ Dropdown extraction error: {str(e)[:100]}...")
+            
+        return links
+
+    def _extract_via_directory_links(self, driver, soup: BeautifulSoup) -> List[ParishData]:
+        """Fallback method to find parish directory links directly in the page"""
+        parishes = []
+        
+        try:
+            # Look for direct links to parish directories
+            directory_patterns = [
+                r'parish.*director',
+                r'church.*director', 
+                r'find.*parish',
+                r'locate.*church',
+                r'director.*parish'
+            ]
+            
+            all_links = soup.find_all('a', href=True)
+            
+            for link in all_links:
+                href = link.get('href', '')
+                text = link.get_text().strip().lower()
+                
+                if any(re.search(pattern, text) or re.search(pattern, href.lower()) for pattern in directory_patterns):
+                    full_url = self._resolve_url(href, driver.current_url)
+                    logger.info(f"    🔗 Found potential parish directory link: {text} -> {full_url}")
+                    
+                    parishes = self._follow_parish_directory_link(driver, full_url)
+                    if parishes:
+                        return parishes
+                        
+        except Exception as e:
+            logger.error(f"    ⚠️ Directory links error: {str(e)[:100]}...")
+            
+        return parishes
+
+    def _follow_parish_directory_link(self, driver, url: str) -> List[ParishData]:
+        """Follow a link to a parish directory and extract parish data"""
+        parishes = []
+        
+        try:
+            original_url = driver.current_url
+            logger.info(f"    🌐 Navigating to parish directory: {url}")
+            
+            driver.get(url)
+            time.sleep(3)  # Wait for page to load
+            
+            # Get the new page content
+            new_soup = BeautifulSoup(driver.page_source, 'html.parser')
+            
+            # Try multiple extraction strategies on the new page
+            extraction_strategies = [
+                lambda: self._extract_from_parish_list(new_soup),
+                lambda: self._extract_from_cards(driver, new_soup),
+                lambda: self._extract_from_text_content(new_soup)
+            ]
+            
+            for strategy in extraction_strategies:
+                try:
+                    parishes = strategy()
+                    if parishes:
+                        logger.info(f"    ✅ Extracted {len(parishes)} parishes from directory page")
+                        break
+                except Exception as e:
+                    logger.error(f"    ⚠️ Strategy failed: {str(e)[:50]}...")
+                    continue
+                    
+        except Exception as e:
+            logger.error(f"    ⚠️ Directory navigation error: {str(e)[:100]}...")
+        finally:
+            # Return to original page if needed
+            try:
+                if driver.current_url != original_url:
+                    driver.back()
+            except Exception:
+                pass
+                
+        return parishes
+
+    def _extract_from_parish_list(self, soup: BeautifulSoup) -> List[ParishData]:
+        """Extract parishes from list-based layouts"""
+        parishes = []
+        
+        try:
+            # Look for list containers with parish data
+            list_selectors = [
+                '.parish-list li', '.church-list li', 
+                'ul.parishes li', 'ul.churches li',
+                '.directory-list .item', '.parish-directory .entry'
+            ]
+            
+            for selector in list_selectors:
+                items = soup.select(selector)
+                if items:
+                    logger.info(f"    📋 Found {len(items)} list items with selector: {selector}")
+                    
+                    for item in items[:100]:  # Limit for performance
+                        parish_data = self._extract_parish_from_element(item)
+                        if parish_data:
+                            parishes.append(parish_data)
+                    
+                    if parishes:
+                        break
+                        
+        except Exception as e:
+            logger.error(f"    ⚠️ Parish list extraction error: {str(e)[:100]}...")
+            
+        return parishes
+
+    def _extract_from_cards(self, driver, soup: BeautifulSoup) -> List[ParishData]:
+        """Extract parishes from card-based layouts"""
+        parishes = []
+        
+        try:
+            # Look for card containers
+            card_selectors = [
+                '.parish-card', '.church-card', '.location-card',
+                '.card:has(*:contains("Parish"))', '.card:has(*:contains("Church"))',
+                '[class*="parish"][class*="card"]', '[class*="church"][class*="card"]'
+            ]
+            
+            for selector in card_selectors:
+                try:
+                    cards = soup.select(selector)
+                    if cards:
+                        logger.info(f"    🃏 Found {len(cards)} cards with selector: {selector}")
+                        
+                        for card in cards[:50]:  # Limit for performance
+                            parish_data = self._extract_parish_from_element(card)
+                            if parish_data:
+                                parishes.append(parish_data)
+                        
+                        if parishes:
+                            break
+                except Exception:
+                    continue
+                    
+        except Exception as e:
+            logger.error(f"    ⚠️ Card extraction error: {str(e)[:100]}...")
+            
+        return parishes
+
+    def _extract_from_text_content(self, soup: BeautifulSoup) -> List[ParishData]:
+        """Extract parishes from plain text content"""
+        parishes = []
+        
+        try:
+            # Get all text content and look for parish patterns
+            text_content = soup.get_text()
+            lines = [line.strip() for line in text_content.split('\n') if line.strip()]
+            
+            parish_patterns = [
+                r'^\s*(Saint|St\.|Sts\.|Holy|Blessed|Our Lady|Cathedral|Christ|Sacred|Immaculate)\s+.+',
+                r'.*\b(Church|Parish|Chapel|Shrine|Basilica)\b.*'
+            ]
+            
+            for line in lines:
+                if len(line) < 5 or len(line) > 200:
+                    continue
+                    
+                for pattern in parish_patterns:
+                    if re.match(pattern, line, re.IGNORECASE):
+                        # Clean and validate the parish name
+                        cleaned_name = re.sub(r'^\s*\d+\.\s*', '', line).strip()
+                        
+                        if self._is_valid_parish_name(cleaned_name):
+                            parish_data = ParishData(
+                                name=self.clean_text(cleaned_name),
+                                extraction_method="navigation_text_extraction"
+                            )
+                            parishes.append(parish_data)
+                            
+                        if len(parishes) >= 100:  # Safety limit
+                            break
+                            
+                if len(parishes) >= 100:
+                    break
+                    
+        except Exception as e:
+            logger.error(f"    ⚠️ Text content extraction error: {str(e)[:100]}...")
+            
+        return parishes
+
+    def _extract_parish_from_element(self, element) -> Optional[ParishData]:
+        """Extract parish data from a DOM element"""
+        try:
+            # Get parish name
+            name = None
+            
+            # Try different ways to get the parish name
+            name_selectors = ['h1', 'h2', 'h3', 'h4', '.name', '.title', '.parish-name', 'strong']
+            for selector in name_selectors:
+                name_elem = element.select_one(selector)
+                if name_elem:
+                    name = name_elem.get_text().strip()
+                    break
+            
+            if not name:
+                # Use first significant text
+                name = element.get_text().strip().split('\n')[0]
+            
+            if not name or not self._is_valid_parish_name(name):
+                return None
+                
+            # Get address information
+            address_text = element.get_text()
+            parsed_address = clean_parish_name_and_extract_address(address_text)
+            
+            return ParishData(
+                name=self.clean_text(name),
+                address=parsed_address.get('street_address'),
+                city=parsed_address.get('city'),
+                state=parsed_address.get('state'),
+                zip_code=parsed_address.get('zip_code'),
+                extraction_method="navigation_element_extraction"
+            )
+            
+        except Exception as e:
+            logger.error(f"    ⚠️ Element extraction error: {str(e)[:50]}...")
+            return None
+
+    def _is_valid_parish_name(self, name: str) -> bool:
+        """Check if the extracted text looks like a valid parish name"""
+        if not name or len(name.strip()) < 3:
+            return False
+            
+        name_lower = name.lower().strip()
+        
+        # Check for parish indicators
+        parish_indicators = [
+            'saint', 'st.', 'st ', 'holy', 'blessed', 'our lady',
+            'cathedral', 'church', 'parish', 'chapel', 'shrine', 'basilica',
+            'sacred', 'immaculate', 'mother', 'christ'
+        ]
+        
+        has_indicator = any(indicator in name_lower for indicator in parish_indicators)
+        
+        # Skip UI elements and non-parish content
+        ui_terms = [
+            'type', 'apply', 'select', 'open', 'load', 'hide', 'disable',
+            'enable', 'boundary', 'group', 'column', 'tool', 'drag', 'zoom',
+            'search', 'filter', 'legend', 'menu', 'navigation'
+        ]
+        
+        has_ui_term = any(ui_term in name_lower for ui_term in ui_terms)
+        
+        return has_indicator and not has_ui_term
+
+    def _resolve_url(self, href: str, base_url: str) -> str:
+        """Resolve relative URLs to absolute URLs"""
+        from urllib.parse import urljoin
+        return urljoin(base_url, href)
+
+# =============================================================================
 # MAIN EXECUTION EXAMPLE
 # =============================================================================
 
@@ -2518,6 +2917,7 @@ if __name__ == "__main__":
     print("  - ParishFinderExtractor: For eCatholic Parish Finder interfaces")
     print("  - TableExtractor: For HTML table-based listings")
     print("  - ImprovedInteractiveMapExtractor: For JavaScript-powered maps")
+    print("  - NavigationExtractor: For hover-based navigation systems")
     print("  - ImprovedGenericExtractor: Generic fallback extractor")
     print("\nMain function:")
     print("  - process_diocese_with_detailed_extraction(): Process a diocese and extract parish data")

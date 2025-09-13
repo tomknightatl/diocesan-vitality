@@ -72,7 +72,7 @@ graph TD
 
 ## Overview
 
-The parish extraction system uses a multi-layered approach to handle the wide variety of diocese website structures:
+The parish extraction system uses a multi-layered approach to handle the wide variety of diocese website structures with **7 specialized extractors**:
 
 1. **Pattern Detection**: Identifies the website type and structure
 2. **Strategy Selection**: Chooses the optimal extraction method
@@ -177,7 +177,35 @@ The parish extraction system uses a multi-layered approach to handle the wide va
 - `_extract_text_based_data()`: Processes text-format directories
 - `_apply_heuristic_rules()`: Uses pattern matching for data extraction
 
-### 6. IframeExtractor
+### 6. NavigationExtractor
+**Purpose**: **NEW PATTERN SOLUTION** - Extracts parish data from diocese websites that use hover-based navigation to access parish directories.
+
+**Technical Approach**:
+- Detects hover-based navigation menus containing parish-related links
+- Uses Selenium ActionChains to perform hover actions over menu items
+- Extracts dropdown links that appear after hovering
+- Navigates to parish directory pages revealed through navigation
+- Applies multiple extraction strategies on discovered directory pages
+- Handles complex navigation patterns requiring user interaction simulation
+
+**Supported Website Types**:
+- Diocese websites with hover-triggered dropdown menus
+- Sites where parish directories are hidden behind navigation interactions
+- Complex navigation systems requiring multi-step user actions
+- Diocese websites with JavaScript-dependent menu systems
+
+**Key Methods**:
+- `_detect_hover_navigation()`: Identifies hover-based navigation patterns
+- `_extract_via_hover_navigation()`: Performs hover actions to reveal links
+- `_extract_dropdown_links()`: Captures links from dropdown menus
+- `_follow_parish_directory_link()`: Navigates to and extracts from directory pages
+- `_extract_from_parish_list()`: Processes list-based parish layouts
+- `_extract_from_cards()`: Handles card-based parish displays
+- `_extract_from_text_content()`: Extracts from plain text parish listings
+
+**Success Story**: Designed for Diocese of Wheeling-Charleston (Diocese 2176) which requires hovering over "Parishes" menu to reveal the link to the actual parish directory at `/directory-category/parishes/320`.
+
+### 7. IframeExtractor
 **Purpose**: **BREAKTHROUGH SOLUTION** - Extracts parish data from iframe-embedded content using drag-to-select functionality.
 
 **Technical Approach**:
@@ -201,6 +229,49 @@ The parish extraction system uses a multi-layered approach to handle the wide va
 - `_is_concatenated_parish_line()`: Identifies concatenated text lines
 
 **Success Story**: Solved Diocese 2009 (Archdiocese of Denver) extraction, improving accuracy from 0% to 98.7% (148/150 matches).
+
+## ParishListingType to Extraction Method Mapping
+
+The system uses a two-step process: **Pattern Detection** (ParishListingType enum) → **Strategy Selection** (extraction_method string stored in database).
+
+### Complete Mapping Table
+
+| # | ParishListingType Enum | Extraction Method | Confidence | Description |
+|---|------------------------|------------------|------------|-------------|
+| 1 | `IFRAME_EMBEDDED` | `iframe_extraction` | 95% | Iframe-embedded parish directories (e.g., Maptive) |
+| 2 | `DIOCESE_CARD_LAYOUT` | `diocese_card_extraction_with_details` | 95% | Salt Lake City style card layout with detail pages |
+| 3 | `HOVER_NAVIGATION` | `navigation_extraction` | 90% | Hover-based dropdown navigation (e.g., Wheeling-Charleston) |
+| 4 | `PARISH_FINDER` | `parish_finder_extraction` | 95% | eCatholic-style interactive directory search |
+| 5 | `INTERACTIVE_MAP` | `interactive_map_extraction` | 90% | JavaScript-powered maps with markers |
+| 6 | `STATIC_TABLE` | `table_extraction` | 95% | HTML table-based parish listings |
+| 7 | `CARD_GRID` | `generic_extraction` | 40% | Card/grid layouts (fallback to generic) |
+| 8 | `SIMPLE_LIST` | `generic_extraction` | 40% | Simple list formats (fallback to generic) |
+| 9 | `PAGINATED_LIST` | `generic_extraction` | 40% | Paginated content (fallback to generic) |
+| 10 | `SEARCHABLE_DIRECTORY` | `generic_extraction` | 40% | Searchable directories (fallback to generic) |
+| 11 | `PDF_DIRECTORY` | `generic_extraction` | 40% | PDF-based directories (fallback to generic) |
+| 12 | `UNKNOWN` | `generic_extraction` | 40% | Unrecognized patterns (fallback) |
+
+### Platform-Specific Overrides
+
+Additionally, certain platforms get special treatment regardless of listing type:
+
+| Platform | Extraction Method | Confidence | Description |
+|----------|------------------|------------|-------------|
+| `SQUARESPACE` | `squarespace_extraction` | 80% | SquareSpace platform-specific selectors |
+
+### Implementation Flow
+
+1. **Pattern Detection**: Website HTML is analyzed to determine `ParishListingType`
+2. **Strategy Selection**: Based on the listing type, an `extraction_method` is chosen
+3. **Database Storage**: The `extraction_method` string is stored with each parish record
+4. **Analytics**: Extraction success rates are tracked by method for optimization
+
+### Notes on Mapping
+
+- **High-confidence methods** (90%+): Have specialized extractor classes
+- **Generic fallback** (40%): Uses basic pattern matching for unrecognized types
+- **Database field**: Only the `extraction_method` is stored, not the enum value
+- **Runtime classification**: ParishListingType enums are used for strategy selection only
 
 ## Architecture Components
 
@@ -257,6 +328,7 @@ strategies = {
 - **IframeExtractor**: 98.7% accuracy (Diocese 2009)
 - **EnhancedDiocesesCardExtractor**: ~95% for card-based sites
 - **TableExtractor**: ~90% for table-based directories
+- **NavigationExtractor**: ~90% for hover-navigation sites (Diocese 2176)
 - **ParishFinderExtractor**: ~85% for search-based interfaces
 - **ImprovedInteractiveMapExtractor**: ~80% for map-based directories
 - **ImprovedGenericExtractor**: ~70% fallback coverage
