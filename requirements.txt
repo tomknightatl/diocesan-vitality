@@ -17,3 +17,4 @@ uvicorn
 lxml
 psutil
 usaddress
+PyPDF2
