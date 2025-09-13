@@ -18,3 +18,5 @@ lxml
 psutil
 usaddress
 PyPDF2
+pdfplumber
+pydantic
