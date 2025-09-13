@@ -28,12 +28,18 @@ This guide provides everything you need to develop and test the USCCB extraction
    ```
 
 4. **Start Local Services** (see Environment Setup for details)
-   ```bash
-   # Start backend (required for monitoring)
-   cd backend && uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
-   # Start frontend dashboard (optional, in separate terminal)
-   cd frontend && npm install && npm start
+   **Terminal 1 - Backend (required for monitoring):**
+   ```bash
+   cd backend
+   uvicorn main:app --reload --host 0.0.0.0 --port 8000
+   ```
+
+   **Terminal 2 - Frontend (optional):**
+   ```bash
+   cd frontend
+   npm install  # First time only
+   npm run dev
    ```
 
 5. **Run Extraction Scripts**
@@ -90,9 +96,9 @@ For the full monitoring dashboard experience:
 ```bash
 cd frontend
 npm install  # First time only
-npm start
+npm run dev
 ```
-Dashboard available at http://localhost:3000
+Dashboard available at http://localhost:5173
 
 ### Monitoring Features
 
@@ -632,7 +638,7 @@ export $(cat .env | grep -v '^#' | xargs)
 
 # 3. Start services (see Environment Setup section for details)
 cd backend && uvicorn main:app --reload  # Terminal 1
-cd frontend && npm start                 # Terminal 2
+cd frontend && npm run dev               # Terminal 2
 
 # 4. Make changes and test
 python extract_dioceses.py --max_dioceses 1
@@ -653,7 +659,7 @@ git push origin feature/your-feature-name
 
 ### Local Development Stack
 - **Backend**: FastAPI Python application (http://localhost:8000)
-- **Frontend**: React app with Vite (http://localhost:3000)
+- **Frontend**: React app with Vite (http://localhost:5173)
 - **Database**: Supabase (PostgreSQL) - remote connection
 - **Monitoring**: WebSocket-based real-time dashboard
 - **Pipeline**: Python extraction scripts with Chrome WebDriver
