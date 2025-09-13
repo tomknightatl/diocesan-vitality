@@ -22,9 +22,10 @@ app = FastAPI()
 origins = [
     "http://usccb.diocesevitality.org",
     "https://usccb.diocesevitality.org",
+    "http://localhost:3000",    # React development server
     "http://localhost:8080",
     "http://localhost:8081",
-    "http://localhost:5173",
+    "http://localhost:5173",    # Vite development server
 ]
 
 app.add_middleware(
