@@ -20,7 +20,7 @@ spec:
         doks.digitalocean.com/node-pool: fast-pool
       containers:
       - name: pipeline
-        image: tomatl/usccb:pipeline-v202509131638
+        image: tomatl/usccb:pipeline-v202509131640
         imagePullPolicy: Always
         resources:
           requests:
@@ -57,6 +57,10 @@ spec:
               key: search-cx
         - name: MPLCONFIGDIR
           value: "/tmp/matplotlib"
+        - name: HOME
+          value: "/tmp"
+        - name: WDM_LOCAL_CACHE
+          value: "/tmp/webdriver-cache"
         # Command line arguments for specific processing
         command: ["python", "run_pipeline.py"]
         args:
