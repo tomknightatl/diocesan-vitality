@@ -40,7 +40,7 @@ class ScheduleAIExtractor:
         Returns:
             Adaptive confidence threshold (lower = more permissive)
         """
-        base_threshold = 20
+        base_threshold = 15  # Lowered from 20 to be more permissive
         adjustments = 0
         
         # URL-based adjustments
@@ -52,9 +52,14 @@ class ScheduleAIExtractor:
             logger.debug(f"Major parish detected, lowering threshold by 10")
         
         # Dedicated schedule pages should have lower thresholds
-        if any(keyword in url_lower for keyword in ['schedule', 'hours', 'mass-times', 'adoration', 'confession']):
+        if any(keyword in url_lower for keyword in ['schedule', 'hours', 'mass-times', 'adoration', 'confession', 'reconciliation']):
+            adjustments -= 7  # Increased from 5 to be more permissive
+            logger.debug(f"Dedicated schedule page detected, lowering threshold by 7")
+        
+        # Parish life/ministry pages often contain schedule info
+        if any(keyword in url_lower for keyword in ['parish-life', 'ministry', 'ministries', 'worship', 'sacrament']):
             adjustments -= 5
-            logger.debug(f"Dedicated schedule page detected, lowering threshold by 5")
+            logger.debug(f"Parish life/ministry page detected, lowering threshold by 5")
         
         # Content-based adjustments
         content_length = len(content.split()) if content else 0
@@ -63,16 +68,21 @@ class ScheduleAIExtractor:
         if content_length > 2000:
             adjustments -= 5
             logger.debug(f"Large page ({content_length} words), lowering threshold by 5")
-        elif content_length < 200:
-            adjustments += 5
-            logger.debug(f"Small page ({content_length} words), raising threshold by 5")
+        elif content_length < 100:  # Only very small pages get penalty
+            adjustments += 3  # Reduced from 5
+            logger.debug(f"Very small page ({content_length} words), raising threshold by 3")
         
-        # Sitemap pages should have higher thresholds (less reliable)
+        # Sitemap pages should have higher thresholds but not too high
         if 'sitemap' in url_lower:
-            adjustments += 15
-            logger.debug(f"Sitemap page detected, raising threshold by 15")
+            adjustments += 10  # Reduced from 15
+            logger.debug(f"Sitemap page detected, raising threshold by 10")
         
-        final_threshold = max(5, base_threshold + adjustments)  # Minimum threshold of 5
+        # Generic 'about' pages might contain schedules
+        if any(keyword in url_lower for keyword in ['about', 'contact', 'home', 'welcome']):
+            adjustments -= 2
+            logger.debug(f"Generic page that might contain schedule info, lowering threshold by 2")
+        
+        final_threshold = max(3, base_threshold + adjustments)  # Minimum threshold lowered to 3
         
         if final_threshold != base_threshold:
             logger.info(f"Adaptive threshold for {url}: {final_threshold} (base: {base_threshold}, adjustment: {adjustments:+d})")
