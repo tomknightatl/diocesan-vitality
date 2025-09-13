@@ -9,6 +9,7 @@ import './index.css';
 
 import Reports from './Reports.jsx';
 import Layout from './Layout.jsx';
+import Parish from './Parish.jsx';
 
 const router = createBrowserRouter([
   {
@@ -21,6 +22,10 @@ const router = createBrowserRouter([
       {
         path: "/diocese",
         element: <Diocese />,
+      },
+      {
+        path: "/parish",
+        element: <Parish />,
       },
       {
         path: "/reports",
