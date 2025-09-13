@@ -608,6 +608,7 @@ For detailed instructions on how to build and deploy the web application, please
 ## See Also
 
 ### 📁 Core Documentation
+- **[docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md)** - Complete local development environment setup and workflow
 - **[supabase-setup.md](supabase-setup.md)** - Database setup and configuration instructions
 - **[CONVERSATION_SUMMARY.md](CONVERSATION_SUMMARY.md)** - Development history and implementation decisions
 
@@ -640,7 +641,6 @@ For detailed instructions on how to build and deploy the web application, please
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture and design patterns
 - **[docs/DATABASE.md](docs/DATABASE.md)** - Database schema and data management
 - **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Docker and Kubernetes deployment instructions
-- **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** - Development environment and workflow
 - **[docs/AUTHENTICATION.md](docs/AUTHENTICATION.md)** - Authentication and security configuration
 - **[docs/CLOUDFLARE.md](docs/CLOUDFLARE.md)** - Cloudflare tunnel and DNS configuration
 
