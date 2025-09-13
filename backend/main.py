@@ -229,18 +229,31 @@ async def get_summary():
     Provides a summary of dioceses and their parish directory URLs.
     """
     try:
-        # Fetch all records from DiocesesParishDirectory to calculate summary
-        response = supabase.table('DiocesesParishDirectory').select('parish_directory_url').execute()
-        data = response.data
-
-        total_dioceses_processed = len(data)
-        found_parish_directories = sum(1 for item in data if item['parish_directory_url'] is not None)
+        # Dioceses summary
+        dir_response = supabase.table('DiocesesParishDirectory').select('parish_directory_url').execute()
+        dir_data = dir_response.data
+        total_dioceses_processed = len(dir_data)
+        found_parish_directories = sum(1 for item in dir_data if item['parish_directory_url'] is not None)
         not_found_parish_directories = total_dioceses_processed - found_parish_directories
+
+        # Parishes summary
+        parishes_count_response = supabase.table('Parishes').select('count', count='exact').execute()
+        parishes_extracted = parishes_count_response.count
+
+        parish_data_response = supabase.table('ParishData').select('parish_id, fact_value').execute()
+        parish_data = parish_data_response.data
+        
+        parishes_searched = len(set(item['parish_id'] for item in parish_data))
+        
+        parishes_with_data_extracted = len(set(item['parish_id'] for item in parish_data if item['fact_value'] and item['fact_value'] != 'Information not found'))
 
         return {
             "total_dioceses_processed": total_dioceses_processed,
             "found_parish_directories": found_parish_directories,
-            "not_found_parish_directories": not_found_parish_directories
+            "not_found_parish_directories": not_found_parish_directories,
+            "parishes_extracted": parishes_extracted,
+            "parishes_searched": parishes_searched,
+            "parishes_with_data_extracted": parishes_with_data_extracted,
         }
     except Exception as e:
         return {"error": str(e)}
