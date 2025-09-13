@@ -23,7 +23,8 @@ from extract_schedule import (
     get_suppression_urls,
     get_sitemap_urls,
     choose_best_url,
-    requests_session
+    requests_session,
+    make_request_with_delay
 )
 
 logger = get_logger(__name__)
@@ -45,7 +46,7 @@ def extract_relevant_content_for_ai(url: str, suppression_urls: set) -> str:
         return ""
         
     try:
-        response = requests_session.get(url, timeout=15)
+        response = make_request_with_delay(requests_session, url, timeout=15)
         response.raise_for_status()
         
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -104,7 +105,7 @@ def find_schedule_pages_with_ai(parish_url: str, parish_id: int, supabase,
             break
             
         try:
-            response = requests_session.get(url, timeout=10)
+            response = make_request_with_delay(requests_session, url, timeout=10)
             response.raise_for_status()
             soup = BeautifulSoup(response.content, 'html.parser')
             page_text = soup.get_text().lower()

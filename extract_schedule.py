@@ -4,7 +4,9 @@
 import argparse
 import heapq
 import os
+import random
 import re
+import time
 import warnings
 from datetime import datetime, timezone
 from urllib.parse import urljoin, urlparse
@@ -29,17 +31,60 @@ logger = get_logger(__name__)
 
 _sitemap_cache = {}
 
-# Configure requests to retry on common transient errors
-retry_strategy = Retry(
-    total=3,
-    backoff_factor=1,
-    status_forcelist=[429, 500, 502, 503, 504],
-    allowed_methods=["HEAD", "GET", "OPTIONS"]
-)
-adapter = HTTPAdapter(max_retries=retry_strategy)
-requests_session = requests.Session()
-requests_session.mount("https://", adapter)
-requests_session.mount("http://", adapter)
+# List of realistic user agents to rotate between
+USER_AGENTS = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3.1 Safari/605.1.15',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:123.0) Gecko/20100101 Firefox/123.0'
+]
+
+def get_resilient_session() -> requests.Session:
+    """Create a resilient HTTP session with bot detection avoidance."""
+    # Configure retry strategy with more aggressive settings for blocked requests
+    retry_strategy = Retry(
+        total=3,
+        backoff_factor=2,  # Increased backoff
+        status_forcelist=[403, 429, 500, 502, 503, 504],  # Added 403 for bot detection
+        allowed_methods=["HEAD", "GET", "OPTIONS"]
+    )
+    
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session = requests.Session()
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    
+    # Set a random user agent
+    session.headers.update({
+        'User-Agent': random.choice(USER_AGENTS),
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Cache-Control': 'max-age=0'
+    })
+    
+    return session
+
+def make_request_with_delay(session: requests.Session, url: str, **kwargs) -> requests.Response:
+    """Make a request with random delay to appear more human-like."""
+    # Add random delay between requests (0.5 to 2 seconds)
+    delay = random.uniform(0.5, 2.0)
+    time.sleep(delay)
+    
+    # Rotate user agent for this request
+    session.headers.update({'User-Agent': random.choice(USER_AGENTS)})
+    
+    return session.get(url, **kwargs)
+
+# Create a global resilient session
+requests_session = get_resilient_session()
 
 def get_suppression_urls(supabase: Client) -> set[str]:
     """Fetches all URLs from the ParishFactsSuppressionURLs table."""
@@ -76,7 +121,7 @@ def get_common_schedule_paths(base_url: str) -> list[str]:
 def get_navigation_links(url: str) -> list[str]:
     """Extract navigation links from the main page when sitemaps fail."""
     try:
-        response = requests_session.get(url, timeout=10)
+        response = make_request_with_delay(requests_session, url, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'html.parser')
         
@@ -145,7 +190,7 @@ def get_sitemap_urls(url: str) -> list[str]:
     # Try sitemap.xml first
     try:
         sitemap_url = urljoin(url, '/sitemap.xml')
-        response = requests_session.get(sitemap_url, timeout=10)
+        response = make_request_with_delay(requests_session, sitemap_url, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'xml')
         sitemap_urls = [
@@ -244,7 +289,7 @@ def extract_time_info(url: str, keyword: str, suppression_urls: set[str]) -> tup
         logger.info(f"Skipping extraction for {url} as it is in the suppression list.")
         return "Information not found", None
     try:
-        response = requests_session.get(url, timeout=10)
+        response = make_request_with_delay(requests_session, url, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'html.parser')
         return extract_time_info_from_soup(soup, keyword)
@@ -372,7 +417,7 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_u
             }
 
         try:
-            response = requests_session.get(current_url, timeout=10)
+            response = make_request_with_delay(requests_session, current_url, timeout=10)
             response.raise_for_status()
             soup = BeautifulSoup(response.content, 'html.parser')
             
