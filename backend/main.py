@@ -5,6 +5,7 @@ import psutil
 import time
 from datetime import datetime, timezone
 from typing import Dict, List, Set
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
 from dotenv import load_dotenv
@@ -16,7 +17,36 @@ from fastapi.middleware.cors import CORSMiddleware
 dotenv_path = Path(__file__).resolve().parent.parent / '.env'
 load_dotenv(dotenv_path=dotenv_path)
 
-app = FastAPI()
+# Background task to periodically update system health
+async def periodic_health_update():
+    """Periodically broadcast system health updates"""
+    while True:
+        try:
+            health_data = monitoring_manager.get_system_health()
+            await monitoring_manager.broadcast({
+                "type": "system_health",
+                "payload": health_data
+            })
+            await asyncio.sleep(10)  # Update every 10 seconds
+        except Exception as e:
+            print(f"Error in periodic health update: {e}")
+            await asyncio.sleep(10)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handle application startup and shutdown"""
+    # Startup
+    asyncio.create_task(periodic_health_update())
+    print("🖥️ Real-time monitoring dashboard backend started")
+    print(f"📊 WebSocket monitoring available at: /ws/monitoring")
+    print(f"🔧 API monitoring endpoints available at: /api/monitoring/*")
+
+    yield
+
+    # Shutdown (if needed)
+    print("🛑 Shutting down monitoring dashboard backend")
+
+app = FastAPI(lifespan=lifespan)
 
 # Configure CORS middleware
 origins = [
@@ -623,26 +653,3 @@ async def send_log_endpoint(log_data: dict):
     except Exception as e:
         return {"error": str(e)}
 
-# Background task to periodically update system health
-async def periodic_health_update():
-    """Periodically broadcast system health updates"""
-    while True:
-        try:
-            health_data = monitoring_manager.get_system_health()
-            await monitoring_manager.broadcast({
-                "type": "system_health",
-                "payload": health_data
-            })
-            await asyncio.sleep(10)  # Update every 10 seconds
-        except Exception as e:
-            print(f"Error in periodic health update: {e}")
-            await asyncio.sleep(10)
-
-# Start background task when app starts
-@app.on_event("startup")
-async def startup_event():
-    """Start background tasks when app starts"""
-    asyncio.create_task(periodic_health_update())
-    print("🖥️ Real-time monitoring dashboard backend started")
-    print(f"📊 WebSocket monitoring available at: /ws/monitoring")
-    print(f"🔧 API monitoring endpoints available at: /api/monitoring/*")
