@@ -18,7 +18,7 @@ spec:
       - name: dockerhub-secret
       containers:
       - name: pipeline
-        image: tomatl/usccb:pipeline
+        image: tomatl/usccb:pipeline-v202509131526
         imagePullPolicy: Always
         resources:
           requests:
