@@ -37,10 +37,28 @@ Since the pipeline manifests are in the `k8s/` directory, they will be automatic
      -n usccb
    ```
 
-3. **Ensure application secrets exist** (created by ArgoCD):
+3. **Create application secrets**:
    ```bash
-   kubectl get secret usccb-secrets -n usccb  # Should contain supabase-url, supabase-key, etc.
+   # Create the usccb-secrets secret with your actual API credentials
+   kubectl create secret generic usccb-secrets \
+     -n usccb \
+     --from-literal=supabase-url="https://your-project.supabase.co" \
+     --from-literal=supabase-key="your-supabase-service-role-key" \
+     --from-literal=genai-api-key="your-google-gemini-api-key" \
+     --from-literal=search-api-key="your-google-search-api-key" \
+     --from-literal=search-cx="your-google-search-cx-id"
+
+   # Verify the secret was created successfully
+   kubectl get secret usccb-secrets -n usccb
+   kubectl describe secret usccb-secrets -n usccb  # Shows keys but not values
    ```
+
+   **Required credentials:**
+   - **supabase-url**: Your Supabase project URL (format: `https://xxxxx.supabase.co`)
+   - **supabase-key**: Your Supabase service role key (found in Project Settings → API)
+   - **genai-api-key**: Google Gemini API key (from Google AI Studio)
+   - **search-api-key**: Google Custom Search JSON API key
+   - **search-cx**: Google Custom Search Engine ID
 
 4. **Deploy via ArgoCD** - Pipeline will be deployed automatically as a Deployment
 
