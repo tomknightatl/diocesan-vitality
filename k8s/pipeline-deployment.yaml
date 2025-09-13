@@ -16,17 +16,19 @@ spec:
       serviceAccountName: default
       imagePullSecrets:
       - name: dockerhub-secret
+      nodeSelector:
+        doks.digitalocean.com/node-pool: fast-pool
       containers:
       - name: pipeline
-        image: tomatl/usccb:pipeline-v202509131526
+        image: tomatl/usccb:pipeline-v202509131608
         imagePullPolicy: Always
         resources:
           requests:
-            memory: "32Mi"
-            cpu: "5m"
+            memory: "512Mi"
+            cpu: "100m"
           limits:
-            memory: "128Mi"
-            cpu: "50m"
+            memory: "3Gi"
+            cpu: "1500m"
         env:
         - name: SUPABASE_URL
           valueFrom:
@@ -53,6 +55,8 @@ spec:
             secretKeyRef:
               name: usccb-secrets
               key: search-cx
+        - name: MPLCONFIGDIR
+          value: "/tmp/matplotlib"
         # Command line arguments for specific processing
         command: ["python", "run_pipeline.py"]
         args:
