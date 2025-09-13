@@ -129,8 +129,8 @@ function ParishList({ dioceseId }) {
                 />
               </th>
               <th style={{ cursor: 'pointer' }}>
-                <div onClick={() => handleSort('Address')}>
-                  Address {sortBy === 'Address' && (sortOrder === 'asc' ? '▲' : '▼')}
+                <div onClick={() => handleSort('Street Address')}>
+                  Address {sortBy === 'Street Address' && (sortOrder === 'asc' ? '▲' : '▼')}
                 </div>
                 <Form.Control
                   type="text"
@@ -142,8 +142,8 @@ function ParishList({ dioceseId }) {
                 />
               </th>
               <th style={{ cursor: 'pointer' }}>
-                <div onClick={() => handleSort('Website')}>
-                  Website {sortBy === 'Website' && (sortOrder === 'asc' ? '▲' : '▼')}
+                <div onClick={() => handleSort('Web')}>
+                  Website {sortBy === 'Web' && (sortOrder === 'asc' ? '▲' : '▼')}
                 </div>
                 <Form.Control
                   type="text"
@@ -180,7 +180,7 @@ function ParishList({ dioceseId }) {
                 <td><a href={parish.Website} target="_blank" rel="noopener noreferrer">{parish.Website}</a></td>
                 <td>{parish.data_extracted ? 'Yes' : 'No'}</td>
                 <td>
-                  <Link to={`/parish/${parish.id}`}>View Schedules</Link>
+                  <Link to={`/parish?id=${parish.id}`}>View Schedules</Link>
                 </td>
               </tr>
             ))}

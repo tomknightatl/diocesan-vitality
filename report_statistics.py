@@ -42,6 +42,10 @@ def fetch_and_process_table(table_name: str, supabase_client: Client):
             print(f"No relevant date columns found in {table_name} for time-series analysis.")
             return df, None
 
+        # Exclude 'created_at' for specific tables as per request
+        if table_name in ['Dioceses', 'Parishes'] and 'created_at' in date_cols:
+            date_cols.remove('created_at')
+
         # Aggregate data by date with dual granularity
         time_series_data = {}
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=7)
@@ -73,33 +77,22 @@ def fetch_and_process_table(table_name: str, supabase_client: Client):
         print(f"Error fetching or processing data from {table_name}: {e}")
         return None, None
 
-def plot_time_series(time_series_data: dict, table_name: str):
+def plot_time_series(time_series_data: dict, table_name: str, global_min_date: datetime, global_max_date: datetime):
     """Generates and saves time-series plots for record counts."""
     if not time_series_data:
         return
 
     fig, ax = plt.subplots(figsize=(12, 6))
+    plt.rcParams.update({'font.size': 14}) # Set global font size
     
-    min_date, max_date = None, None
-
     for col_name, df_ts in time_series_data.items():
         ax.plot(df_ts['date'], df_ts['count'], marker='o', linestyle='-', label=f'Records by {col_name}')
         
-        # Update min and max dates
-        if not df_ts.empty:
-            current_min = df_ts['date'].min()
-            current_max = df_ts['date'].max()
-            if min_date is None or current_min < min_date:
-                min_date = current_min
-            if max_date is None or current_max > max_date:
-                max_date = current_max
+    # Set x-axis limits using global min/max dates
+    if global_min_date and global_max_date:
+        ax.set_xlim(global_min_date, global_max_date)
 
-    # Set x-axis limits with a 10-day padding
-    if min_date and max_date:
-        from datetime import timedelta
-        ax.set_xlim(min_date - timedelta(days=10), max_date + timedelta(days=10))
-
-    ax.set_title(f'Number of Records in {table_name} Over Time')
+    ax.set_title(f'Number of Records in {table_name} Over Time', fontsize=16)
     ax.set_xlabel('Date', fontsize=14)
     ax.set_ylabel('Number of Records', fontsize=14)
     ax.grid(True)
@@ -114,16 +107,36 @@ def plot_time_series(time_series_data: dict, table_name: str):
     plt.close(fig) # Close the figure to free memory
 
 def main():
-    tables_to_report = ['Dioceses', 'DiocesesParishDirectory', 'Parishes', 'Parishes']
+    tables_to_report = ['Dioceses', 'DiocesesParishDirectory', 'Parishes', 'ParishScheduleSummary']
     
+    all_min_dates = []
+    all_max_dates = []
+    all_time_series_data = {}
+
     for table_name in tables_to_report:
         df, time_series_data = fetch_and_process_table(table_name, supabase)
         
         if df is not None:
             print(f"Current number of records in {table_name}: {len(df)}")
             if time_series_data:
-                plot_time_series(time_series_data, table_name)
+                all_time_series_data[table_name] = time_series_data
+                for col_name, df_ts in time_series_data.items():
+                    if not df_ts.empty:
+                        all_min_dates.append(df_ts['date'].min())
+                        all_max_dates.append(df_ts['date'].max())
             print("-" * 50)
+
+    global_min_date = min(all_min_dates) if all_min_dates else None
+    global_max_date = max(all_max_dates) if all_max_dates else None
+
+    # Add 1 day padding
+    if global_min_date:
+        global_min_date -= timedelta(days=1)
+    if global_max_date:
+        global_max_date += timedelta(days=1)
+
+    for table_name, time_series_data in all_time_series_data.items():
+        plot_time_series(time_series_data, table_name, global_min_date, global_max_date)
 
 if __name__ == "__main__":
     main()

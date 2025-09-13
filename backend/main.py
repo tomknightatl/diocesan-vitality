@@ -347,22 +347,55 @@ def get_diocese(diocese_id: int):
         return {"error": str(e)}
 
 @app.get("/api/dioceses/{diocese_id}/parishes")
-def get_parishes_for_diocese(diocese_id: int):
+def get_parishes_for_diocese(
+    diocese_id: int,
+    page: int = 1,
+    page_size: int = 20,
+    sort_by: str = "Name",
+    sort_order: str = "asc",
+    filter_name: str = None,
+    filter_address: str = None,
+    filter_website: str = None,
+    filter_data_extracted: str = None
+):
     """
-    Fetches all parishes for a given diocese ID.
+    Fetches all parishes for a given diocese ID with pagination, sorting, and filtering.
     """
     try:
+        offset = (page - 1) * page_size
+
         # First, get the diocese's website using its ID
         diocese_response = supabase.table('Dioceses').select('Website').eq('id', diocese_id).execute()
         if not diocese_response.data:
             raise HTTPException(status_code=404, detail="Diocese not found")
         diocese_website = diocese_response.data[0]['Website']
 
-        parishes_response = supabase.table('Parishes').select('*').eq('diocese_url', diocese_website).execute()
+        query = supabase.table('Parishes').select('*', count='exact').eq('diocese_url', diocese_website)
+
+        # Apply filters
+        if filter_name:
+            query = query.ilike('Name', f'%{filter_name}%')
+        if filter_address:
+            query = query.ilike('Address', f'%{filter_address}%')
+        if filter_website:
+            query = query.ilike('Web', f'%{filter_website}%') # Use 'Web' for website column
+
+        # Apply sorting and pagination
+        if sort_by == "Name":
+            query = query.order('Name', desc=sort_order.lower() == 'desc')
+        elif sort_by == "Address":
+            query = query.order('Street Address', desc=sort_order.lower() == 'desc')
+        elif sort_by == "Website":
+            query = query.order('Web', desc=sort_order.lower() == 'desc')
+        # Add other sortable columns as needed
+
+        parishes_response = query.range(offset, offset + page_size - 1).execute()
+        
         parishes = parishes_response.data
+        total_count = parishes_response.count
 
         if not parishes:
-            return {"data": []}
+            return {"data": [], "total_count": 0, "page": page, "page_size": page_size}
 
         parish_ids = [parish['id'] for parish in parishes]
 
@@ -381,16 +414,116 @@ def get_parishes_for_diocese(diocese_id: int):
             elif fact['fact_type'] == 'AdorationSchedule':
                 parish_facts[pid]['adoration_facts'] = fact['fact_value']
 
-        # Add facts to parishes
+        # Add facts to parishes and data_extracted flag
+        all_parishes_with_data = {item['parish_id'] for item in parish_data if item['fact_value'] and item['fact_value'] != 'Information not found'}
+
         for parish in parishes:
             facts = parish_facts.get(parish['id'], {})
             parish['reconciliation_facts'] = facts.get('reconciliation_facts')
             parish['adoration_facts'] = facts.get('adoration_facts')
+            parish['data_extracted'] = parish['id'] in all_parishes_with_data
 
-        if filter == 'with_data':
-            parishes = [p for p in parishes if p['reconciliation_facts'] or p['adoration_facts']]
+        if filter_data_extracted:
+            if filter_data_extracted.lower() == 'true':
+                parishes = [p for p in parishes if p['data_extracted']]
+            elif filter_data_extracted.lower() == 'false':
+                parishes = [p for p in parishes if not p['data_extracted']]
 
-        return {"data": parishes}
+        # Apply Python-side sorting for data_extracted if requested
+        if sort_by == "data_extracted":
+            parishes.sort(key=lambda p: p.get('data_extracted', False), reverse=sort_order.lower() == 'desc')
+
+        return {
+            "data": parishes,
+            "total_count": total_count,
+            "page": page,
+            "page_size": page_size
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/api/parishes")
+def get_all_parishes(
+    page: int = 1,
+    page_size: int = 20,
+    sort_by: str = "Name",
+    sort_order: str = "asc",
+    filter_name: str = None,
+    filter_address: str = None,
+    filter_website: str = None,
+    filter_data_extracted: str = None
+):
+    """
+    Fetches all parishes with pagination, sorting, and filtering.
+    """
+    try:
+        offset = (page - 1) * page_size
+        
+        query = supabase.table('Parishes').select('*', count='exact')
+        
+        # Apply filters
+        if filter_name:
+            query = query.ilike('Name', f'%{filter_name}%')
+        if filter_address:
+            query = query.ilike('Address', f'%{filter_address}%')
+        if filter_website:
+            query = query.ilike('Website', f'%{filter_website}%')
+
+        # Apply sorting and pagination
+        if sort_by == "Name":
+            query = query.order('Name', desc=sort_order.lower() == 'desc')
+        elif sort_by == "Address":
+            query = query.order('Street Address', desc=sort_order.lower() == 'desc')
+        elif sort_by == "Website":
+            query = query.order('Web', desc=sort_order.lower() == 'desc')
+        # Add other sortable columns as needed
+
+        parishes_response = query.range(offset, offset + page_size - 1).execute()
+        
+        parishes = parishes_response.data
+        total_count = parishes_response.count
+
+        # Fetch parish data for 'data_extracted' filter and add data_extracted flag
+        all_parish_ids = [p['id'] for p in parishes]
+        all_parish_data_response = supabase.table('ParishData').select('parish_id, fact_value').in_('parish_id', all_parish_ids).execute()
+        all_parishes_with_data = {item['parish_id'] for item in all_parish_data_response.data if item['fact_value'] and item['fact_value'] != 'Information not found'}
+
+        for parish in parishes:
+            parish['data_extracted'] = parish['id'] in all_parishes_with_data
+
+        # Apply filter for data_extracted after computing the flag
+        if filter_data_extracted:
+            if filter_data_extracted.lower() == 'true':
+                parishes = [p for p in parishes if p['data_extracted']]
+            elif filter_data_extracted.lower() == 'false':
+                parishes = [p for p in parishes if not p['data_extracted']]
+
+        # Apply Python-side sorting for data_extracted if requested
+        if sort_by == "data_extracted":
+            parishes.sort(key=lambda p: p.get('data_extracted', False), reverse=sort_order.lower() == 'desc')
+
+        return {
+            "data": parishes,
+            "total_count": total_count,
+            "page": page,
+            "page_size": page_size
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/parish")
+def get_parish(
+    parish_id: int
+):
+    """
+    Fetches a single parish by its ID.
+    """
+    try:
+        response = supabase.table('Parishes').select('*').eq('id', parish_id).execute()
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Parish not found")
+        return {"data": response.data[0]}
     except Exception as e:
         return {"error": str(e)}
 
