@@ -36,7 +36,11 @@ const Dashboard = () => {
       const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
       const backendHost = isProduction ? 'api.diocesevitality.org' : 'localhost:8000';
       const wsUrl = `${protocol}//${backendHost}/ws/monitoring`;
-      
+
+      console.log('🔌 Attempting WebSocket connection to:', wsUrl);
+      console.log('🌐 Is production?', isProduction);
+      console.log('🏠 Hostname:', window.location.hostname);
+
       wsRef.current = new WebSocket(wsUrl);
       
       wsRef.current.onopen = () => {
@@ -48,6 +52,7 @@ const Dashboard = () => {
       wsRef.current.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          console.log('📨 WebSocket message received:', data.type, data);
           handleWebSocketMessage(data);
         } catch (error) {
           console.error('Error parsing WebSocket message:', error);
@@ -79,6 +84,7 @@ const Dashboard = () => {
   };
 
   const handleWebSocketMessage = (data) => {
+    console.log('🔄 Processing message type:', data.type);
     switch (data.type) {
       case 'extraction_status':
         setExtractionStatus(data.payload);
