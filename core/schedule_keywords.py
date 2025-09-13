@@ -13,9 +13,9 @@ from core.logger import get_logger
 logger = get_logger(__name__)
 
 
-def load_keywords_from_database(supabase: Client) -> Tuple[Dict[str, int], List[str], Dict[str, int], List[str]]:
+def load_keywords_from_database(supabase: Client) -> Tuple[Dict[str, int], List[str], Dict[str, int], List[str], Dict[str, int], List[str]]:
     """
-    Loads reconciliation and adoration keywords from the ScheduleKeywords database table.
+    Loads reconciliation, adoration, and mass times keywords from the ScheduleKeywords database table.
     
     Returns:
         Tuple containing:
@@ -23,6 +23,8 @@ def load_keywords_from_database(supabase: Client) -> Tuple[Dict[str, int], List[
         - reconciliation_negative_keywords: List of negative reconciliation keywords
         - adoration_keywords: Dict of positive adoration keywords and their weights  
         - adoration_negative_keywords: List of negative adoration keywords
+        - mass_keywords: Dict of positive mass times keywords and their weights
+        - mass_negative_keywords: List of negative mass times keywords
     """
     try:
         # Fetch all active keywords from database
@@ -40,6 +42,8 @@ def load_keywords_from_database(supabase: Client) -> Tuple[Dict[str, int], List[
         reconciliation_negative = []
         adoration_keywords = {}
         adoration_negative = []
+        mass_keywords = {}
+        mass_negative = []
         
         # Process each keyword
         for row in response.data:
@@ -60,6 +64,12 @@ def load_keywords_from_database(supabase: Client) -> Tuple[Dict[str, int], List[
                 else:
                     adoration_keywords[keyword] = weight
                     
+            elif schedule_type == 'mass':
+                if is_negative:
+                    mass_negative.append(keyword)
+                else:
+                    mass_keywords[keyword] = weight
+                    
             elif schedule_type == 'both':
                 if is_negative:
                     reconciliation_negative.append(keyword)
@@ -67,14 +77,27 @@ def load_keywords_from_database(supabase: Client) -> Tuple[Dict[str, int], List[
                 else:
                     reconciliation_keywords[keyword] = weight
                     adoration_keywords[keyword] = weight
+                    
+            elif schedule_type == 'all':
+                if is_negative:
+                    reconciliation_negative.append(keyword)
+                    adoration_negative.append(keyword)
+                    mass_negative.append(keyword)
+                else:
+                    reconciliation_keywords[keyword] = weight
+                    adoration_keywords[keyword] = weight
+                    mass_keywords[keyword] = weight
         
         logger.info(f"Loaded from database: {len(reconciliation_keywords)} reconciliation keywords, "
                    f"{len(reconciliation_negative)} reconciliation negative keywords, "
                    f"{len(adoration_keywords)} adoration keywords, "
-                   f"{len(adoration_negative)} adoration negative keywords")
+                   f"{len(adoration_negative)} adoration negative keywords, "
+                   f"{len(mass_keywords)} mass keywords, "
+                   f"{len(mass_negative)} mass negative keywords")
         
         return (reconciliation_keywords, reconciliation_negative, 
-                adoration_keywords, adoration_negative)
+                adoration_keywords, adoration_negative, 
+                mass_keywords, mass_negative)
                 
     except Exception as e:
         logger.error(f"Error loading keywords from database: {e}")
@@ -82,7 +105,7 @@ def load_keywords_from_database(supabase: Client) -> Tuple[Dict[str, int], List[
         return get_fallback_keywords()
 
 
-def get_fallback_keywords() -> Tuple[Dict[str, int], List[str], Dict[str, int], List[str]]:
+def get_fallback_keywords() -> Tuple[Dict[str, int], List[str], Dict[str, int], List[str], Dict[str, int], List[str]]:
     """
     Returns hardcoded fallback keywords if database loading fails.
     """
@@ -106,21 +129,42 @@ def get_fallback_keywords() -> Tuple[Dict[str, int], List[str], Dict[str, int], 
     
     adoration_negative = ['reconciliation', 'confession', 'baptism', 'donate', 'giving']
     
+    mass_keywords = {
+        'mass': 8,
+        'masses': 8, 
+        'liturgy': 5,
+        'eucharist': 3,
+        'schedule': 5,
+        'times': 4,
+        'sunday': 6,
+        'weekday': 4,
+        'saturday': 4
+    }
+    
+    mass_negative = ['adoration', 'reconciliation', 'confession', 'baptism', 'donate', 'giving', 'meeting']
+    
     logger.info("Using fallback hardcoded keywords")
     return (reconciliation_keywords, reconciliation_negative, 
-            adoration_keywords, adoration_negative)
+            adoration_keywords, adoration_negative,
+            mass_keywords, mass_negative)
 
 
 def get_all_keywords_for_priority_calculation(supabase: Client) -> Dict[str, int]:
     """
     Gets combined keywords dictionary for URL priority calculation.
-    Merges reconciliation and adoration keywords, taking the higher weight if there are duplicates.
+    Merges reconciliation, adoration, and mass keywords, taking the higher weight if there are duplicates.
     """
-    recon_kw, _, ador_kw, _ = load_keywords_from_database(supabase)
+    recon_kw, _, ador_kw, _, mass_kw, _ = load_keywords_from_database(supabase)
     
     # Merge dictionaries, taking higher weight for duplicate keys
     all_keywords = recon_kw.copy()
     for keyword, weight in ador_kw.items():
+        if keyword in all_keywords:
+            all_keywords[keyword] = max(all_keywords[keyword], weight)
+        else:
+            all_keywords[keyword] = weight
+            
+    for keyword, weight in mass_kw.items():
         if keyword in all_keywords:
             all_keywords[keyword] = max(all_keywords[keyword], weight)
         else:
@@ -137,7 +181,7 @@ def add_keyword(supabase: Client, keyword: str, schedule_type: str, weight: int 
     Args:
         supabase: Supabase client
         keyword: The keyword to add
-        schedule_type: 'reconciliation', 'adoration', or 'both'
+        schedule_type: 'reconciliation', 'adoration', 'mass', 'both', or 'all'
         weight: Weight/importance of the keyword (higher = more important)
         is_negative: Whether this is a negative (exclusion) keyword
         description: Optional description of the keyword

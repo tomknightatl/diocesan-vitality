@@ -87,7 +87,7 @@ def find_schedule_pages_with_ai(parish_url: str, parish_id: int, supabase,
     logger.info(f"Starting AI-enhanced schedule extraction for parish {parish_id}: {parish_url}")
     
     # Load keywords from database
-    recon_kw, recon_neg, ador_kw, ador_neg = load_keywords_from_database(supabase)
+    recon_kw, recon_neg, ador_kw, ador_neg, mass_kw, mass_neg = load_keywords_from_database(supabase)
     
     # Discover candidate pages using existing keyword logic
     candidate_pages = {'reconciliation': [], 'adoration': []}

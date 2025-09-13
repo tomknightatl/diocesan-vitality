@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Container, Table, Spinner, Alert, Pagination, Form, Row, Col, OverlayTrigger, Tooltip } from 'react-bootstrap';
+import ParishList from './ParishList';
 import './App.css';
 
 function App() {
@@ -304,6 +305,9 @@ function App() {
             </Pagination>
           </div>
         )}
+
+        <ParishList />
+
       </Container>
 
       

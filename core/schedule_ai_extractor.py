@@ -28,6 +28,56 @@ class ScheduleAIExtractor:
         except Exception as e:
             logger.error(f"Failed to initialize AI Schedule Extractor: {e}")
             self.model = None
+    
+    def get_adaptive_confidence_threshold(self, url: str, content: str) -> int:
+        """
+        Calculate adaptive confidence threshold based on URL and content characteristics.
+        
+        Args:
+            url: Source URL for context clues
+            content: Page content for complexity analysis
+            
+        Returns:
+            Adaptive confidence threshold (lower = more permissive)
+        """
+        base_threshold = 20
+        adjustments = 0
+        
+        # URL-based adjustments
+        url_lower = url.lower()
+        
+        # Major parishes/cathedrals should have lower thresholds
+        if any(keyword in url_lower for keyword in ['cathedral', 'basilica', 'shrine']):
+            adjustments -= 10
+            logger.debug(f"Major parish detected, lowering threshold by 10")
+        
+        # Dedicated schedule pages should have lower thresholds
+        if any(keyword in url_lower for keyword in ['schedule', 'hours', 'mass-times', 'adoration', 'confession']):
+            adjustments -= 5
+            logger.debug(f"Dedicated schedule page detected, lowering threshold by 5")
+        
+        # Content-based adjustments
+        content_length = len(content.split()) if content else 0
+        
+        # Large pages with lots of content should be more permissive
+        if content_length > 2000:
+            adjustments -= 5
+            logger.debug(f"Large page ({content_length} words), lowering threshold by 5")
+        elif content_length < 200:
+            adjustments += 5
+            logger.debug(f"Small page ({content_length} words), raising threshold by 5")
+        
+        # Sitemap pages should have higher thresholds (less reliable)
+        if 'sitemap' in url_lower:
+            adjustments += 15
+            logger.debug(f"Sitemap page detected, raising threshold by 15")
+        
+        final_threshold = max(5, base_threshold + adjustments)  # Minimum threshold of 5
+        
+        if final_threshold != base_threshold:
+            logger.info(f"Adaptive threshold for {url}: {final_threshold} (base: {base_threshold}, adjustment: {adjustments:+d})")
+        
+        return final_threshold
 
     def extract_schedule_from_content(self, content: str, url: str, schedule_type: str) -> Dict:
         """
@@ -36,7 +86,7 @@ class ScheduleAIExtractor:
         Args:
             content: HTML content or text from the webpage
             url: Source URL for context
-            schedule_type: 'adoration' or 'reconciliation'
+            schedule_type: 'adoration', 'reconciliation', or 'mass'
             
         Returns:
             Dict with structured schedule information
@@ -53,6 +103,10 @@ class ScheduleAIExtractor:
             
             # Parse AI response into structured data
             result = self._parse_ai_response(response.text, url, schedule_type)
+            
+            # Add URL and content for adaptive threshold calculation
+            result['url'] = url
+            result['content'] = content[:1000]  # Store first 1000 chars for threshold calculation
             
             logger.info(f"AI extraction completed for {schedule_type} at {url}")
             return result
@@ -97,7 +151,7 @@ Please respond ONLY in this JSON format:
 
 If no adoration schedule is found, return has_weekly_schedule: false and schedule_found: false.
 """
-        else:  # reconciliation
+        elif schedule_type == "reconciliation":
             return f"""
 You are an expert at extracting Catholic parish schedule information.
 Analyze the following webpage content and extract ONLY Reconciliation/Confession schedule information.
@@ -127,6 +181,41 @@ Please respond ONLY in this JSON format:
 }}
 
 If no reconciliation schedule is found, return has_weekly_schedule: false and schedule_found: false.
+"""
+        elif schedule_type == "mass":
+            return f"""
+You are an expert at extracting Catholic parish schedule information.
+Analyze the following webpage content and extract ONLY Mass schedule information.
+
+Look for:
+- Mass times and schedules
+- Sunday Mass schedules
+- Weekday Mass schedules
+- Saturday Vigil Mass schedules
+- Holy Day schedules
+- Liturgy and Eucharistic celebration times
+- Weekly recurring schedules (e.g., "Sunday 8:00 AM, 10:30 AM, 12:00 PM")
+- Daily Mass offerings
+- Special liturgical schedules
+
+WEBPAGE CONTENT:
+{cleaned_content}
+
+Please respond ONLY in this JSON format:
+{{
+    "has_weekly_schedule": true/false,
+    "schedule_found": true/false,
+    "days_offered": ["Sunday", "Monday", "Tuesday", etc.],
+    "times": ["8:00 AM", "10:30 AM", "12:00 PM", etc.],
+    "frequency": "weekly" | "daily" | "weekends_only" | "special_events" | "unknown",
+    "schedule_details": "Full text description of the Mass schedule",
+    "has_vigil_mass": true/false,
+    "has_daily_mass": true/false,
+    "confidence_score": 0-100,
+    "notes": "Any additional relevant information"
+}}
+
+If no Mass schedule is found, return has_weekly_schedule: false and schedule_found: false.
 """
 
     def _clean_content_for_ai(self, content: str) -> str:
@@ -198,7 +287,7 @@ If no reconciliation schedule is found, return has_weekly_schedule: false and sc
         
         Args:
             parish_urls: List of (url, parish_id, content) tuples
-            schedule_type: 'adoration' or 'reconciliation'
+            schedule_type: 'adoration', 'reconciliation', or 'mass'
             
         Returns:
             List of extraction results
@@ -234,8 +323,18 @@ def save_ai_schedule_results(supabase, results: List[Dict]):
         if not parish_id or not schedule_type:
             continue
             
-        # Only save if schedule was found with reasonable confidence
-        if result.get('schedule_found') and result.get('confidence_score', 0) >= 20:
+        # Use adaptive confidence threshold based on URL and content
+        url = result.get('url', '')
+        content = result.get('content', '')
+        
+        # Create temporary extractor instance if we need to calculate adaptive threshold
+        temp_extractor = ScheduleAIExtractor()
+        adaptive_threshold = temp_extractor.get_adaptive_confidence_threshold(url, content)
+        
+        confidence_score = result.get('confidence_score', 0)
+        
+        # Only save if schedule was found with adaptive confidence threshold
+        if result.get('schedule_found') and confidence_score >= adaptive_threshold:
             
             # Create structured fact value
             fact_value = {
@@ -274,6 +373,11 @@ def test_ai_extraction():
     extractor = ScheduleAIExtractor()
     
     sample_content = """
+    <h3>Mass Schedule</h3>
+    <p>Sunday Masses: 8:00 AM, 10:30 AM, 12:00 PM</p>
+    <p>Saturday Vigil: 5:00 PM</p>
+    <p>Weekday Masses: Monday-Friday 8:00 AM, Wednesday 6:00 PM</p>
+    
     <h3>Adoration Schedule</h3>
     <p>Eucharistic Adoration is held every Wednesday from 6:00 PM to 7:00 PM in the church.</p>
     <p>First Friday Holy Hour: 7:00 PM - 8:00 PM</p>
@@ -285,7 +389,7 @@ def test_ai_extraction():
     result = extractor.extract_schedule_from_content(
         sample_content, 
         "https://example.com", 
-        "adoration"
+        "mass"
     )
     
     print("AI Extraction Result:")
