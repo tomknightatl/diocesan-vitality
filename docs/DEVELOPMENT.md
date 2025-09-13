@@ -92,6 +92,39 @@ python extract_parishes.py --num_dioceses 1 --num_parishes_per_diocese 3
 python run_pipeline.py --max_dioceses 1 --max_parishes_per_diocese 2 --num_parishes_for_schedule 1
 ```
 
+### 5. Pipeline Development
+
+The data extraction pipeline can be developed and tested both locally and in containerized environments.
+
+```bash
+# Run individual pipeline components locally
+source venv/bin/activate
+export $(cat .env | grep -v '^#' | xargs)
+
+# Test individual scripts
+python extract_dioceses.py --max_dioceses 2
+python find_parishes.py --diocese_id 123
+python extract_parishes.py --diocese_id 123 --num_parishes_per_diocese 5
+python extract_schedule.py
+
+# Test full pipeline with limits
+python run_pipeline.py --diocese_id 123 --max_parishes_per_diocese 5 --skip_schedules
+
+# Test pipeline container locally
+docker build -f Dockerfile.pipeline -t usccb-pipeline:test .
+docker run --rm --env-file .env usccb-pipeline:test
+
+# Test with specific arguments
+docker run --rm --env-file .env usccb-pipeline:test python run_pipeline.py --skip_schedules
+
+# Debug pipeline container
+docker run -it --rm --env-file .env usccb-pipeline:test /bin/bash
+
+# Test Chrome/ChromeDriver setup
+docker run --rm usccb-pipeline:test google-chrome --version
+docker run --rm usccb-pipeline:test python -c "from webdriver_manager.chrome import ChromeDriverManager; print('OK')"
+```
+
 ## 💡 Recommended Daily Workflow
 ```bash
 # Terminal 1: Backend
@@ -143,6 +176,7 @@ python run_pipeline.py \
 # Test Docker build (for production preparation)
 docker build -t usccb-backend:test ./backend
 docker build -t usccb-frontend:test ./frontend
+docker build -f Dockerfile.pipeline -t usccb-pipeline:test .
 ```
 
 ## 🔧 Development Workflow
@@ -185,10 +219,12 @@ python extract_dioceses.py --max_dioceses 1
 # Test Docker builds (verifies production readiness)
 docker build -t usccb-backend:test ./backend
 docker build -t usccb-frontend:test ./frontend
+docker build -f Dockerfile.pipeline -t usccb-pipeline:test .
 
 # Tag images for production testing (if you have a staging environment)
 docker tag usccb-backend:test $DOCKER_USERNAME/usccb:backend-test
 docker tag usccb-frontend:test $DOCKER_USERNAME/usccb:frontend-test
+docker tag usccb-pipeline:test $DOCKER_USERNAME/usccb:pipeline-test
 ```
 
 ## 🚀 Production Deployment
@@ -376,6 +412,7 @@ pytest tests/ -v
 # 7. Test Docker builds before pushing
 docker build -t usccb-backend:test ./backend
 docker build -t usccb-frontend:test ./frontend
+docker build -f Dockerfile.pipeline -t usccb-pipeline:test .
 ```
 
 ## 🚨 Deployment Troubleshooting
