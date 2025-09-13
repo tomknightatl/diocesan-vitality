@@ -19,7 +19,7 @@ const router = createBrowserRouter([
         element: <App />,
       },
       {
-        path: "/diocese/:id",
+        path: "/diocese",
         element: <Diocese />,
       },
       {
