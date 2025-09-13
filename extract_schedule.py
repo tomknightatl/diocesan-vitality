@@ -53,29 +53,139 @@ def get_suppression_urls(supabase: Client) -> set[str]:
         return set()
 
 
+def get_common_schedule_paths(base_url: str) -> list[str]:
+    """Generate common schedule page paths for a parish website."""
+    common_paths = [
+        '/schedules', '/schedule', '/confession', '/confessions',
+        '/reconciliation', '/adoration', '/eucharistic-adoration',
+        '/sacraments', '/mass-times', '/worship', '/hours',
+        '/spiritual-life', '/prayer', '/devotions', '/holy-hour',
+        '/blessed-sacrament', '/penance', '/services', '/liturgy',
+        '/parish-life', '/faith-formation', '/ministries'
+    ]
+    
+    # Generate full URLs
+    schedule_urls = []
+    for path in common_paths:
+        full_url = urljoin(base_url.rstrip('/'), path)
+        schedule_urls.append(full_url)
+    
+    return schedule_urls
+
+
+def get_navigation_links(url: str) -> list[str]:
+    """Extract navigation links from the main page when sitemaps fail."""
+    try:
+        response = requests_session.get(url, timeout=10)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.content, 'html.parser')
+        
+        # Look for navigation elements
+        nav_links = []
+        
+        # Find navigation menus
+        nav_selectors = [
+            'nav a', 'header nav a', '.nav a', '.navigation a',
+            '.menu a', '.main-menu a', '#menu a', '#nav a',
+            'ul.menu a', 'ul.nav a', '.navbar a', '.site-nav a',
+            'footer a'  # Footer links often contain schedule pages
+        ]
+        
+        for selector in nav_selectors:
+            links = soup.select(selector)
+            for link in links:
+                href = link.get('href')
+                if href:
+                    # Convert relative URLs to absolute
+                    if href.startswith('/'):
+                        full_url = urljoin(url, href)
+                    elif href.startswith(('http://', 'https://')):
+                        full_url = href
+                    else:
+                        continue  # Skip non-URL links like mailto:, tel:, etc.
+                    
+                    # Filter for potentially relevant links
+                    link_text = link.get_text().lower()
+                    href_lower = href.lower()
+                    
+                    relevant_terms = [
+                        'schedule', 'confession', 'reconciliation', 'adoration',
+                        'sacrament', 'mass', 'worship', 'prayer', 'spiritual',
+                        'devotion', 'penance', 'blessed', 'eucharistic', 'holy',
+                        'service', 'liturgy', 'ministry'
+                    ]
+                    
+                    if any(term in link_text or term in href_lower for term in relevant_terms):
+                        nav_links.append(full_url)
+        
+        # Remove duplicates while preserving order
+        unique_links = []
+        seen = set()
+        for link in nav_links:
+            if link not in seen:
+                unique_links.append(link)
+                seen.add(link)
+                
+        return unique_links[:20]  # Limit to prevent excessive requests
+        
+    except Exception as e:
+        logger.warning(f"Could not extract navigation links from {url}: {e}")
+        return []
+
+
 def get_sitemap_urls(url: str) -> list[str]:
-    """Fetches sitemap.xml and extracts URLs."""
+    """Fetches sitemap.xml and extracts URLs. Falls back to navigation parsing if sitemap fails."""
     normalized_url = normalize_url(url) # Normalize URL for consistent caching key
     if normalized_url in _sitemap_cache:
         logger.debug(f"Returning sitemap from cache for {url}")
         return _sitemap_cache[normalized_url]
 
+    sitemap_urls = []
+    
+    # Try sitemap.xml first
     try:
         sitemap_url = urljoin(url, '/sitemap.xml')
         response = requests_session.get(sitemap_url, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'xml')
-        sitemap_links = [
+        sitemap_urls = [
             loc.text
             for loc in soup.find_all('loc')
             if loc.text and loc.text.startswith(('http://', 'https://')) and 'default' not in loc.text
         ]
-        _sitemap_cache[normalized_url] = sitemap_links # Cache the result
-        return sitemap_links
+        if sitemap_urls:
+            logger.debug(f"Found {len(sitemap_urls)} URLs in sitemap for {url}")
+            _sitemap_cache[normalized_url] = sitemap_urls
+            return sitemap_urls
     except requests.exceptions.RequestException as e:
         logger.warning(f"Could not fetch or parse sitemap for {url}: {e}")
-        _sitemap_cache[normalized_url] = [] # Cache empty list on failure to avoid repeated attempts
-        return []
+    
+    # Sitemap failed, try fallback methods
+    logger.info(f"Sitemap failed for {url}, trying fallback URL discovery methods")
+    
+    # Method 1: Common schedule paths
+    common_paths = get_common_schedule_paths(url)
+    logger.debug(f"Generated {len(common_paths)} common schedule paths")
+    
+    # Method 2: Navigation links
+    nav_links = get_navigation_links(url)
+    logger.debug(f"Found {len(nav_links)} navigation links")
+    
+    # Combine all discovered URLs
+    all_discovered = common_paths + nav_links
+    
+    # Remove duplicates
+    unique_urls = []
+    seen = set()
+    for discovered_url in all_discovered:
+        normalized_discovered = normalize_url(discovered_url)
+        if normalized_discovered not in seen:
+            unique_urls.append(discovered_url)
+            seen.add(normalized_discovered)
+    
+    logger.info(f"Discovered {len(unique_urls)} URLs using fallback methods for {url}")
+    _sitemap_cache[normalized_url] = unique_urls
+    return unique_urls
 
 
 def extract_time_info_from_soup(soup: BeautifulSoup, keyword: str) -> tuple[str, str | None]:
