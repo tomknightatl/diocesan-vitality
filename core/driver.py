@@ -126,7 +126,7 @@ class ProtectedWebDriver:
         
         # Configure circuit breakers for different operations
         self.page_load_cb_config = CircuitBreakerConfig(
-            failure_threshold=3,
+            failure_threshold=8,     # Increase from 3 to 8 - page load failures are serious
             recovery_timeout=30,
             request_timeout=45,
             max_retries=2,
@@ -134,7 +134,7 @@ class ProtectedWebDriver:
         )
         
         self.element_cb_config = CircuitBreakerConfig(
-            failure_threshold=5,
+            failure_threshold=20,    # Increase from 5 to 20 - element not found is expected during selector testing
             recovery_timeout=15,
             request_timeout=15,
             max_retries=1,
@@ -143,47 +143,43 @@ class ProtectedWebDriver:
         
         logger.info(f"🛡️ Protected WebDriver initialized with default timeout: {default_timeout}s")
     
-    @circuit_breaker('webdriver_page_load')
     def get(self, url, timeout=None):
         """Load a web page with circuit breaker protection"""
         timeout = timeout or self.default_timeout
         logger.debug(f"🌐 Loading page: {url} (timeout: {timeout}s)")
         
-        # Set page load timeout
-        self.driver.set_page_load_timeout(timeout)
+        cb = circuit_manager.get_circuit_breaker('webdriver_page_load', self.page_load_cb_config)
         
-        start_time = time.time()
-        try:
-            self.driver.get(url)
-            load_time = time.time() - start_time
-            logger.debug(f"✅ Page loaded in {load_time:.2f}s")
-            return True
-        except TimeoutException as e:
-            load_time = time.time() - start_time
-            logger.warning(f"⏰ Page load timeout after {load_time:.2f}s for {url}")
-            raise TimeoutError(f"Page load timeout after {timeout}s") from e
-        except WebDriverException as e:
-            load_time = time.time() - start_time
-            logger.error(f"❌ WebDriver error after {load_time:.2f}s for {url}: {str(e)}")
-            raise
+        def _load_page():
+            # Set page load timeout
+            self.driver.set_page_load_timeout(timeout)
+            
+            start_time = time.time()
+            try:
+                self.driver.get(url)
+                load_time = time.time() - start_time
+                logger.debug(f"✅ Page loaded in {load_time:.2f}s")
+                return True
+            except TimeoutException as e:
+                load_time = time.time() - start_time
+                logger.warning(f"⏰ Page load timeout after {load_time:.2f}s for {url}")
+                raise TimeoutError(f"Page load timeout after {timeout}s") from e
+            except WebDriverException as e:
+                load_time = time.time() - start_time
+                logger.error(f"❌ WebDriver error after {load_time:.2f}s for {url}: {str(e)}")
+                raise
+        
+        return cb.call(_load_page)
     
-    @circuit_breaker('webdriver_element_interaction')
     def find_element(self, *args, **kwargs):
         """Find element with circuit breaker protection"""
-        try:
-            return self.driver.find_element(*args, **kwargs)
-        except Exception as e:
-            logger.debug(f"🔍 Element not found: {str(e)}")
-            raise
+        cb = circuit_manager.get_circuit_breaker('webdriver_element_interaction', self.element_cb_config)
+        return cb.call(self.driver.find_element, *args, **kwargs)
     
-    @circuit_breaker('webdriver_element_interaction')
     def find_elements(self, *args, **kwargs):
         """Find elements with circuit breaker protection"""
-        try:
-            return self.driver.find_elements(*args, **kwargs)
-        except Exception as e:
-            logger.debug(f"🔍 Elements not found: {str(e)}")
-            raise
+        cb = circuit_manager.get_circuit_breaker('webdriver_element_interaction', self.element_cb_config)
+        return cb.call(self.driver.find_elements, *args, **kwargs)
     
     @circuit_breaker('webdriver_javascript')
     def execute_script(self, script, *args, timeout=None):
