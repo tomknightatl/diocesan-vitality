@@ -103,7 +103,7 @@ def make_request_with_delay(session: requests.Session, url: str, **kwargs) -> re
                             'content': content.encode(),
                             'text': content,
                             'headers': {'content-type': 'text/html'},
-                            'raise_for_status': lambda: None,
+                            'raise_for_status': lambda self: None,
                             'url': url
                         })()
                         logger.info(f"Successfully retrieved {url} using stealth browser")
@@ -127,7 +127,7 @@ def make_request_with_delay(session: requests.Session, url: str, **kwargs) -> re
                         'content': content.encode(),
                         'text': content,
                         'headers': {'content-type': 'text/html'},
-                        'raise_for_status': lambda: None,
+                        'raise_for_status': lambda self: None,
                         'url': url
                     })()
                     logger.info(f"Successfully retrieved {url} using stealth browser")
@@ -231,6 +231,84 @@ def get_navigation_links(url: str) -> list[str]:
         return []
 
 
+def get_robots_txt_hints(url: str) -> list[str]:
+    """Extract potential URL hints from robots.txt file."""
+    robots_urls = []
+    try:
+        robots_url = urljoin(url, '/robots.txt')
+        response = make_request_with_delay(requests_session, robots_url, timeout=5)
+        response.raise_for_status()
+        
+        # Parse robots.txt for Sitemap directives and disallowed paths that might contain schedules
+        content = response.text
+        
+        for line in content.splitlines():
+            line = line.strip()
+            if line.startswith('Sitemap:'):
+                sitemap_url = line.split(':', 1)[1].strip()
+                if sitemap_url.startswith(('http://', 'https://')):
+                    robots_urls.append(sitemap_url)
+            elif line.startswith('Disallow:'):
+                # Sometimes robots.txt blocks schedule pages - might give us hints
+                disallow_path = line.split(':', 1)[1].strip()
+                if any(term in disallow_path.lower() for term in ['schedule', 'confession', 'adoration', 'mass']):
+                    full_url = urljoin(url, disallow_path)
+                    robots_urls.append(full_url)
+                    
+    except Exception as e:
+        logger.debug(f"Could not parse robots.txt for {url}: {e}")
+    
+    return robots_urls
+
+
+def is_relevant_url(discovered_url: str, base_url: str) -> bool:
+    """Filter URLs to ensure they're relevant and from the same domain."""
+    try:
+        base_domain = urlparse(base_url).netloc
+        discovered_domain = urlparse(discovered_url).netloc
+        
+        # Must be from same domain
+        if base_domain != discovered_domain:
+            return False
+            
+        url_lower = discovered_url.lower()
+        
+        # Skip non-content URLs
+        exclude_patterns = [
+            '/wp-content/', '/wp-admin/', '/admin/', '/login/', '/logout/',
+            '/search/', '/feed/', '/rss/', '/api/', '/ajax/', '/json/',
+            '.css', '.js', '.jpg', '.jpeg', '.png', '.gif', '.pdf',
+            '.zip', '.doc', '.docx', '.xlsx', '.ppt', '.pptx',
+            '/donate/', '/giving/', '/pledge/', '/payment/', '/shop/',
+            'mailto:', 'tel:', 'javascript:', '#', '?'
+        ]
+        
+        if any(pattern in url_lower for pattern in exclude_patterns):
+            return False
+            
+        # Prefer URLs that likely contain schedule content
+        include_patterns = [
+            'schedule', 'confession', 'reconciliation', 'adoration', 
+            'sacrament', 'mass', 'worship', 'prayer', 'spiritual',
+            'devotion', 'penance', 'blessed', 'eucharistic', 'holy',
+            'service', 'liturgy', 'ministry', 'parish-life', 'about'
+        ]
+        
+        # If it matches include patterns, definitely keep it
+        if any(pattern in url_lower for pattern in include_patterns):
+            return True
+            
+        # For other URLs, be more conservative
+        # Allow general navigation pages that might link to schedules
+        if len(discovered_url.split('/')) <= 5:  # Not too deep in site structure
+            return True
+            
+        return False
+        
+    except Exception:
+        return False
+
+
 def get_sitemap_urls(url: str) -> list[str]:
     """Fetches sitemap.xml and extracts URLs. Falls back to navigation parsing if sitemap fails."""
     normalized_url = normalize_url(url) # Normalize URL for consistent caching key
@@ -240,46 +318,118 @@ def get_sitemap_urls(url: str) -> list[str]:
 
     sitemap_urls = []
     
-    # Try sitemap.xml first
-    try:
-        sitemap_url = urljoin(url, '/sitemap.xml')
-        response = make_request_with_delay(requests_session, sitemap_url, timeout=10)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.content, 'xml')
-        sitemap_urls = [
-            loc.text
-            for loc in soup.find_all('loc')
-            if loc.text and loc.text.startswith(('http://', 'https://')) and 'default' not in loc.text
-        ]
-        if sitemap_urls:
-            logger.debug(f"Found {len(sitemap_urls)} URLs in sitemap for {url}")
-            _sitemap_cache[normalized_url] = sitemap_urls
-            return sitemap_urls
-    except requests.exceptions.RequestException as e:
-        logger.warning(f"Could not fetch or parse sitemap for {url}: {e}")
+    # Try multiple sitemap locations and formats
+    sitemap_locations = [
+        '/sitemap.xml',
+        '/sitemap_index.xml', 
+        '/sitemaps.xml',
+        '/sitemap/sitemap.xml',
+        '/wp-sitemap.xml',  # WordPress default
+        '/site-map.xml',
+        '/sitemap1.xml'
+    ]
     
-    # Sitemap failed, try fallback methods
-    logger.info(f"Sitemap failed for {url}, trying fallback URL discovery methods")
+    for sitemap_path in sitemap_locations:
+        try:
+            sitemap_url = urljoin(url, sitemap_path)
+            response = make_request_with_delay(requests_session, sitemap_url, timeout=10)
+            response.raise_for_status()
+            
+            # Try XML parsing first
+            soup = BeautifulSoup(response.content, 'xml')
+            urls_found = [
+                loc.text
+                for loc in soup.find_all('loc')
+                if loc.text and loc.text.startswith(('http://', 'https://'))
+            ]
+            
+            # If XML parsing didn't work, try HTML parsing
+            if not urls_found:
+                soup = BeautifulSoup(response.content, 'html.parser')
+                urls_found = [
+                    loc.text
+                    for loc in soup.find_all('loc')
+                    if loc.text and loc.text.startswith(('http://', 'https://'))
+                ]
+            
+            # Check for sitemap index files (contain links to other sitemaps)
+            sitemap_links = [
+                loc.text
+                for loc in soup.find_all('loc')
+                if loc.text and 'sitemap' in loc.text.lower() and loc.text.startswith(('http://', 'https://'))
+            ]
+            
+            # If we found sitemap links, fetch those too
+            for sitemap_link in sitemap_links[:5]:  # Limit to prevent infinite recursion
+                try:
+                    sub_response = make_request_with_delay(requests_session, sitemap_link, timeout=10)
+                    sub_response.raise_for_status()
+                    sub_soup = BeautifulSoup(sub_response.content, 'xml')
+                    sub_urls = [
+                        loc.text
+                        for loc in sub_soup.find_all('loc') 
+                        if loc.text and loc.text.startswith(('http://', 'https://'))
+                    ]
+                    urls_found.extend(sub_urls)
+                except Exception as sub_e:
+                    logger.debug(f"Failed to fetch sub-sitemap {sitemap_link}: {sub_e}")
+                    continue
+            
+            if urls_found:
+                # Filter out unwanted URLs
+                filtered_urls = [
+                    u for u in urls_found 
+                    if not any(exclude in u.lower() for exclude in ['default', 'template', 'admin', 'wp-content', 'attachment'])
+                ]
+                logger.debug(f"Found {len(filtered_urls)} URLs in sitemap {sitemap_path} for {url}")
+                _sitemap_cache[normalized_url] = filtered_urls
+                return filtered_urls
+                
+        except requests.exceptions.RequestException as e:
+            logger.debug(f"Could not fetch sitemap {sitemap_path} for {url}: {e}")
+            continue
+    
+    # All sitemap attempts failed, try fallback methods
+    logger.info(f"All sitemap attempts failed for {url}, trying fallback URL discovery methods")
     
     # Method 1: Common schedule paths
     common_paths = get_common_schedule_paths(url)
     logger.debug(f"Generated {len(common_paths)} common schedule paths")
     
-    # Method 2: Navigation links
+    # Method 2: Navigation links  
     nav_links = get_navigation_links(url)
     logger.debug(f"Found {len(nav_links)} navigation links")
     
-    # Combine all discovered URLs
-    all_discovered = common_paths + nav_links
+    # Method 3: Stealth browser fallback for navigation discovery
+    stealth_nav_links = []
+    if len(nav_links) < 5:  # If we didn't find many links, try stealth browser
+        logger.debug("Few navigation links found, trying stealth browser for enhanced discovery")
+        try:
+            from core.stealth_browser import get_stealth_browser
+            stealth_browser = get_stealth_browser()
+            if stealth_browser.is_available:
+                stealth_nav_links = stealth_browser.get_navigation_links(url)
+                logger.debug(f"Stealth browser found {len(stealth_nav_links)} additional navigation links")
+        except Exception as e:
+            logger.debug(f"Stealth browser navigation failed: {e}")
     
-    # Remove duplicates
+    # Method 4: Robots.txt parsing for additional discovery hints
+    robots_urls = get_robots_txt_hints(url)
+    logger.debug(f"Found {len(robots_urls)} URLs from robots.txt hints")
+    
+    # Combine all discovered URLs
+    all_discovered = common_paths + nav_links + stealth_nav_links + robots_urls
+    
+    # Remove duplicates and filter
     unique_urls = []
     seen = set()
     for discovered_url in all_discovered:
         normalized_discovered = normalize_url(discovered_url)
         if normalized_discovered not in seen:
-            unique_urls.append(discovered_url)
-            seen.add(normalized_discovered)
+            # Additional filtering for quality
+            if is_relevant_url(discovered_url, url):
+                unique_urls.append(discovered_url)
+                seen.add(normalized_discovered)
     
     logger.info(f"Discovered {len(unique_urls)} URLs using fallback methods for {url}")
     _sitemap_cache[normalized_url] = unique_urls
