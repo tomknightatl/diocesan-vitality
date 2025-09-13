@@ -1,10 +1,43 @@
 # United States Conference of Catholic Bishops (USCCB) Data Project
 
-**IMPORTANT: Before you begin, please set up your development environment by following the instructions in `setup-venv.md`. This includes creating a virtual environment, installing dependencies, and configuring your API keys.**
+**🌐 LIVE SYSTEM**: The production system is running at [https://usccb.diocesevitality.org](https://usccb.diocesevitality.org) with real-time data collection and monitoring.
+
+**For local development**: Follow the "Getting Started" and "Environment Setup" sections below to configure your development environment.
 
 ## Overview
 
 This project is a comprehensive data collection and analysis system for U.S. Catholic dioceses and parishes. It employs advanced web scraping techniques, AI-powered content analysis, and automated data processing to build and maintain a detailed database of Catholic institutions across the United States. The system collects information from the official USCCB website and individual diocese websites, including diocese details, parish directories, and detailed parish information.
+
+## Cloud Architecture
+
+The system runs in the cloud using a **two-tier architecture** designed for cost efficiency and scalability:
+
+### 🌐 **Tier 1: Always-On Web Services**
+**Deployment**: Single small node (s-1vcpu-2gb) running continuously
+- **Frontend**: React dashboard serving the user interface at [usccb.diocesevitality.org](https://usccb.diocesevitality.org)
+- **Backend**: FastAPI server providing data APIs and real-time monitoring
+- **Database**: Supabase (managed PostgreSQL) for persistent data storage
+- **Cost**: Minimal (~$12/month) - runs 24/7 to serve users
+
+### 🚀 **Tier 2: On-Demand Data Collection**
+**Deployment**: Dedicated node (s-2vcpu-4gb) that scales from 0→1 when needed
+- **Pipeline**: Automated data extraction and processing system
+- **Chrome/Selenium**: Headless browser automation for web scraping
+- **AI Processing**: Google Gemini integration for content analysis
+- **Cost**: Pay-per-use (~$0.02/hour) - only runs when collecting data
+
+### 💡 **Cost-Optimized Design**
+- **Always available**: Users can access the dashboard and data anytime
+- **Scheduled extraction**: Pipeline runs on-demand or scheduled basis
+- **Auto-scaling**: Data collection node scales to 0 when idle (no cost)
+- **Resource isolation**: Web services and data collection don't compete for resources
+
+### 🔄 **Operational Flow**
+1. **Continuous**: Frontend + Backend serve users on small node
+2. **On-demand**: Scale up dedicated node for data collection
+3. **Real-time**: Live extraction monitoring via WebSocket dashboard
+4. **Auto-shutdown**: Pipeline node scales to 0 after completion
+5. **Fresh data**: Updated information available immediately via web interface
 
 ## How It Works
 
@@ -27,7 +60,7 @@ The USCCB Data Extraction Pipeline is a multi-step process that systematically c
 - **Multi-Platform Parish Extraction**: Supports various website platforms including SquareSpace, WordPress, eCatholic, and custom implementations
 - **⚡ High-Performance Concurrent Processing**: Asyncio-based extraction with 60% performance improvement
 - **🛡️ Circuit Breaker Protection**: Automatic failure detection and recovery for external services
-- **🖥️ Real-time Monitoring Dashboard**: Live operational visibility with WebSocket updates
+- **🖥️ Live Production Dashboard**: Real-time extraction monitoring at [usccb.diocesevitality.org](https://usccb.diocesevitality.org)
 - **Interactive Parish Finder Support**: Specialized extractors for JavaScript-based parish finder interfaces
 - **Cloud Database Integration**: Stores data in Supabase with automated upserts and conflict resolution
 - **Comprehensive Logging**: Detailed extraction statistics and error tracking
@@ -244,45 +277,58 @@ If you encounter errors like "Permission denied" or "Chrome not found" when runn
 
 ## Running the System
 
-The primary method for running the data collection process is via the pipeline scripts. These orchestrate the entire workflow, from diocese extraction to schedule collection, with optional real-time monitoring.
+The system can be run in two environments: **local development** for testing and development, or **cloud production** for continuous operation with real-time monitoring.
 
-### Running the Full Pipeline
+### 🌐 **Cloud Production (Live System)**
+
+**Access the live system**: [https://usccb.diocesevitality.org/dashboard](https://usccb.diocesevitality.org/dashboard)
+
+The production system runs automatically in Kubernetes with:
+- **Real-time dashboard**: Monitor live data extraction progress
+- **Automatic pipeline**: Continuously collects fresh diocese and parish data
+- **Auto-scaling**: Data collection infrastructure scales up/down as needed
+- **High availability**: Frontend and backend available 24/7
+
+**For system administrators:**
+- Pipeline management via Kubernetes scaling (requires cluster access)
+- Monitoring and logs available through the web dashboard
+- See `/k8s/README.md` for deployment and management instructions
+
+### 💻 **Local Development**
+
+For development, testing, or running custom extractions on your local machine:
+
+#### Running the Pipeline
 
 **IMPORTANT:** Always activate your virtual environment first:
 ```bash
 source venv/bin/activate
 ```
 
-#### Option 1: Standard Pipeline (Without Monitoring)
+**Option 1: Standard Pipeline**
 ```bash
 python run_pipeline.py
 ```
 
-#### Option 2: Monitoring-Enabled Pipeline (Recommended) 🖥️
-For real-time operational visibility and dashboard monitoring:
-
+**Option 2: Monitoring-Enabled Pipeline (Recommended)**
 ```bash
-# Run with monitoring and extended timeout (2 hours)
-source venv/bin/activate && timeout 7200 python3 run_pipeline_monitored.py --max_parishes_per_diocese 10 --num_parishes_for_schedule 10
+python run_pipeline_monitored.py --max_parishes_per_diocese 10 --num_parishes_for_schedule 10
 ```
 
-**To use the monitoring dashboard:**
-1. **Start Backend Server** (in separate terminal):
+#### Local Monitoring Dashboard
+
+To use real-time monitoring during development:
+
+1. **Start Backend** (terminal 1):
    ```bash
    cd backend && uvicorn main:app --reload --host 0.0.0.0 --port 8000
    ```
-2. **Start Frontend Server** (in separate terminal):
+2. **Start Frontend** (terminal 2):
    ```bash
-   cd frontend && npm run dev
+   cd frontend && npm install && npm run dev
    ```
-3. **Open Dashboard**: Navigate to `http://localhost:5173/dashboard`
-4. **Run Pipeline**: Execute the monitoring-enabled command above
-
-#### Option 3: Background Processing
-For long-running extractions:
-```bash
-source venv/bin/activate && nohup python3 run_pipeline_monitored.py --max_parishes_per_diocese 10 --num_parishes_for_schedule 10 > pipeline.log 2>&1 &
-```
+3. **Open Dashboard**: `http://localhost:5173/dashboard`
+4. **Run Pipeline** (terminal 3): Use monitoring-enabled option above
 
 ### Pipeline Parameters
 
@@ -465,11 +511,13 @@ while True:
 
 ## Data Coverage
 
-As of the latest runs, the system has successfully processed:
-- **190+ U.S. Catholic Dioceses**
-- **Thousands of Parish Records** with detailed information
+The production system continuously maintains current data:
+- **196 U.S. Catholic Dioceses** (all active dioceses)
+- **17,000+ Parish Records** with detailed information
 - **High Success Rates**: 85-95% successful parish directory detection
 - **Rich Data Fields**: Including addresses, coordinates, contact info, and schedules
+- **Live Updates**: Data refreshed automatically through continuous pipeline operation
+- **Real-time Dashboard**: Current extraction status visible at [usccb.diocesevitality.org/dashboard](https://usccb.diocesevitality.org/dashboard)
 
 ## Contributing
 
@@ -494,13 +542,24 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Web Application
 
-This project includes a web application to provide a user interface for the collected data. The application is architected as a modern, containerized service-oriented system, ready for deployment on Kubernetes.
+The project includes a modern web application providing real-time access to collected data and extraction monitoring. The system is fully deployed in production and available at [https://usccb.diocesevitality.org](https://usccb.diocesevitality.org).
 
-### Project Structure
+### Live Production System
 
--   **/frontend**: A React single-page application (SPA) created with Vite. It is served by a lightweight NGINX web server.
--   **/backend**: A Python API built with FastAPI. It serves data from the Supabase database and provides a secure interface for admin actions.
--   **/k8s**: Contains all the Kubernetes manifests required to deploy the frontend and backend services, including Deployments, Services, and an Ingress for routing traffic.
+**🌐 Access the Dashboard**: [https://usccb.diocesevitality.org/dashboard](https://usccb.diocesevitality.org/dashboard)
+
+Features:
+- **Real-time extraction monitoring**: Watch live data collection progress
+- **Interactive data browser**: Explore dioceses and parishes
+- **Live logs**: Four-step extraction process visibility
+- **System health**: Circuit breaker status and performance metrics
+
+### Architecture
+
+-   **/frontend**: React SPA with real-time WebSocket dashboard
+-   **/backend**: FastAPI server with monitoring and data APIs
+-   **/pipeline**: Containerized extraction system with live monitoring
+-   **/k8s**: Production Kubernetes deployment manifests
 
 ### Container Registry
 
