@@ -702,7 +702,7 @@ def process_single_diocese(diocese_info):
                 
                 if search_snippets:
                     logger.info(f"🔍 [{diocese_name}] Found {len(search_snippets)} search results. Analyzing with AI...")
-                    parish_dir_url_found = analyze_search_snippet_with_genai_async(
+                    parish_dir_url_found = analyze_search_snippet_with_genai(
                         search_snippets, diocese_name
                     )
                     if parish_dir_url_found:
