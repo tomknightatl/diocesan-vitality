@@ -32,8 +32,10 @@ const Dashboard = () => {
   const connectWebSocket = () => {
     try {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      // Connect to backend server (port 8000) instead of frontend server
-      const wsUrl = `${protocol}//localhost:8000/ws/monitoring`;
+      // Connect to backend server - use localhost for development, production URL for deployed version
+      const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+      const backendHost = isProduction ? 'api.diocesevitality.org' : 'localhost:8000';
+      const wsUrl = `${protocol}//${backendHost}/ws/monitoring`;
       
       wsRef.current = new WebSocket(wsUrl);
       
