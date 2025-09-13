@@ -27,10 +27,13 @@ This guide provides everything you need to develop and test the USCCB extraction
    # Edit .env with your API keys (see Environment Setup section)
    ```
 
-4. **Start Local Backend** (for monitoring)
+4. **Start Local Services** (see Environment Setup for details)
    ```bash
-   cd backend
-   uvicorn main:app --reload --host 0.0.0.0 --port 8000
+   # Start backend (required for monitoring)
+   cd backend && uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+   # Start frontend dashboard (optional, in separate terminal)
+   cd frontend && npm install && npm start
    ```
 
 5. **Run Extraction Scripts**
@@ -69,6 +72,42 @@ SEARCH_CX_USCCB=your-google-search-cx-id
 3. **Google Custom Search**:
    - Create API key at Google Cloud Console
    - Set up Custom Search Engine at https://cse.google.com/
+
+### Local Services Setup
+
+#### Backend Server (Required for Monitoring)
+
+Start the FastAPI backend server:
+```bash
+cd backend
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+Server runs at http://localhost:8000
+
+#### Frontend Dashboard (Optional)
+
+For the full monitoring dashboard experience:
+```bash
+cd frontend
+npm install  # First time only
+npm start
+```
+Dashboard available at http://localhost:3000
+
+### Monitoring Features
+
+- **Real-time Logs**: View extraction progress live
+- **Error Tracking**: See detailed error messages
+- **Progress Tracking**: Monitor parishes processed
+- **WebSocket Connection**: Live updates without refresh
+
+### Available API Endpoints
+
+- `GET /api/logs` - Recent log entries
+- `GET /api/statistics` - Current extraction stats
+- `GET /api/parishes` - Parish data
+- `GET /api/dioceses` - Diocese data
+- `WS /ws/monitoring` - WebSocket for live updates
 
 ## Development Workflow
 
@@ -118,39 +157,6 @@ python run_pipeline_monitored.py \
   --diocese_id 123 \
   --max_parishes_per_diocese 20
 ```
-
-## Local Monitoring Dashboard
-
-### Backend Setup
-
-1. **Start Backend Server**
-   ```bash
-   cd backend
-   uvicorn main:app --reload --host 0.0.0.0 --port 8000
-   ```
-   Server runs at http://localhost:8000
-
-2. **Start Frontend** (optional)
-   ```bash
-   cd frontend
-   npm start
-   ```
-   Dashboard available at http://localhost:3000
-
-### Monitoring Features
-
-- **Real-time Logs**: View extraction progress live
-- **Error Tracking**: See detailed error messages
-- **Progress Tracking**: Monitor parishes processed
-- **WebSocket Connection**: Live updates without refresh
-
-### API Endpoints
-
-- `GET /api/logs` - Recent log entries
-- `GET /api/statistics` - Current extraction stats
-- `GET /api/parishes` - Parish data
-- `GET /api/dioceses` - Diocese data
-- `WS /ws/monitoring` - WebSocket for live updates
 
 ## Testing
 
@@ -624,9 +630,9 @@ git checkout -b feature/your-feature-name
 source venv/bin/activate
 export $(cat .env | grep -v '^#' | xargs)
 
-# 3. Start services
+# 3. Start services (see Environment Setup section for details)
 cd backend && uvicorn main:app --reload  # Terminal 1
-cd frontend && npm run dev               # Terminal 2
+cd frontend && npm start                 # Terminal 2
 
 # 4. Make changes and test
 python extract_dioceses.py --max_dioceses 1
@@ -666,7 +672,8 @@ git push origin feature/your-feature-name
 ```bash
 # Daily development workflow
 source venv/bin/activate
-cd backend && uvicorn main:app --reload &  # Start monitoring
+# Start services (see Environment Setup section)
+cd backend && uvicorn main:app --reload &
 python run_pipeline_monitored.py --diocese_id 123 --max_parishes_per_diocese 10
 
 # Quick test single parish
