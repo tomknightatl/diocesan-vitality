@@ -12,14 +12,14 @@ spec:
         spec:
           containers:
           - name: pipeline
-            image: $DOCKER_USERNAME/usccb:pipeline
+            image: tomatl/usccb:pipeline
             imagePullPolicy: Always
             resources:
               requests:
-                memory: "100Mi"
-                cpu: "25m"
+                memory: "96Mi"
+                cpu: "5m"
               limits:
-                memory: "200Mi"
+                memory: "256Mi"
                 cpu: "50m"
             env:
             - name: SUPABASE_URL
