@@ -32,6 +32,17 @@ def _setup_driver_with_retry():
     chrome_options.add_argument("--allow-running-insecure-content")
     chrome_options.add_argument("--unsafely-treat-insecure-origin-as-secure")
     chrome_options.add_argument("--cipher-suite-blacklist=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256")
+
+    # Fix permissions by using writable directories
+    chrome_options.add_argument("--user-data-dir=/tmp/chrome-user-data")
+    chrome_options.add_argument("--data-path=/tmp/chrome-data")
+    chrome_options.add_argument("--disk-cache-dir=/tmp/chrome-cache")
+    chrome_options.add_argument("--homedir=/tmp")
+
+    # Use cache directory that webdriver-manager can access
+    import os
+    os.environ['WDM_LOCAL_CACHE'] = '/tmp/webdriver-cache'
+
     return webdriver.Chrome(
         service=Service(ChromeDriverManager().install()), options=chrome_options
     )
