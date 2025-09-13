@@ -1,11 +1,19 @@
-apiVersion: batch/v1
-kind: Job
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: usccb-pipeline-job
+  name: pipeline-deployment
   namespace: usccb
 spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pipeline
   template:
+    metadata:
+      labels:
+        app: pipeline
     spec:
+      serviceAccountName: default
       imagePullSecrets:
       - name: dockerhub-secret
       containers:
@@ -45,7 +53,7 @@ spec:
             secretKeyRef:
               name: usccb-secrets
               key: search-cx
-        # Add command line arguments for specific processing
+        # Command line arguments for specific processing
         args:
         - "--max_parishes_per_diocese"
         - "50"
@@ -61,5 +69,4 @@ spec:
         emptyDir: {}
       - name: chrome-user-data
         emptyDir: {}
-      restartPolicy: Never
-  backoffLimit: 2
+      restartPolicy: Always
