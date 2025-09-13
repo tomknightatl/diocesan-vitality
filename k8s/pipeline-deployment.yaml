@@ -54,7 +54,7 @@ spec:
               name: usccb-secrets
               key: search-cx
         # Command line arguments for specific processing
-        command: ["python", "main.py"]
+        command: ["python", "run_pipeline.py"]
         args:
         - "--max_parishes_per_diocese"
         - "50"
