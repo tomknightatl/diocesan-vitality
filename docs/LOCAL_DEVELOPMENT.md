@@ -353,6 +353,313 @@ git push origin feature/parish-extraction-fix
 - Back up database before major changes
 - Monitor extraction progress in dashboard
 
+## Docker Development
+
+### Building and Testing Pipeline Container
+```bash
+# Build pipeline container locally
+docker build -f Dockerfile.pipeline -t usccb-pipeline:test .
+
+# Run pipeline container with environment file
+docker run --rm --env-file .env usccb-pipeline:test
+
+# Test with specific arguments
+docker run --rm --env-file .env usccb-pipeline:test python run_pipeline.py --skip_schedules
+
+# Debug pipeline container interactively
+docker run -it --rm --env-file .env usccb-pipeline:test /bin/bash
+
+# Test Chrome/ChromeDriver setup in container
+docker run --rm usccb-pipeline:test google-chrome --version
+docker run --rm usccb-pipeline:test python -c "from webdriver_manager.chrome import ChromeDriverManager; print('ChromeDriver OK')"
+```
+
+### Building Backend and Frontend Containers
+```bash
+# Build backend container
+docker build -t usccb-backend:test ./backend
+
+# Build frontend container
+docker build -t usccb-frontend:test ./frontend
+
+# Test all containers before production deployment
+docker build -t usccb-backend:test ./backend
+docker build -t usccb-frontend:test ./frontend
+docker build -f Dockerfile.pipeline -t usccb-pipeline:test .
+```
+
+## IDE Configuration
+
+### VS Code Setup
+
+Create `.vscode/settings.json`:
+```json
+{
+  "python.defaultInterpreterPath": "./venv/bin/python",
+  "python.envFile": "${workspaceFolder}/.env",
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["tests"],
+  "eslint.workingDirectories": ["frontend"]
+}
+```
+
+Create `.vscode/launch.json`:
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Pipeline",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/run_pipeline_monitored.py",
+      "args": [
+        "--max_parishes_per_diocese", "5",
+        "--num_parishes_for_schedule", "3",
+        "--monitoring_url", "http://localhost:8000"
+      ],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "Backend Debug",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/backend/main.py",
+      "envFile": "${workspaceFolder}/.env",
+      "console": "integratedTerminal"
+    }
+  ]
+}
+```
+
+### Recommended VS Code Extensions
+- Python
+- Pylance
+- Python Docstring Generator
+- GitLens
+- Docker
+- Kubernetes
+
+## Code Quality Setup
+
+### Pre-commit Hooks
+```bash
+# Install pre-commit
+pip install pre-commit
+
+# Create .pre-commit-config.yaml
+cat << EOF > .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/psf/black
+    rev: 23.1.0
+    hooks:
+      - id: black
+        language_version: python3.12
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.0.0
+    hooks:
+      - id: flake8
+
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v8.56.0
+    hooks:
+      - id: eslint
+        files: frontend/.*\.[jt]sx?$
+        types: [file]
+EOF
+
+# Install hooks
+pre-commit install
+```
+
+### Code Formatting and Linting
+```bash
+# Format Python code
+python -m black .
+
+# Check Python code style
+python -m flake8 . --exclude=venv,node_modules --max-line-length=88
+
+# Format JavaScript/React code (in frontend directory)
+cd frontend && npm run lint
+```
+
+## Advanced Testing
+
+### Docker Testing Strategy
+```bash
+# Test production builds locally before deploying
+docker build -t usccb-backend:test ./backend
+docker build -t usccb-frontend:test ./frontend
+docker build -f Dockerfile.pipeline -t usccb-pipeline:test .
+
+# Tag for staging environment testing (if available)
+docker tag usccb-backend:test $DOCKER_USERNAME/usccb:backend-test
+docker tag usccb-frontend:test $DOCKER_USERNAME/usccb:frontend-test
+docker tag usccb-pipeline:test $DOCKER_USERNAME/usccb:pipeline-test
+```
+
+### Integration Testing
+```bash
+# Test API endpoints while backend is running
+curl http://localhost:8000/api
+curl http://localhost:8000/api/dioceses
+curl http://localhost:8000/api/monitoring/status
+
+# Test WebSocket monitoring connection
+# Open browser dev tools and test WebSocket at ws://localhost:8000/ws/monitoring
+```
+
+### End-to-End Pipeline Testing
+```bash
+# Full pipeline test with minimal data
+python run_pipeline.py \
+  --max_dioceses 1 \
+  --max_parishes_per_diocese 2 \
+  --num_parishes_for_schedule 1
+
+# Test monitoring-enabled pipeline
+python run_pipeline_monitored.py \
+  --diocese_id 123 \
+  --max_parishes_per_diocese 5 \
+  --monitoring_url http://localhost:8000
+```
+
+## Production Deployment Troubleshooting
+
+### Issue: Updated Docker Images Not Reflected in Production
+
+**Problem**: After building and pushing updated Docker images and syncing ArgoCD, the application still shows the old version.
+
+**Root Cause**: Kubernetes deployments using image tags without version numbers won't automatically pull updated images, even with `imagePullPolicy: Always`.
+
+**Solution**: Force restart the deployments:
+```bash
+# Force restart deployments to pull latest images
+kubectl rollout restart deployment/frontend-deployment -n usccb
+kubectl rollout restart deployment/backend-deployment -n usccb
+kubectl rollout restart deployment/pipeline-deployment -n usccb
+
+# Verify new pods are running
+kubectl get pods -n usccb
+
+# Check image SHA of new pods (optional)
+kubectl get pod <pod-name> -n usccb -o jsonpath='{.status.containerStatuses[0].imageID}'
+```
+
+### Production Deployment Workflow
+```bash
+# 1. Build and push images
+docker build -t $DOCKER_USERNAME/usccb:backend ./backend
+docker build -t $DOCKER_USERNAME/usccb:frontend ./frontend
+docker build -f Dockerfile.pipeline -t $DOCKER_USERNAME/usccb:pipeline .
+
+docker push $DOCKER_USERNAME/usccb:backend
+docker push $DOCKER_USERNAME/usccb:frontend
+docker push $DOCKER_USERNAME/usccb:pipeline
+
+# 2. Sync ArgoCD application
+
+# 3. Force deployment restart (if using same tags)
+kubectl rollout restart deployment/frontend-deployment -n usccb
+kubectl rollout restart deployment/backend-deployment -n usccb
+
+# 4. Verify deployment
+kubectl get pods -n usccb
+```
+
+## Continuous Integration
+
+### GitHub Actions Workflow
+Create `.github/workflows/test.yml`:
+```yaml
+name: Test
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+
+    - name: Run tests
+      run: |
+        pytest tests/ -v
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+
+    - name: Install frontend dependencies
+      working-directory: ./frontend
+      run: npm install
+
+    - name: Build frontend
+      working-directory: ./frontend
+      run: npm run build
+```
+
+## Development Workflow
+
+### Feature Development Process
+```bash
+# 1. Create feature branch
+git checkout -b feature/your-feature-name
+
+# 2. Set up environment
+source venv/bin/activate
+export $(cat .env | grep -v '^#' | xargs)
+
+# 3. Start services
+cd backend && uvicorn main:app --reload  # Terminal 1
+cd frontend && npm run dev               # Terminal 2
+
+# 4. Make changes and test
+python extract_dioceses.py --max_dioceses 1
+pytest tests/ -v
+
+# 5. Test Docker builds before committing
+docker build -t usccb-backend:test ./backend
+docker build -t usccb-frontend:test ./frontend
+docker build -f Dockerfile.pipeline -t usccb-pipeline:test .
+
+# 6. Commit and push
+git add .
+git commit -m "feat: your feature description"
+git push origin feature/your-feature-name
+```
+
+## Architecture Overview
+
+### Local Development Stack
+- **Backend**: FastAPI Python application (http://localhost:8000)
+- **Frontend**: React app with Vite (http://localhost:3000)
+- **Database**: Supabase (PostgreSQL) - remote connection
+- **Monitoring**: WebSocket-based real-time dashboard
+- **Pipeline**: Python extraction scripts with Chrome WebDriver
+
+### Production Stack
+- **Frontend**: React app served by NGINX
+- **Backend**: FastAPI Python application
+- **Pipeline**: Kubernetes Deployment with monitoring integration
+- **Database**: Supabase (PostgreSQL)
+- **Infrastructure**: Kubernetes with ArgoCD GitOps
+- **Container Registry**: Docker Hub
+
 ## Quick Reference
 
 ### Most Common Commands
