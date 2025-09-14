@@ -44,7 +44,7 @@ def force_garbage_collection():
     
     return final_memory
 
-def main(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MAX_PARISHES_PER_DIOCESE):
+def main(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MAX_PARISHES_PER_DIOCESE, monitoring_client=None):
     """
     Main function to extract parish information from diocese websites.
     """
@@ -124,7 +124,8 @@ def main(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MAX_PARISHES_P
                     diocese_info['name'],
                     diocese_info['url'],
                     diocese_info['parish_directory_url'],
-                    supabase
+                    supabase,
+                    monitoring_client
                 )
             
             # Strategic garbage collection after each diocese

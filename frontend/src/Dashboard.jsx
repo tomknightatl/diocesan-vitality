@@ -533,22 +533,46 @@ const Dashboard = () => {
           <Card>
             <Card.Body>
               <Card.Title>📋 Live Extraction Log</Card.Title>
-              <div 
+              <div
                 className="live-log bg-dark text-light p-3 rounded"
-                style={{ height: '400px', overflowY: 'auto', fontFamily: 'monospace', fontSize: '0.875rem' }}
+                style={{
+                  height: '400px',
+                  overflowY: 'auto',
+                  fontFamily: 'monospace',
+                  fontSize: '0.875rem'
+                }}
               >
+                <style>
+                  {`
+                    .live-log a {
+                      color: #60a5fa !important;
+                      text-decoration: underline;
+                    }
+                    .live-log a:hover {
+                      color: #93c5fd !important;
+                      text-decoration: none;
+                    }
+                  `}
+                </style>
                 {liveLog.length > 0 ? (
                   liveLog.map((log, index) => (
-                    <div key={log.id || index} className="mb-1">
-                      <span className="text-secondary">[{formatTimestamp(log.timestamp)}]</span>
-                      <span className={`ms-2 ${
+                    <div key={log.id || index} className="mb-1 d-flex align-items-start">
+                      <span className="text-secondary me-2" style={{ minWidth: '140px', fontSize: '0.75rem' }}>
+                        [{formatTimestamp(log.timestamp)}]
+                      </span>
+                      <div className={`flex-grow-1 ${
                         log.level === 'ERROR' ? 'text-danger' :
                         log.level === 'WARNING' ? 'text-warning' :
                         log.level === 'INFO' ? 'text-info' :
                         'text-light'
                       }`}>
-                        {log.message}
-                      </span>
+                        <span
+                          dangerouslySetInnerHTML={{ __html: log.message }}
+                          style={{
+                            wordBreak: 'break-word'
+                          }}
+                        />
+                      </div>
                     </div>
                   ))
                 ) : (
