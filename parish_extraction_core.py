@@ -746,11 +746,27 @@ def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_id: int
         start_idx = batch_num * batch_size
         end_idx = min(start_idx + batch_size, len(valid_parishes))
         batch = valid_parishes[start_idx:end_idx]
-        
+
+        # Prepare batch data and check existing parishes before upsert
+        batch_data = []
+        parish_actions = {}  # Store whether each parish is new or existing
+
+        for item in batch:
+            parish = item['original']
+            parish_data = item['data']
+            batch_data.append(parish_data)
+
+            # Check if parish already exists to determine insert vs update
+            if monitoring_client:
+                try:
+                    existing = supabase.table('Parishes').select('id').eq('Name', parish.name).eq('diocese_id', diocese_id).execute()
+                    is_new_parish = not existing.data
+                    parish_actions[parish.name] = "Parish added" if is_new_parish else "Parish updated"
+                except Exception as e:
+                    parish_actions[parish.name] = "Parish saved"
+                    logger.debug(f"Could not determine insert/update status for {parish.name}: {e}")
+
         try:
-            # Prepare batch data
-            batch_data = [item['data'] for item in batch]
-            
             # Execute batch upsert
             logger.info(f"    📦 Batch {batch_num + 1}/{total_batches}: Upserting {len(batch_data)} parishes...")
             response = supabase.table('Parishes').upsert(batch_data, on_conflict='Name,diocese_id').execute()
@@ -759,7 +775,7 @@ def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_id: int
                 logger.error(f"    ❌ Batch {batch_num + 1} database error: {response.error}")
                 # Try individual upserts as fallback for this batch
                 logger.info(f"    🔄 Falling back to individual upserts for batch {batch_num + 1}...")
-                batch_success = _fallback_individual_upserts(batch, supabase, monitoring_client)
+                batch_success = _fallback_individual_upserts(batch, supabase, monitoring_client, diocese_name, parish_actions)
                 success_count += batch_success
             else:
                 batch_success = len(batch_data)
@@ -770,10 +786,10 @@ def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_id: int
                 if monitoring_client:
                     for item in batch:
                         parish = item['original']
-                        parish_data = item['data']
+                        action = parish_actions.get(parish.name, "Parish saved")
                         website_link = f" → <a href='{parish.website}' target='_blank'>{parish.website}</a>" if parish.website else ""
                         monitoring_client.send_log(
-                            f"Step 3 │ ✅ Parish saved: {parish.name}{website_link}",
+                            f"Step 3 │ ✅ {action}: {parish.name}, {diocese_name}{website_link}",
                             "INFO"
                         )
 
@@ -791,7 +807,7 @@ def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_id: int
             logger.error(f"    ❌ Batch {batch_num + 1} failed: {e}")
             # Try individual upserts as fallback
             logger.info(f"    🔄 Falling back to individual upserts for batch {batch_num + 1}...")
-            batch_success = _fallback_individual_upserts(batch, supabase, monitoring_client)
+            batch_success = _fallback_individual_upserts(batch, supabase, monitoring_client, diocese_name, parish_actions)
             success_count += batch_success
 
     # Phase 3: Summary reporting
@@ -809,7 +825,7 @@ def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_id: int
     return success_count > 0
 
 
-def _fallback_individual_upserts(batch: List[Dict], supabase, monitoring_client=None) -> int:
+def _fallback_individual_upserts(batch: List[Dict], supabase, monitoring_client=None, diocese_name=None, parish_actions=None) -> int:
     """Fallback function for individual upserts when batch fails"""
     success_count = 0
     
@@ -822,10 +838,11 @@ def _fallback_individual_upserts(batch: List[Dict], supabase, monitoring_client=
                 logger.info(f"      ✅ 📌 Individually saved: {parish.name}")
 
                 # Send to monitoring if available
-                if monitoring_client:
+                if monitoring_client and diocese_name:
+                    action = parish_actions.get(parish.name, "Parish saved") if parish_actions else "Parish saved"
                     website_link = f" → <a href='{parish.website}' target='_blank'>{parish.website}</a>" if parish.website else ""
                     monitoring_client.send_log(
-                        f"Step 3 │ ✅ Parish saved: {parish.name}{website_link}",
+                        f"Step 3 │ ✅ {action}: {parish.name}, {diocese_name}{website_link}",
                         "INFO"
                     )
             else:
