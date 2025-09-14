@@ -144,7 +144,8 @@ def main(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MAX_PARISHES_P
 
             # Log the first few dioceses to be processed for debugging
             first_five = dioceses_to_process[:5]
-            logger.info(f"  🎯 Processing order (first 5): {[f'{d['name']} ({diocese_last_extraction.get(d['id'], 'never')})' for d in first_five]}")
+            first_five_names = [f"{d['name']} ({diocese_last_extraction.get(d['id'], 'never')})" for d in first_five]
+            logger.info(f"  🎯 Processing order (first 5): {first_five_names}")
 
             logger.info(f"  ✅ Diocese prioritization complete: processing from least to most recently attempted")
 

@@ -31,6 +31,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY *.py .
 COPY core/ core/
 COPY sql/ sql/
+COPY extractors/ extractors/
 
 # Create non-root user for security
 RUN groupadd -r appuser && useradd -r -g appuser appuser
