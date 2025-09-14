@@ -28,7 +28,7 @@ class RespectfulAutomation:
     def __init__(self):
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (compatible; USCCB Parish Directory Research; +https://usccb.org/contact-us)'
+            'User-Agent': 'Mozilla/5.0 (compatible; Parish Directory Research;)'
         })
 
         # Rate limiting: minimum time between requests per domain

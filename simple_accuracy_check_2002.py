@@ -10,7 +10,8 @@ from datetime import datetime
 from difflib import SequenceMatcher
 
 # Add the project root to Python path
-sys.path.append('/home/tomk/USCCB')
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(project_root)
 
 from core.db import get_supabase_client
 from core.logger import get_logger
@@ -306,7 +307,8 @@ def main():
     
     if metrics:
         # Save report
-        report_file = f"/home/tomk/USCCB/diocese_2002_accuracy_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        report_file = os.path.join(project_root, f"diocese_2002_accuracy_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt")
         with open(report_file, 'w') as f:
             f.write(report)
         

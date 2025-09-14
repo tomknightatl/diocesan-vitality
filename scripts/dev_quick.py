@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Quick development commands for USCCB pipeline.
+Quick development commands for the pipeline.
 Shortcuts for common development tasks.
 """
 
@@ -203,14 +203,14 @@ def restart_services():
     print("🌐 Frontend: http://localhost:3000")
 
 def main():
-    parser = argparse.ArgumentParser(description="Quick USCCB Development Commands")
+    parser = argparse.ArgumentParser(description="Quick Development Commands")
     parser.add_argument('command', choices=[
         'extract', 'diocese', 'schedule', 'logs', 'clear-cache',
         'stats', 'kill-chrome', 'ports', 'restart'
     ], help='Quick command to run')
 
     if len(sys.argv) == 1:
-        print("🚀 USCCB Quick Development Commands")
+        print("🚀 Quick Development Commands")
         print("=" * 40)
         print("Available commands:")
         print("  extract     - Extract single parish (fastest test)")
