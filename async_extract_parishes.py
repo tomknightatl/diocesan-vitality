@@ -277,6 +277,16 @@ class AsyncDioceseProcessor:
             
             # Step 2: Extract basic parish information (synchronous for now)
             from bs4 import BeautifulSoup
+
+            # Handle case where async driver returns Task instead of string
+            if hasattr(html_content, '__await__') or 'Task' in str(type(html_content)):
+                logger.error(f"❌ html_content is Task object: {type(html_content)}")
+                raise ValueError(f"Async driver returned Task object instead of HTML string: {type(html_content)}")
+
+            if not isinstance(html_content, str):
+                logger.error(f"❌ html_content is not a string: {type(html_content)}")
+                raise TypeError(f"Expected string but got {type(html_content)}")
+
             soup = BeautifulSoup(html_content, 'html.parser')
             
             # Detect pattern and extract parishes

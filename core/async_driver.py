@@ -198,8 +198,8 @@ class AsyncWebDriverPool:
         
         return self.domain_rate_limiters[domain]
     
-    async def submit_request(self, url: str, callback: Callable, *args, 
-                           priority: int = 1, max_retries: int = 2, **kwargs) -> asyncio.Task:
+    async def submit_request(self, url: str, callback: Callable, *args,
+                           priority: int = 1, max_retries: int = 2, **kwargs) -> Any:
         """Submit a request to the async queue"""
         task = RequestTask(
             url=url,
@@ -216,9 +216,10 @@ class AsyncWebDriverPool:
         
         await self.request_queue.put((priority, time.time(), task))
         self.stats['queue_size'] = self.request_queue.qsize()
-        
+
         logger.debug(f"📝 Queued request: {url} (priority: {priority}, queue size: {self.stats['queue_size']})")
-        return asyncio.create_task(self._wait_for_result(future))
+        # Directly await the result instead of returning a Task
+        return await self._wait_for_result(future)
     
     async def _wait_for_result(self, future: asyncio.Future) -> Any:
         """Wait for a request result"""

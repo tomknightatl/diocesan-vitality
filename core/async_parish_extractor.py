@@ -235,7 +235,13 @@ class AsyncParishExtractor:
         """
         try:
             # Load the parish detail page
-            current_url = driver.current_url
+            try:
+                current_url = driver.current_url
+                # Handle async driver Task object
+                if hasattr(current_url, '__await__') or 'Task' in str(type(current_url)):
+                    current_url = "unknown_url"
+            except Exception:
+                current_url = "unknown_url"
             logger.debug(f"🔍 Extracting details for: {parish_name}")
             
             # Wait for page content
@@ -244,8 +250,26 @@ class AsyncParishExtractor:
             )
             
             # Get page source and parse
-            html_content = driver.page_source
-            soup = BeautifulSoup(html_content, 'html.parser')
+            try:
+                html_content = driver.page_source
+                # Handle case where async driver returns Task instead of string
+                if hasattr(html_content, '__await__') or str(type(html_content)) == "<class 'coroutine'>" or 'Task' in str(type(html_content)):
+                    logger.warning(f"⚠️ Async driver returned Task object instead of string, using fallback")
+                    # Try to get page source using alternative method
+                    html_content = driver.execute_script("return document.documentElement.outerHTML;")
+                soup = BeautifulSoup(html_content, 'html.parser')
+            except (TypeError, ValueError) as e:
+                if "invalid type" in str(e).lower():
+                    logger.warning(f"⚠️ BeautifulSoup markup error: {e}")
+                    # Fallback: use driver execute_script to get HTML
+                    try:
+                        html_content = driver.execute_script("return document.documentElement.outerHTML;")
+                        soup = BeautifulSoup(html_content, 'html.parser')
+                    except Exception as fallback_error:
+                        logger.error(f"❌ Fallback HTML extraction failed: {fallback_error}")
+                        raise e
+                else:
+                    raise e
             
             # Extract enhanced information
             enhanced_info = self._extract_enhanced_parish_info(soup, base_info)
