@@ -64,7 +64,7 @@ def main():
     if not args.skip_dioceses:
         try:
             logger.info("\n--- Step 1: Extract Dioceses ---")
-            monitoring_client.send_log("1️⃣ Extract Dioceses: Scraping USCCB website for all U.S. dioceses", "INFO")
+            monitoring_client.send_log("Step 1 │ Extract Dioceses: Scraping USCCB website for all U.S. dioceses", "INFO")
             monitoring_client.update_extraction_status(
                 status="running",
                 current_diocese="USCCB Website",
@@ -73,7 +73,7 @@ def main():
             
             extract_dioceses_main(0)  # Setting max_dioceses to 0 to run for all
             
-            monitoring_client.send_log("✅ Step 1 Complete: Diocese extraction completed successfully", "INFO")
+            monitoring_client.send_log("Step 1 │ ✅ Diocese extraction completed successfully", "INFO")
             
         except Exception as e:
             monitoring_client.report_error(
@@ -83,13 +83,13 @@ def main():
             logger.error(f"Diocese extraction failed: {e}", exc_info=True)
     else:
         logger.info("\n--- Skipping Step 1: Extract Dioceses ---")
-        monitoring_client.send_log("⏭️ Step 1 Skipped: Extract Dioceses", "INFO")
+        monitoring_client.send_log("Step 1 │ ⏭️ Diocese extraction skipped", "INFO")
 
     # Step 2: Find Parish Directories
     if not args.skip_parish_directories:
         try:
             logger.info("\n--- Step 2: Find Parish Directories ---")
-            monitoring_client.send_log("2️⃣ Find Parish Directories: Using AI to locate parish directory pages", "INFO")
+            monitoring_client.send_log("Step 2 │ Find Parish Directories: Using AI to locate parish directory pages", "INFO")
             monitoring_client.update_extraction_status(
                 status="running",
                 current_diocese="Parish Directory Discovery",
@@ -98,7 +98,7 @@ def main():
             
             find_parish_directories(diocese_id=args.diocese_id, max_dioceses_to_process=20)
             
-            monitoring_client.send_log("✅ Step 2 Complete: Parish directory discovery completed", "INFO")
+            monitoring_client.send_log("Step 2 │ ✅ Parish directory discovery completed", "INFO")
             
         except Exception as e:
             monitoring_client.report_error(
@@ -108,7 +108,7 @@ def main():
             logger.error(f"Parish directory search failed: {e}", exc_info=True)
     else:
         logger.info("\n--- Skipping Step 2: Find Parish Directories ---")
-        monitoring_client.send_log("⏭️ Step 2 Skipped: Find Parish Directories", "INFO")
+        monitoring_client.send_log("Step 2 │ ⏭️ Parish directory discovery skipped", "INFO")
 
     # Step 3: Extract Parishes
     if not args.skip_parishes:
@@ -126,15 +126,15 @@ def main():
             
             # Use monitoring context for parish extraction
             with ExtractionMonitoring(diocese_name, args.max_parishes_per_diocese) as monitor:
-                monitoring_client.send_log(f"3️⃣ Extract Parishes: Collecting detailed parish information from {diocese_name}", "INFO")
+                monitoring_client.send_log(f"Step 3 │ Extract Parishes: Collecting detailed parish information from {diocese_name}", "INFO")
                 
                 # Run parish extraction
-                extract_parishes_main(args.diocese_id, args.max_parishes_per_diocese)
+                extract_parishes_main(args.diocese_id, args.max_parishes_per_diocese, monitoring_client)
                 
                 # Update final progress (this would be better integrated into extract_parishes_main)
                 monitor.update_progress(args.max_parishes_per_diocese, int(args.max_parishes_per_diocese * 0.85))
             
-            monitoring_client.send_log("✅ Step 3 Complete: Parish extraction completed successfully", "INFO")
+            monitoring_client.send_log("Step 3 │ ✅ Parish extraction completed successfully", "INFO")
             
         except Exception as e:
             monitoring_client.report_error(
@@ -145,13 +145,13 @@ def main():
             logger.error(f"Parish extraction failed: {e}", exc_info=True)
     else:
         logger.info("\n--- Skipping Step 3: Extract Parishes ---")
-        monitoring_client.send_log("⏭️ Step 3 Skipped: Extract Parishes", "INFO")
+        monitoring_client.send_log("Step 3 │ ⏭️ Parish extraction skipped", "INFO")
 
     # Step 4: Extract Schedules
     if not args.skip_schedules:
         try:
             logger.info("\n--- Step 4: Extract Schedules ---")
-            monitoring_client.send_log("4️⃣ Extract Schedules: Visiting parish websites to gather mass and service times", "INFO")
+            monitoring_client.send_log("Step 4 │ Extract Schedules: Visiting parish websites to gather mass and service times", "INFO")
             monitoring_client.update_extraction_status(
                 status="running",
                 current_diocese="Schedule Extraction",
@@ -159,9 +159,9 @@ def main():
                 total_parishes=args.num_parishes_for_schedule
             )
             
-            extract_schedule_main(args.num_parishes_for_schedule)
+            extract_schedule_main(args.num_parishes_for_schedule, monitoring_client=monitoring_client)
             
-            monitoring_client.send_log("✅ Step 4 Complete: Schedule extraction completed successfully", "INFO")
+            monitoring_client.send_log("Step 4 │ ✅ Schedule extraction completed successfully", "INFO")
             
         except Exception as e:
             monitoring_client.report_error(
@@ -171,17 +171,17 @@ def main():
             logger.error(f"Schedule extraction failed: {e}", exc_info=True)
     else:
         logger.info("\n--- Skipping Step 4: Extract Schedules ---")
-        monitoring_client.send_log("⏭️ Step 4 Skipped: Extract Schedules", "INFO")
+        monitoring_client.send_log("Step 4 │ ⏭️ Schedule extraction skipped", "INFO")
 
     # Step 5: Reporting
     if not args.skip_reporting:
         try:
             logger.info("\n--- Generating Reports ---")
-            monitoring_client.send_log("📊 Generating statistical reports", "INFO")
+            monitoring_client.send_log("Step 5 │ Generating statistical reports", "INFO")
             
             report_statistics_main()
             
-            monitoring_client.send_log("✅ Report generation completed successfully", "INFO")
+            monitoring_client.send_log("Step 5 │ ✅ Report generation completed successfully", "INFO")
             
         except Exception as e:
             monitoring_client.report_error(
@@ -191,12 +191,12 @@ def main():
             logger.error(f"Report generation failed: {e}", exc_info=True)
     else:
         logger.info("\n--- Skipping Report Generation ---")
-        monitoring_client.send_log("⏭️ Report generation skipped", "INFO")
+        monitoring_client.send_log("Step 5 │ ⏭️ Report generation skipped", "INFO")
 
     # Pipeline completion
     total_time = time.time() - start_time
     monitoring_client.update_extraction_status(status="idle")
-    monitoring_client.send_log(f"🎉 Pipeline completed in {total_time:.1f} seconds", "INFO")
+    monitoring_client.send_log(f"Pipeline │ 🎉 Completed in {total_time:.1f} seconds", "INFO")
     
     logger.info("USCCB data extraction pipeline completed!")
 

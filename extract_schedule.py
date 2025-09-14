@@ -723,7 +723,7 @@ def get_parishes_to_process(supabase: Client, num_parishes: int, parish_id: int 
         return []
 
 
-def save_facts_to_supabase(supabase: Client, results: list):
+def save_facts_to_supabase(supabase: Client, results: list, monitoring_client=None):
     """Saves the scraping results to the new ParishData table."""
     if not results:
         logger.info("No results to save to Supabase.")
@@ -766,13 +766,46 @@ def save_facts_to_supabase(supabase: Client, results: list):
         return
 
     try:
+        # Get parish names for monitoring if monitoring client is available
+        parish_names = {}
+        if monitoring_client and facts_to_save:
+            parish_ids = list(set(fact['parish_id'] for fact in facts_to_save))
+            try:
+                parish_response = supabase.table('Parishes').select('id, Name, Web').in_('id', parish_ids).execute()
+                parish_names = {p['id']: {'name': p.get('Name', 'Unknown Parish'), 'website': p.get('Web', '')}
+                              for p in parish_response.data}
+            except Exception as e:
+                logger.warning(f"Could not fetch parish names for monitoring: {e}")
+
         supabase.table('ParishData').upsert(facts_to_save, on_conflict='parish_id,fact_type').execute()
         logger.info(f"Successfully saved {len(facts_to_save)} facts to Supabase table 'ParishData'.")
+
+        # Send monitoring logs for ParishData insertions
+        if monitoring_client:
+            for fact in facts_to_save:
+                parish_id = fact['parish_id']
+                parish_info = parish_names.get(parish_id, {'name': 'Unknown Parish', 'website': ''})
+                parish_name = parish_info['name']
+                parish_website = parish_info['website']
+
+                fact_type = fact['fact_type'].replace('Schedule', '')  # Remove 'Schedule' from type
+                fact_value = fact['fact_value']
+                source_url = fact.get('fact_source_url', '')
+
+                # Create website links
+                parish_link = f" → <a href='{parish_website}' target='_blank'>{parish_website}</a>" if parish_website else ""
+                source_link = f" | <a href='{source_url}' target='_blank'>Source</a>" if source_url else ""
+
+                monitoring_client.send_log(
+                    f"Step 4 │ ✅ {fact_type} data saved for {parish_name}: {fact_value[:100]}{'...' if len(fact_value) > 100 else ''}{parish_link}{source_link}",
+                    "INFO"
+                )
+
     except Exception as e:
         logger.error(f"An unexpected error occurred during Supabase upsert: {e}", exc_info=True)
 
 
-def main(num_parishes: int, parish_id: int = None, max_pages_to_scan: int = config.DEFAULT_MAX_PAGES_TO_SCAN):
+def main(num_parishes: int, parish_id: int = None, max_pages_to_scan: int = config.DEFAULT_MAX_PAGES_TO_SCAN, monitoring_client=None):
     """Main function to run the scraping pipeline."""
     load_dotenv()
 
@@ -807,11 +840,11 @@ def main(num_parishes: int, parish_id: int = None, max_pages_to_scan: int = conf
         
         # Save results after each parish to avoid data loss if script is interrupted
         logger.info(f"Saving results for parish {p_id} immediately...")
-        save_facts_to_supabase(supabase, [result])
+        save_facts_to_supabase(supabase, [result], monitoring_client)
 
     # Also save all results at the end (in case any individual saves failed)
     logger.info("Final batch save of all results...")
-    save_facts_to_supabase(supabase, results)
+    save_facts_to_supabase(supabase, results, monitoring_client)
 
 
 if __name__ == '__main__':

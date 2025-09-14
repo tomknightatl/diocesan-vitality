@@ -676,8 +676,8 @@ PARISH_SKIP_TERMS = [
     'office', 'center', 'no parish registration', 'archdiocese'
 ]
 
-def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_id: int, diocese_name: str, diocese_url: str, 
-                                     parish_directory_url: str, supabase):
+def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_id: int, diocese_name: str, diocese_url: str,
+                                     parish_directory_url: str, supabase, monitoring_client=None):
     """Enhanced version of Supabase upsert function with batch operations and Parish Finder support"""
 
     if not supabase:
@@ -759,20 +759,31 @@ def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_id: int
                 logger.error(f"    ❌ Batch {batch_num + 1} database error: {response.error}")
                 # Try individual upserts as fallback for this batch
                 logger.info(f"    🔄 Falling back to individual upserts for batch {batch_num + 1}...")
-                batch_success = _fallback_individual_upserts(batch, supabase)
+                batch_success = _fallback_individual_upserts(batch, supabase, monitoring_client)
                 success_count += batch_success
             else:
                 batch_success = len(batch_data)
                 success_count += batch_success
                 logger.info(f"    ✅ Batch {batch_num + 1}: Successfully saved {batch_success} parishes")
-                
-                # Log sample of saved parishes for verification
+
+                # Send monitoring logs for each parish inserted
+                if monitoring_client:
+                    for item in batch:
+                        parish = item['original']
+                        parish_data = item['data']
+                        website_link = f" → <a href='{parish.website}' target='_blank'>{parish.website}</a>" if parish.website else ""
+                        monitoring_client.send_log(
+                            f"Step 3 │ ✅ Parish saved: {parish.name}{website_link}",
+                            "INFO"
+                        )
+
+                # Log sample of saved parishes for verification (console only)
                 for i, item in enumerate(batch[:3]):  # Show first 3 parishes in batch
                     parish = item['original']
                     detail_indicator = "📍" if parish.detail_extraction_success else "📌"
                     method_short = parish.extraction_method.replace('_extraction', '').replace('_', ' ')
                     logger.info(f"      {detail_indicator} {parish.name} ({method_short}, {parish.confidence_score:.2f})")
-                
+
                 if len(batch) > 3:
                     logger.info(f"      ... and {len(batch) - 3} more parishes")
 
@@ -780,7 +791,7 @@ def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_id: int
             logger.error(f"    ❌ Batch {batch_num + 1} failed: {e}")
             # Try individual upserts as fallback
             logger.info(f"    🔄 Falling back to individual upserts for batch {batch_num + 1}...")
-            batch_success = _fallback_individual_upserts(batch, supabase)
+            batch_success = _fallback_individual_upserts(batch, supabase, monitoring_client)
             success_count += batch_success
 
     # Phase 3: Summary reporting
@@ -798,7 +809,7 @@ def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_id: int
     return success_count > 0
 
 
-def _fallback_individual_upserts(batch: List[Dict], supabase) -> int:
+def _fallback_individual_upserts(batch: List[Dict], supabase, monitoring_client=None) -> int:
     """Fallback function for individual upserts when batch fails"""
     success_count = 0
     
@@ -809,6 +820,14 @@ def _fallback_individual_upserts(batch: List[Dict], supabase) -> int:
                 success_count += 1
                 parish = item['original']
                 logger.info(f"      ✅ 📌 Individually saved: {parish.name}")
+
+                # Send to monitoring if available
+                if monitoring_client:
+                    website_link = f" → <a href='{parish.website}' target='_blank'>{parish.website}</a>" if parish.website else ""
+                    monitoring_client.send_log(
+                        f"Step 3 │ ✅ Parish saved: {parish.name}{website_link}",
+                        "INFO"
+                    )
             else:
                 logger.error(f"      ❌ Individual upsert error: {response.error}")
         except Exception as e:
