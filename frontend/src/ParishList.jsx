@@ -106,6 +106,47 @@ function ParishList({ dioceseId }) {
     </Tooltip>
   );
 
+  const renderBlockingTooltip = (props, parish) => {
+    if (!parish.is_blocked) {
+      return (
+        <Tooltip id="blocking-tooltip" {...props}>
+          <div>
+            <strong>✅ Accessible</strong><br />
+            Status: {parish.status_description}<br />
+            HTTP Status: {parish.status_code || 'N/A'}<br />
+            Respectful Automation: ✅
+          </div>
+        </Tooltip>
+      );
+    }
+
+    return (
+      <Tooltip id="blocking-tooltip" {...props}>
+        <div>
+          <strong>🚫 BLOCKED</strong><br />
+          <strong>Type:</strong> {parish.blocking_type}<br />
+          <strong>Status:</strong> {parish.status_description}<br />
+          <strong>HTTP Status:</strong> {parish.status_code || 'N/A'}<br />
+          {parish.blocking_evidence?.robots_txt && (
+            <>
+              <strong>Robots.txt:</strong> {parish.blocking_evidence.robots_txt}<br />
+            </>
+          )}
+          {parish.blocking_evidence?.evidence_list?.length > 0 && (
+            <>
+              <strong>Evidence:</strong> {parish.blocking_evidence.evidence_list.join(', ')}<br />
+            </>
+          )}
+          {parish.robots_txt_check?.robots_url && (
+            <>
+              <strong>Robots URL:</strong> {parish.robots_txt_check.robots_url}
+            </>
+          )}
+        </div>
+      </Tooltip>
+    );
+  };
+
   return (
     <Container className="mt-4">
       <h2>{dioceseId ? 'Parishes in Diocese' : 'All Parishes'}</h2>
@@ -154,7 +195,7 @@ function ParishList({ dioceseId }) {
                   className="mt-1"
                 />
               </th>
-              <th style={{ cursor: 'pointer' }}>
+              <th style={{ cursor: 'pointer', width: '120px', minWidth: '120px' }}>
                 <div onClick={() => handleSort('data_extracted')}>
                   Data Extracted {sortBy === 'data_extracted' && (sortOrder === 'asc' ? '▲' : '▼')}
                 </div>
@@ -169,7 +210,10 @@ function ParishList({ dioceseId }) {
                   <option value="false">No</option>
                 </Form.Select>
               </th>
-              <th>Schedules</th>
+              <th style={{ cursor: 'pointer', width: '100px', minWidth: '100px' }} onClick={() => handleSort('is_blocked')}>
+                Blocked {sortBy === 'is_blocked' && (sortOrder === 'asc' ? '▲' : '▼')}
+              </th>
+              <th style={{ width: '120px', minWidth: '120px' }}>Schedules</th>
             </tr>
           </thead>
           <tbody>
@@ -179,6 +223,29 @@ function ParishList({ dioceseId }) {
                 <td>{parish.Address}</td>
                 <td><a href={parish.Website} target="_blank" rel="noopener noreferrer">{parish.Website}</a></td>
                 <td>{parish.data_extracted ? 'Yes' : 'No'}</td>
+                <td>
+                  {parish.respectful_automation_used ? (
+                    <OverlayTrigger
+                      placement="top"
+                      delay={{ show: 250, hide: 400 }}
+                      overlay={(props) => renderBlockingTooltip(props, parish)}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={parish.is_blocked || false}
+                          readOnly
+                          style={{
+                            cursor: parish.is_blocked ? 'help' : 'default',
+                            accentColor: parish.is_blocked ? '#dc3545' : '#28a745'
+                          }}
+                        />
+                      </div>
+                    </OverlayTrigger>
+                  ) : (
+                    <span style={{ color: '#6c757d', fontSize: '0.8em' }}>Not tested</span>
+                  )}
+                </td>
                 <td>
                   <Link to={`/parish?id=${parish.id}`}>View Schedules</Link>
                 </td>

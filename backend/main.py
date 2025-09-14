@@ -484,6 +484,21 @@ def get_parishes_for_diocese(
             parish['adoration_facts'] = facts.get('adoration_facts')
             parish['data_extracted'] = parish['id'] in all_parishes_with_data
 
+            # Map database column names to frontend expectations
+            if 'Street Address' in parish:
+                parish['Address'] = parish['Street Address']
+            if 'Web' in parish:
+                parish['Website'] = parish['Web']
+
+            # Ensure blocking detection fields are present
+            parish['is_blocked'] = parish.get('is_blocked', False)
+            parish['blocking_type'] = parish.get('blocking_type')
+            parish['blocking_evidence'] = parish.get('blocking_evidence', {})
+            parish['status_code'] = parish.get('status_code')
+            parish['robots_txt_check'] = parish.get('robots_txt_check', {})
+            parish['respectful_automation_used'] = parish.get('respectful_automation_used', False)
+            parish['status_description'] = parish.get('status_description', 'Not tested')
+
         if filter_data_extracted:
             if filter_data_extracted.lower() == 'true':
                 parishes = [p for p in parishes if p['data_extracted']]
@@ -552,6 +567,21 @@ def get_all_parishes(
 
         for parish in parishes:
             parish['data_extracted'] = parish['id'] in all_parishes_with_data
+
+            # Map database column names to frontend expectations
+            if 'Street Address' in parish:
+                parish['Address'] = parish['Street Address']
+            if 'Web' in parish:
+                parish['Website'] = parish['Web']
+
+            # Ensure blocking detection fields are present
+            parish['is_blocked'] = parish.get('is_blocked', False)
+            parish['blocking_type'] = parish.get('blocking_type')
+            parish['blocking_evidence'] = parish.get('blocking_evidence', {})
+            parish['status_code'] = parish.get('status_code')
+            parish['robots_txt_check'] = parish.get('robots_txt_check', {})
+            parish['respectful_automation_used'] = parish.get('respectful_automation_used', False)
+            parish['status_description'] = parish.get('status_description', 'Not tested')
 
         # Apply filter for data_extracted after computing the flag
         if filter_data_extracted:
