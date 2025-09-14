@@ -431,6 +431,13 @@ def get_parishes_for_diocese(
             raise HTTPException(status_code=404, detail="Diocese not found")
         diocese_website = diocese_response.data[0]['Website']
 
+        query = supabase.from('parishes_with_diocese_name').select('*', count='exact').eq('diocese_id', diocese_id)
+
+        # Apply filters
+        if filter_name:
+            query = query.ilike('Name', f'%{filter_name}%')
+        if filter_diocese_name:
+            query = query.ilike('diocese_name', f'%{filter_diocese_name}%')
 
         if filter_website:
         # Apply sorting and pagination
