@@ -56,8 +56,8 @@ class SimpleABTestExtractor:
         random.seed()
         return method
 
-    def get_unvisited_parishes(self, limit: int = 20) -> List[Tuple[str, int]]:
-        """Get parishes that haven't been processed yet."""
+    def get_parishes_for_testing(self, limit: int = 20) -> List[Tuple[str, int]]:
+        """Get parishes for A/B testing, prioritizing unvisited ones."""
         try:
             # Get parishes already processed
             processed_response = self.supabase.table('ParishData').select('parish_id').execute()
@@ -68,19 +68,23 @@ class SimpleABTestExtractor:
                 'id, Name, Web'
             ).not_.is_('Web', 'null').execute()
 
-            # Filter out processed ones and problematic URLs
+            # Separate unvisited and visited parishes
             unvisited = []
+            visited = []
             for parish in parishes_response.data:
-                if (parish['id'] not in processed_ids and
-                    parish['Web'] and
-                    parish['Web'] not in self.suppression_urls):
-                    unvisited.append((parish['Web'], parish['id']))
+                if parish['Web'] and parish['Web'] not in self.suppression_urls:
+                    if parish['id'] not in processed_ids:
+                        unvisited.append((parish['Web'], parish['id']))
+                    else:
+                        visited.append((parish['Web'], parish['id']))
 
-            logger.info(f"Found {len(unvisited)} unvisited parishes")
-            return unvisited[:limit]
+            # Prioritize unvisited, then include visited if needed
+            parishes_to_test = unvisited + visited
+            logger.info(f"Found {len(unvisited)} unvisited, {len(visited)} visited parishes")
+            return parishes_to_test[:limit]
 
         except Exception as e:
-            logger.error(f"Error getting unvisited parishes: {e}")
+            logger.error(f"Error getting parishes for testing: {e}")
             return []
 
     def simple_keyword_extraction(self, url: str, parish_id: int) -> Dict:
@@ -204,7 +208,7 @@ class SimpleABTestExtractor:
 
     def run_simple_ab_test(self, num_parishes: int) -> Dict[str, Any]:
         """Run simplified A/B test."""
-        parishes = self.get_unvisited_parishes(num_parishes)
+        parishes = self.get_parishes_for_testing(num_parishes)
         if not parishes:
             logger.info("No parishes to test")
             return {}
