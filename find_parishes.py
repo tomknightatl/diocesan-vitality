@@ -853,7 +853,9 @@ def find_parish_directories(diocese_id=None, max_dioceses_to_process=config.DEFA
             if unprocessed_dioceses_urls:
                 logger.info(f"Found {len(unprocessed_dioceses_urls)} dioceses needing parish directory URLs.")
                 limit = max_dioceses_to_process if max_dioceses_to_process != 0 else len(unprocessed_dioceses_urls)
-                dioceses_to_scan_urls = random.sample(list(unprocessed_dioceses_urls), limit)
+                # Fix: Ensure limit doesn't exceed available dioceses
+                actual_limit = min(limit, len(unprocessed_dioceses_urls))
+                dioceses_to_scan_urls = random.sample(list(unprocessed_dioceses_urls), actual_limit)
             else:
                 logger.info("All dioceses have been scanned. Rescanning the oldest entries based on 'updated_at'.")
                 limit = max_dioceses_to_process if max_dioceses_to_process != 0 else 5

@@ -1,7 +1,10 @@
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.webdriver.firefox.options import Options as FirefoxOptions
+from selenium.webdriver.firefox.service import Service as FirefoxService
 from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.firefox import GeckoDriverManager
 from core.logger import get_logger
 from core.circuit_breaker import circuit_breaker, CircuitBreakerConfig, circuit_manager
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
@@ -14,6 +17,81 @@ driver = None
 # Define retryable exceptions for WebDriver setup
 RETRYABLE_WEBDRIVER_EXCEPTIONS = (WebDriverException, SessionNotCreatedException)
 
+def _setup_chrome_driver():
+    """Set up Chrome WebDriver with enhanced compatibility."""
+    import os
+    import tempfile
+    import uuid
+
+    chrome_options = ChromeOptions()
+
+    # Essential headless options
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--window-size=1920,1080")
+
+    # Enhanced stability options
+    chrome_options.add_argument("--disable-web-security")
+    chrome_options.add_argument("--disable-features=VizDisplayCompositor")
+    chrome_options.add_argument("--disable-extensions")
+    chrome_options.add_argument("--disable-plugins")
+    chrome_options.add_argument("--disable-background-timer-throttling")
+    chrome_options.add_argument("--disable-backgrounding-occluded-windows")
+    chrome_options.add_argument("--disable-renderer-backgrounding")
+    chrome_options.add_argument("--disable-logging")
+    chrome_options.add_argument("--disable-default-apps")
+    chrome_options.add_argument("--disable-sync")
+
+    # Use unique session ID to avoid conflicts
+    session_id = str(uuid.uuid4())[:8]
+
+    # Create unique temp directories for this session
+    temp_base = tempfile.gettempdir()
+    user_data_dir = os.path.join(temp_base, f'chrome-user-data-{session_id}')
+    cache_dir = os.path.join(temp_base, f'chrome-cache-{session_id}')
+    webdriver_cache = os.path.join(temp_base, f'webdriver-cache-{session_id}')
+
+    # Create directories
+    for tmp_dir in [user_data_dir, cache_dir, webdriver_cache]:
+        os.makedirs(tmp_dir, mode=0o777, exist_ok=True)
+
+    # Use unique directories to avoid conflicts
+    chrome_options.add_argument(f"--user-data-dir={user_data_dir}")
+    chrome_options.add_argument(f"--disk-cache-dir={cache_dir}")
+    chrome_options.add_argument("--disable-background-networking")
+
+    # Use cache directory that webdriver-manager can access
+    os.environ['WDM_LOCAL_CACHE'] = webdriver_cache
+
+    logger.info(f"🔧 Creating Chrome session with ID: {session_id}")
+
+    return webdriver.Chrome(
+        service=ChromeService(ChromeDriverManager().install()), options=chrome_options
+    )
+
+def _setup_firefox_driver():
+    """Set up Firefox WebDriver as fallback."""
+    firefox_options = FirefoxOptions()
+    firefox_options.add_argument("--headless")
+    firefox_options.add_argument("--width=1920")
+    firefox_options.add_argument("--height=1080")
+
+    # Set Firefox preferences for better compatibility
+    firefox_options.set_preference("dom.webdriver.enabled", False)
+    firefox_options.set_preference("useAutomationExtension", False)
+    firefox_options.set_preference("general.useragent.override",
+                                  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+
+    # Use cache directory that webdriver-manager can access
+    import os
+    os.environ['WDM_LOCAL_CACHE'] = '/tmp/webdriver-cache'
+
+    return webdriver.Firefox(
+        service=FirefoxService(GeckoDriverManager().install()), options=firefox_options
+    )
+
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
@@ -21,31 +99,32 @@ RETRYABLE_WEBDRIVER_EXCEPTIONS = (WebDriverException, SessionNotCreatedException
     reraise=False, # Do not re-raise after retries, let the function return None
 )
 def _setup_driver_with_retry():
-    """Internal helper to set up WebDriver with retry logic."""
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("window-size=1920,1080")
-    chrome_options.add_argument("--allow-insecure-localhost")
-    chrome_options.add_argument("--allow-running-insecure-content")
-    chrome_options.add_argument("--unsafely-treat-insecure-origin-as-secure")
-    chrome_options.add_argument("--cipher-suite-blacklist=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256")
+    """Internal helper to set up WebDriver with retry logic and fallback support."""
+    # Try Chrome first
+    try:
+        logger.info("🔧 Attempting Chrome WebDriver setup...")
+        driver = _setup_chrome_driver()
+        logger.info("✅ Chrome WebDriver setup successful")
+        return driver
+    except Exception as chrome_error:
+        logger.warning(f"⚠️ Chrome WebDriver failed: {chrome_error}")
 
-    # Fix permissions by using writable directories
-    chrome_options.add_argument("--user-data-dir=/tmp/chrome-user-data")
-    chrome_options.add_argument("--data-path=/tmp/chrome-data")
-    chrome_options.add_argument("--disk-cache-dir=/tmp/chrome-cache")
-    chrome_options.add_argument("--homedir=/tmp")
-
-    # Use cache directory that webdriver-manager can access
-    import os
-    os.environ['WDM_LOCAL_CACHE'] = '/tmp/webdriver-cache'
-
-    return webdriver.Chrome(
-        service=Service(ChromeDriverManager().install()), options=chrome_options
-    )
+        # Fallback to Firefox if available
+        try:
+            # Check if Firefox is available
+            import shutil
+            if shutil.which('firefox') or shutil.which('firefox-esr'):
+                logger.info("🔧 Falling back to Firefox WebDriver...")
+                driver = _setup_firefox_driver()
+                logger.info("✅ Firefox WebDriver setup successful")
+                return driver
+            else:
+                logger.warning("⚠️ Firefox not available for fallback")
+                return None
+        except Exception as firefox_error:
+            logger.error(f"❌ Firefox WebDriver also failed: {firefox_error}")
+            logger.error("❌ All WebDriver options exhausted")
+            return None
 
 def setup_driver():
     """Initializes and returns the Selenium WebDriver instance."""
