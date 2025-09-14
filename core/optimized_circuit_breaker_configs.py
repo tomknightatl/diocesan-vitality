@@ -28,7 +28,7 @@ class OptimizedCircuitBreakerConfigs:
         - Shorter retry delay to speed up fallback attempts
         """
         return CircuitBreakerConfig(
-            failure_threshold=30,      # Increased from 20 - element not found is normal during testing
+            failure_threshold=15,      # Optimized from 30 - fail-fast on problematic dioceses
             recovery_timeout=10,       # Decreased from 15 - DOM issues resolve quickly
             success_threshold=2,       # Only need 2 successes to confirm recovery
             request_timeout=10,        # Shorter timeout for element operations

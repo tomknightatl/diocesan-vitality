@@ -218,20 +218,35 @@ class JavaScriptExecutionEngine:
             # Step 1: Enable network monitoring
             self.network_analyzer.enable_logging()
 
-            # Step 2: Try multiple loading strategies
+            # Step 2: Check for dynamic indicators - if none found, use shorter timeouts
+            has_dynamic_content = self._has_dynamic_indicators()
+            if not has_dynamic_content:
+                logger.info("⚡ No dynamic indicators detected - using faster timeouts")
+                timeout = min(timeout, 10)  # Reduce max timeout to 10 seconds
+
+            # Step 3: Try multiple loading strategies with adaptive timeouts
             strategies = [
-                self._wait_for_content_change,
-                self._trigger_scroll_loading,
-                self._simulate_user_interaction,
-                self._wait_for_ajax_completion,
-                self._poll_for_content_appearance
+                (self._wait_for_content_change, 5),      # Reduced from default
+                (self._trigger_scroll_loading, 4),       # Reduced from default
+                (self._simulate_user_interaction, 3),    # Reduced from default
+                (self._wait_for_ajax_completion, 4),     # Reduced from default
+                (self._poll_for_content_appearance, 6)   # Slightly longer for polling
             ]
 
-            for i, strategy in enumerate(strategies, 1):
-                logger.info(f"🔄 Trying loading strategy {i}: {strategy.__name__}")
+            total_strategy_time = sum(timeout for _, timeout in strategies)
+            max_allowed_time = min(timeout, 15)  # Cap total time at 15 seconds
+
+            for i, (strategy, strategy_timeout) in enumerate(strategies, 1):
+                # Check if we're approaching time limit
+                elapsed = time.time() - start_time
+                if elapsed > max_allowed_time:
+                    logger.info(f"⚡ Time limit reached ({elapsed:.1f}s), skipping remaining strategies")
+                    break
+
+                logger.info(f"🔄 Trying loading strategy {i}: {strategy.__name__} (timeout: {strategy_timeout}s)")
 
                 try:
-                    if strategy(timeout // len(strategies)):
+                    if strategy(strategy_timeout):
                         result['content_loaded'] = True
                         result['method_used'] = strategy.__name__
                         logger.info(f"✅ Content loaded using {strategy.__name__}")
@@ -240,8 +255,8 @@ class JavaScriptExecutionEngine:
                     logger.debug(f"⚠️ Strategy {strategy.__name__} failed: {e}")
                     continue
 
-            # Step 3: Collect network requests
-            requests = self.network_analyzer.collect_requests(3)
+            # Step 4: Collect network requests
+            requests = self.network_analyzer.collect_requests(2)  # Reduced from 3
             result['api_endpoints'] = self.network_analyzer.analyze_parish_endpoints()
 
             # Step 4: Extract any parish elements found
@@ -480,6 +495,54 @@ class JavaScriptExecutionEngine:
         has_exclusion = any(exclusion in text_lower for exclusion in exclusions)
 
         return has_indicator and not has_exclusion and len(text.strip()) > 3
+
+    def _has_dynamic_indicators(self) -> bool:
+        """Check if the page has indicators of dynamic content loading."""
+        try:
+            # Check for common dynamic loading indicators in page source
+            page_source = self.driver.page_source.lower()
+
+            dynamic_indicators = [
+                'loading', 'spinner', 'progress', 'ajax', 'xhr', 'fetch',
+                'react', 'vue', 'angular', 'jquery', 'bootstrap',
+                'data-load', 'lazy-load', 'infinite-scroll',
+                'just a moment', 'please wait', 'loading content'
+            ]
+
+            # Check for JavaScript frameworks and AJAX indicators
+            script_indicators = ['$.ajax', '$.get', '$.post', 'XMLHttpRequest', 'fetch(']
+
+            has_dynamic_text = any(indicator in page_source for indicator in dynamic_indicators)
+            has_script_activity = any(indicator in page_source for indicator in script_indicators)
+
+            # Check for loading elements in DOM
+            loading_selectors = [
+                '.loading', '.spinner', '.progress', '.loader',
+                '[data-loading]', '[data-load]', '#loading'
+            ]
+
+            has_loading_elements = False
+            for selector in loading_selectors:
+                try:
+                    elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                    if elements:
+                        has_loading_elements = True
+                        break
+                except:
+                    continue
+
+            result = has_dynamic_text or has_script_activity or has_loading_elements
+
+            if result:
+                logger.debug("🔍 Dynamic indicators found on page")
+            else:
+                logger.debug("🔍 No dynamic indicators detected")
+
+            return result
+
+        except Exception as e:
+            logger.debug(f"🔍 Error checking dynamic indicators: {e}")
+            return False
 
 
 def get_dynamic_content_engine(driver: WebDriver) -> JavaScriptExecutionEngine:
