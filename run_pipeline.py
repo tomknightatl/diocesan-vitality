@@ -172,7 +172,8 @@ def main():
             extract_schedule_main(
                 num_parishes=args.num_parishes_for_schedule,
                 parish_id=None,
-                max_pages_per_parish=args.max_pages_per_parish
+                max_pages_per_parish=args.max_pages_per_parish,
+                diocese_id=args.diocese_id
             )
             
             monitoring_client.send_log("Step 4 │ ✅ Schedule extraction completed successfully", "INFO")
