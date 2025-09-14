@@ -24,7 +24,7 @@ function ParishList({ dioceseId }) {
 
   const [debouncedFilterName, setDebouncedFilterName] = useState(filterName);
   const [debouncedFilterDioceseName, setDebouncedFilterDioceseName] = useState(filterDioceseName);
-  const [debouncedFilterAddress, setDebouncedFilterAddress] = useState(filterAddress);
+
   const [debouncedFilterWebsite, setDebouncedFilterWebsite] = useState(filterWebsite);
   const [debouncedFilterDataExtracted, setDebouncedFilterDataExtracted] = useState(filterDataExtracted);
 
