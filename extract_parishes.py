@@ -256,7 +256,11 @@ def main(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MAX_PARISHES_P
         logger.info("  📊 Circuit Breaker Final Report:")
         circuit_manager.log_summary()
         
-        close_driver()
+        # Close the protected driver
+        if driver:
+            driver.close()
+        else:
+            close_driver()  # Fallback for global driver cleanup
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Extract parish information from diocese websites.")
