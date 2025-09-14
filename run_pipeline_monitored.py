@@ -27,7 +27,7 @@ def main():
     parser.add_argument("--skip_reporting", action="store_true", help="Skip the reporting step.")
     parser.add_argument("--diocese_id", type=int, help="ID of a specific diocese to process.")
     parser.add_argument("--max_parishes_per_diocese", type=int, default=config.DEFAULT_MAX_PARISHES_PER_DIOCESE, help="Max parishes to extract per diocese.")
-    parser.add_argument("--max_dioceses", type=int, default=config.DEFAULT_MAX_DIOCESES, help="Max dioceses to process in Step 3. Set to 0 for no limit.")
+    parser.add_argument("--max_dioceses", type=int, default=config.DEFAULT_MAX_DIOCESES, help="Max dioceses to process in Steps 1 and 3. Set to 0 for no limit.")
     parser.add_argument("--num_parishes_for_schedule", type=int, default=config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE, help="Number of parishes to extract schedules for.")
     parser.add_argument("--monitoring_url", type=str, default="http://localhost:8000", help="Monitoring backend URL.")
     parser.add_argument("--disable_monitoring", action="store_true", help="Disable monitoring integration.")
@@ -72,7 +72,7 @@ def main():
                 parishes_processed=0
             )
             
-            extract_dioceses_main(0)  # Setting max_dioceses to 0 to run for all
+            extract_dioceses_main(args.max_dioceses)
             
             monitoring_client.send_log("Step 1 │ ✅ Diocese extraction completed successfully", "INFO")
             
