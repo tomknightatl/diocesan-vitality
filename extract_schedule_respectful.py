@@ -291,10 +291,12 @@ def process_parish_with_blocking_detection(parish_url: str, parish_id: int,
         }
 
 
-def main(num_parishes: int = None, parish_id: int = None, max_pages_per_parish: int = 10):
+def main(num_parishes: int = None, parish_id: int = None, max_pages_per_parish: int = 10, diocese_id: int = None):
     """Main function for respectful parish processing with blocking detection."""
 
     logger.info("🚀 Starting respectful parish website analysis with blocking detection")
+    if diocese_id:
+        logger.info(f"📍 Filtering to diocese ID: {diocese_id}")
 
     supabase = get_supabase_client()
     if not supabase:
@@ -307,7 +309,7 @@ def main(num_parishes: int = None, parish_id: int = None, max_pages_per_parish: 
 
     # Get parishes to process
     suppression_urls = get_suppression_urls(supabase)
-    parishes_to_process = get_parishes_to_process(supabase, num_parishes, parish_id)
+    parishes_to_process = get_parishes_to_process(supabase, num_parishes, parish_id, diocese_id)
 
     if not parishes_to_process:
         logger.info("No parishes to process")
@@ -365,11 +367,14 @@ if __name__ == '__main__':
                        help="Specific parish ID to process")
     parser.add_argument("--max_pages_per_parish", type=int, default=10,
                        help="Maximum pages to analyze per parish")
+    parser.add_argument("--diocese_id", type=int,
+                       help="Filter parishes to specific diocese ID")
 
     args = parser.parse_args()
 
     main(
         num_parishes=args.num_parishes,
         parish_id=args.parish_id,
-        max_pages_per_parish=args.max_pages_per_parish
+        max_pages_per_parish=args.max_pages_per_parish,
+        diocese_id=args.diocese_id
     )

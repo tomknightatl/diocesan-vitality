@@ -32,13 +32,14 @@ class IntelligentParishPrioritizer:
         self.logger = logger
         logger.info("🎯 Intelligent Parish Prioritizer initialized")
 
-    def get_prioritized_parishes(self, num_parishes: int, parish_id: int = None) -> List[Tuple[str, int]]:
+    def get_prioritized_parishes(self, num_parishes: int, parish_id: int = None, diocese_id: int = None) -> List[Tuple[str, int]]:
         """
         Get prioritized parishes for schedule extraction using simplified logic.
 
         Args:
             num_parishes: Number of parishes to return
             parish_id: Specific parish ID to process (overrides prioritization)
+            diocese_id: Filter parishes to specific diocese
 
         Returns:
             List of (parish_url, parish_id) tuples in priority order
@@ -50,7 +51,7 @@ class IntelligentParishPrioritizer:
             return self._get_specific_parish(parish_id)
 
         # Get prioritized parishes using simplified logic
-        prioritized_parishes = self._get_simple_prioritized_parishes(num_parishes)
+        prioritized_parishes = self._get_simple_prioritized_parishes(num_parishes, diocese_id)
 
         logger.info(f"🎯 Selected {len(prioritized_parishes)} parishes with simplified prioritization")
         self._log_prioritization_summary(prioritized_parishes)
@@ -70,17 +71,23 @@ class IntelligentParishPrioritizer:
             logger.error(f"🎯 Error fetching specific parish {parish_id}: {e}")
             return []
 
-    def _get_simple_prioritized_parishes(self, num_parishes: int) -> List[Dict]:
+    def _get_simple_prioritized_parishes(self, num_parishes: int, diocese_id: int = None) -> List[Dict]:
         """
         Get prioritized parishes using simplified logic:
         1. Never-tested parishes first (newer parishes first by ID)
         2. Previously tested parishes second (older tests first by extracted_at)
         """
         try:
-            # Get all parishes with websites
-            parishes_response = self.supabase.table('Parishes').select(
+            # Get all parishes with websites (with optional diocese filtering)
+            query = self.supabase.table('Parishes').select(
                 'id, Name, Web, respectful_automation_used, extracted_at'
-            ).not_.is_('Web', 'null').execute()
+            ).not_.is_('Web', 'null')
+
+            if diocese_id:
+                query = query.eq('diocese_id', diocese_id)
+                logger.info(f"🎯 Filtering parishes to diocese ID: {diocese_id}")
+
+            parishes_response = query.execute()
 
             if not parishes_response.data:
                 logger.warning("🎯 No parishes with websites found")
