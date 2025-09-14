@@ -836,6 +836,17 @@ class TableExtractor(BaseExtractor):
         parishes = []
 
         try:
+            # ENHANCEMENT: Handle dropdown pagination controls before extracting
+            initial_count = self._count_table_rows(soup)
+            logger.info(f"    📊 Initial parish count: {initial_count}")
+
+            # Try to maximize results by setting dropdown to "All" or highest value
+            enhanced_count = self._handle_pagination_dropdown(driver)
+            if enhanced_count > initial_count:
+                logger.info(f"    📈 Enhanced parish count: {enhanced_count} (increased by {enhanced_count - initial_count})")
+                # Re-parse the page after dropdown change
+                soup = BeautifulSoup(driver.page_source, 'html.parser')
+
             tables = soup.find_all('table')
 
             for table in tables:
@@ -918,6 +929,75 @@ class TableExtractor(BaseExtractor):
             confidence_score=0.85,
             extraction_method="table_extraction"
         )
+
+    def _count_table_rows(self, soup: BeautifulSoup) -> int:
+        """Count parish rows in tables for comparison"""
+        count = 0
+        try:
+            tables = soup.find_all('table')
+            for table in tables:
+                table_text = table.get_text().lower()
+                if any(keyword in table_text for keyword in ['parish', 'church', 'name', 'address']):
+                    rows = table.find_all('tr')[1:]  # Skip header row
+                    count += len(rows)
+        except:
+            pass
+        return count
+
+    def _handle_pagination_dropdown(self, driver) -> int:
+        """Handle dropdown pagination controls to maximize results"""
+        try:
+            from selenium.webdriver.common.by import By
+            from selenium.webdriver.support.ui import Select
+            import time
+
+            # Look for select dropdowns that might control pagination
+            selects = driver.find_elements(By.TAG_NAME, 'select')
+
+            for select_element in selects:
+                try:
+                    select_obj = Select(select_element)
+                    options = select_obj.options
+
+                    # Look for "All", highest number, or common pagination values
+                    best_option = None
+                    best_value = 0
+
+                    for option in options:
+                        opt_text = option.text.lower().strip()
+                        opt_value = option.get_attribute('value')
+
+                        # Prioritize "All" or similar
+                        if opt_text in ['all', 'show all', 'view all'] or opt_value == '-1':
+                            best_option = option
+                            break
+                        # Look for high numeric values (100+)
+                        elif opt_value.isdigit() and int(opt_value) >= 100:
+                            if int(opt_value) > best_value:
+                                best_value = int(opt_value)
+                                best_option = option
+                        # Fallback to any numeric value higher than current
+                        elif opt_value.isdigit() and int(opt_value) > best_value:
+                            best_value = int(opt_value)
+                            best_option = option
+
+                    if best_option and best_option.get_attribute('value') != select_element.get_attribute('value'):
+                        logger.info(f"    🔄 Setting dropdown to: {best_option.text} (value: {best_option.get_attribute('value')})")
+                        select_obj.select_by_value(best_option.get_attribute('value'))
+                        time.sleep(3)  # Wait for page to reload
+
+                        # Return new count
+                        soup = BeautifulSoup(driver.page_source, 'html.parser')
+                        return self._count_table_rows(soup)
+
+                except Exception as e:
+                    logger.debug(f"    ⚠️ Dropdown handling error: {str(e)[:50]}...")
+                    continue
+
+        except Exception as e:
+            logger.debug(f"    ⚠️ Pagination dropdown error: {str(e)[:50]}...")
+
+        return 0  # Return 0 if no enhancement found
 
 # =============================================================================
 # IMPROVED INTERACTIVE MAP EXTRACTOR
