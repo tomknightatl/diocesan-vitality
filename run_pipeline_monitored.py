@@ -42,7 +42,7 @@ def main():
         logger.info(f"📊 Monitoring enabled: {args.monitoring_url}")
 
     # Send initial log
-    monitoring_client.send_log("🚀 Starting USCCB data extraction pipeline", "INFO")
+    monitoring_client.send_log("Pipeline │ Starting USCCB data extraction pipeline", "INFO")
     
     logger.info("Starting USCCB data extraction pipeline with monitoring...")
     start_time = time.time()
