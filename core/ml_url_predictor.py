@@ -100,7 +100,7 @@ class MLURLPredictor:
             success_response = self.supabase.table('ParishData').select(
                 'fact_source_url, parish_id'
             ).in_(
-                'fact_type', ['ReconciliationSchedule', 'AdorationSchedule', 'MassSchedule']
+                'fact_type', ['ReconciliationSchedule', 'AdorationSchedule']
             ).not_.is_('fact_source_url', 'null').execute()
 
             urls = []

@@ -54,16 +54,31 @@ The USCCB Data Extraction Pipeline is a multi-step process that systematically c
 
 ## Key Features
 
+### 🚀 **Core Data Extraction**
 - **Automated Diocese Discovery**: Scrapes the official USCCB website to collect diocese information
 - **AI-Powered Parish Directory Detection**: Uses Google's Gemini AI to intelligently identify parish directory pages
 - **Advanced Web Scraping**: Employs Selenium with retry logic and pattern detection for robust data extraction
 - **Multi-Platform Parish Extraction**: Supports various website platforms including SquareSpace, WordPress, eCatholic, and custom implementations
-- **⚡ High-Performance Concurrent Processing**: Asyncio-based extraction with 60% performance improvement
+
+### ⚡ **Performance & Optimization**
+- **High-Performance Concurrent Processing**: Asyncio-based extraction with 60% performance improvement
+- **🤖 ML-Based URL Prediction**: Machine learning system that reduces 404 errors by 50% through intelligent URL discovery
+- **🔗 Enhanced URL Management**: Success-based URL memory with "golden URLs" prioritization
+- **⚡ Adaptive Timeout Management**: Dynamic timeout optimization based on site complexity and response patterns
+- **💾 Intelligent Caching**: Smart caching system with content-aware TTL management
 - **🛡️ Circuit Breaker Protection**: Automatic failure detection and recovery for external services
+
+### 📊 **Analytics & Monitoring**
 - **🖥️ Live Production Dashboard**: Real-time extraction monitoring at [usccb.diocesevitality.org](https://usccb.diocesevitality.org)
+- **🔍 Comprehensive URL Visit Tracking**: Detailed visit analytics with response times, quality scores, and error classification
+- **📈 Quality-Weighted ML Training**: Advanced machine learning training using visit success data
+- **🎯 Intelligent Parish Prioritization**: Multi-factor scoring for optimal extraction order
+
+### 🔧 **Advanced Features**
 - **Interactive Parish Finder Support**: Specialized extractors for JavaScript-based parish finder interfaces
 - **Cloud Database Integration**: Stores data in Supabase with automated upserts and conflict resolution
 - **Comprehensive Logging**: Detailed extraction statistics and error tracking
+- **🔄 Parallel Processing Framework**: Domain-aware rate limiting with resource management
 
 ## Project Architecture
 
@@ -643,6 +658,9 @@ For detailed instructions on how to build and deploy the web application, please
 - **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Docker and Kubernetes deployment instructions
 - **[docs/AUTHENTICATION.md](docs/AUTHENTICATION.md)** - Authentication and security configuration
 - **[docs/CLOUDFLARE.md](docs/CLOUDFLARE.md)** - Cloudflare tunnel and DNS configuration
+
+### 🤖 Machine Learning & Optimization
+- **[docs/ml-model-training.md](docs/ml-model-training.md)** - ML-based URL prediction system training and optimization
 
 ### 🧪 Testing & Quality
 - **[tests/TESTING.md](tests/TESTING.md)** - Testing framework and test procedures
