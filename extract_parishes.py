@@ -45,7 +45,7 @@ def force_garbage_collection():
     
     return final_memory
 
-def main(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MAX_PARISHES_PER_DIOCESE, monitoring_client=None):
+def main(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MAX_PARISHES_PER_DIOCESE, max_dioceses=config.DEFAULT_MAX_DIOCESES, monitoring_client=None):
     """
     Main function to extract parish information from diocese websites.
     """
@@ -147,6 +147,12 @@ def main(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MAX_PARISHES_P
             logger.info(f"  🎯 Processing order (first 5): {[f'{d['name']} ({diocese_last_extraction.get(d['id'], 'never')})' for d in first_five]}")
 
             logger.info(f"  ✅ Diocese prioritization complete: processing from least to most recently attempted")
+
+            # Apply diocese limit after prioritization
+            if max_dioceses > 0 and len(dioceses_to_process) > max_dioceses:
+                original_count = len(dioceses_to_process)
+                dioceses_to_process = dioceses_to_process[:max_dioceses]
+                logger.info(f"  📊 Applied diocese limit: processing {max_dioceses} of {original_count} dioceses")
 
     if not dioceses_to_process:
         logger.info("No dioceses to process.")
@@ -266,7 +272,13 @@ if __name__ == "__main__":
         default=5,
         help="Maximum number of parishes to extract from each diocese. Set to 0 for no limit. Defaults to 5.",
     )
+    parser.add_argument(
+        "--max_dioceses",
+        type=int,
+        default=config.DEFAULT_MAX_DIOCESES,
+        help="Maximum number of dioceses to process. Set to 0 for no limit. Defaults to 5.",
+    )
     args = parser.parse_args()
 
     config.validate_config()
-    main(args.diocese_id, args.num_parishes_per_diocese)
+    main(args.diocese_id, args.num_parishes_per_diocese, args.max_dioceses)
