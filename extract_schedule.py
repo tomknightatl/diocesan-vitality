@@ -840,17 +840,19 @@ def save_facts_to_supabase(supabase: Client, results: list, monitoring_client=No
                 'fact_type': 'ReconciliationSchedule',
                 'fact_value': result.get('reconciliation_info'),
                 'fact_source_url': result.get('reconciliation_page'),
-                'fact_string': result.get('reconciliation_fact_string')
+                'fact_string': result.get('reconciliation_fact_string'),
+                'extraction_method': 'keyword_based'
             })
             logger.info(f"Added reconciliation fact for parish {parish_id}")
-        
+
         if result.get('offers_adoration') and result.get('adoration_info') != "Information not found":
             facts_to_save.append({
                 'parish_id': parish_id,
                 'fact_type': 'AdorationSchedule',
                 'fact_value': result.get('adoration_info'),
                 'fact_source_url': result.get('adoration_page'),
-                'fact_string': result.get('adoration_fact_string')
+                'fact_string': result.get('adoration_fact_string'),
+                'extraction_method': 'keyword_based'
             })
             logger.info(f"Added adoration fact for parish {parish_id}")
 

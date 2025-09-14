@@ -12,7 +12,7 @@ import config
 from extract_dioceses import main as extract_dioceses_main
 from find_parishes import find_parish_directories
 from extract_parishes import main as extract_parishes_main
-from extract_schedule import main as extract_schedule_main
+from extract_schedule_ab_test import main as extract_schedule_main
 from report_statistics import main as report_statistics_main
 
 logger = get_logger(__name__)
@@ -29,6 +29,7 @@ def main():
     parser.add_argument("--max_parishes_per_diocese", type=int, default=config.DEFAULT_MAX_PARISHES_PER_DIOCESE, help="Max parishes to extract per diocese.")
     parser.add_argument("--max_dioceses", type=int, default=config.DEFAULT_MAX_DIOCESES, help="Max dioceses to process in Steps 1 and 3. Set to 0 for no limit.")
     parser.add_argument("--num_parishes_for_schedule", type=int, default=config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE, help="Number of parishes to extract schedules for.")
+    parser.add_argument("--schedule_ab_test_ratio", type=float, default=0.5, help="Fraction of parishes to assign to AI-enhanced extraction (0.0-1.0, default: 0.5)")
     parser.add_argument("--monitoring_url", type=str, default="http://localhost:8000", help="Monitoring backend URL.")
     parser.add_argument("--disable_monitoring", action="store_true", help="Disable monitoring integration.")
     
@@ -152,7 +153,7 @@ def main():
     if not args.skip_schedules:
         try:
             logger.info("\n--- Step 4: Extract Schedules ---")
-            monitoring_client.send_log("Step 4 │ Extract Schedules: Visiting parish websites to gather mass and service times", "INFO")
+            monitoring_client.send_log(f"Step 4 │ Extract Schedules: A/B testing keyword vs AI methods ({args.schedule_ab_test_ratio:.0%} AI)", "INFO")
             monitoring_client.update_extraction_status(
                 status="running",
                 current_diocese="Schedule Extraction",
@@ -160,7 +161,11 @@ def main():
                 total_parishes=args.num_parishes_for_schedule
             )
             
-            extract_schedule_main(args.num_parishes_for_schedule, monitoring_client=monitoring_client)
+            extract_schedule_main(
+                num_parishes=args.num_parishes_for_schedule,
+                test_ratio=args.schedule_ab_test_ratio,
+                monitoring_client=monitoring_client
+            )
             
             monitoring_client.send_log("Step 4 │ ✅ Schedule extraction completed successfully", "INFO")
             

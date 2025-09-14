@@ -26,6 +26,15 @@ from core.db import get_supabase_client
 
 logger = get_logger(__name__)
 
+# Known problematic domains that should be skipped
+PROBLEMATIC_DOMAINS = {
+    'stmarkrcc.org',  # DNS resolution fails
+    'sthelenacc-clayton.org',  # Connection issues
+    'stpaulcleveland.com',  # Timeout issues
+    'qofathomson.org',  # Connection problems
+    'stmarystoccoa.org'  # DNS/connectivity issues
+}
+
 
 @dataclass
 class ParishPriorityScore:
@@ -131,9 +140,13 @@ class IntelligentParishPrioritizer:
             return []
 
     def _get_candidate_parishes(self) -> List[Dict]:
-        """Fetch ALL candidate parishes prioritizing comprehensive database coverage."""
+        """Fetch candidate parishes with preference for unvisited ones."""
         try:
-            # Get ALL parishes with web URLs - no diocese restrictions for comprehensive coverage
+            # Get parishes that haven't been processed yet (no ParishData records)
+            processed_parishes_response = self.supabase.table('ParishData').select('parish_id').execute()
+            processed_parish_ids = {p['parish_id'] for p in processed_parishes_response.data}
+
+            # Get all parishes with web URLs
             parishes_response = self.supabase.table('Parishes').select(
                 'id, Name, Web, diocese_id'
             ).not_.is_('Web', 'null').execute()
@@ -145,40 +158,53 @@ class IntelligentParishPrioritizer:
 
             dioceses_map = {d['id']: d['Name'] for d in dioceses_response.data}
 
-            candidates = []
+            # Split parishes into unvisited and visited
+            unvisited_candidates = []
+            visited_candidates = []
+
             for parish in parishes_response.data:
                 if parish.get('Web') and parish.get('diocese_id'):
                     # Clean and validate the URL
                     parish_url = parish['Web'].strip()
                     if parish_url and (parish_url.startswith('http://') or parish_url.startswith('https://')):
                         diocese_name = dioceses_map.get(parish['diocese_id'], 'Unknown Diocese')
-                        candidates.append({
+                        candidate = {
                             'parish_id': parish['id'],
                             'parish_name': parish.get('Name', 'Unknown'),
                             'parish_url': parish_url,
                             'diocese_id': parish['diocese_id'],
                             'diocese_name': diocese_name
-                        })
+                        }
 
-            logger.info(f"🎯 Found {len(candidates)} candidate parishes across ALL dioceses")
-            return candidates
+                        # Prioritize unvisited parishes
+                        if parish['id'] not in processed_parish_ids:
+                            unvisited_candidates.append(candidate)
+                        else:
+                            visited_candidates.append(candidate)
+
+            # Return unvisited first, then visited as fallback
+            all_candidates = unvisited_candidates + visited_candidates
+
+            logger.info(f"🎯 Found {len(unvisited_candidates)} unvisited parishes, {len(visited_candidates)} visited parishes")
+            logger.info(f"🎯 Total candidate pool: {len(all_candidates)} parishes")
+
+            return all_candidates
 
         except Exception as e:
             logger.error(f"🎯 Error fetching candidate parishes: {e}")
             return []
 
     def _prioritize_parishes(self, candidates: List[Dict]) -> List[ParishPriorityScore]:
-        """Score and prioritize all candidate parishes."""
-        logger.info(f"🎯 Scoring {len(candidates)} parishes with multi-factor prioritization")
+        """Simple prioritization favoring unvisited parishes."""
+        logger.info(f"🎯 Simplified prioritization for {len(candidates)} parishes (unvisited first)")
 
         prioritized = []
 
-        # Get historical data for scoring
-        extraction_history = self._get_extraction_history()
-        diocese_success_rates = self._calculate_diocese_success_rates(extraction_history)
-
-        for candidate in candidates:
+        for i, candidate in enumerate(candidates):
             try:
+                # Simple scoring: unvisited parishes get higher score
+                base_score = 1.0 if i < len(candidates) // 2 else 0.5  # Assumes unvisited are first half
+
                 score = ParishPriorityScore(
                     parish_id=candidate['parish_id'],
                     parish_name=candidate['parish_name'],
@@ -187,17 +213,16 @@ class IntelligentParishPrioritizer:
                     diocese_name=candidate['diocese_name']
                 )
 
-                # Calculate all scoring components
-                score.schedule_likelihood_score = self._calculate_schedule_likelihood(candidate)
-                score.freshness_score = self._calculate_freshness_score(candidate, extraction_history)
-                score.diocese_success_score = diocese_success_rates.get(candidate['diocese_id'], 0.5)
-                score.website_quality_score = self._calculate_website_quality(candidate['parish_url'])
+                # Simplified scoring - just set base scores
+                score.schedule_likelihood_score = base_score
+                score.freshness_score = base_score
+                score.diocese_success_score = base_score
+                score.website_quality_score = base_score
 
-                # Add historical data
-                parish_history = extraction_history.get(candidate['parish_id'], {})
-                score.last_extraction_attempt = parish_history.get('last_attempt')
-                score.successful_extractions = parish_history.get('successful', 0)
-                score.total_extractions = parish_history.get('total', 0)
+                # No historical data needed for simplified version
+                score.last_extraction_attempt = None
+                score.successful_extractions = 0
+                score.total_extractions = 0
 
                 prioritized.append(score)
 
