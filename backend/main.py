@@ -262,11 +262,13 @@ async def get_summary():
     """
     try:
         # Dioceses summary
-        dir_response = supabase.table('DiocesesParishDirectory').select('parish_directory_url').execute()
+        total_dioceses_response = supabase.table('Dioceses').select('count', count='exact').execute()
+        total_dioceses_processed = total_dioceses_response.count
+
+        dir_response = supabase.table('DiocesesParishDirectory').select('diocese_id').execute()
         dir_data = dir_response.data
-        total_dioceses_processed = len(dir_data)
-        found_parish_directories = sum(1 for item in dir_data if item['parish_directory_url'] is not None)
-        not_found_parish_directories = total_dioceses_processed - found_parish_directories
+        dioceses_with_parish_directories_found = len(set(item['diocese_id'] for item in dir_data))
+        dioceses_without_parish_directories_found = total_dioceses_processed - dioceses_with_parish_directories_found
 
         # Parishes summary
         parishes_count_response = supabase.table('Parishes').select('count', count='exact').execute()
@@ -281,8 +283,8 @@ async def get_summary():
 
         return {
             "total_dioceses_processed": total_dioceses_processed,
-            "found_parish_directories": found_parish_directories,
-            "not_found_parish_directories": not_found_parish_directories,
+            "found_parish_directories": dioceses_with_parish_directories_found,
+            "not_found_parish_directories": dioceses_without_parish_directories_found,
             "parishes_extracted": parishes_extracted,
             "parishes_with_data_extracted": parishes_with_data_extracted,
             "parishes_with_data_not_extracted": parishes_with_data_not_extracted,

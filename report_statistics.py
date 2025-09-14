@@ -202,26 +202,22 @@ def main():
         global_max_date += timedelta(days=1)
 
     # Calculate max values for y-axis alignment dynamically
-    max_parishes_count = 0
-    max_parishdata_count = 0
+    max_parish_related_count = 0
 
     for table_name, time_series_data in all_time_series_data.items():
         for col_name, df_ts in time_series_data.items():
             if not df_ts.empty:
-                if table_name == 'Parishes':
-                    max_parishes_count = max(max_parishes_count, df_ts['count'].max())
-                elif table_name == 'ParishData':
-                    max_parishdata_count = max(max_parishdata_count, df_ts['count'].max())
+                if table_name in ['Parishes', 'ParishData']:
+                    max_parish_related_count = max(max_parish_related_count, df_ts['count'].max())
 
-    # Add a buffer to the max values
-    y_max_parishes = max_parishes_count * 1.1 if max_parishes_count > 0 else 100 # 10% buffer, min 100
-    y_max_parishdata = max_parishdata_count * 1.1 if max_parishdata_count > 0 else 100 # 10% buffer, min 100
+    # Add a buffer to the max value
+    y_max_parish_related = max_parish_related_count * 1.1 if max_parish_related_count > 0 else 100 # 10% buffer, min 100
 
     y_max_limits = {
         'Dioceses': 200, # These can remain static or be made dynamic if needed
         'DiocesesParishDirectory': 200, # These can remain static or be made dynamic if needed
-        'Parishes': y_max_parishes,
-        'ParishData': y_max_parishdata
+        'Parishes': y_max_parish_related,
+        'ParishData': y_max_parish_related
     }
 
     for table_name, time_series_data in all_time_series_data.items():
