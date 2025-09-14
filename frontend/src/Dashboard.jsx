@@ -195,7 +195,7 @@ const Dashboard = () => {
       <Row className="mb-4">
         <Col>
           <div className="d-flex justify-content-between align-items-center">
-            <h2>🖥️ Extraction Monitoring Dashboard</h2>
+            <h2>Current Health of Data Collection Servers</h2>
             <div className="d-flex align-items-center">
               <Badge bg={connected ? 'success' : 'danger'} className="me-2">
                 {connected ? '🟢 Connected' : '🔴 Disconnected'}
