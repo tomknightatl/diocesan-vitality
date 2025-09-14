@@ -415,9 +415,9 @@ def get_parishes_for_diocese(
     sort_by: str = "Name",
     sort_order: str = "asc",
     filter_name: str = None,
-    filter_address: str = None,
     filter_website: str = None,
-    filter_data_extracted: str = None
+    filter_data_extracted: str = None,
+    filter_diocese_name: str = None
 ):
     """
     Fetches all parishes for a given diocese ID with pagination, sorting, and filtering.
@@ -431,26 +431,13 @@ def get_parishes_for_diocese(
             raise HTTPException(status_code=404, detail="Diocese not found")
         diocese_website = diocese_response.data[0]['Website']
 
-        query = supabase.table('Parishes').select('*', count='exact').eq('diocese_url', diocese_website)
 
-        # Apply filters
-        if filter_name:
-            query = query.ilike('Name', f'%{filter_name}%')
-        if filter_address:
-            query = query.ilike('Address', f'%{filter_address}%')
         if filter_website:
-            query = query.ilike('Web', f'%{filter_website}%') # Use 'Web' for website column
-
         # Apply sorting and pagination
         if sort_by == "Name":
             query = query.order('Name', desc=sort_order.lower() == 'desc')
-        elif sort_by == "Street Address":
-            query = query.order('Street Address', desc=sort_order.lower() == 'desc')
-        elif sort_by == "Web":
-            query = query.order('Web', desc=sort_order.lower() == 'desc')
-        elif sort_by == "is_blocked":
-            query = query.order('is_blocked', desc=sort_order.lower() == 'desc')
-        # Add other sortable columns as needed
+        elif sort_by == "DioceseName":
+            query = query.order('diocese_name', desc=sort_order.lower() == 'desc')
 
         parishes_response = query.range(offset, offset + page_size - 1).execute()
         
@@ -487,8 +474,6 @@ def get_parishes_for_diocese(
             parish['data_extracted'] = parish['id'] in all_parishes_with_data
 
             # Map database column names to frontend expectations
-            if 'Street Address' in parish:
-                parish['Address'] = parish['Street Address']
             if 'Web' in parish:
                 parish['Website'] = parish['Web']
 
@@ -530,9 +515,9 @@ def get_all_parishes(
     sort_by: str = "Name",
     sort_order: str = "asc",
     filter_name: str = None,
-    filter_address: str = None,
     filter_website: str = None,
-    filter_data_extracted: str = None
+    filter_data_extracted: str = None,
+    filter_diocese_name: str = None
 ):
     """
     Fetches all parishes with pagination, sorting, and filtering.
@@ -540,21 +525,22 @@ def get_all_parishes(
     try:
         offset = (page - 1) * page_size
         
-        query = supabase.table('Parishes').select('*', count='exact')
+        query = supabase.from('parishes_with_diocese_name').select('*', count='exact')
         
         # Apply filters
         if filter_name:
             query = query.ilike('Name', f'%{filter_name}%')
-        if filter_address:
-            query = query.ilike('Address', f'%{filter_address}%')
+        if filter_diocese_name:
+            query = query.ilike('diocese_name', f'%{filter_diocese_name}%')
+
         if filter_website:
             query = query.ilike('Website', f'%{filter_website}%')
 
         # Apply sorting and pagination
         if sort_by == "Name":
             query = query.order('Name', desc=sort_order.lower() == 'desc')
-        elif sort_by == "Street Address":
-            query = query.order('Street Address', desc=sort_order.lower() == 'desc')
+        elif sort_by == "DioceseName":
+            query = query.order('diocese_name', desc=sort_order.lower() == 'desc')
         elif sort_by == "Web":
             query = query.order('Web', desc=sort_order.lower() == 'desc')
         elif sort_by == "is_blocked":
@@ -575,8 +561,7 @@ def get_all_parishes(
             parish['data_extracted'] = parish['id'] in all_parishes_with_data
 
             # Map database column names to frontend expectations
-            if 'Street Address' in parish:
-                parish['Address'] = parish['Street Address']
+
             if 'Web' in parish:
                 parish['Website'] = parish['Web']
 
