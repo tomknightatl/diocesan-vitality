@@ -82,7 +82,7 @@ kubectl logs deployment/pipeline-deployment -n usccb > pipeline-logs.txt
 ### Dashboard Access
 The pipeline provides real-time monitoring through a web dashboard:
 
-**Production Dashboard:** https://usccb.diocesevitality.org/dashboard
+**Production Dashboard:** https://usccb.diocesanvitality.org/dashboard
 
 **Local Dashboard:** http://localhost:3000/dashboard (when running locally)
 
@@ -99,7 +99,7 @@ The dashboard provides real-time monitoring of:
 
 ### WebSocket Connection
 The dashboard connects via WebSocket for real-time updates:
-- **Production**: `wss://api.diocesevitality.org/ws/monitoring`
+- **Production**: `wss://api.diocesanvitality.org/ws/monitoring`
 - **Development**: `ws://localhost:8000/ws/monitoring`
 
 If you see "Dashboard disconnected", check:
@@ -357,7 +357,7 @@ kubectl logs deployment/pipeline-deployment -n usccb | grep -i "chrome\|webdrive
 kubectl logs deployment/pipeline-deployment -n usccb | grep "Circuit breaker"
 
 # Check dashboard for circuit breaker states
-# Visit: https://usccb.diocesevitality.org/dashboard
+# Visit: https://usccb.diocesanvitality.org/dashboard
 
 # Reset by restarting pipeline
 kubectl rollout restart deployment pipeline-deployment -n usccb

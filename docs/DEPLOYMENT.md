@@ -196,7 +196,7 @@ sed -i "s|YOUR_DOCKERHUB_USERNAME|$DOCKER_USERNAME|g" k8s/frontend-deployment.ya
 ```
 
 3. **`k8s/ingress.yaml`**:
-   - The `spec.rules[0].host` is set to `diocesevitality.org`
+   - The `spec.rules[0].host` is set to `diocesanvitality.org`
    - Ensure the `kubernetes.io/ingress.class` annotation matches your cluster's Ingress Controller
 
 After reviewing these files, commit and push them to your Git repository if you made any further changes.
@@ -257,9 +257,9 @@ Once the Ingress `ADDRESS` is available and you have configured your DNS:
 1. **Configure DNS Records** (Example: Cloudflare):
    - Add an `A` record pointing your domain to the Ingress Controller's External IP
 
-2. **Access Frontend**: Navigate to `http://diocesevitality.org/` (or `https://diocesevitality.org/` if TLS is configured)
+2. **Access Frontend**: Navigate to `http://diocesanvitality.org/` (or `https://diocesanvitality.org/` if TLS is configured)
 
-3. **Test Backend API**: Access `http://diocesevitality.org/api`
+3. **Test Backend API**: Access `http://diocesanvitality.org/api`
 
 ## Troubleshooting
 
