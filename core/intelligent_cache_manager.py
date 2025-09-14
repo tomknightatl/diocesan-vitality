@@ -43,6 +43,8 @@ class ContentType(Enum):
     IMAGE_DATA = "image_data"
     STATIC_CONTENT = "static_content"
     DATABASE_QUERY = "database_query"
+    DNS_RESULT = "dns_result"
+    URL_VERIFICATION = "url_verification"
 
 
 @dataclass
@@ -121,7 +123,9 @@ class IntelligentCacheManager:
             ContentType.PARISH_DATA: 3600.0,     # 1 hour
             ContentType.IMAGE_DATA: 86400.0,     # 24 hours
             ContentType.STATIC_CONTENT: 86400.0, # 24 hours
-            ContentType.DATABASE_QUERY: 600.0    # 10 minutes
+            ContentType.DATABASE_QUERY: 600.0,   # 10 minutes
+            ContentType.DNS_RESULT: 3600.0,      # 1 hour
+            ContentType.URL_VERIFICATION: 1800.0 # 30 minutes
         }
 
         # Probabilistic refresh thresholds

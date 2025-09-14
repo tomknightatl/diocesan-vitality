@@ -29,6 +29,7 @@ from core.ml_url_predictor import get_ml_url_predictor
 from core.adaptive_timeout_manager import get_adaptive_timeout_manager
 from core.intelligent_cache_manager import get_cache_manager, ContentType
 from core.robust_error_handler import get_error_handler, ErrorContext
+from core.intelligent_url_filter import get_url_filter
 
 logger = get_logger(__name__)
 
@@ -154,27 +155,48 @@ class EnhancedURLManager:
         """Internal method with ML-based URL optimization."""
         logger.info(f"🔗 Optimizing {len(discovered_urls)} discovered URLs with ML prediction")
 
-        candidates = []
-        processed_urls = set()
+        # Step 1: Intelligent URL pre-filtering to remove low-quality URLs
+        url_filter = get_url_filter()
 
-        # Get ML predictions for this domain
+        # Create ML prediction dictionary for filtering
         domain = urlparse(extraction_context.parish_url).netloc
+        ml_confidence_dict = {}
         try:
             ml_predictions = self.ml_predictor.predict_successful_urls(
                 domain,
                 base_patterns=extraction_context.priority_urls[:10]  # Use top priority URLs as patterns
             )
+            ml_confidence_dict = dict(ml_predictions[:50])  # Top 50 for filtering
             logger.info(f"🧠 ML predictor generated {len(ml_predictions)} URL predictions")
         except Exception as e:
-            logger.warning(f"🧠 ML prediction failed: {e}, falling back to pattern-based")
+            logger.warning(f"🧠 ML prediction failed for filtering: {e}")
             ml_predictions = []
 
-        # Priority 0: ML Predictions (highest priority)
-        for url, confidence in ml_predictions[:20]:  # Top 20 ML predictions
+        # Filter URLs intelligently - this is the key optimization
+        max_urls_to_process = min(40, len(discovered_urls))  # Limit processing to top 40 URLs
+        filtered_urls, url_analyses = url_filter.filter_urls(
+            discovered_urls,
+            max_urls=max_urls_to_process,
+            ml_predictions=ml_confidence_dict
+        )
+
+        logger.info(f"🔍 URL filtering reduced {len(discovered_urls)} URLs to {len(filtered_urls)} high-quality candidates")
+
+        candidates = []
+        processed_urls = set()
+
+        # Priority 0: ML Predictions from filtered URLs (highest priority)
+        ml_predicted_urls = [url for url, confidence in ml_predictions[:15] if url in filtered_urls]
+        for url in ml_predicted_urls:
             if url not in processed_urls:
+                confidence = ml_confidence_dict.get(url, 0.5)
                 candidate = self._create_url_candidate(url, extraction_context.parish_id,
                                                      priority_boost=20.0 * confidence, is_ml_predicted=True)
                 if candidate:
+                    # Add URL analysis insights to the candidate
+                    analysis = url_analyses.get(url)
+                    if analysis:
+                        candidate.estimated_timeout = analysis.estimated_processing_time
                     candidates.append(candidate)
                     processed_urls.add(url)
 
@@ -196,11 +218,23 @@ class EnhancedURLManager:
                     candidates.append(candidate)
                     processed_urls.add(url)
 
-        # Priority 3: Standard discovered URLs with enhanced scoring
-        for url in discovered_urls:
+        # Priority 3: Remaining filtered URLs (intelligent discovery)
+        for url in filtered_urls:
             if url not in processed_urls:
                 candidate = self._create_url_candidate(url, extraction_context.parish_id)
                 if candidate and candidate.priority_score > 0:
+                    # Apply URL analysis insights
+                    analysis = url_analyses.get(url)
+                    if analysis:
+                        candidate.estimated_timeout = analysis.estimated_processing_time
+                        # Boost priority based on URL quality
+                        quality_boost = {
+                            'excellent': 5.0,
+                            'good': 3.0,
+                            'fair': 1.0,
+                            'poor': 0.0
+                        }.get(analysis.quality.value, 0.0)
+                        candidate.priority_score += quality_boost
                     candidates.append(candidate)
                     processed_urls.add(url)
 

@@ -113,6 +113,26 @@ class OptimizedCircuitBreakerConfigs:
         )
 
     @staticmethod
+    def get_url_verification_config() -> CircuitBreakerConfig:
+        """
+        Optimized config for URL verification operations.
+
+        Key optimizations:
+        - Low failure threshold (3) since URL verification should be fast
+        - Short recovery timeout (5s) since DNS/connectivity issues resolve quickly
+        - Quick timeout for individual URL checks
+        - Minimal retries to avoid wasted time
+        """
+        return CircuitBreakerConfig(
+            failure_threshold=3,       # URL verification should succeed quickly or fail fast
+            recovery_timeout=5,        # DNS/connectivity recovers fast
+            success_threshold=1,       # Single success confirms URL works
+            request_timeout=8,         # Quick URL verification timeout
+            max_retries=1,             # Minimal retries for URL checks
+            retry_delay=0.3            # Very fast retries
+        )
+
+    @staticmethod
     def get_adaptive_config(operation_type: str) -> CircuitBreakerConfig:
         """
         Get adaptive circuit breaker config based on operation type.
@@ -130,6 +150,7 @@ class OptimizedCircuitBreakerConfigs:
             'javascript': OptimizedCircuitBreakerConfigs.get_javascript_execution_config(),
             'search': OptimizedCircuitBreakerConfigs.get_search_interaction_config(),
             'map': OptimizedCircuitBreakerConfigs.get_map_interaction_config(),
+            'url_verification': OptimizedCircuitBreakerConfigs.get_url_verification_config(),
         }
 
         config = configs.get(operation_type)
