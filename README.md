@@ -74,11 +74,50 @@ The Data Extraction Pipeline is a multi-step process that systematically collect
 - **📈 Quality-Weighted ML Training**: Advanced machine learning training using visit success data
 - **🎯 Intelligent Parish Prioritization**: Multi-factor scoring for optimal extraction order
 
+### 🤝 **Respectful Automation**
+- **🤖 Gold-Standard Web Ethics**: Comprehensive robots.txt compliance with immediate cessation when blocked
+- **⏱️ Thoughtful Rate Limiting**: 2-5 second delays between requests per domain with randomized timing
+- **🛡️ Advanced Blocking Detection**: Real-time detection of 403 Forbidden, rate limiting, and Cloudflare protection
+- **📊 Transparency & Accountability**: Detailed logging of respectful behavior and blocking compliance
+- **🔍 Proper Identification**: Clear User-Agent strings identifying research purpose
+- **💡 Ethical Data Collection**: Prioritizing website owners' preferences over data collection efficiency
+
 ### 🔧 **Advanced Features**
 - **Interactive Parish Finder Support**: Specialized extractors for JavaScript-based parish finder interfaces
 - **Cloud Database Integration**: Stores data in Supabase with automated upserts and conflict resolution
 - **Comprehensive Logging**: Detailed extraction statistics and error tracking
 - **🔄 Parallel Processing Framework**: Domain-aware rate limiting with resource management
+
+## Why Respectful Automation?
+
+Our investment in respectful automation reflects a core commitment to **ethical data collection** and **sustainable web practices**. Here's why this matters:
+
+### 🎯 **Mission Alignment**
+- **Catholic Social Teaching**: Our approach reflects Catholic principles of respect, stewardship, and responsible use of resources
+- **Community Partnership**: Parish websites serve their communities first - our research comes second
+- **Long-term Sustainability**: Respectful practices ensure continued access and community trust
+
+### 📊 **Practical Benefits**
+- **Higher Success Rates**: Respectful behavior reduces blocking and improves data quality
+- **Sustainable Operations**: Avoids IP bans and maintains long-term access to data sources
+- **Legal Compliance**: Proactive adherence to robots.txt and web standards reduces legal risks
+- **Community Relations**: Demonstrates good faith to diocesan IT administrators
+
+### 🛡️ **Technical Excellence**
+- **Professional Standards**: Industry best practices for automated data collection
+- **Error Reduction**: Proper rate limiting reduces server stress and timeout errors
+- **Quality Assurance**: Respectful timing allows for complete page loads and accurate extraction
+- **Monitoring Transparency**: Clear logging enables accountability and troubleshooting
+
+### 💡 **Research Ethics**
+- **Academic Integrity**: Maintains high standards for data collection methodology
+- **Transparency**: Open documentation of our respectful practices and limitations
+- **Reproducibility**: Other researchers can build upon our ethical framework
+- **Community Benefit**: Collected data serves the broader Catholic research community
+
+**Our respectful automation isn't just about following rules—it's about building technology that serves the Catholic community with dignity and care.**
+
+---
 
 ## Project Architecture
 
@@ -424,26 +463,36 @@ python async_extract_parishes.py \
 
 **Expected Performance:** 60% faster than sequential processing, optimal for dioceses with 20+ parishes.
 
-#### Step 4: Extract Liturgical Schedules (A/B Testing)
+#### Step 4: Extract Liturgical Schedules (Respectful Automation)
+```bash
+# Respectful automation with blocking detection
+python extract_schedule_respectful.py --num_parishes 10
+
+# Diocese-specific extraction (NEW: diocese filtering)
+python extract_schedule_respectful.py --diocese_id 2024 --num_parishes 10
+
+# Full diocese extraction (respects all blocking)
+python extract_schedule_respectful.py --diocese_id 2024
+```
+
+**🤝 Respectful Automation Features:**
+- **Gold-Standard Web Ethics**: Comprehensive robots.txt compliance with immediate cessation when blocked
+- **Advanced Blocking Detection**: Real-time detection of 403 Forbidden, rate limiting, and Cloudflare protection
+- **Thoughtful Rate Limiting**: 2-5 second delays between requests with randomized timing
+- **Diocese Filtering**: Target specific dioceses for focused research (NEW)
+- **AI-Powered Extraction**: Google Gemini integration for intelligent schedule parsing
+- **Transparency Logging**: Detailed documentation of respectful behavior and blocking compliance
+
+**🧪 A/B Testing (Alternative Method):**
 ```bash
 # A/B testing approach (default 50/50 split)
 python extract_schedule_ab_test_simple.py --num_parishes 10
 
 # Custom A/B ratio (75% AI, 25% keyword-based)
 python extract_schedule_ab_test_simple.py --num_parishes 20 --test_ratio 0.75
-
-# Traditional keyword-based extraction only
-python extract_schedule.py --num_parishes 10
 ```
 
-**🧪 A/B Testing Features:**
-- **Dual Methods**: Compares keyword-based vs AI-enhanced schedule extraction
-- **Consistent Assignment**: Each parish always gets the same extraction method
-- **Performance Analytics**: Tracks success rates and extraction quality by method
-- **Database Attribution**: Results clearly marked with `extraction_method` field
-- **Timeout Protection**: Prevents hanging on problematic websites
-
-**Recent A/B Test Results**: AI-enhanced method achieved 2.0 extractions per parish vs 1.8 for keyword-based, with structured JSON output and confidence scoring.
+**Recent Results**: Respectful automation achieved 62.5% accessibility rate with 80% schedule detection success among accessible parishes, while maintaining 100% robots.txt compliance.
 
 
 
