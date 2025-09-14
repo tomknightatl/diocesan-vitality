@@ -440,6 +440,8 @@ def get_parishes_for_diocese(
             query = query.ilike('diocese_name', f'%{filter_diocese_name}%')
 
         if filter_website:
+            query = query.ilike('Web', f'%{filter_website}%') # Use 'Web' for website column
+
         # Apply sorting and pagination
         if sort_by == "Name":
             query = query.order('Name', desc=sort_order.lower() == 'desc')
