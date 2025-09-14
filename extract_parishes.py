@@ -7,6 +7,7 @@ import argparse
 import gc
 import psutil
 import os
+from datetime import datetime, timezone
 
 import config
 from core.db import get_supabase_client
@@ -97,41 +98,55 @@ def main(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MAX_PARISHES_P
                         'parish_directory_url': d['parish_directory_url']
                     })
 
-            # Prioritize dioceses by last extraction date (least recently extracted first)
-            logger.info(f"  📅 Prioritizing {len(dioceses_to_process)} dioceses by extraction recency...")
+            # Prioritize dioceses by last extraction attempt date (least recently attempted first)
+            logger.info(f"  📅 Prioritizing {len(dioceses_to_process)} dioceses by extraction attempt recency...")
 
-            # Get the most recent extraction date for each diocese
+            # Get the last extraction attempt date for each diocese from DiocesesParishDirectory
+            diocese_urls = [d['url'] for d in dioceses_to_process]
+            extraction_attempts = supabase.table('DiocesesParishDirectory').select('diocese_url, last_extraction_attempt_at').in_('diocese_url', diocese_urls).execute()
+
+            # Create mapping of diocese_url to last_extraction_attempt_at
+            url_to_last_attempt = {}
+            if extraction_attempts.data:
+                for attempt in extraction_attempts.data:
+                    url = attempt['diocese_url']
+                    last_attempt = attempt['last_extraction_attempt_at']
+                    # Handle None/null values - treat as never attempted (highest priority)
+                    url_to_last_attempt[url] = last_attempt if last_attempt else ""
+
+            # Add last attempt timestamp to each diocese for sorting
             diocese_last_extraction = {}
             for diocese in dioceses_to_process:
-                diocese_id = diocese['id']
-                # Query for the most recent parish extraction date for this diocese
-                recent_parish = supabase.table('Parishes').select('extracted_at').eq('diocese_id', diocese_id).order('extracted_at', desc=True).limit(1).execute()
+                diocese_url = diocese['url']
+                last_attempt = url_to_last_attempt.get(diocese_url, "")
+                diocese_last_extraction[diocese['id']] = last_attempt
 
-                if recent_parish.data:
-                    # Diocese has been extracted before - use the most recent extraction date
-                    last_extraction = recent_parish.data[0]['extracted_at']
-                    diocese_last_extraction[diocese_id] = last_extraction
-                    logger.debug(f"    {diocese['name']}: last extracted {last_extraction}")
+                if last_attempt == "":
+                    logger.debug(f"    {diocese['name']}: never attempted (highest priority)")
                 else:
-                    # Diocese has never been extracted - prioritize it first (use empty string for sorting)
-                    diocese_last_extraction[diocese_id] = ""
-                    logger.debug(f"    {diocese['name']}: never extracted (priority)")
+                    logger.debug(f"    {diocese['name']}: last attempted {last_attempt}")
 
-            # Sort dioceses by extraction date (empty string sorts first, then oldest dates)
+            # Sort dioceses by last extraction attempt date (empty string sorts first, then oldest dates)
             dioceses_to_process.sort(key=lambda d: diocese_last_extraction.get(d['id'], ""))
 
             # Log the prioritization results
-            never_extracted = [d['name'] for d in dioceses_to_process if diocese_last_extraction.get(d['id']) == ""]
-            if never_extracted:
-                logger.info(f"  🆕 {len(never_extracted)} dioceses never extracted (highest priority): {', '.join(never_extracted[:5])}{'...' if len(never_extracted) > 5 else ''}")
+            never_attempted = [d['name'] for d in dioceses_to_process if diocese_last_extraction.get(d['id']) == ""]
+            if never_attempted:
+                logger.info(f"  🆕 {len(never_attempted)} dioceses never attempted (highest priority): {', '.join(never_attempted[:5])}{'...' if len(never_attempted) > 5 else ''}")
 
-            recently_extracted = [d for d in dioceses_to_process if diocese_last_extraction.get(d['id']) != ""]
-            if recently_extracted:
-                oldest_name = recently_extracted[0]['name'] if recently_extracted else None
-                newest_name = recently_extracted[-1]['name'] if recently_extracted else None
-                logger.info(f"  📅 Extraction priority: {oldest_name} (oldest) → {newest_name} (newest)")
+            previously_attempted = [d for d in dioceses_to_process if diocese_last_extraction.get(d['id']) != ""]
+            if previously_attempted:
+                oldest_name = previously_attempted[0]['name'] if previously_attempted else None
+                newest_name = previously_attempted[-1]['name'] if previously_attempted else None
+                oldest_date = diocese_last_extraction.get(previously_attempted[0]['id']) if previously_attempted else None
+                newest_date = diocese_last_extraction.get(previously_attempted[-1]['id']) if previously_attempted else None
+                logger.info(f"  📅 Extraction attempt priority: {oldest_name} ({oldest_date}) → {newest_name} ({newest_date})")
 
-            logger.info(f"  ✅ Diocese prioritization complete: processing from least to most recently extracted")
+            # Log the first few dioceses to be processed for debugging
+            first_five = dioceses_to_process[:5]
+            logger.info(f"  🎯 Processing order (first 5): {[f'{d['name']} ({diocese_last_extraction.get(d['id'], 'never')})' for d in first_five]}")
+
+            logger.info(f"  ✅ Diocese prioritization complete: processing from least to most recently attempted")
 
     if not dioceses_to_process:
         logger.info("No dioceses to process.")
@@ -150,7 +165,17 @@ def main(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MAX_PARISHES_P
         
         for i, diocese_info in enumerate(dioceses_to_process):
             logger.info(f"Processing {diocese_info['name']} (ID: {diocese_info['id']})...")
-            
+
+            # Update last extraction attempt timestamp for this diocese
+            try:
+                current_timestamp = datetime.now(timezone.utc)
+                supabase.table('DiocesesParishDirectory').update({
+                    'last_extraction_attempt_at': current_timestamp.isoformat()
+                }).eq('diocese_url', diocese_info['url']).execute()
+                logger.debug(f"  📅 Updated last_extraction_attempt_at for {diocese_info['name']}")
+            except Exception as e:
+                logger.warning(f"  ⚠️ Failed to update last_extraction_attempt_at for {diocese_info['name']}: {e}")
+
             # Process the diocese
             result = process_diocese_with_detailed_extraction(diocese_info, driver, num_parishes_per_diocese)
 
