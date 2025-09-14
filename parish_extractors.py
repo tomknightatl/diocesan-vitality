@@ -924,33 +924,22 @@ class TableExtractor(BaseExtractor):
 # =============================================================================
 
 class ImprovedInteractiveMapExtractor(BaseExtractor):
-    """Improved extractor for JavaScript-powered maps with better error handling"""
+    """Improved extractor for JavaScript-powered maps with fast-fail optimization"""
 
     def extract(self, driver, soup: BeautifulSoup, url: str) -> List[ParishData]:
         parishes = []
 
         try:
-            # Try to find map containers
-            map_selectors = [
-                "#map", ".map", ".parish-map", ".church-map",
-                "[id*='map']", "[class*='map']",
-                "#parish-finder", ".parish-finder"
-            ]
+            # OPTIMIZATION 1: Fast-fail map detection
+            from core.extraction_optimizer import get_extractor_optimizer
+            optimizer = get_extractor_optimizer()
 
-            map_found = False
-            for selector in map_selectors:
-                try:
-                    WebDriverWait(driver, 2).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, selector))
-                    )
-                    map_found = True
-                    logger.info(f"    📍 Found map container: {selector}")
-                    break
-                except:
-                    continue
+            # Quick check if page has map features before attempting costly operations
+            if not optimizer.fast_fail_map_check(driver):
+                logger.info(f"    ⚡ Fast-fail: No map features detected, skipping map extraction")
+                return parishes
 
-            if not map_found:
-                logger.info(f"    ℹ️ No map container found, trying direct JS extraction...")
+            logger.info(f"    🗺️ Map features detected, proceeding with extraction...")
 
             # Method 1: Extract from JavaScript variables
             parishes.extend(self._extract_from_js_variables(driver))
@@ -959,12 +948,12 @@ class ImprovedInteractiveMapExtractor(BaseExtractor):
             if not parishes:
                 parishes.extend(self._extract_from_script_tags(soup))
 
-            # Method 3: Extract from map markers
-            if not parishes and map_found:
+            # Method 3: Extract from map markers (only if we detected map features)
+            if not parishes:
                 parishes.extend(self._extract_from_markers(driver))
 
         except Exception as e:
-            print(f"    ℹ️ Map extraction completed with info: {str(e)[:100]}...")
+            logger.info(f"    ℹ️ Map extraction completed with info: {str(e)[:100]}...")
 
         return parishes
 
@@ -1530,8 +1519,15 @@ def process_diocese_with_detailed_extraction(diocese_info: Dict, driver, max_par
         print(f"    🎯 Confidence: {pattern.confidence_score:.2f}")
         print(f"    ⚙️ Method: {pattern.extraction_method}")
 
-        # Step 3: Extract parishes with detailed information
+        # Step 3: Extract parishes with intelligent optimization
         parishes = []
+
+        # OPTIMIZATION 2 & 3 & 4: Initialize extraction optimizer
+        from core.extraction_optimizer import get_extractor_optimizer
+        optimizer = get_extractor_optimizer()
+
+        # Analyze page content for intelligent extractor selection
+        page_analysis = optimizer.analyze_page_content(driver, html_content)
 
         # Try extractors in order of specificity
         extractors_to_try = []
@@ -1568,16 +1564,30 @@ def process_diocese_with_detailed_extraction(diocese_info: Dict, driver, max_par
             if not any(existing_name == name for existing_name, _ in extractors_to_try):
                 extractors_to_try.append((name, extractor))
 
-        # Try each extractor until we find parishes
-        for extractor_name, extractor in extractors_to_try:
-            try:
-                print(f"  🔄 Trying {extractor_name}...")
+        # OPTIMIZATION 2: Optimize extractor sequence based on page analysis
+        optimized_extractors = optimizer.optimize_extractor_sequence(extractors_to_try, page_analysis)
 
-                # Special handling for enhanced AI fallback extractor which has different interface
-                if extractor_name == 'EnhancedAIFallbackExtractor':
-                    current_parishes = extractor.extract(driver, diocese_name, parish_directory_url, max_parishes)
-                else:
-                    current_parishes = extractor.extract(driver, soup, parish_directory_url)
+        # Try each extractor with optimization
+        for extractor_name, extractor in optimized_extractors:
+            try:
+                # OPTIMIZATION 3: Check if extractor should be skipped via circuit breaker
+                if optimizer.should_skip_extractor(extractor_name, page_analysis):
+                    continue
+
+                # OPTIMIZATION 4: Get optimized timeout for this extractor
+                timeout = optimizer.get_extractor_timeout(extractor_name, page_analysis)
+                print(f"  🔄 Trying {extractor_name} (timeout: {timeout}s)...")
+
+                # OPTIMIZATION 3: Execute with circuit breaker protection
+                def extraction_function():
+                    if extractor_name == 'EnhancedAIFallbackExtractor':
+                        return extractor.extract(driver, diocese_name, parish_directory_url, max_parishes)
+                    else:
+                        return extractor.extract(driver, soup, parish_directory_url)
+
+                current_parishes = optimizer.execute_with_circuit_breaker(
+                    extractor_name, extraction_function
+                )
 
                 if current_parishes:
                     parishes.extend(current_parishes)
@@ -1682,6 +1692,13 @@ def process_diocese_with_detailed_extraction(diocese_info: Dict, driver, max_par
             print(f"      📮 Zip Codes: {field_stats['zip_codes_extracted']}/{total_parishes}")
             print(f"      👥 Clergy Info: {field_stats['clergy_info_extracted']}/{total_parishes}")
             print(f"      ⏰ Service Times: {field_stats['service_times_extracted']}/{total_parishes}")
+
+            # Log optimization performance statistics
+            opt_stats = optimizer.get_optimization_stats()
+            print(f"  🚀 Optimization Performance:")
+            print(f"      🔧 Extractors optimized: {len([name for name in optimized_extractors])}")
+            print(f"      ⚡ Extractors skipped: {len(opt_stats.get('skipped_extractors', []))}")
+            print(f"      🔌 Circuit breakers active: {len([cb for cb in opt_stats['circuit_breakers'].values() if cb['state'] != 'CLOSED'])}")
 
         else:
             print("  ❌ No parishes found with any extraction method")
