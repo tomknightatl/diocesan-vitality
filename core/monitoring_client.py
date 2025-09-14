@@ -144,7 +144,7 @@ class MonitoringClient:
             parishes_processed=0,
             progress_percentage=0.0
         )
-        self.send_log(f"🚀 Started extraction for {diocese_name} ({total_parishes} parishes)", "INFO")
+        self.send_log(f"Started extraction for {diocese_name} ({total_parishes} parishes)", "INFO")
     
     def extraction_progress(self, 
                           diocese_name: str,
