@@ -131,6 +131,39 @@ def main(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MAX_PARISHES_P
             # Strategic garbage collection after each diocese
             if len(dioceses_to_process) > 1:  # Only log for multi-diocese runs
                 logger.info(f"  📊 Completed diocese {i+1}/{len(dioceses_to_process)}")
+
+                # Send diocese progress to monitoring dashboard
+                if monitoring_client:
+                    current_diocese_name = diocese_info['name']
+                    progress_percentage = ((i + 1) / len(dioceses_to_process)) * 100
+
+                    # Determine next diocese name for the log message
+                    next_diocese_name = None
+                    if i + 1 < len(dioceses_to_process):
+                        next_diocese_name = dioceses_to_process[i + 1]['name']
+
+                    # Send completion log for current diocese
+                    monitoring_client.send_log(
+                        f"Step 3 │ ✅ Finished Diocese {current_diocese_name}",
+                        "INFO"
+                    )
+
+                    # Send starting log for next diocese (if exists)
+                    if next_diocese_name:
+                        monitoring_client.send_log(
+                            f"Step 3 │ ▶️ Starting Diocese {next_diocese_name}",
+                            "INFO"
+                        )
+
+                    # Update progress bar percentage
+                    monitoring_client.update_extraction_status(
+                        status="running",
+                        current_diocese=next_diocese_name or "Extraction Complete",
+                        progress_percentage=progress_percentage,
+                        parishes_processed=i + 1,
+                        total_parishes=len(dioceses_to_process)
+                    )
+
                 force_garbage_collection()
                 
                 # Additional cleanup for large runs
