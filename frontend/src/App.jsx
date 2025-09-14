@@ -304,7 +304,7 @@ function App() {
                     className="mt-1"
                   />
                 </th>
-                <th>Parishes</th>
+                <th>Parishes Directory</th>
                 <th style={{ cursor: 'pointer' }} onClick={() => handleSort('parishes_in_db_count')}>
                   Parishes Extracted {sortBy === 'parishes_in_db_count' && (sortOrder === 'asc' ? '▲' : '▼')}
                 </th>
@@ -324,7 +324,7 @@ function App() {
                   <td><a href={diocese.Website} target="_blank" rel="noopener noreferrer">{diocese.Website}</a></td>
                   <td>
                     {diocese.parish_directory_url && 
-                        <a href={diocese.parish_directory_url} target="_blank" rel="noopener noreferrer">Link</a>
+                        <a href={diocese.parish_directory_url} target="_blank" rel="noopener noreferrer">{diocese.parish_directory_url}</a>
                     }
                   </td>
                   <td>
