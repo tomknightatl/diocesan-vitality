@@ -20,3 +20,4 @@ usaddress
 PyPDF2
 pdfplumber
 pydantic
+scikit-learn
