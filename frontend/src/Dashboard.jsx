@@ -32,14 +32,35 @@ const Dashboard = () => {
   const connectWebSocket = () => {
     try {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      // Connect to backend server - use localhost for development, production URL for deployed version
-      const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-      const backendHost = isProduction ? 'api.diocesevitality.org' : 'localhost:8000';
+      const hostname = window.location.hostname;
+      let backendHost;
+
+      switch (hostname) {
+        case 'localhost':
+        case '127.0.0.1':
+          backendHost = 'localhost:8000';
+          break;
+        
+        case 'usccb.diocesevitality.org':
+          // The old frontend domain points to the old backend API
+          backendHost = 'api.diocesevitality.org'; 
+          break;
+
+        case 'ui.diocesanvitality.org':
+        case 'diocesanvitality.org':
+          // The new frontend domains point to the new backend API
+          backendHost = 'api.diocesanvitality.org';
+          break;
+
+        default:
+          // As a fallback, default to the new production backend.
+          backendHost = 'api.diocesanvitality.org';
+      }
+
       const wsUrl = `${protocol}//${backendHost}/ws/monitoring`;
 
       console.log('🔌 Attempting WebSocket connection to:', wsUrl);
-      console.log('🌐 Is production?', isProduction);
-      console.log('🏠 Hostname:', window.location.hostname);
+      console.log('🏠 Hostname:', hostname);
 
       wsRef.current = new WebSocket(wsUrl);
       

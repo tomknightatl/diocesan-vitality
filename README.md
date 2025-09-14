@@ -1,6 +1,6 @@
 # United States Conference of Catholic Bishops (USCCB) Data Project
 
-**🌐 LIVE SYSTEM**: The production system is running at [https://usccb.diocesevitality.org](https://usccb.diocesevitality.org) with real-time data collection and monitoring.
+**🌐 LIVE SYSTEM**: The production system is running at [https://usccb.diocesanvitality.org](https://usccb.diocesanvitality.org) with real-time data collection and monitoring.
 
 **For local development**: Follow the "Getting Started" and "Environment Setup" sections below to configure your development environment.
 
@@ -14,7 +14,7 @@ The system runs in the cloud using a **two-tier architecture** designed for cost
 
 ### 🌐 **Tier 1: Always-On Web Services**
 **Deployment**: Single small node (s-1vcpu-2gb) running continuously
-- **Frontend**: React dashboard serving the user interface at [usccb.diocesevitality.org](https://usccb.diocesevitality.org)
+- **Frontend**: React dashboard serving the user interface at [usccb.diocesanvitality.org](https://usccb.diocesanvitality.org)
 - **Backend**: FastAPI server providing data APIs and real-time monitoring
 - **Database**: Supabase (managed PostgreSQL) for persistent data storage
 - **Cost**: Minimal (~$12/month) - runs 24/7 to serve users
@@ -69,7 +69,7 @@ The USCCB Data Extraction Pipeline is a multi-step process that systematically c
 - **🛡️ Circuit Breaker Protection**: Automatic failure detection and recovery for external services
 
 ### 📊 **Analytics & Monitoring**
-- **🖥️ Live Production Dashboard**: Real-time extraction monitoring at [usccb.diocesevitality.org](https://usccb.diocesevitality.org)
+- **🖥️ Live Production Dashboard**: Real-time extraction monitoring at [usccb.diocesanvitality.org](https://usccb.diocesanvitality.org)
 - **🔍 Comprehensive URL Visit Tracking**: Detailed visit analytics with response times, quality scores, and error classification
 - **📈 Quality-Weighted ML Training**: Advanced machine learning training using visit success data
 - **🎯 Intelligent Parish Prioritization**: Multi-factor scoring for optimal extraction order
@@ -236,7 +236,7 @@ This project uses a virtual environment to manage dependencies and environment v
 
 5.  **Configure Environment Variables**
 
-    This project uses environment variables to securely store API keys and other sensitive information. You need to create a `.env` file in the root directory of the project.
+    This project.
 
     Create a file named `.env` in `/home/tomk/USCCB/` 
     
@@ -296,7 +296,7 @@ The system can be run in two environments: **local development** for testing and
 
 ### 🌐 **Cloud Production (Live System)**
 
-**Access the live system**: [https://usccb.diocesevitality.org/dashboard](https://usccb.diocesevitality.org/dashboard)
+**Access the live system**: [https://usccb.diocesanvitality.org/dashboard](https://usccb.diocesanvitality.org/dashboard)
 
 The production system runs automatically in Kubernetes with:
 - **Real-time dashboard**: Monitor live data extraction progress
@@ -532,7 +532,7 @@ The production system continuously maintains current data:
 - **High Success Rates**: 85-95% successful parish directory detection
 - **Rich Data Fields**: Including addresses, coordinates, contact info, and schedules
 - **Live Updates**: Data refreshed automatically through continuous pipeline operation
-- **Real-time Dashboard**: Current extraction status visible at [usccb.diocesevitality.org/dashboard](https://usccb.diocesevitality.org/dashboard)
+- **Real-time Dashboard**: Current extraction status visible at [usccb.diocesanvitality.org/dashboard](https://usccb.diocesanvitality.org/dashboard)
 
 ## Contributing
 
@@ -557,11 +557,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Web Application
 
-The project includes a modern web application providing real-time access to collected data and extraction monitoring. The system is fully deployed in production and available at [https://usccb.diocesevitality.org](https://usccb.diocesevitality.org).
+The project includes a modern web application providing real-time access to collected data and extraction monitoring. The system is fully deployed in production and available at [https://usccb.diocesanvitality.org](https://usccb.diocesanvitality.org).
 
 ### Live Production System
 
-**🌐 Access the Dashboard**: [https://usccb.diocesevitality.org/dashboard](https://usccb.diocesevitality.org/dashboard)
+**🌐 Access the Dashboard**: [https://usccb.diocesanvitality.org/dashboard](https://usccb.diocesanvitality.org/dashboard)
 
 Features:
 - **Real-time extraction monitoring**: Watch live data collection progress
