@@ -6,7 +6,7 @@ function Layout() {
     <>
       <Navbar bg="dark" variant="dark">
         <Container>
-          <Navbar.Brand href="/">USCCB Diocese Vitality Index</Navbar.Brand>
+          <Navbar.Brand href="/">Diocesan Vitality</Navbar.Brand>
           <Nav className="me-auto">
             <Nav.Link as={Link} to="/">Home</Nav.Link>
             <Nav.Link as={Link} to="/reports">Reports</Nav.Link>
