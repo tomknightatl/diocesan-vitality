@@ -444,10 +444,12 @@ def get_parishes_for_diocese(
         # Apply sorting and pagination
         if sort_by == "Name":
             query = query.order('Name', desc=sort_order.lower() == 'desc')
-        elif sort_by == "Address":
+        elif sort_by == "Street Address":
             query = query.order('Street Address', desc=sort_order.lower() == 'desc')
-        elif sort_by == "Website":
+        elif sort_by == "Web":
             query = query.order('Web', desc=sort_order.lower() == 'desc')
+        elif sort_by == "is_blocked":
+            query = query.order('is_blocked', desc=sort_order.lower() == 'desc')
         # Add other sortable columns as needed
 
         parishes_response = query.range(offset, offset + page_size - 1).execute()
@@ -505,9 +507,11 @@ def get_parishes_for_diocese(
             elif filter_data_extracted.lower() == 'false':
                 parishes = [p for p in parishes if not p['data_extracted']]
 
-        # Apply Python-side sorting for data_extracted if requested
+        # Apply Python-side sorting for data_extracted and is_blocked if requested
         if sort_by == "data_extracted":
             parishes.sort(key=lambda p: p.get('data_extracted', False), reverse=sort_order.lower() == 'desc')
+        elif sort_by == "is_blocked":
+            parishes.sort(key=lambda p: p.get('is_blocked', False), reverse=sort_order.lower() == 'desc')
 
         return {
             "data": parishes,
@@ -549,10 +553,12 @@ def get_all_parishes(
         # Apply sorting and pagination
         if sort_by == "Name":
             query = query.order('Name', desc=sort_order.lower() == 'desc')
-        elif sort_by == "Address":
+        elif sort_by == "Street Address":
             query = query.order('Street Address', desc=sort_order.lower() == 'desc')
-        elif sort_by == "Website":
+        elif sort_by == "Web":
             query = query.order('Web', desc=sort_order.lower() == 'desc')
+        elif sort_by == "is_blocked":
+            query = query.order('is_blocked', desc=sort_order.lower() == 'desc')
         # Add other sortable columns as needed
 
         parishes_response = query.range(offset, offset + page_size - 1).execute()
@@ -590,9 +596,11 @@ def get_all_parishes(
             elif filter_data_extracted.lower() == 'false':
                 parishes = [p for p in parishes if not p['data_extracted']]
 
-        # Apply Python-side sorting for data_extracted if requested
+        # Apply Python-side sorting for data_extracted and is_blocked if requested
         if sort_by == "data_extracted":
             parishes.sort(key=lambda p: p.get('data_extracted', False), reverse=sort_order.lower() == 'desc')
+        elif sort_by == "is_blocked":
+            parishes.sort(key=lambda p: p.get('is_blocked', False), reverse=sort_order.lower() == 'desc')
 
         return {
             "data": parishes,
