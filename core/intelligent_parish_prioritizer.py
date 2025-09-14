@@ -49,12 +49,12 @@ class ParishPriorityScore:
 
     @property
     def total_score(self) -> float:
-        """Calculate weighted total priority score."""
+        """Calculate weighted total priority score - PRIORITIZING COMPREHENSIVE COVERAGE."""
         return (
-            self.schedule_likelihood_score * 0.3 +  # 30% weight
-            self.freshness_score * 0.25 +          # 25% weight
-            self.diocese_success_score * 0.25 +    # 25% weight
-            self.website_quality_score * 0.2       # 20% weight
+            self.freshness_score * 0.6 +           # 60% weight - UNVISITED PARISHES FIRST
+            self.schedule_likelihood_score * 0.2 + # 20% weight - reduced importance
+            self.diocese_success_score * 0.1 +     # 10% weight - reduced importance
+            self.website_quality_score * 0.1       # 10% weight - reduced importance
         )
 
     @property
@@ -131,9 +131,9 @@ class IntelligentParishPrioritizer:
             return []
 
     def _get_candidate_parishes(self) -> List[Dict]:
-        """Fetch all candidate parishes with diocese information."""
+        """Fetch ALL candidate parishes prioritizing comprehensive database coverage."""
         try:
-            # Get parishes with web URLs
+            # Get ALL parishes with web URLs - no diocese restrictions for comprehensive coverage
             parishes_response = self.supabase.table('Parishes').select(
                 'id, Name, Web, diocese_id'
             ).not_.is_('Web', 'null').execute()
@@ -148,16 +148,19 @@ class IntelligentParishPrioritizer:
             candidates = []
             for parish in parishes_response.data:
                 if parish.get('Web') and parish.get('diocese_id'):
-                    diocese_name = dioceses_map.get(parish['diocese_id'], 'Unknown Diocese')
-                    candidates.append({
-                        'parish_id': parish['id'],
-                        'parish_name': parish.get('Name', 'Unknown'),
-                        'parish_url': parish['Web'],
-                        'diocese_id': parish['diocese_id'],
-                        'diocese_name': diocese_name
-                    })
+                    # Clean and validate the URL
+                    parish_url = parish['Web'].strip()
+                    if parish_url and (parish_url.startswith('http://') or parish_url.startswith('https://')):
+                        diocese_name = dioceses_map.get(parish['diocese_id'], 'Unknown Diocese')
+                        candidates.append({
+                            'parish_id': parish['id'],
+                            'parish_name': parish.get('Name', 'Unknown'),
+                            'parish_url': parish_url,
+                            'diocese_id': parish['diocese_id'],
+                            'diocese_name': diocese_name
+                        })
 
-            logger.info(f"🎯 Found {len(candidates)} candidate parishes across dioceses")
+            logger.info(f"🎯 Found {len(candidates)} candidate parishes across ALL dioceses")
             return candidates
 
         except Exception as e:
@@ -369,53 +372,59 @@ class IntelligentParishPrioritizer:
     def _apply_diocese_clustering(self, prioritized_parishes: List[ParishPriorityScore],
                                 num_parishes: int) -> List[ParishPriorityScore]:
         """
-        Apply diocese clustering to batch similar extraction patterns.
-        Ensures diversity across dioceses while respecting priority scores.
+        Apply COMPREHENSIVE COVERAGE diocese distribution - prioritize unvisited parishes across ALL dioceses.
         """
         if not prioritized_parishes:
             return []
 
-        # Group by diocese
+        # Group by diocese and sort each group by score
         diocese_groups = defaultdict(list)
         for parish in prioritized_parishes:
             diocese_groups[parish.diocese_id].append(parish)
 
+        # Sort each diocese group by score (unvisited parishes will score highest)
+        for diocese_id in diocese_groups:
+            diocese_groups[diocese_id].sort(key=lambda p: p.total_score, reverse=True)
+
         selected = []
         remaining_slots = num_parishes
 
-        # Strategy: Take best parishes from each diocese in rounds
-        max_rounds = 5
-        parishes_per_round = max(1, num_parishes // (len(diocese_groups) * max_rounds))
+        # Strategy: Round-robin across ALL dioceses to ensure comprehensive coverage
+        max_parishes_per_diocese = max(1, num_parishes // len(diocese_groups)) + 1
 
-        for round_num in range(max_rounds):
-            if remaining_slots <= 0:
-                break
+        # Round-robin selection to maximize diocese diversity
+        round_num = 0
+        max_rounds = max_parishes_per_diocese
+
+        while remaining_slots > 0 and round_num < max_rounds:
+            parishes_added_this_round = 0
 
             for diocese_id, diocese_parishes in diocese_groups.items():
                 if remaining_slots <= 0:
                     break
 
-                # Take next best parishes from this diocese
-                start_idx = round_num * parishes_per_round
-                end_idx = start_idx + min(parishes_per_round, remaining_slots)
+                # Take the next best parish from this diocese (if available)
+                if round_num < len(diocese_parishes):
+                    parish = diocese_parishes[round_num]
+                    if parish not in selected:  # Avoid duplicates
+                        selected.append(parish)
+                        remaining_slots -= 1
+                        parishes_added_this_round += 1
 
-                round_parishes = diocese_parishes[start_idx:end_idx]
-                selected.extend(round_parishes)
-                remaining_slots -= len(round_parishes)
+            if parishes_added_this_round == 0:  # No more parishes available
+                break
 
-        # Fill remaining slots with highest scoring parishes regardless of diocese
-        if remaining_slots > 0:
-            remaining_parishes = [p for p in prioritized_parishes if p not in selected]
-            selected.extend(remaining_parishes[:remaining_slots])
+            round_num += 1
 
-        # Re-sort by total score to maintain priority order
+        # Final sort by total score (unvisited parishes first due to high freshness score)
         selected.sort(key=lambda p: p.total_score, reverse=True)
 
         diocese_distribution = defaultdict(int)
         for parish in selected:
             diocese_distribution[parish.diocese_name] += 1
 
-        logger.info(f"🎯 Diocese clustering applied - Distribution: {dict(diocese_distribution)}")
+        logger.info(f"🎯 Comprehensive coverage applied - {len(diocese_distribution)} dioceses")
+        logger.info(f"🎯 Diocese distribution: {dict(list(diocese_distribution.items())[:10])}{'...' if len(diocese_distribution) > 10 else ''}")
         return selected[:num_parishes]
 
     def _log_prioritization_summary(self, selected_parishes: List[ParishPriorityScore]):
