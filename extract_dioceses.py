@@ -39,7 +39,7 @@ def get_soup(url, retries=3, backoff_factor=1.0):
             logger.info(f"Retrying in {sleep_time} seconds...")
             time.sleep(sleep_time)
 
-def extract_dioceses_data(soup):
+def extract_dioceses_data(soup, max_dioceses=None):
     """
     Extracts dioceses information from the parsed HTML.
     Returns a list of dictionaries with diocese details.
@@ -48,6 +48,10 @@ def extract_dioceses_data(soup):
     diocese_containers = soup.find_all('div', class_='views-row')
 
     logger.info(f"Found {len(diocese_containers)} potential diocese containers")
+
+    if max_dioceses and max_dioceses > 0:
+        logger.info(f"Limiting processing to first {max_dioceses} dioceses")
+        diocese_containers = diocese_containers[:max_dioceses]
 
     for i, container in enumerate(diocese_containers):
         logger.info(f"Processing container {i+1}")
@@ -99,17 +103,13 @@ def main(max_dioceses=config.DEFAULT_MAX_DIOCESES):
         return
 
     logger.info("Successfully fetched and parsed the dioceses page.")
-    
-    dioceses = extract_dioceses_data(soup)
+
+    dioceses = extract_dioceses_data(soup, max_dioceses)
     logger.info(f"Extracted information for {len(dioceses)} dioceses.")
 
     if not dioceses:
         logger.warning("No dioceses were extracted.")
         return
-
-    if max_dioceses > 0:
-        dioceses = dioceses[:max_dioceses]
-        logger.info(f"Limiting extraction to {len(dioceses)} dioceses.")
 
     dioceses_df = pd.DataFrame(dioceses)
     logger.info(dioceses_df.head())
