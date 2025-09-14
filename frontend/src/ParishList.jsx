@@ -17,11 +17,13 @@ function ParishList({ dioceseId }) {
   const initialFilter = queryParams.get('filter') || '';
 
   const [filterName, setFilterName] = useState('');
-  const [filterAddress, setFilterAddress] = useState('');
+  const [filterDioceseName, setFilterDioceseName] = useState('');
+
   const [filterWebsite, setFilterWebsite] = useState('');
   const [filterDataExtracted, setFilterDataExtracted] = useState(initialFilter === 'with_data' ? 'true' : '');
 
   const [debouncedFilterName, setDebouncedFilterName] = useState(filterName);
+  const [debouncedFilterDioceseName, setDebouncedFilterDioceseName] = useState(filterDioceseName);
   const [debouncedFilterAddress, setDebouncedFilterAddress] = useState(filterAddress);
   const [debouncedFilterWebsite, setDebouncedFilterWebsite] = useState(filterWebsite);
   const [debouncedFilterDataExtracted, setDebouncedFilterDataExtracted] = useState(filterDataExtracted);
@@ -29,7 +31,7 @@ function ParishList({ dioceseId }) {
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedFilterName(filterName);
-      setDebouncedFilterAddress(filterAddress);
+      setDebouncedFilterDioceseName(filterDioceseName);
       setDebouncedFilterWebsite(filterWebsite);
       setDebouncedFilterDataExtracted(filterDataExtracted);
     }, 500);
@@ -37,7 +39,7 @@ function ParishList({ dioceseId }) {
     return () => {
       clearTimeout(handler);
     };
-  }, [filterName, filterAddress, filterWebsite, filterDataExtracted]);
+  }, [filterName, filterDioceseName, filterWebsite, filterDataExtracted]);
 
   useEffect(() => {
     const fetchParishes = async () => {
@@ -52,7 +54,8 @@ function ParishList({ dioceseId }) {
         });
 
         if (debouncedFilterName) params.append('filter_name', debouncedFilterName);
-        if (debouncedFilterAddress) params.append('filter_address', debouncedFilterAddress);
+        if (debouncedFilterDioceseName) params.append('filter_diocese_name', debouncedFilterDioceseName);
+
         if (debouncedFilterWebsite) params.append('filter_website', debouncedFilterWebsite);
         if (debouncedFilterDataExtracted) params.append('filter_data_extracted', debouncedFilterDataExtracted);
 
@@ -78,7 +81,7 @@ function ParishList({ dioceseId }) {
     };
 
     fetchParishes();
-  }, [currentPage, sortBy, sortOrder, debouncedFilterName, debouncedFilterAddress, debouncedFilterWebsite, debouncedFilterDataExtracted, dioceseId]);
+  }, [currentPage, sortBy, sortOrder, debouncedFilterName, debouncedFilterDioceseName, debouncedFilterWebsite, debouncedFilterDataExtracted, dioceseId]);
 
   const handleSort = (column) => {
     if (sortBy === column) {
@@ -170,18 +173,19 @@ function ParishList({ dioceseId }) {
                 />
               </th>
               <th style={{ cursor: 'pointer' }}>
-                <div onClick={() => handleSort('Street Address')}>
-                  Address {sortBy === 'Street Address' && (sortOrder === 'asc' ? '▲' : '▼')}
+                <div onClick={() => handleSort('DioceseName')}>
+                  Diocese Name {sortBy === 'DioceseName' && (sortOrder === 'asc' ? '▲' : '▼')}
                 </div>
                 <Form.Control
                   type="text"
-                  placeholder="Filter Address"
-                  value={filterAddress}
-                  onChange={(e) => setFilterAddress(e.target.value)}
+                  placeholder="Filter Diocese Name"
+                  value={filterDioceseName}
+                  onChange={(e) => setFilterDioceseName(e.target.value)}
                   onClick={(e) => e.stopPropagation()}
                   className="mt-1"
                 />
               </th>
+
               <th style={{ cursor: 'pointer' }}>
                 <div onClick={() => handleSort('Web')}>
                   Website {sortBy === 'Web' && (sortOrder === 'asc' ? '▲' : '▼')}
@@ -222,7 +226,8 @@ function ParishList({ dioceseId }) {
             {parishes.map((parish, index) => (
               <tr key={parish.id || index}>
                 <td>{parish.Name}</td>
-                <td>{parish.Address}</td>
+                <td>{parish.DioceseName}</td>
+
                 <td><a href={parish.Website} target="_blank" rel="noopener noreferrer">{parish.Website}</a></td>
                 <td>{parish.data_extracted ? 'Yes' : 'No'}</td>
                 <td>
