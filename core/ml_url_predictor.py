@@ -87,43 +87,117 @@ class MLURLPredictor:
         logger.info("🧠 ML URL Predictor initialized")
 
     def load_training_data(self) -> Tuple[List[str], List[int]]:
-        """Load training data from successful and failed extractions."""
+        """
+        Load enhanced training data from visit tracking and successful extractions.
+        Uses new visit tracking columns when available, falls back to basic schema.
+        """
         try:
+            # First, detect available schema
+            test_response = self.supabase.table('DiscoveredUrls').select('*').limit(1).execute()
+            has_enhanced_schema = test_response.data and 'visited_at' in test_response.data[0] if test_response.data else False
+
             # Get successful URLs from ParishData
             success_response = self.supabase.table('ParishData').select(
                 'fact_source_url, parish_id'
             ).in_(
                 'fact_type', ['ReconciliationSchedule', 'AdorationSchedule', 'MassSchedule']
-            ).is_('fact_source_url', 'not.null').execute()
-
-            # Get attempted URLs from DiscoveredUrls (including failures)
-            discovered_response = self.supabase.table('DiscoveredUrls').select(
-                'url, parish_id, status_code'
-            ).execute()
+            ).not_.is_('fact_source_url', 'null').execute()
 
             urls = []
             labels = []
+            weights = []  # Quality-based sample weights
 
-            # Successful URLs (label = 1)
+            # Successful URLs (label = 1) - highest quality training data
             successful_urls = set()
             for record in success_response.data:
                 url = record['fact_source_url']
                 if url and self._is_schedule_relevant(url):
                     urls.append(url)
                     labels.append(1)
+                    weights.append(1.0)  # High confidence in successful extractions
                     successful_urls.add(url)
 
-            # Failed URLs (label = 0) - but only schedule-relevant ones
-            for record in discovered_response.data:
-                url = record['url']
-                status = record.get('status_code', 404)
-                if (url and url not in successful_urls and
-                    self._is_schedule_relevant(url) and
-                    status >= 400):
-                    urls.append(url)
-                    labels.append(0)
+            if has_enhanced_schema:
+                logger.info("🧠 Using enhanced visit tracking data for ML training")
 
-            logger.info(f"🧠 Loaded {len(urls)} URLs for training ({sum(labels)} successful, {len(labels) - sum(labels)} failed)")
+                # Get visited URLs with detailed tracking information
+                discovered_response = self.supabase.table('DiscoveredUrls').select(
+                    'url, parish_id, visited, visited_at, http_status, extraction_success, '
+                    'schedule_data_found, quality_score, schedule_keywords_count'
+                ).eq('visited', True).execute()
+
+                # Process visited URLs with enhanced data
+                for record in discovered_response.data:
+                    url = record['url']
+                    if url in successful_urls or not self._is_schedule_relevant(url):
+                        continue
+
+                    http_status = record.get('http_status')
+                    extraction_success = record.get('extraction_success', False)
+                    schedule_found = record.get('schedule_data_found', False)
+                    quality_score = record.get('quality_score', 0.0)
+                    keywords_count = record.get('schedule_keywords_count', 0)
+
+                    # Determine label based on comprehensive success metrics
+                    if schedule_found or (extraction_success and quality_score > 0.7):
+                        # High-quality successful extraction
+                        urls.append(url)
+                        labels.append(1)
+                        weights.append(min(quality_score, 1.0))
+                        successful_urls.add(url)
+                    elif extraction_success and quality_score > 0.4:
+                        # Medium-quality extraction (some schedule content found)
+                        urls.append(url)
+                        labels.append(1)
+                        weights.append(quality_score * 0.8)  # Lower weight for medium quality
+                        successful_urls.add(url)
+                    elif http_status and http_status >= 400:
+                        # HTTP error - clear negative example
+                        urls.append(url)
+                        labels.append(0)
+                        weights.append(0.9)  # High confidence in HTTP errors
+                    elif extraction_success and quality_score <= 0.2:
+                        # Successfully loaded but no relevant content
+                        urls.append(url)
+                        labels.append(0)
+                        weights.append(0.7)  # Medium confidence in content irrelevance
+                    elif keywords_count == 0 and quality_score == 0.0:
+                        # Completely irrelevant content
+                        urls.append(url)
+                        labels.append(0)
+                        weights.append(0.6)  # Lower confidence due to potential false negatives
+
+            else:
+                logger.info("🧠 Using basic schema for ML training (limited features)")
+
+                # Fallback to basic schema approach
+                discovered_response = self.supabase.table('DiscoveredUrls').select(
+                    'url, parish_id, visited'
+                ).execute()
+
+                # Process discovered URLs with basic success inference
+                for record in discovered_response.data:
+                    url = record['url']
+                    visited = record.get('visited', False)
+
+                    if (url and url not in successful_urls and
+                        self._is_schedule_relevant(url) and visited):
+                        # Assume visited but not successful URLs are negative examples
+                        urls.append(url)
+                        labels.append(0)
+                        weights.append(0.5)  # Low confidence without detailed tracking
+
+            # Store sample weights for potential use in training
+            self.sample_weights = weights
+
+            positive_samples = sum(labels)
+            negative_samples = len(labels) - positive_samples
+
+            logger.info(f"🧠 Loaded {len(urls)} URLs for training:")
+            logger.info(f"🧠   Positive samples (successful): {positive_samples}")
+            logger.info(f"🧠   Negative samples (failed): {negative_samples}")
+            logger.info(f"🧠   Enhanced tracking: {'Yes' if has_enhanced_schema else 'No'}")
+
             return urls, labels
 
         except Exception as e:

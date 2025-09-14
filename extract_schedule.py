@@ -27,6 +27,7 @@ from core.schedule_keywords import load_keywords_from_database, get_all_keywords
 from core.stealth_browser import get_stealth_browser
 from core.intelligent_parish_prioritizer import get_intelligent_parish_prioritizer
 from core.enhanced_url_manager import get_enhanced_url_manager
+from core.url_visit_tracker import get_url_visit_tracker, VisitTracker
 
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
@@ -571,8 +572,9 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_u
         logger.warning(f"Temporarily skipping {url} due to persistent network issues.")
         return {'url': url, 'scraped_at': datetime.now(timezone.utc).isoformat(), 'offers_reconciliation': False, 'offers_adoration': False}
 
-    # Initialize Enhanced URL Manager
+    # Initialize Enhanced URL Manager and Visit Tracker
     url_manager = get_enhanced_url_manager(supabase)
+    visit_tracker = get_url_visit_tracker(supabase)
 
     # Create optimized extraction context
     extraction_context = url_manager.get_extraction_context(parish_id, url)
@@ -652,43 +654,73 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_u
                 'created_at': datetime.now(timezone.utc).isoformat()
             }
 
-        try:
-            response = make_request_with_delay(requests_session, current_url, timeout=10)
-            response.raise_for_status()
-            soup = BeautifulSoup(response.content, 'html.parser')
-            
-            page_text_lower = soup.get_text().lower()
+        # Use VisitTracker context manager for comprehensive visit tracking
+        with VisitTracker(current_url, parish_id, visit_tracker) as visit_result:
+            try:
+                start_time = time.time()
+                response = make_request_with_delay(requests_session, current_url, timeout=10)
+                response_time = time.time() - start_time
 
-            if any(kw in page_text_lower for kw in ['reconciliation', 'confession']):
-                logger.info(f"Found 'Reconciliation' keywords on {current_url}")
-                candidate_pages['reconciliation'].append(current_url)
+                # Record HTTP response details
+                visit_tracker.record_http_response(
+                    visit_result,
+                    response.status_code,
+                    response_time,
+                    response.headers.get('content-type'),
+                    len(response.content) if response.content else 0,
+                    response.url
+                )
 
-            if 'adoration' in page_text_lower:
-                logger.info(f"Found 'Adoration' keyword on {current_url}")
-                candidate_pages['adoration'].append(current_url)
+                response.raise_for_status()
+                soup = BeautifulSoup(response.content, 'html.parser')
 
-            for a in soup.find_all('a', href=True):
-                link = urljoin(current_url, a['href']).split('#')[0]
-                # Check if the link is a valid HTTP/HTTPS URL and does not contain an email pattern
-                if link.startswith(('http://', 'https://')) and link not in visited_urls and not re.search(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', link):
-                    if normalize_url(link) in suppression_urls:
-                        logger.debug(f"Skipping discovered link {link} as it is in the suppression list.")
-                        continue
-                    link_priority = calculate_priority(link, all_keywords, [], base_domain)
-                    heapq.heappush(urls_to_visit, (-link_priority, link))
-                    key = (link, parish_id)
-                    if key not in discovered_urls:
-                        discovered_urls[key] = {
-                            'parish_id': parish_id,
-                            'url': link,
-                            'score': int(link_priority),
-                            'source_url': current_url,
-                            'visited': False,
-                            'created_at': datetime.now(timezone.utc).isoformat()
-                        }
+                page_text = soup.get_text()
+                page_text_lower = page_text.lower()
 
-        except requests.exceptions.RequestException as e:
-            logger.warning(f"Could not fetch or process {current_url}: {e}")
+                # Track schedule data discovery
+                schedule_found = False
+
+                if any(kw in page_text_lower for kw in ['reconciliation', 'confession']):
+                    logger.info(f"Found 'Reconciliation' keywords on {current_url}")
+                    candidate_pages['reconciliation'].append(current_url)
+                    schedule_found = True
+
+                if 'adoration' in page_text_lower:
+                    logger.info(f"Found 'Adoration' keyword on {current_url}")
+                    candidate_pages['adoration'].append(current_url)
+                    schedule_found = True
+
+                # Record extraction success and assess content quality
+                visit_tracker.record_extraction_attempt(visit_result, True)
+                quality_score = visit_tracker.assess_content_quality(visit_result, page_text, schedule_found)
+
+                logger.debug(f"🔍 Visit tracked for {current_url}: quality={quality_score:.2f}, schedule_found={schedule_found}")
+
+                # Continue with link discovery
+                for a in soup.find_all('a', href=True):
+                    link = urljoin(current_url, a['href']).split('#')[0]
+                    # Check if the link is a valid HTTP/HTTPS URL and does not contain an email pattern
+                    if link.startswith(('http://', 'https://')) and link not in visited_urls and not re.search(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', link):
+                        if normalize_url(link) in suppression_urls:
+                            logger.debug(f"Skipping discovered link {link} as it is in the suppression list.")
+                            continue
+                        link_priority = calculate_priority(link, all_keywords, [], base_domain)
+                        heapq.heappush(urls_to_visit, (-link_priority, link))
+                        key = (link, parish_id)
+                        if key not in discovered_urls:
+                            discovered_urls[key] = {
+                                'parish_id': parish_id,
+                                'url': link,
+                                'score': int(link_priority),
+                                'source_url': current_url,
+                                'visited': False,
+                                'created_at': datetime.now(timezone.utc).isoformat()
+                            }
+
+            except requests.exceptions.RequestException as e:
+                logger.warning(f"Could not fetch or process {current_url}: {e}")
+                # Record extraction failure
+                visit_tracker.record_extraction_attempt(visit_result, False, e)
 
     if len(visited_urls) >= optimized_max_pages:
         logger.warning(f"🔗 Reached optimized scan limit of {optimized_max_pages} pages for {url}.")
