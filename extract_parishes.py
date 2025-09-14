@@ -85,6 +85,8 @@ def main(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MAX_PARISHES_P
             urls = [d['diocese_url'] for d in dioceses_with_dirs]
             names_response = supabase.table('Dioceses').select('id, Name, Website').in_('Website', urls).execute()
             url_to_details = {item['Website']: {'id': item['id'], 'name': item['Name']} for item in names_response.data}
+
+            # Build initial list of dioceses
             for d in dioceses_with_dirs:
                 details = url_to_details.get(d['diocese_url'])
                 if details:
@@ -94,6 +96,42 @@ def main(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MAX_PARISHES_P
                         'url': d['diocese_url'],
                         'parish_directory_url': d['parish_directory_url']
                     })
+
+            # Prioritize dioceses by last extraction date (least recently extracted first)
+            logger.info(f"  📅 Prioritizing {len(dioceses_to_process)} dioceses by extraction recency...")
+
+            # Get the most recent extraction date for each diocese
+            diocese_last_extraction = {}
+            for diocese in dioceses_to_process:
+                diocese_id = diocese['id']
+                # Query for the most recent parish extraction date for this diocese
+                recent_parish = supabase.table('Parishes').select('extracted_at').eq('diocese_id', diocese_id).order('extracted_at', desc=True).limit(1).execute()
+
+                if recent_parish.data:
+                    # Diocese has been extracted before - use the most recent extraction date
+                    last_extraction = recent_parish.data[0]['extracted_at']
+                    diocese_last_extraction[diocese_id] = last_extraction
+                    logger.debug(f"    {diocese['name']}: last extracted {last_extraction}")
+                else:
+                    # Diocese has never been extracted - prioritize it first (use empty string for sorting)
+                    diocese_last_extraction[diocese_id] = ""
+                    logger.debug(f"    {diocese['name']}: never extracted (priority)")
+
+            # Sort dioceses by extraction date (empty string sorts first, then oldest dates)
+            dioceses_to_process.sort(key=lambda d: diocese_last_extraction.get(d['id'], ""))
+
+            # Log the prioritization results
+            never_extracted = [d['name'] for d in dioceses_to_process if diocese_last_extraction.get(d['id']) == ""]
+            if never_extracted:
+                logger.info(f"  🆕 {len(never_extracted)} dioceses never extracted (highest priority): {', '.join(never_extracted[:5])}{'...' if len(never_extracted) > 5 else ''}")
+
+            recently_extracted = [d for d in dioceses_to_process if diocese_last_extraction.get(d['id']) != ""]
+            if recently_extracted:
+                oldest_name = recently_extracted[0]['name'] if recently_extracted else None
+                newest_name = recently_extracted[-1]['name'] if recently_extracted else None
+                logger.info(f"  📅 Extraction priority: {oldest_name} (oldest) → {newest_name} (newest)")
+
+            logger.info(f"  ✅ Diocese prioritization complete: processing from least to most recently extracted")
 
     if not dioceses_to_process:
         logger.info("No dioceses to process.")
