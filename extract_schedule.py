@@ -26,6 +26,7 @@ from core.utils import normalize_url # Import normalize_url
 from core.schedule_keywords import load_keywords_from_database, get_all_keywords_for_priority_calculation
 from core.stealth_browser import get_stealth_browser
 from core.intelligent_parish_prioritizer import get_intelligent_parish_prioritizer
+from core.enhanced_url_manager import get_enhanced_url_manager
 
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
@@ -552,8 +553,13 @@ def calculate_priority(url: str, keywords: dict, negative_keywords: list[str], b
 
 def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_urls: set[str], max_pages_to_scan: int = config.DEFAULT_MAX_PAGES_TO_SCAN) -> dict:
     """
-    Scrapes a parish website to find the best pages for Reconciliation and Adoration info.
-    Uses a priority queue to visit more promising URLs first.
+    Enhanced parish website scraping with intelligent URL discovery and optimization.
+
+    Uses Enhanced URL Manager for:
+    - Success-based URL memory (golden URLs)
+    - Smart protocol detection and DNS resolution
+    - Dynamic page limits based on success history
+    - Improved timeout strategies
     """
     # Initial check for the starting URL
     if normalize_url(url) in suppression_urls:
@@ -564,6 +570,16 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_u
     if url == "http://www.saintbrigid.org/":
         logger.warning(f"Temporarily skipping {url} due to persistent network issues.")
         return {'url': url, 'scraped_at': datetime.now(timezone.utc).isoformat(), 'offers_reconciliation': False, 'offers_adoration': False}
+
+    # Initialize Enhanced URL Manager
+    url_manager = get_enhanced_url_manager(supabase)
+
+    # Create optimized extraction context
+    extraction_context = url_manager.get_extraction_context(parish_id, url)
+
+    # Use dynamic page limit from context
+    optimized_max_pages = extraction_context.page_scan_limit
+    logger.info(f"🔗 Using optimized page scan limit: {optimized_max_pages}")
 
     urls_to_visit = []
     visited_urls = set()
@@ -576,20 +592,36 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_u
 
     base_domain = urlparse(url).netloc.lower().replace('www.', '')
 
-    heapq.heappush(urls_to_visit, (0, url))
-
+    # Collect initial URLs (base + sitemap)
+    initial_urls = [url]
     sitemap_urls = get_sitemap_urls(url)
     if sitemap_urls:
-        for s_url in sitemap_urls:
-            if normalize_url(s_url) in suppression_urls:
-                logger.info(f"Skipping sitemap URL {s_url} as it is in the suppression list.")
-                continue
-            priority = calculate_priority(s_url, all_keywords, [], base_domain)
-            heapq.heappush(urls_to_visit, (-priority, s_url))
+        initial_urls.extend(sitemap_urls)
 
-    logger.info(f"Starting scan with {len(urls_to_visit)} initial URLs in priority queue.")
+    # Get optimized URL candidates using Enhanced URL Manager
+    logger.info(f"🔗 Getting optimized URL candidates for {len(initial_urls)} initial URLs")
+    optimized_candidates = url_manager.get_optimized_url_candidates(extraction_context, initial_urls)
 
-    while urls_to_visit and len(visited_urls) < max_pages_to_scan:
+    # Build priority queue from optimized candidates
+    for candidate in optimized_candidates:
+        if normalize_url(candidate.url) in suppression_urls:
+            logger.info(f"Skipping optimized URL {candidate.url} as it is in suppression list.")
+            continue
+
+        # Use Enhanced URL Manager priority score (negative for max-heap)
+        priority = -candidate.priority_score
+        heapq.heappush(urls_to_visit, (priority, candidate.url))
+
+    # Add any remaining initial URLs not covered by optimization
+    for initial_url in initial_urls:
+        if not any(candidate.url == initial_url for candidate in optimized_candidates):
+            if normalize_url(initial_url) not in suppression_urls:
+                priority = calculate_priority(initial_url, all_keywords, [], base_domain)
+                heapq.heappush(urls_to_visit, (-priority, initial_url))
+
+    logger.info(f"🔗 Starting enhanced scan with {len(urls_to_visit)} optimized URLs in priority queue.")
+
+    while urls_to_visit and len(visited_urls) < optimized_max_pages:
         priority, current_url = heapq.heappop(urls_to_visit)
         priority = -priority
 
@@ -615,7 +647,7 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_u
             discovered_urls[key] = {
                 'parish_id': parish_id,
                 'url': current_url,
-                'score': priority,
+                'score': int(priority),
                 'visited': True,
                 'created_at': datetime.now(timezone.utc).isoformat()
             }
@@ -649,7 +681,7 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_u
                         discovered_urls[key] = {
                             'parish_id': parish_id,
                             'url': link,
-                            'score': link_priority,
+                            'score': int(link_priority),
                             'source_url': current_url,
                             'visited': False,
                             'created_at': datetime.now(timezone.utc).isoformat()
@@ -658,8 +690,8 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_u
         except requests.exceptions.RequestException as e:
             logger.warning(f"Could not fetch or process {current_url}: {e}")
 
-    if len(visited_urls) >= max_pages_to_scan:
-        logger.warning(f"Reached scan limit of {max_pages_to_scan} pages for {url}.")
+    if len(visited_urls) >= optimized_max_pages:
+        logger.warning(f"🔗 Reached optimized scan limit of {optimized_max_pages} pages for {url}.")
 
     if discovered_urls:
         urls_to_insert = list(discovered_urls.values())
