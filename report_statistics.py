@@ -9,10 +9,16 @@ from datetime import datetime, timezone, timedelta
 # Load environment variables
 load_dotenv()
 
-# Initialize Supabase client
-supabase_url = os.getenv("SUPABASE_URL")
-supabase_key = os.getenv("SUPABASE_KEY")
-supabase: Client = create_client(supabase_url, supabase_key)
+# Initialize Supabase client (deferred)
+def get_supabase_client():
+    """Create and return Supabase client with proper error handling."""
+    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_key = os.getenv("SUPABASE_KEY")
+
+    if not supabase_url or not supabase_key or supabase_url == "<url>" or supabase_key == "<key>":
+        raise ValueError("SUPABASE_URL and SUPABASE_KEY environment variables must be set with valid values")
+
+    return create_client(supabase_url, supabase_key)
 
 def fetch_and_process_table(table_name: str, supabase_client: Client):
     """Fetches data from a Supabase table and processes it for charting."""
@@ -173,8 +179,15 @@ def plot_time_series(time_series_data: dict, table_name: str, global_min_date: d
     plt.close(fig) # Close the figure to free memory
 
 def main():
+    try:
+        supabase = get_supabase_client()
+    except ValueError as e:
+        print(f"Warning: Cannot create Supabase client: {e}")
+        print("Skipping statistics reporting due to missing credentials.")
+        return
+
     tables_to_report = ['Dioceses', 'DiocesesParishDirectory', 'Parishes', 'ParishData']
-    
+
     all_min_dates = []
     all_max_dates = []
     all_time_series_data = {}
