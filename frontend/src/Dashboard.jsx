@@ -534,12 +534,13 @@ const Dashboard = () => {
             <Card.Body>
               <Card.Title>📋 Live Extraction Log</Card.Title>
               <div
-                className="live-log bg-dark text-light p-3 rounded"
+                className="live-log bg-dark text-light p-3 rounded text-start"
                 style={{
                   height: '400px',
                   overflowY: 'auto',
                   fontFamily: 'monospace',
-                  fontSize: '0.875rem'
+                  fontSize: '0.875rem',
+                  textAlign: 'left'
                 }}
               >
                 <style>
@@ -556,11 +557,11 @@ const Dashboard = () => {
                 </style>
                 {liveLog.length > 0 ? (
                   liveLog.map((log, index) => (
-                    <div key={log.id || index} className="mb-1 d-flex align-items-start">
-                      <span className="text-secondary me-2" style={{ minWidth: '140px', fontSize: '0.75rem' }}>
+                    <div key={log.id || index} className="mb-1 d-flex align-items-start text-start">
+                      <span className="text-secondary me-2" style={{ minWidth: '140px', fontSize: '0.75rem', textAlign: 'left' }}>
                         [{formatTimestamp(log.timestamp)}]
                       </span>
-                      <div className={`flex-grow-1 ${
+                      <div className={`flex-grow-1 text-start ${
                         log.level === 'ERROR' ? 'text-danger' :
                         log.level === 'WARNING' ? 'text-warning' :
                         log.level === 'INFO' ? 'text-info' :
@@ -569,14 +570,16 @@ const Dashboard = () => {
                         <span
                           dangerouslySetInnerHTML={{ __html: log.message }}
                           style={{
-                            wordBreak: 'break-word'
+                            wordBreak: 'break-word',
+                            textAlign: 'left',
+                            display: 'block'
                           }}
                         />
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="text-muted">No log entries available</div>
+                  <div className="text-muted text-start">No log entries available</div>
                 )}
               </div>
             </Card.Body>
