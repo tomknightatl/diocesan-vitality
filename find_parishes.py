@@ -29,16 +29,25 @@ from core.driver import close_driver, setup_driver, ensure_driver_available, rec
 from core.utils import normalize_url_join
 from core.logger import get_logger
 from core.db_batch_operations import get_batch_manager
+from respectful_automation import RespectfulAutomation, create_blocking_report
 
 logger = get_logger(__name__)
 
 # Global batch manager for database operations
 _batch_manager = None
 
+# Global respectful automation instance
+_respectful_automation = None
+
 def get_current_batch_manager():
     """Get the current batch manager instance."""
     global _batch_manager
     return _batch_manager
+
+def get_respectful_automation():
+    """Get the current respectful automation instance."""
+    global _respectful_automation
+    return _respectful_automation
 
 def batch_upsert_parish_directory(data_to_upsert, current_url):
     """Helper function to batch upsert parish directory data."""
@@ -649,26 +658,87 @@ def process_single_diocese(diocese_info):
     """
     Process a single diocese in isolation with its own WebDriver instance.
     This function is designed to be thread-safe for parallel processing.
-    
+
     Args:
         diocese_info: Dictionary containing diocese information (id, url, name)
-        
+
     Returns:
         String describing the processing result
     """
     current_url = diocese_info["url"]
     diocese_name = diocese_info["name"]
     current_diocese_id = diocese_info["id"]
-    
+
+    # Get respectful automation instance
+    respectful_automation = get_respectful_automation()
+
+    # Initialize blocking detection data
+    blocking_data = {
+        'is_blocked': False,
+        'blocking_type': None,
+        'blocking_evidence': {},
+        'status_code': None,
+        'robots_txt_check': {},
+        'respectful_automation_used': True,
+        'status_description': None
+    }
+
+    logger.info(f"🔄 [{diocese_name}] Starting respectful processing...")
+
+    # First, test the URL for blocking using respectful automation
+    if respectful_automation:
+        logger.info(f"  🤖 [{diocese_name}] Testing for blocking with respectful automation...")
+        response, automation_info = respectful_automation.respectful_get(current_url, timeout=30)
+
+        if response is None:
+            # Request failed - could be blocking or other issue
+            if automation_info.get('error') == 'robots_txt_disallowed':
+                logger.warning(f"  ⚠️ [{diocese_name}] Robots.txt disallows access")
+                blocking_data.update({
+                    'is_blocked': True,
+                    'blocking_type': 'robots_txt_disallowed',
+                    'status_description': 'Diocese website disallows automated access via robots.txt',
+                    'robots_txt_check': automation_info.get('robots_info', {}),
+                    'blocking_evidence': {'robots_txt': automation_info.get('message', 'Access disallowed')}
+                })
+            else:
+                logger.warning(f"  ❌ [{diocese_name}] Request failed: {automation_info.get('message', 'Unknown error')}")
+                blocking_data.update({
+                    'status_description': f'Diocese website request failed: {automation_info.get("message", "Unknown error")}',
+                    'blocking_evidence': {'error': automation_info.get('message', 'Request failed')}
+                })
+        else:
+            # Got a response - check for blocking
+            block_info = automation_info.get('blocking_info', {})
+            robots_info = automation_info.get('robots_info', {})
+
+            blocking_data.update({
+                'is_blocked': block_info.get('is_blocked', False),
+                'blocking_type': block_info.get('blocking_type'),
+                'status_code': block_info.get('status_code'),
+                'blocking_evidence': {
+                    'evidence_list': block_info.get('evidence', []),
+                    'headers': block_info.get('headers', {})
+                },
+                'robots_txt_check': robots_info
+            })
+
+            if blocking_data['is_blocked']:
+                logger.warning(f"  🚫 [{diocese_name}] Blocking detected: {blocking_data['blocking_type']} (HTTP {blocking_data['status_code']})")
+                blocking_report = create_blocking_report(block_info, current_url, diocese_name)
+                blocking_data['status_description'] = blocking_report.get('status_description', 'Diocese website blocking automated access')
+            else:
+                logger.info(f"  ✅ [{diocese_name}] No blocking detected (HTTP {blocking_data['status_code']})")
+                blocking_data['status_description'] = 'Diocese website accessible to automated requests'
+
     # Each worker gets its own WebDriver instance with recovery support
     worker_driver = ensure_driver_available()
     if not worker_driver:
         error_msg = f"Failed to setup WebDriver for {diocese_name}"
         logger.error(error_msg)
         return error_msg
-    
+
     try:
-        logger.info(f"🔄 [{diocese_name}] Starting parallel processing...")
         parish_dir_url_found = None
         status_text = "Not Found"
         method = "not_found_all_stages"
@@ -721,7 +791,7 @@ def process_single_diocese(diocese_info):
                 result_msg = f"NOT FOUND after trying all methods"
                 logger.info(f"❌ [{diocese_name}] Result: {result_msg}")
             
-            # Prepare data for batch upsert
+            # Prepare data for batch upsert including blocking detection
             data_to_upsert = {
                 "diocese_id": current_diocese_id,
                 "diocese_url": current_url,
@@ -729,6 +799,14 @@ def process_single_diocese(diocese_info):
                 "found": status_text,
                 "found_method": method,
                 "updated_at": datetime.now(timezone.utc).isoformat(),
+                # Blocking detection fields (will be ignored if columns don't exist yet)
+                "is_blocked": blocking_data['is_blocked'],
+                "blocking_type": blocking_data['blocking_type'],
+                "blocking_evidence": blocking_data['blocking_evidence'],
+                "status_code": blocking_data['status_code'],
+                "robots_txt_check": blocking_data['robots_txt_check'],
+                "respectful_automation_used": blocking_data['respectful_automation_used'],
+                "status_description": blocking_data['status_description']
             }
             batch_upsert_parish_directory(data_to_upsert, current_url)
             
@@ -748,6 +826,14 @@ def process_single_diocese(diocese_info):
                 "found": status_text,
                 "found_method": method,
                 "updated_at": datetime.now(timezone.utc).isoformat(),
+                # Blocking detection fields
+                "is_blocked": blocking_data['is_blocked'],
+                "blocking_type": blocking_data['blocking_type'],
+                "blocking_evidence": blocking_data['blocking_evidence'],
+                "status_code": blocking_data['status_code'],
+                "robots_txt_check": blocking_data['robots_txt_check'],
+                "respectful_automation_used": blocking_data['respectful_automation_used'],
+                "status_description": blocking_data['status_description']
             }
             batch_upsert_parish_directory(data_to_upsert, current_url)
             return error_msg
@@ -780,6 +866,14 @@ def process_single_diocese(diocese_info):
                 "found": status_text,
                 "found_method": method,
                 "updated_at": datetime.now(timezone.utc).isoformat(),
+                # Blocking detection fields
+                "is_blocked": blocking_data['is_blocked'],
+                "blocking_type": blocking_data['blocking_type'],
+                "blocking_evidence": blocking_data['blocking_evidence'],
+                "status_code": blocking_data['status_code'],
+                "robots_txt_check": blocking_data['robots_txt_check'],
+                "respectful_automation_used": blocking_data['respectful_automation_used'],
+                "status_description": blocking_data['status_description']
             }
             batch_upsert_parish_directory(data_to_upsert, current_url)
             return error_msg
@@ -813,6 +907,11 @@ def find_parish_directories(diocese_id=None, max_dioceses_to_process=config.DEFA
     global _batch_manager
     _batch_manager = get_batch_manager(supabase, batch_size=20)
     _batch_manager.configure_table("DiocesesParishDirectory", "diocese_id")
+
+    # Initialize respectful automation
+    global _respectful_automation
+    _respectful_automation = RespectfulAutomation()
+    logger.info("Respectful automation initialized successfully.")
 
     dioceses_to_scan = []
     try:
