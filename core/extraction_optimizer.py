@@ -17,7 +17,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
-from core.circuit_breaker import circuit_manager
+from core.circuit_breaker import circuit_manager, CircuitBreakerConfig, CircuitState
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -56,11 +56,11 @@ class ExtractorOptimizer:
     def _initialize_circuits(self):
         """Initialize per-extractor circuit breakers"""
         for extractor_name in self.EXTRACTOR_TIMEOUTS.keys():
-            circuit_config = {
-                'failure_threshold': 3,    # Fast-fail after 3 failures
-                'recovery_timeout': 30,    # 30 second recovery window
-                'request_timeout': self.EXTRACTOR_TIMEOUTS[extractor_name]
-            }
+            circuit_config = CircuitBreakerConfig(
+                failure_threshold=3,    # Fast-fail after 3 failures
+                recovery_timeout=30,    # 30 second recovery window
+                request_timeout=self.EXTRACTOR_TIMEOUTS[extractor_name]
+            )
 
             circuit_id = f'extractor_{extractor_name.lower()}'
             self.extractor_circuits[extractor_name] = circuit_manager.get_circuit_breaker(
@@ -68,7 +68,7 @@ class ExtractorOptimizer:
             )
 
             logger.debug(f"🔌 Initialized circuit breaker for {extractor_name} "
-                        f"(timeout: {circuit_config['request_timeout']}s)")
+                        f"(timeout: {circuit_config.request_timeout}s)")
 
     def analyze_page_content(self, driver, html_content: str) -> Dict[str, any]:
         """
@@ -248,7 +248,7 @@ class ExtractorOptimizer:
         """
         # Check circuit breaker status
         circuit = self.extractor_circuits.get(extractor_name)
-        if circuit and circuit.current_state == 'OPEN':
+        if circuit and circuit.state == CircuitState.OPEN:
             logger.info(f"  ⚡ Skipping {extractor_name} - circuit breaker OPEN")
             return True
 
@@ -376,7 +376,7 @@ class ExtractorOptimizer:
 
         for extractor_name, circuit in self.extractor_circuits.items():
             stats['circuit_breakers'][extractor_name] = {
-                'state': circuit.current_state,
+                'state': circuit.state.value,
                 'failure_count': circuit.failure_count,
                 'last_failure_time': getattr(circuit, 'last_failure_time', None)
             }
