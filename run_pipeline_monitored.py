@@ -97,7 +97,7 @@ def main():
                 parishes_processed=0
             )
             
-            find_parish_directories(diocese_id=args.diocese_id, max_dioceses_to_process=20)
+            find_parish_directories(diocese_id=args.diocese_id, max_dioceses_to_process=args.max_dioceses)
             
             monitoring_client.send_log("Step 2 │ ✅ Parish directory discovery completed", "INFO")
             
