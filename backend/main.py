@@ -431,7 +431,7 @@ def get_parishes_for_diocese(
             raise HTTPException(status_code=404, detail="Diocese not found")
         diocese_website = diocese_response.data[0]['Website']
 
-        query = supabase.from('parishes_with_diocese_name').select('*', count='exact').eq('diocese_id', diocese_id)
+        query = supabase.table('parishes_with_diocese_name').select('*', count='exact').eq('diocese_id', diocese_id)
 
         # Apply filters
         if filter_name:
@@ -532,7 +532,7 @@ def get_all_parishes(
     try:
         offset = (page - 1) * page_size
         
-        query = supabase.from('parishes_with_diocese_name').select('*', count='exact')
+        query = supabase.table('parishes_with_diocese_name').select('*', count='exact')
         
         # Apply filters
         if filter_name:
