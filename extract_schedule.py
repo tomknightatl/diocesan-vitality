@@ -25,6 +25,7 @@ from core.db import get_supabase_client # Import the get_supabase_client functio
 from core.utils import normalize_url # Import normalize_url
 from core.schedule_keywords import load_keywords_from_database, get_all_keywords_for_priority_calculation
 from core.stealth_browser import get_stealth_browser
+from core.intelligent_parish_prioritizer import get_intelligent_parish_prioritizer
 
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
@@ -698,7 +699,36 @@ def scrape_parish_data(url: str, parish_id: int, supabase: Client, suppression_u
 
 
 def get_parishes_to_process(supabase: Client, num_parishes: int, parish_id: int = None) -> list[tuple[str, int]]:
-    """Fetches parish URLs and IDs to process."""
+    """
+    Intelligently prioritized parish selection for schedule extraction.
+
+    Uses advanced algorithms to select parishes based on:
+    - Schedule likelihood scoring (website patterns)
+    - Freshness-based selection (recency prioritization)
+    - Diocese clustering (batch similar patterns)
+    - Success rate learning (historical performance)
+    """
+    try:
+        # Use intelligent prioritization system
+        prioritizer = get_intelligent_parish_prioritizer(supabase)
+        prioritized_parishes = prioritizer.get_prioritized_parishes(num_parishes, parish_id)
+
+        if prioritized_parishes:
+            logger.info(f"🎯 Intelligent prioritization selected {len(prioritized_parishes)} parishes")
+            return prioritized_parishes
+        else:
+            logger.warning("🎯 Intelligent prioritization returned no parishes, falling back to simple method")
+            # Fallback to simple method if intelligent prioritization fails
+            return _get_parishes_simple_fallback(supabase, num_parishes, parish_id)
+
+    except Exception as e:
+        logger.error(f"🎯 Error in intelligent parish prioritization: {e}")
+        logger.info("🎯 Falling back to simple parish selection method")
+        return _get_parishes_simple_fallback(supabase, num_parishes, parish_id)
+
+
+def _get_parishes_simple_fallback(supabase: Client, num_parishes: int, parish_id: int = None) -> list[tuple[str, int]]:
+    """Simple fallback parish selection method (original implementation)."""
     if parish_id:
         try:
             response = supabase.table('Parishes').select('id, Web').eq('id', parish_id).execute()
@@ -714,7 +744,7 @@ def get_parishes_to_process(supabase: Client, num_parishes: int, parish_id: int 
     try:
         response = supabase.table('Parishes').select('id, Web').not_.is_('Web', 'null').execute()
         all_parishes = [(p['Web'], p['id']) for p in response.data if p['Web']]
-        
+
         if num_parishes > 0:
             return all_parishes[:num_parishes]
         return all_parishes
