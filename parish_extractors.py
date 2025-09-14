@@ -41,6 +41,9 @@ from parish_extraction_core import (
     setup_enhanced_driver, enhanced_safe_upsert_to_supabase, clean_parish_name_and_extract_address
 )
 
+# Import parish validation system
+from core.parish_validation import filter_valid_parishes
+
 # PDF extraction components
 from pdf_parish_extractor import PDFParishExtractor
 
@@ -1603,13 +1606,35 @@ def process_diocese_with_detailed_extraction(diocese_info: Dict, driver, max_par
             
             print(f"    📊 Deduplication: {dedup_metrics.original_count} → {dedup_metrics.deduplicated_count} parishes ({dedup_metrics.duplicates_removed} duplicates removed, {dedup_metrics.deduplication_rate:.1f}%)")
             
-            # Apply max parishes limit after deduplication
-            if max_parishes != 0 and len(unique_parishes) > max_parishes:
-                unique_parishes = unique_parishes[:max_parishes]
+            # Apply parish validation to filter out diocesan departments
+            print(f"    🔍 Applying parish validation to filter out diocesan departments...")
+            parishes_to_validate = []
+            for parish in unique_parishes:
+                # Convert ParishData to dict format for validation
+                parish_dict = {
+                    'name': parish.name,
+                    'url': getattr(parish, 'website', None) or getattr(parish, 'url', None),
+                    'address': getattr(parish, 'full_address', None) or getattr(parish, 'address', None),
+                    'description': getattr(parish, 'description', None)
+                }
+                parishes_to_validate.append(parish_dict)
+
+            # Apply validation filter
+            validated_parishes_dicts = filter_valid_parishes(parishes_to_validate)
+            validated_names = {p['name'] for p in validated_parishes_dicts}
+
+            # Filter original parish objects based on validated names
+            validated_parishes = [p for p in unique_parishes if p.name in validated_names]
+
+            print(f"    ✅ Parish validation: {len(validated_parishes)}/{len(unique_parishes)} parishes validated as actual parishes")
+
+            # Apply max parishes limit after validation
+            if max_parishes != 0 and len(validated_parishes) > max_parishes:
+                validated_parishes = validated_parishes[:max_parishes]
                 print(f"    ✂️  Limited to first {max_parishes} parishes")
-            
+
             # Filter out parishes with very short names (likely extraction errors)
-            unique_parishes = [p for p in unique_parishes if len(p.name.strip()) > 2]
+            unique_parishes = [p for p in validated_parishes if len(p.name.strip()) > 2]
 
             result['parishes_found'] = unique_parishes
             result['success'] = True
