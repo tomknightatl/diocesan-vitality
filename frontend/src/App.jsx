@@ -127,6 +127,47 @@ function App() {
     </Tooltip>
   );
 
+  const renderBlockingTooltip = (props, diocese) => {
+    if (!diocese.is_blocked) {
+      return (
+        <Tooltip id="blocking-tooltip" {...props}>
+          <div>
+            <strong>✅ Accessible</strong><br />
+            Status: {diocese.status_description}<br />
+            HTTP Status: {diocese.status_code || 'N/A'}<br />
+            Respectful Automation: ✅
+          </div>
+        </Tooltip>
+      );
+    }
+
+    return (
+      <Tooltip id="blocking-tooltip" {...props}>
+        <div>
+          <strong>🚫 BLOCKED</strong><br />
+          <strong>Type:</strong> {diocese.blocking_type}<br />
+          <strong>Status:</strong> {diocese.status_description}<br />
+          <strong>HTTP Status:</strong> {diocese.status_code || 'N/A'}<br />
+          {diocese.blocking_evidence?.robots_txt && (
+            <>
+              <strong>Robots.txt:</strong> {diocese.blocking_evidence.robots_txt}<br />
+            </>
+          )}
+          {diocese.blocking_evidence?.evidence_list?.length > 0 && (
+            <>
+              <strong>Evidence:</strong> {diocese.blocking_evidence.evidence_list.join(', ')}<br />
+            </>
+          )}
+          {diocese.robots_txt_check?.robots_url && (
+            <>
+              <strong>Robots URL:</strong> {diocese.robots_txt_check.robots_url}
+            </>
+          )}
+        </div>
+      </Tooltip>
+    );
+  };
+
   return (
     <>
       
@@ -270,6 +311,9 @@ function App() {
                 <th style={{ cursor: 'pointer' }} onClick={() => handleSort('parishes_with_data_extracted_count')}>
                   Parishes with Data Extracted {sortBy === 'parishes_with_data_extracted_count' && (sortOrder === 'asc' ? '▲' : '▼')}
                 </th>
+                <th style={{ cursor: 'pointer' }} onClick={() => handleSort('is_blocked')}>
+                  Blocked {sortBy === 'is_blocked' && (sortOrder === 'asc' ? '▲' : '▼')}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -288,6 +332,29 @@ function App() {
                   </td>
                   <td>
                     <Link to={`/diocese?id=${diocese.id}&filter=with_data`}>{diocese.parishes_with_data_extracted_count}</Link>
+                  </td>
+                  <td>
+                    {diocese.respectful_automation_used ? (
+                      <OverlayTrigger
+                        placement="top"
+                        delay={{ show: 250, hide: 400 }}
+                        overlay={(props) => renderBlockingTooltip(props, diocese)}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={diocese.is_blocked || false}
+                            readOnly
+                            style={{
+                              cursor: diocese.is_blocked ? 'help' : 'default',
+                              accentColor: diocese.is_blocked ? '#dc3545' : '#28a745'
+                            }}
+                          />
+                        </div>
+                      </OverlayTrigger>
+                    ) : (
+                      <span style={{ color: '#6c757d', fontSize: '0.8em' }}>Not tested</span>
+                    )}
                   </td>
                 </tr>
               ))}
