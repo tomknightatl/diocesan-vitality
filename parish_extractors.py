@@ -44,8 +44,8 @@ from parish_extraction_core import (
 # Import parish validation system
 from core.parish_validation import filter_valid_parishes
 
-# Import AI fallback extractor
-from extractors.ai_fallback_extractor import AIFallbackExtractor
+# Import enhanced AI fallback extractor
+from extractors.enhanced_ai_fallback_extractor import EnhancedAIFallbackExtractor
 
 # PDF extraction components
 from pdf_parish_extractor import PDFParishExtractor
@@ -1560,7 +1560,7 @@ def process_diocese_with_detailed_extraction(diocese_info: Dict, driver, max_par
             ('ImprovedInteractiveMapExtractor', ImprovedInteractiveMapExtractor(pattern)),
             ('NavigationExtractor', NavigationExtractor(pattern)),
             ('ImprovedGenericExtractor', ImprovedGenericExtractor(pattern)),
-            ('AIFallbackExtractor', AIFallbackExtractor())  # AI-powered fallback as last resort
+            ('EnhancedAIFallbackExtractor', EnhancedAIFallbackExtractor())  # Enhanced AI-powered fallback with JS execution as last resort
         ]
 
         # Add fallbacks that aren't already in the list
@@ -1573,8 +1573,8 @@ def process_diocese_with_detailed_extraction(diocese_info: Dict, driver, max_par
             try:
                 print(f"  🔄 Trying {extractor_name}...")
 
-                # Special handling for AI fallback extractor which has different interface
-                if extractor_name == 'AIFallbackExtractor':
+                # Special handling for enhanced AI fallback extractor which has different interface
+                if extractor_name == 'EnhancedAIFallbackExtractor':
                     current_parishes = extractor.extract(driver, diocese_name, parish_directory_url, max_parishes)
                 else:
                     current_parishes = extractor.extract(driver, soup, parish_directory_url)
