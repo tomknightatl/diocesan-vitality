@@ -146,11 +146,19 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
             # Step 5: Validate and deduplicate results
             validated_parishes = self._validate_and_deduplicate(all_parish_data)
 
-            # Step 6: Create/update profile if successful
-            if validated_parishes and not profile:
-                new_profile = self.profile_manager.create_custom_profile(domain, ai_result)
-                if new_profile:
-                    logger.info(f"🎯 Created new profile for {domain} based on successful extraction")
+            # Step 6: Create/update profile based on results
+            if not profile:  # Only create new profiles if none exists
+                if validated_parishes:
+                    # Successful extraction - create confidence profile
+                    new_profile = self.profile_manager.create_custom_profile(domain, ai_result)
+                    if new_profile:
+                        logger.info(f"🎯 Created high-confidence profile for {domain} based on successful extraction")
+                elif ai_result.get('confidence', 0.0) >= 0.6 and ai_result.get('extraction_strategy'):
+                    # Failed extraction but high AI confidence - create learning profile
+                    learning_profile = self.profile_manager.create_custom_profile(domain, ai_result)
+                    if learning_profile:
+                        logger.info(f"🎯 Created learning profile for {domain} - Strategy: {ai_result.get('extraction_strategy')} (confidence: {ai_result.get('confidence', 0.0):.2f})")
+                        logger.info(f"    💡 Profile will be used for future extractions to improve success rate")
 
             # Step 7: Apply max_parishes limit
             if max_parishes and len(validated_parishes) > max_parishes:
