@@ -325,9 +325,22 @@ def get_dioceses(
 
         total_count = len(dioceses)
 
-        # Fetch additional data
-        all_dir_response = supabase.table('DiocesesParishDirectory').select('diocese_id, parish_directory_url').execute()
+        # Fetch additional data including blocking detection
+        all_dir_response = supabase.table('DiocesesParishDirectory').select(
+            'diocese_id, parish_directory_url, is_blocked, blocking_type, blocking_evidence, status_code, robots_txt_check, respectful_automation_used, status_description'
+        ).execute()
         dir_url_map = {item['diocese_id']: item['parish_directory_url'] for item in all_dir_response.data}
+        blocking_data_map = {
+            item['diocese_id']: {
+                'is_blocked': item.get('is_blocked', False),
+                'blocking_type': item.get('blocking_type'),
+                'blocking_evidence': item.get('blocking_evidence', {}),
+                'status_code': item.get('status_code'),
+                'robots_txt_check': item.get('robots_txt_check', {}),
+                'respectful_automation_used': item.get('respectful_automation_used', False),
+                'status_description': item.get('status_description', 'Unknown')
+            } for item in all_dir_response.data
+        }
 
         parishes_response = supabase.table('Parishes').select('id, diocese_url').execute()
         parishes_map = {p['id']: p['diocese_url'] for p in parishes_response.data}
@@ -349,6 +362,16 @@ def get_dioceses(
             diocese['parish_directory_url'] = dir_url_map.get(diocese['id'])
             diocese['parishes_in_db_count'] = parish_counts.get(diocese['Website'], 0)
             diocese['parishes_with_data_extracted_count'] = parishes_with_data_extracted_counts.get(diocese['Website'], 0)
+
+            # Add blocking detection data
+            blocking_data = blocking_data_map.get(diocese['id'], {})
+            diocese['is_blocked'] = blocking_data.get('is_blocked', False)
+            diocese['blocking_type'] = blocking_data.get('blocking_type')
+            diocese['blocking_evidence'] = blocking_data.get('blocking_evidence', {})
+            diocese['status_code'] = blocking_data.get('status_code')
+            diocese['robots_txt_check'] = blocking_data.get('robots_txt_check', {})
+            diocese['respectful_automation_used'] = blocking_data.get('respectful_automation_used', False)
+            diocese['status_description'] = blocking_data.get('status_description', 'Not tested')
 
         # Sort in Python
         reverse = sort_order.lower() == 'desc'
