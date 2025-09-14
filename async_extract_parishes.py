@@ -24,6 +24,48 @@ from parish_extractors import ensure_chrome_installed
 logger = get_logger(__name__)
 
 
+def get_parish_directory_url_with_override(supabase, diocese_id: int, diocese_url: str) -> tuple:
+    """
+    Get parish directory URL with override support.
+
+    Args:
+        supabase: Supabase client
+        diocese_id: Diocese ID
+        diocese_url: Diocese website URL
+
+    Returns:
+        Tuple of (parish_directory_url, source) where source is 'override' or 'original'
+    """
+    try:
+        # First, check for override
+        override_response = supabase.table('DioceseParishDirectoryOverride').select(
+            'parish_directory_url, found_method'
+        ).eq('diocese_id', diocese_id).execute()
+
+        if override_response.data:
+            override_url = override_response.data[0]['parish_directory_url']
+            found_method = override_response.data[0].get('found_method', 'override')
+            logger.info(f"🔄 Using override parish directory URL for diocese {diocese_id}: {override_url} (method: {found_method})")
+            return override_url, 'override'
+
+        # Fallback to original table
+        original_response = supabase.table('DiocesesParishDirectory').select(
+            'parish_directory_url'
+        ).eq('diocese_url', diocese_url).execute()
+
+        if original_response.data:
+            original_url = original_response.data[0]['parish_directory_url']
+            logger.debug(f"📋 Using original parish directory URL for diocese {diocese_id}: {original_url}")
+            return original_url, 'original'
+
+        logger.warning(f"⚠️ No parish directory URL found for diocese {diocese_id} (URL: {diocese_url})")
+        return None, None
+
+    except Exception as e:
+        logger.error(f"❌ Error fetching parish directory URL for diocese {diocese_id}: {e}")
+        return None, None
+
+
 def get_memory_usage():
     """Get current memory usage in MB"""
     process = psutil.Process(os.getpid())
@@ -360,35 +402,46 @@ async def main_async(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MA
         response = supabase.table('Dioceses').select('id, Name, Website').eq('id', diocese_id).execute()
         if response.data:
             d = response.data[0]
-            dir_response = supabase.table('DiocesesParishDirectory').select('parish_directory_url').eq('diocese_url', d['Website']).execute()
-            if dir_response.data:
+            parish_directory_url, source = get_parish_directory_url_with_override(
+                supabase, d['id'], d['Website']
+            )
+            if parish_directory_url:
                 dioceses_to_process.append({
                     'id': d['id'],
                     'name': d['Name'],
                     'url': d['Website'],
-                    'parish_directory_url': dir_response.data[0]['parish_directory_url']
+                    'parish_directory_url': parish_directory_url,
+                    'url_source': source  # Track whether this came from override or original
                 })
+                logger.info(f"✅ Found parish directory URL for {d['Name']} (source: {source})")
             else:
                 logger.warning(f"No parish directory URL found for diocese {d['Name']}.")
     else:
-        query = supabase.table('DiocesesParishDirectory').select(
-            'diocese_url, parish_directory_url'
-        ).not_.is_('parish_directory_url', 'null')
-        response = query.execute()
-        dioceses_with_dirs = response.data if response.data else []
-        if dioceses_with_dirs:
-            urls = [d['diocese_url'] for d in dioceses_with_dirs]
-            names_response = supabase.table('Dioceses').select('id, Name, Website').in_('Website', urls).execute()
-            url_to_details = {item['Website']: {'id': item['id'], 'name': item['Name']} for item in names_response.data}
-            for d in dioceses_with_dirs:
-                details = url_to_details.get(d['diocese_url'])
-                if details:
+        # Get all dioceses and check for both override and original URLs
+        all_dioceses_response = supabase.table('Dioceses').select('id, Name, Website').execute()
+        if all_dioceses_response.data:
+            for diocese in all_dioceses_response.data:
+                diocese_id = diocese['id']
+                diocese_name = diocese['Name']
+                diocese_url = diocese['Website']
+
+                parish_directory_url, source = get_parish_directory_url_with_override(
+                    supabase, diocese_id, diocese_url
+                )
+
+                if parish_directory_url:
                     dioceses_to_process.append({
-                        'id': details['id'],
-                        'name': details['name'],
-                        'url': d['diocese_url'],
-                        'parish_directory_url': d['parish_directory_url']
+                        'id': diocese_id,
+                        'name': diocese_name,
+                        'url': diocese_url,
+                        'parish_directory_url': parish_directory_url,
+                        'url_source': source
                     })
+                    logger.debug(f"📋 Added {diocese_name} to processing queue (source: {source})")
+                else:
+                    logger.debug(f"⏭️ Skipping {diocese_name} - no parish directory URL found")
+
+        logger.info(f"🎯 Found {len(dioceses_to_process)} dioceses with parish directory URLs")
 
     if not dioceses_to_process:
         logger.info("No dioceses to process.")
