@@ -1,6 +1,6 @@
 # Workflow for extract_dioceses.py
 
-This document outlines the process flow of the `extract_dioceses.py` script, which is responsible for extracting diocese information from the USCCB website.
+This document outlines the process flow of the `extract_dioceses.py` script, which is responsible for extracting diocese information from the official conference website.
 
 The diagram below illustrates the step-by-step logic of the script.
 
@@ -8,7 +8,7 @@ The diagram below illustrates the step-by-step logic of the script.
 graph TD
     A[Start] --> B{Parse CLI Args};
     B --> C[Validate Configuration];
-    C --> D[Construct USCCB Dioceses URL];
+    C --> D[Construct Dioceses URL];
     D --> E{Fetch Page Content};
     E -- Success --> F[Parse HTML];
     E -- Failure --> G[Error: Failed to Fetch Page];

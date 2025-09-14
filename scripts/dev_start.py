@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Development startup script for USCCB pipeline.
+Development startup script for the pipeline.
 Helps developers quickly start the local environment.
 """
 
@@ -23,7 +23,7 @@ def check_environment():
     required_vars = [
         'SUPABASE_URL',
         'SUPABASE_KEY',
-        'GENAI_API_KEY_USCCB'
+        'GENAI_API_KEY'
     ]
 
     missing = [var for var in required_vars if not os.getenv(var)]
@@ -114,7 +114,7 @@ def run_pipeline_test():
         return False
 
 def main():
-    parser = argparse.ArgumentParser(description="USCCB Development Environment Starter")
+    parser = argparse.ArgumentParser(description="Development Environment Starter")
     parser.add_argument('--check-only', action='store_true', help='Only check environment, don\'t start services')
     parser.add_argument('--backend-only', action='store_true', help='Start only the backend')
     parser.add_argument('--frontend-only', action='store_true', help='Start only the frontend')
@@ -123,7 +123,7 @@ def main():
 
     args = parser.parse_args()
 
-    print("🏁 USCCB Development Environment Setup")
+    print("🏁 Development Environment Setup")
     print("=" * 50)
 
     # Always check environment first

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Development testing script for USCCB pipeline.
+Development testing script for the pipeline.
 Quick tests and diagnostics for local development.
 """
 
@@ -199,9 +199,9 @@ def run_environment_check():
         required_vars = [
             'SUPABASE_URL',
             'SUPABASE_KEY',
-            'GENAI_API_KEY_USCCB',
-            'SEARCH_API_KEY_USCCB',
-            'SEARCH_CX_USCCB'
+            'GENAI_API_KEY',
+            'SEARCH_API_KEY',
+            'SEARCH_CX'
         ]
 
         for var in required_vars:
@@ -225,7 +225,7 @@ def run_environment_check():
         print(f"⚠️ Python {sys.version_info.major}.{sys.version_info.minor} (may have issues)")
 
 def main():
-    parser = argparse.ArgumentParser(description="USCCB Development Testing Suite")
+    parser = argparse.ArgumentParser(description="Development Testing Suite")
     parser.add_argument('--all', action='store_true', help='Run all tests')
     parser.add_argument('--db', action='store_true', help='Test database connection')
     parser.add_argument('--ai', action='store_true', help='Test AI API connection')
@@ -242,7 +242,7 @@ def main():
         parser.print_help()
         return
 
-    print("🧪 USCCB Development Testing Suite")
+    print("🧪 Development Testing Suite")
     print("=" * 40)
 
     success_count = 0

@@ -1,4 +1,4 @@
-# USCCB Parish Schedule Extraction - Conversation Summary
+# Parish Schedule Extraction - Conversation Summary
 
 ## Overview
 This conversation focused on implementing three priority enhancements (3A, 3B, 3C) to the parish schedule extraction system, followed by comprehensive testing, issue resolution, and optimization work.
@@ -20,7 +20,7 @@ This conversation focused on implementing three priority enhancements (3A, 3B, 3
 ## Implemented Priority Enhancements
 
 ### Priority 3A: Advanced Bot Detection Countermeasures
-**File Created:** `/home/tomk/USCCB/core/stealth_browser.py`
+**File Created:** `.../core/stealth_browser.py`
 
 **Key Features:**
 - Selenium-based headless Chrome automation
@@ -45,7 +45,7 @@ class StealthBrowser:
 ```
 
 ### Priority 3B: AI Confidence Optimization
-**File Enhanced:** `/home/tomk/USCCB/core/schedule_ai_extractor.py`
+**File Enhanced:** `.../core/schedule_ai_extractor.py`
 
 **Key Improvements:**
 - Adaptive confidence threshold system based on URL characteristics
@@ -164,15 +164,15 @@ def is_relevant_url(discovered_url: str, base_url: str) -> bool:
 ## Files Modified/Created
 
 ### New Files Created
-1. `/home/tomk/USCCB/core/stealth_browser.py` - Complete stealth browser implementation
-2. `/home/tomk/USCCB/sql/migrations/001_extend_schedule_types.sql` - Database constraint updates
-3. `/home/tomk/USCCB/sql/migrations/002_populate_mass_keywords.sql` - Keyword population
-4. `/home/tomk/USCCB/CONVERSATION_SUMMARY.md` - This comprehensive summary
+1. `.../core/stealth_browser.py` - Complete stealth browser implementation
+2. `.../sql/migrations/001_extend_schedule_types.sql` - Database constraint updates
+3. `.../sql/migrations/002_populate_mass_keywords.sql` - Keyword population
+4. `.../CONVERSATION_SUMMARY.md` - This comprehensive summary
 
 ### Enhanced Existing Files
-1. `/home/tomk/USCCB/extract_schedule.py` - Stealth browser integration and enhanced content discovery
-2. `/home/tomk/USCCB/core/schedule_ai_extractor.py` - Adaptive confidence thresholds and mass extraction
-3. `/home/tomk/USCCB/core/schedule_keywords.py` - Extended keyword system for mass times
+1. `.../extract_schedule.py` - Stealth browser integration and enhanced content discovery
+2. `.../core/schedule_ai_extractor.py` - Adaptive confidence thresholds and mass extraction
+3. `.../core/schedule_keywords.py` - Extended keyword system for mass times
 
 ## Key Lessons and Best Practices
 

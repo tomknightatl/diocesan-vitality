@@ -1,6 +1,6 @@
 # Testing Guide
 
-This document outlines the testing strategy for the USCCB data project, how to run existing tests, and how to add new ones.
+This document outlines the testing strategy for the data project, how to run existing tests, and how to add new ones.
 
 ## Testing Framework
 

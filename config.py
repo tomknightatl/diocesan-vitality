@@ -11,11 +11,11 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 # --- GenAI API Key Setup ---
-GENAI_API_KEY = os.getenv("GENAI_API_KEY_USCCB")
+GENAI_API_KEY = os.getenv("GENAI_API_KEY")
 
 # --- Search Engine API Key Setup ---
-SEARCH_API_KEY = os.getenv("SEARCH_API_KEY_USCCB")
-SEARCH_CX = os.getenv("SEARCH_CX_USCCB")
+SEARCH_API_KEY = os.getenv("SEARCH_API_KEY")
+SEARCH_CX = os.getenv("SEARCH_CX")
 
 # --- Pipeline Defaults ---
 DEFAULT_MAX_DIOCESES = 5

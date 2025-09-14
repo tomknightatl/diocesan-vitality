@@ -1,12 +1,12 @@
-# United States Conference of Catholic Bishops (USCCB) Data Project
+# Diocese Data Project
 
-**🌐 LIVE SYSTEM**: The production system is running at [https://usccb.diocesanvitality.org](https://usccb.diocesanvitality.org) with real-time data collection and monitoring.
+**🌐 LIVE SYSTEM**: The production system is running at [https://diocesanvitality.org](https://diocesanvitality.org) with real-time data collection and monitoring.
 
 **For local development**: Follow the "Getting Started" and "Environment Setup" sections below to configure your development environment.
 
 ## Overview
 
-This project is a comprehensive data collection and analysis system for U.S. Catholic dioceses and parishes. It employs advanced web scraping techniques, AI-powered content analysis, and automated data processing to build and maintain a detailed database of Catholic institutions across the United States. The system collects information from the official USCCB website and individual diocese websites, including diocese details, parish directories, and detailed parish information.
+This project is a comprehensive data collection and analysis system for U.S. Catholic dioceses and parishes. It employs advanced web scraping techniques, AI-powered content analysis, and automated data processing to build and maintain a detailed database of Catholic institutions across the United States. The system collects information from the official conference website and individual diocese websites, including diocese details, parish directories, and detailed parish information.
 
 ## Cloud Architecture
 
@@ -14,7 +14,7 @@ The system runs in the cloud using a **two-tier architecture** designed for cost
 
 ### 🌐 **Tier 1: Always-On Web Services**
 **Deployment**: Single small node (s-1vcpu-2gb) running continuously
-- **Frontend**: React dashboard serving the user interface at [usccb.diocesanvitality.org](https://usccb.diocesanvitality.org)
+- **Frontend**: React dashboard serving the user interface at [diocesanvitality.org](https://diocesanvitality.org)
 - **Backend**: FastAPI server providing data APIs and real-time monitoring
 - **Database**: Supabase (managed PostgreSQL) for persistent data storage
 - **Cost**: Minimal (~$12/month) - runs 24/7 to serve users
@@ -41,13 +41,13 @@ The system runs in the cloud using a **two-tier architecture** designed for cost
 
 ## How It Works
 
-The USCCB Data Extraction Pipeline is a multi-step process that systematically collects and organizes Catholic diocese and parish information from across the United States.
+The Data Extraction Pipeline is a multi-step process that systematically collects and organizes Catholic diocese and parish information from across the United States.
 
-![USCCB Data Extraction Pipeline Architecture](./architecture-diagram.svg)
+![Data Extraction Pipeline Architecture](./architecture-diagram.svg)
 
 ### Pipeline Steps
 
-1. **Extract Dioceses**: Scrapes the USCCB website for all U.S. dioceses
+1. **Extract Dioceses**: Scrapes the official conference website for all U.S. dioceses
 2. **Find Parish Directories**: Uses AI to locate parish directory pages on diocese websites
 3. **Extract Parishes**: Collects detailed parish information using specialized extractors
 4. **Extract Schedules**: Visits individual parish websites to gather mass and service times
@@ -55,7 +55,7 @@ The USCCB Data Extraction Pipeline is a multi-step process that systematically c
 ## Key Features
 
 ### 🚀 **Core Data Extraction**
-- **Automated Diocese Discovery**: Scrapes the official USCCB website to collect diocese information
+- **Automated Diocese Discovery**: Scrapes the official conference website to collect diocese information
 - **AI-Powered Parish Directory Detection**: Uses Google's Gemini AI to intelligently identify parish directory pages
 - **Advanced Web Scraping**: Employs Selenium with retry logic and pattern detection for robust data extraction
 - **Multi-Platform Parish Extraction**: Supports various website platforms including SquareSpace, WordPress, eCatholic, and custom implementations
@@ -69,7 +69,7 @@ The USCCB Data Extraction Pipeline is a multi-step process that systematically c
 - **🛡️ Circuit Breaker Protection**: Automatic failure detection and recovery for external services
 
 ### 📊 **Analytics & Monitoring**
-- **🖥️ Live Production Dashboard**: Real-time extraction monitoring at [usccb.diocesanvitality.org](https://usccb.diocesanvitality.org)
+- **🖥️ Live Production Dashboard**: Real-time extraction monitoring at [diocesanvitality.org](https://diocesanvitality.org)
 - **🔍 Comprehensive URL Visit Tracking**: Detailed visit analytics with response times, quality scores, and error classification
 - **📈 Quality-Weighted ML Training**: Advanced machine learning training using visit success data
 - **🎯 Intelligent Parish Prioritization**: Multi-factor scoring for optimal extraction order
@@ -92,7 +92,7 @@ The USCCB Data Extraction Pipeline is a multi-step process that systematically c
 
 ### Data Pipeline
 
-1. **Diocese Collection** → Scrapes USCCB for basic diocese information
+1. **Diocese Collection** → Scrapes the official source for basic diocese information
 2. **Parish Directory Discovery** → AI-powered detection of parish listing pages
 3. **Parish Extraction** → Advanced scraping with platform-specific extractors
 4. **Data Enhancement** → Extracts detailed parish information including addresses, contact info, and schedules
@@ -106,7 +106,7 @@ The USCCB Data Extraction Pipeline is a multi-step process that systematically c
 ### Data Extraction Modules
 
 #### Standard (Sequential) Processing
-- **`extract_dioceses.py`**: Scrapes the USCCB website to build the initial list of dioceses.
+- **`extract_dioceses.py`**: Scrapes the official conference website to build the initial list of dioceses.
 - **`find_parishes.py`**: Analyzes diocese websites to find the parish directory URL.
 - **`extract_parishes.py`**: Extracts parish information from the parish directory URLs.
 - **`extract_schedule.py`**: Extracts liturgical schedules (Adoration and Reconciliation) from parish websites.
@@ -139,7 +139,7 @@ The project uses Supabase (PostgreSQL) with the following key tables:
 
 ### `Dioceses`
 - **Primary Data**: Diocese names, addresses, official websites
-- **Source**: USCCB official directory
+- **Source**: Official directory
 
 ### `DiocesesParishDirectory`
 - **Links**: Diocese URLs to their parish directory pages
@@ -211,7 +211,7 @@ This project uses a virtual environment to manage dependencies and environment v
 
     ```bash
     # Navigate to the root of your project directory
-    cd /home/tomk/USCCB
+    cd /path/to/your/project
 
     # Create a virtual environment named 'venv'
     python3 -m venv venv
@@ -238,16 +238,16 @@ This project uses a virtual environment to manage dependencies and environment v
 
     This project.
 
-    Create a file named `.env` in `/home/tomk/USCCB/` 
+    Create a file named `.env` in the project root. 
     
-    Either (1) copy the contents of the LastPass password ".env file for USCCB repo" and paste that text into the .env file, or (2) Replacing the following placeholder values with the actual keys:
+    Either (1) copy the contents of the LastPass password ".env file for the repo" and paste that text into the .env file, or (2) Replacing the following placeholder values with the actual keys:
 
     ```
     SUPABASE_URL="your_supabase_url_here"
     SUPABASE_KEY="your_supabase_anon_key_here"
-    GENAI_API_KEY_USCCB="your_google_genai_api_key_here"
-    SEARCH_API_KEY_USCCB="your_google_custom_search_api_key_here"
-    SEARCH_CX_USCCB="your_google_custom_search_engine_id_here"
+    GENAI_API_KEY="your_google_genai_api_key_here"
+    SEARCH_API_KEY="your_google_custom_search_api_key_here"
+    SEARCH_CX="your_google_custom_search_engine_id_here"
     # Docker Hub credentials (for deployment)
     DOCKER_USERNAME="your_dockerhub_username"
     DOCKER_PASSWORD="your_dockerhub_password_or_token"
@@ -296,7 +296,7 @@ The system can be run in two environments: **local development** for testing and
 
 ### 🌐 **Cloud Production (Live System)**
 
-**Access the live system**: [https://usccb.diocesanvitality.org/dashboard](https://usccb.diocesanvitality.org/dashboard)
+**Access the live system**: [https://diocesanvitality.org/dashboard](https://diocesanvitality.org/dashboard)
 
 The production system runs automatically in Kubernetes with:
 - **Real-time dashboard**: Monitor live data extraction progress
@@ -380,7 +380,7 @@ While the pipeline is the recommended approach, you can run the individual scrip
 ```bash
 python extract_dioceses.py
 ```
-This script scrapes the USCCB website for all U.S. dioceses, extracts their details, and stores them in the `Dioceses` table. Use the `--max_dioceses` argument to limit the number of dioceses processed.
+This script scrapes the official conference website for all U.S. dioceses, extracts their details, and stores them in the `Dioceses` table. Use the `--max_dioceses` argument to limit the number of dioceses processed.
 
 #### Step 2: Find Parish Directories
 ```bash
@@ -548,7 +548,7 @@ The production system continuously maintains current data:
 - **High Success Rates**: 85-95% successful parish directory detection
 - **Rich Data Fields**: Including addresses, coordinates, contact info, and schedules
 - **Live Updates**: Data refreshed automatically through continuous pipeline operation
-- **Real-time Dashboard**: Current extraction status visible at [usccb.diocesanvitality.org/dashboard](https://usccb.diocesanvitality.org/dashboard)
+- **Real-time Dashboard**: Current extraction status visible at [diocesanvitality.org/dashboard](https://diocesanvitality.org/dashboard)
 
 ## Contributing
 
@@ -564,7 +564,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- United States Conference of Catholic Bishops for providing publicly accessible diocese information
+- The official conference website for providing publicly accessible diocese information
 - Google AI for Gemini API access enabling intelligent content analysis
 - Supabase for reliable cloud database infrastructure
 - The open-source community for the excellent web scraping and data processing libraries
@@ -573,11 +573,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Web Application
 
-The project includes a modern web application providing real-time access to collected data and extraction monitoring. The system is fully deployed in production and available at [https://usccb.diocesanvitality.org](https://usccb.diocesanvitality.org).
+The project includes a modern web application providing real-time access to collected data and extraction monitoring. The system is fully deployed in production and available at [https://diocesanvitality.org](https://diocesanvitality.org).
 
 ### Live Production System
 
-**🌐 Access the Dashboard**: [https://usccb.diocesanvitality.org/dashboard](https://usccb.diocesanvitality.org/dashboard)
+**🌐 Access the Dashboard**: [https://diocesanvitality.org/dashboard](https://diocesanvitality.org/dashboard)
 
 Features:
 - **Real-time extraction monitoring**: Watch live data collection progress
@@ -602,7 +602,7 @@ The web application uses **Docker Hub** for container image storage. Docker Hub 
 
 To use Docker Hub:
 1. Create a free account at [hub.docker.com](https://hub.docker.com)
-2. Create a repository for your images (e.g., `usccb` with tags for different services)
+2. Create a repository for your images (e.g., `app` with tags for different services)
 3. Configure your credentials in the `.env` file:
    ```bash
    DOCKER_USERNAME=your-dockerhub-username
@@ -618,18 +618,18 @@ To use Docker Hub:
    
    # Build and push backend
    cd backend
-   docker build -t $DOCKER_USERNAME/usccb:backend .
-   docker push $DOCKER_USERNAME/usccb:backend
+   docker build -t $DOCKER_USERNAME/app:backend .
+   docker push $DOCKER_USERNAME/app:backend
 
    # Build and push frontend
    cd ../frontend
-   docker build -t $DOCKER_USERNAME/usccb:frontend .
-   docker push $DOCKER_USERNAME/usccb:frontend
+   docker build -t $DOCKER_USERNAME/app:frontend .
+   docker push $DOCKER_USERNAME/app:frontend
 
    # Build and push pipeline
    cd ..
-   docker build -f Dockerfile.pipeline -t $DOCKER_USERNAME/usccb:pipeline .
-   docker push $DOCKER_USERNAME/usccb:pipeline
+   docker build -f Dockerfile.pipeline -t $DOCKER_USERNAME/app:pipeline .
+   docker push $DOCKER_USERNAME/app:pipeline
    ```
 
 For detailed instructions on how to build and deploy the web application, please see the [**Deployment Guide (DEPLOYMENT.md)**](./DEPLOYMENT.md).
@@ -644,7 +644,7 @@ For detailed instructions on how to build and deploy the web application, please
 - **[CONVERSATION_SUMMARY.md](CONVERSATION_SUMMARY.md)** - Development history and implementation decisions
 
 ### 📊 Data Extraction Modules
-- **[extract_dioceses_README.md](extract_dioceses_README.md)** - Diocese extraction from USCCB website
+- **[extract_dioceses_README.md](extract_dioceses_README.md)** - Diocese extraction from the official conference website
 - **[find_parishes_README.md](find_parishes_README.md)** - AI-powered parish directory discovery
 - **[extract_parishes_README.md](extract_parishes_README.md)** - Parish information extraction and processing
 - **[extract_schedule_README.md](extract_schedule_README.md)** - **🧪 NEW** - A/B testing schedule extraction (keyword vs AI methods)
@@ -673,7 +673,7 @@ For detailed instructions on how to build and deploy the web application, please
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture and design patterns
 - **[docs/DATABASE.md](docs/DATABASE.md)** - Database schema and data management
 - **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Docker and Kubernetes deployment instructions
-- **[docs/AUTHENTICATION.md](docs/AUTHENTICATION.md)** - Authentication and security configuration
+- **[docs/AUTHENTICATION.md](docs.md)** - Authentication and security configuration
 - **[docs/CLOUDFLARE.md](docs/CLOUDFLARE.md)** - Cloudflare tunnel and DNS configuration
 
 ### 🤖 Machine Learning & Optimization

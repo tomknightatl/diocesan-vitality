@@ -210,8 +210,10 @@ function ParishList({ dioceseId }) {
                   <option value="false">No</option>
                 </Form.Select>
               </th>
-              <th style={{ cursor: 'pointer', width: '100px', minWidth: '100px' }} onClick={() => handleSort('is_blocked')}>
-                Blocked {sortBy === 'is_blocked' && (sortOrder === 'asc' ? '▲' : '▼')}
+              <th style={{ cursor: 'pointer', width: '100px', minWidth: '100px' }}>
+                <div onClick={() => handleSort('is_blocked')}>
+                  Blocked {sortBy === 'is_blocked' && (sortOrder === 'asc' ? '▲' : '▼')}
+                </div>
               </th>
               <th style={{ width: '120px', minWidth: '120px' }}>Schedules</th>
             </tr>
