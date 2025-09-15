@@ -152,7 +152,7 @@ function ParishList({ dioceseId }) {
 
   return (
     <Container className="mt-4">
-      <h2>{dioceseId ? 'Parishes in Diocese' : 'All Parishes'}</h2>
+      {dioceseId && <h2>Parishes in Diocese</h2>}
       {loading && <Spinner animation="border" />}
       {error && <Alert variant="danger">Error fetching parishes: {error}</Alert>}
       {!loading && !error && (
@@ -226,7 +226,7 @@ function ParishList({ dioceseId }) {
             {parishes.map((parish, index) => (
               <tr key={parish.id || index}>
                 <td>{parish.Name}</td>
-                <td>{parish.DioceseName}</td>
+                <td>{parish.diocese_name}</td>
 
                 <td><a href={parish.Website} target="_blank" rel="noopener noreferrer">{parish.Website}</a></td>
                 <td>{parish.data_extracted ? 'Yes' : 'No'}</td>

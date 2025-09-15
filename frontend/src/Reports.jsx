@@ -26,8 +26,6 @@ function Reports() {
 
   return (
     <Container className="mt-4">
-      <h2>Reports</h2>
-      <p className="text-muted mb-4">Data collection and processing analytics showing records added over time.</p>
 
       <h3 className="mb-3">Diocese Data</h3>
       <Row className="mb-5">

@@ -10,6 +10,7 @@ import './index.css';
 import Reports from './Reports.jsx';
 import Layout from './Layout.jsx';
 import Parish from './Parish.jsx';
+import ParishList from './ParishList.jsx';
 
 const router = createBrowserRouter([
   {
@@ -26,6 +27,10 @@ const router = createBrowserRouter([
       {
         path: "/parish",
         element: <Parish />,
+      },
+      {
+        path: "/parishes",
+        element: <ParishList />,
       },
       {
         path: "/reports",
