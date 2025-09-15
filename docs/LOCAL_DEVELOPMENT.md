@@ -21,54 +21,41 @@ This guide provides everything you need to develop and test the Diocesan Vitalit
 
 ## Quick Start
 
-1. **Create and Activate Virtual Environment**
+1. **Configure Secrets as Environment Variables**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your API keys (see Environment Setup section, above)
+   ```
+
+2. **Create and Activate Virtual Environment**
    ```bash
    python3 -m venv venv
    source venv/bin/activate
    ```
 
-2. **Install Dependencies**
+3. **Install Dependencies**
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Configure Secrets as Environment Variables**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your API keys (see Environment Setup section)
-   ```
-
-  ```bash
-  # Supabase Configuration
-  SUPABASE_URL=https://your-project.supabase.co
-  SUPABASE_KEY=your-supabase-service-role-key
-
-  # Google AI API Keys
-  GENAI_API_KEY=your-google-gemini-api-key
-  SEARCH_API_KEY=your-google-search-api-key
-  SEARCH_CX=your-google-search-cx-id
-  ```
-
-  **Note:** Docker Hub username (`tomatl`) is configured in `config.py`, not in environment variables.
-
-4. **Start Local Services**
-
-   **Terminal 1 - Backend (required for monitoring):**
+4. **Start Backend**
    ```bash
    cd backend
    uvicorn main:app --reload --host 0.0.0.0 --port 8000
    ```
-   Server runs at http://localhost:8000
+   Backend API Server runs at http://localhost:8000
 
-   **Terminal 2 - Frontend (optional):**
+5. **Start Frontend**
+   Open a second terminal.     
    ```bash
    cd frontend
    npm install  # First time only
    npm run dev
    ```
-   Dashboard available at http://localhost:5173
+   Frontend User Interface available at http://localhost:5173
 
-5. **Run Extraction Scripts**
+5. **Run Data Collection Pipeline and/or Components**
+   Open a third terminal.     
    ```bash
    # Full pipeline with monitoring (recommended)
    python run_pipeline_monitored.py --monitoring_url http://localhost:8000 \
