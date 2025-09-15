@@ -155,10 +155,11 @@ const Dashboard = () => {
   const getStatusBadge = (status) => {
     const variants = {
       'running': 'success',
-      'idle': 'secondary', 
+      'idle': 'secondary',
       'error': 'danger',
       'paused': 'warning',
-      'completed': 'info'
+      'completed': 'info',
+      'stale': 'warning'
     };
     return variants[status] || 'secondary';
   };
@@ -220,7 +221,7 @@ const Dashboard = () => {
 
       {/* System Health Overview */}
       <Row className="mb-4">
-        <Col md={3}>
+        <Col md={4}>
           <Card className="h-100">
             <Card.Body>
               <Card.Title className="text-center">
@@ -247,61 +248,29 @@ const Dashboard = () => {
           </Card>
         </Col>
 
-        <Col md={3}>
+        <Col md={4}>
           <Card className="h-100">
             <Card.Body>
               <Card.Title className="text-center">
                 <i className="fas fa-tasks text-info"></i> Extraction Status
               </Card.Title>
-              {extractionStatus ? (
-                <div className="text-center">
-                  <div className="display-6 mb-2">
-                    <Badge bg={getStatusBadge(extractionStatus.status)}>
-                      {extractionStatus.status.toUpperCase()}
-                    </Badge>
-                  </div>
-                  <p className="mb-1"><strong>Diocese:</strong> {extractionStatus.current_diocese || 'None'}</p>
-                  <p className="mb-1"><strong>Parishes:</strong> {extractionStatus.parishes_processed || 0}</p>
-                  <p className="mb-0"><strong>Success Rate:</strong> {formatDecimal(extractionStatus.success_rate || 0)}%</p>
+              <div className="text-center">
+                <div className="display-6 mb-2">
+                  <Badge bg={extractionStatus ? getStatusBadge(extractionStatus.status) : 'secondary'}>
+                    {extractionStatus ? extractionStatus.status.toUpperCase() : 'IDLE'}
+                  </Badge>
                 </div>
-              ) : (
-                <div className="text-center">
-                  <div className="display-6 mb-2">
-                    <Badge bg="secondary">IDLE</Badge>
-                  </div>
-                  <p className="text-muted">No active extraction</p>
-                </div>
-              )}
+                {extractionStatus && extractionStatus.status === 'stale' && extractionStatus.stale_reason && (
+                  <small className="text-muted">
+                    <i className="fas fa-exclamation-triangle"></i> {extractionStatus.stale_reason}
+                  </small>
+                )}
+              </div>
             </Card.Body>
           </Card>
         </Col>
 
-        <Col md={3}>
-          <Card className="h-100">
-            <Card.Body>
-              <Card.Title className="text-center">
-                <i className="fas fa-chart-line text-success"></i> Performance
-              </Card.Title>
-              {performanceMetrics ? (
-                <div className="text-center">
-                  <div className="display-6 mb-2 text-success">
-                    {formatDecimal(performanceMetrics.parishes_per_minute)}
-                  </div>
-                  <p className="mb-1"><strong>Parishes/min</strong></p>
-                  <p className="mb-1"><strong>Queue:</strong> {performanceMetrics.queue_size || 0}</p>
-                  <p className="mb-0"><strong>Pool:</strong> {formatDecimal(performanceMetrics.pool_utilization || 0)}%</p>
-                </div>
-              ) : (
-                <div className="text-center">
-                  <div className="display-6 mb-2 text-muted">--</div>
-                  <p className="text-muted">No metrics</p>
-                </div>
-              )}
-            </Card.Body>
-          </Card>
-        </Col>
-
-        <Col md={3}>
+        <Col md={4}>
           <Card className="h-100">
             <Card.Body>
               <Card.Title className="text-center">
@@ -468,7 +437,11 @@ const Dashboard = () => {
                   ))}
                 </Row>
               ) : (
-                <p className="text-muted">No circuit breaker data available</p>
+                <p className="text-muted">
+                  <i className="fas fa-clock"></i> No circuit breaker data available
+                  <br />
+                  <small>Data will appear when extraction processes are running</small>
+                </p>
               )}
             </Card.Body>
           </Card>
