@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: diocesan-vitality-pipeline
+  name: diocesan-vitality-app
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -11,8 +11,6 @@ spec:
     repoURL: https://github.com/tomknightatl/diocesan-vitality
     targetRevision: HEAD
     path: k8s
-    directory:
-      include: pipeline-*
   destination:
     server: https://kubernetes.default.svc
     namespace: diocesan-vitality
@@ -22,10 +20,3 @@ spec:
       selfHeal: true
     syncOptions:
     - CreateNamespace=true
-    retry:
-      limit: 5
-      backoff:
-        duration: 5s
-        factor: 2
-        maxDuration: 3m
-  revisionHistoryLimit: 10
