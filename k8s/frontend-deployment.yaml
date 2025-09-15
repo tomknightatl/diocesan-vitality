@@ -14,9 +14,6 @@ spec:
         app: frontend
     spec:
       serviceAccountName: default
-      # Comment out or remove imagePullSecrets if using public Docker Hub repositories
-      imagePullSecrets:
-      - name: dockerhub-secret
       containers:
       - name: frontend
         # IMPORTANT: Replace YOUR_DOCKERHUB_USERNAME with your actual Docker Hub username
