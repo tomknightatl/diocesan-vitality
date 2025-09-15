@@ -610,13 +610,34 @@ def get_parish(
     parish_id: int
 ):
     """
-    Fetches a single parish by its ID.
+    Fetches a single parish by its ID with diocese name and schedule data.
     """
     try:
-        response = supabase.table('Parishes').select('*').eq('id', parish_id).execute()
-        if not response.data:
+        # Get parish basic info
+        parish_response = supabase.table('Parishes').select('*').eq('id', parish_id).execute()
+
+        if not parish_response.data:
             raise HTTPException(status_code=404, detail="Parish not found")
-        return {"data": response.data[0]}
+
+        parish = parish_response.data[0]
+
+        # Get diocese name
+        if parish.get('diocese_id'):
+            diocese_response = supabase.table('Dioceses').select('Name').eq('id', parish['diocese_id']).execute()
+            if diocese_response.data:
+                parish['diocese_name'] = diocese_response.data[0]['Name']
+            else:
+                parish['diocese_name'] = None
+        else:
+            parish['diocese_name'] = None
+
+        # Get schedule data
+        schedule_response = supabase.table('ParishData').select('*').eq('parish_id', parish_id).execute()
+
+        # Add schedule data to parish
+        parish['schedules'] = schedule_response.data
+
+        return {"data": parish}
     except Exception as e:
         return {"error": str(e)}
 
