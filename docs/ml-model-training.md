@@ -2,7 +2,7 @@
 
 ## Overview
 
-The USCCB data extraction pipeline includes a sophisticated Machine Learning-based URL prediction system that dramatically improves extraction success rates by learning from historical data and predicting the most likely schedule URLs for each domain.
+The Diocesan Vitality data extraction pipeline includes a sophisticated Machine Learning-based URL prediction system that dramatically improves extraction success rates by learning from historical data and predicting the most likely schedule URLs for each domain.
 
 ## Architecture
 

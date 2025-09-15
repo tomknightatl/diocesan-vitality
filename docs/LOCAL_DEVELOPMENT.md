@@ -1,6 +1,6 @@
 # Local Development Guide
 
-This guide provides everything you need to develop and test the USCCB extraction scripts locally.
+This guide provides everything you need to develop and test the Diocesan Vitality extraction scripts locally.
 
 ## Prerequisites
 
@@ -66,9 +66,9 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_KEY=your-supabase-service-role-key
 
 # Google AI API Keys
-GENAI_API_KEY_USCCB=your-google-gemini-api-key
-SEARCH_API_KEY_USCCB=your-google-search-api-key
-SEARCH_CX_USCCB=your-google-search-cx-id
+GENAI_API_KEY_Diocesan Vitality=your-google-gemini-api-key
+SEARCH_API_KEY_Diocesan Vitality=your-google-search-api-key
+SEARCH_CX_Diocesan Vitality=your-google-search-cx-id
 ```
 
 ### API Key Setup
@@ -370,34 +370,34 @@ git push origin feature/parish-extraction-fix
 ### Building and Testing Pipeline Container
 ```bash
 # Build pipeline container locally
-docker build -f Dockerfile.pipeline -t usccb-pipeline:test .
+docker build -f Dockerfile.pipeline -t diocesan-vitality-pipeline:test .
 
 # Run pipeline container with environment file
-docker run --rm --env-file .env usccb-pipeline:test
+docker run --rm --env-file .env diocesan-vitality-pipeline:test
 
 # Test with specific arguments
-docker run --rm --env-file .env usccb-pipeline:test python run_pipeline.py --skip_schedules
+docker run --rm --env-file .env diocesan-vitality-pipeline:test python run_pipeline.py --skip_schedules
 
 # Debug pipeline container interactively
-docker run -it --rm --env-file .env usccb-pipeline:test /bin/bash
+docker run -it --rm --env-file .env diocesan-vitality-pipeline:test /bin/bash
 
 # Test Chrome/ChromeDriver setup in container
-docker run --rm usccb-pipeline:test google-chrome --version
-docker run --rm usccb-pipeline:test python -c "from webdriver_manager.chrome import ChromeDriverManager; print('ChromeDriver OK')"
+docker run --rm diocesan-vitality-pipeline:test google-chrome --version
+docker run --rm diocesan-vitality-pipeline:test python -c "from webdriver_manager.chrome import ChromeDriverManager; print('ChromeDriver OK')"
 ```
 
 ### Building Backend and Frontend Containers
 ```bash
 # Build backend container
-docker build -t usccb-backend:test ./backend
+docker build -t diocesan-vitality-backend:test ./backend
 
 # Build frontend container
-docker build -t usccb-frontend:test ./frontend
+docker build -t diocesan-vitality-frontend:test ./frontend
 
 # Test all containers before production deployment
-docker build -t usccb-backend:test ./backend
-docker build -t usccb-frontend:test ./frontend
-docker build -f Dockerfile.pipeline -t usccb-pipeline:test .
+docker build -t diocesan-vitality-backend:test ./backend
+docker build -t diocesan-vitality-frontend:test ./frontend
+docker build -f Dockerfile.pipeline -t diocesan-vitality-pipeline:test .
 ```
 
 ## IDE Configuration
@@ -503,14 +503,14 @@ cd frontend && npm run lint
 ### Docker Testing Strategy
 ```bash
 # Test production builds locally before deploying
-docker build -t usccb-backend:test ./backend
-docker build -t usccb-frontend:test ./frontend
-docker build -f Dockerfile.pipeline -t usccb-pipeline:test .
+docker build -t diocesan-vitality-backend:test ./backend
+docker build -t diocesan-vitality-frontend:test ./frontend
+docker build -f Dockerfile.pipeline -t diocesan-vitality-pipeline:test .
 
 # Tag for staging environment testing (if available)
-docker tag usccb-backend:test $DOCKER_USERNAME/usccb:backend-test
-docker tag usccb-frontend:test $DOCKER_USERNAME/usccb:frontend-test
-docker tag usccb-pipeline:test $DOCKER_USERNAME/usccb:pipeline-test
+docker tag diocesan-vitality-backend:test $DOCKER_USERNAME/diocesan-vitality:backend-test
+docker tag diocesan-vitality-frontend:test $DOCKER_USERNAME/diocesan-vitality:frontend-test
+docker tag diocesan-vitality-pipeline:test $DOCKER_USERNAME/diocesan-vitality:pipeline-test
 ```
 
 ### Integration Testing
@@ -550,36 +550,36 @@ python run_pipeline_monitored.py \
 **Solution**: Force restart the deployments:
 ```bash
 # Force restart deployments to pull latest images
-kubectl rollout restart deployment/frontend-deployment -n usccb
-kubectl rollout restart deployment/backend-deployment -n usccb
-kubectl rollout restart deployment/pipeline-deployment -n usccb
+kubectl rollout restart deployment/frontend-deployment -n diocesan-vitality
+kubectl rollout restart deployment/backend-deployment -n diocesan-vitality
+kubectl rollout restart deployment/pipeline-deployment -n diocesan-vitality
 
 # Verify new pods are running
-kubectl get pods -n usccb
+kubectl get pods -n diocesan-vitality
 
 # Check image SHA of new pods (optional)
-kubectl get pod <pod-name> -n usccb -o jsonpath='{.status.containerStatuses[0].imageID}'
+kubectl get pod <pod-name> -n diocesan-vitality -o jsonpath='{.status.containerStatuses[0].imageID}'
 ```
 
 ### Production Deployment Workflow
 ```bash
 # 1. Build and push images
-docker build -t $DOCKER_USERNAME/usccb:backend ./backend
-docker build -t $DOCKER_USERNAME/usccb:frontend ./frontend
-docker build -f Dockerfile.pipeline -t $DOCKER_USERNAME/usccb:pipeline .
+docker build -t $DOCKER_USERNAME/diocesan-vitality:backend ./backend
+docker build -t $DOCKER_USERNAME/diocesan-vitality:frontend ./frontend
+docker build -f Dockerfile.pipeline -t $DOCKER_USERNAME/diocesan-vitality:pipeline .
 
-docker push $DOCKER_USERNAME/usccb:backend
-docker push $DOCKER_USERNAME/usccb:frontend
-docker push $DOCKER_USERNAME/usccb:pipeline
+docker push $DOCKER_USERNAME/diocesan-vitality:backend
+docker push $DOCKER_USERNAME/diocesan-vitality:frontend
+docker push $DOCKER_USERNAME/diocesan-vitality:pipeline
 
 # 2. Sync ArgoCD application
 
 # 3. Force deployment restart (if using same tags)
-kubectl rollout restart deployment/frontend-deployment -n usccb
-kubectl rollout restart deployment/backend-deployment -n usccb
+kubectl rollout restart deployment/frontend-deployment -n diocesan-vitality
+kubectl rollout restart deployment/backend-deployment -n diocesan-vitality
 
 # 4. Verify deployment
-kubectl get pods -n usccb
+kubectl get pods -n diocesan-vitality
 ```
 
 ## Continuous Integration
@@ -645,9 +645,9 @@ python extract_dioceses.py --max_dioceses 1
 pytest tests/ -v
 
 # 5. Test Docker builds before committing
-docker build -t usccb-backend:test ./backend
-docker build -t usccb-frontend:test ./frontend
-docker build -f Dockerfile.pipeline -t usccb-pipeline:test .
+docker build -t diocesan-vitality-backend:test ./backend
+docker build -t diocesan-vitality-frontend:test ./frontend
+docker build -f Dockerfile.pipeline -t diocesan-vitality-pipeline:test .
 
 # 6. Commit and push
 git add .

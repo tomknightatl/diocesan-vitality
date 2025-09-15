@@ -1,6 +1,6 @@
 # Frontend Application
 
-This directory contains the React frontend for the USCCB Diocese Vitality Index application.
+This directory contains the React frontend for the Diocesan Vitality Diocese Vitality Index application.
 
 ## Local Development
 

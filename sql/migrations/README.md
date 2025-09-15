@@ -1,6 +1,6 @@
 # Database Migrations
 
-This directory contains SQL migration scripts for the USCCB parish schedule extraction system.
+This directory contains SQL migration scripts for the Diocesan Vitality parish schedule extraction system.
 
 ## Migration Process
 

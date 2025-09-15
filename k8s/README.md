@@ -1,13 +1,13 @@
-# USCCB Pipeline Kubernetes Deployment
+# Diocesan Vitality Pipeline Kubernetes Deployment
 
-This directory contains Kubernetes manifests for running the USCCB data extraction pipeline on your DOKS cluster.
+This directory contains Kubernetes manifests for running the Diocesan Vitality data extraction pipeline on your DOKS cluster.
 
 ## Overview
 
 The pipeline runs as a **continuous Deployment** in Kubernetes, using the same Docker image naming convention as your backend and frontend:
-- **Backend**: `tomatl/usccb:backend`
-- **Frontend**: `tomatl/usccb:frontend`
-- **Pipeline**: `tomatl/usccb:pipeline`
+- **Backend**: `tomatl/diocesan-vitality:backend`
+- **Frontend**: `tomatl/diocesan-vitality:frontend`
+- **Pipeline**: `tomatl/diocesan-vitality:pipeline`
 
 The pipeline provides:
 - **Continuous execution** via Deployment (always running, auto-restart on completion)
@@ -19,12 +19,12 @@ The pipeline provides:
 ## Quick Start
 
 ### Deploy with ArgoCD (Recommended)
-Since the pipeline manifests are in the `k8s/` directory, they will be automatically deployed by your ArgoCD Application to the `usccb` namespace.
+Since the pipeline manifests are in the `k8s/` directory, they will be automatically deployed by your ArgoCD Application to the `diocesan-vitality` namespace.
 
 1. **Build and push the pipeline image**:
    ```bash
-   docker build -f Dockerfile.pipeline -t tomatl/usccb:pipeline .
-   docker push tomatl/usccb:pipeline
+   docker build -f Dockerfile.pipeline -t tomatl/diocesan-vitality:pipeline .
+   docker push tomatl/diocesan-vitality:pipeline
    ```
 
 2. **Ensure Docker registry secret exists**:
@@ -34,14 +34,14 @@ Since the pipeline manifests are in the `k8s/` directory, they will be automatic
      --docker-username=tomatl \
      --docker-password=YOUR_PERSONAL_ACCESS_TOKEN \
      --docker-email=your-email@example.com \
-     -n usccb
+     -n diocesan-vitality
    ```
 
 3. **Create application secrets**:
    ```bash
-   # Create the usccb-secrets secret with your actual API credentials
-   kubectl create secret generic usccb-secrets \
-     -n usccb \
+   # Create the diocesan-vitality-secrets secret with your actual API credentials
+   kubectl create secret generic diocesan-vitality-secrets \
+     -n diocesan-vitality \
      --from-literal=supabase-url="https://your-project.supabase.co" \
      --from-literal=supabase-key="your-supabase-service-role-key" \
      --from-literal=genai-api-key="your-google-gemini-api-key" \
@@ -49,8 +49,8 @@ Since the pipeline manifests are in the `k8s/` directory, they will be automatic
      --from-literal=search-cx="your-google-search-cx-id"
 
    # Verify the secret was created successfully
-   kubectl get secret usccb-secrets -n usccb
-   kubectl describe secret usccb-secrets -n usccb  # Shows keys but not values
+   kubectl get secret diocesan-vitality-secrets -n diocesan-vitality
+   kubectl describe secret diocesan-vitality-secrets -n diocesan-vitality  # Shows keys but not values
    ```
 
    **Required credentials:**
@@ -75,37 +75,37 @@ When you make changes to the pipeline code and need to deploy a new version:
 2. **Build and push new image**:
    ```bash
    # Build the updated pipeline image
-   docker build -f Dockerfile.pipeline -t tomatl/usccb:pipeline .
+   docker build -f Dockerfile.pipeline -t tomatl/diocesan-vitality:pipeline .
 
    # Push to Docker Hub
-   docker push tomatl/usccb:pipeline
+   docker push tomatl/diocesan-vitality:pipeline
    ```
 
 3. **Deploy to Kubernetes**:
    ```bash
    # Restart deployment to pull latest image
-   kubectl rollout restart deployment pipeline-deployment -n usccb
+   kubectl rollout restart deployment pipeline-deployment -n diocesan-vitality
 
    # Monitor the deployment
-   kubectl rollout status deployment pipeline-deployment -n usccb
+   kubectl rollout status deployment pipeline-deployment -n diocesan-vitality
 
    # Check new pod is running
-   kubectl get pods -n usccb -l app=pipeline
+   kubectl get pods -n diocesan-vitality -l app=pipeline
    ```
 
 4. **Verify deployment**:
    ```bash
    # Check logs for successful startup
-   kubectl logs -f deployment/pipeline-deployment -n usccb
+   kubectl logs -f deployment/pipeline-deployment -n diocesan-vitality
 
    # Monitor via dashboard
-   # Visit: https://usccb.diocesanvitality.org/dashboard
+   # Visit: https://diocesan-vitality.diocesanvitality.org/dashboard
    ```
 
 ### Manual Pipeline Restart
 To restart the pipeline without rebuilding (triggers fresh execution):
 ```bash
-kubectl rollout restart deployment pipeline-deployment -n usccb
+kubectl rollout restart deployment pipeline-deployment -n diocesan-vitality
 ```
 
 ## Files Explained
@@ -120,7 +120,7 @@ kubectl rollout restart deployment pipeline-deployment -n usccb
 - `pipeline-configmap.yaml` - Non-sensitive configuration
 
 ### ArgoCD Files
-- `usccb-app.yaml` - ArgoCD Application definition (in root directory)
+- `diocesan-vitality-app.yaml` - ArgoCD Application definition (in root directory)
 
 ## Usage
 
@@ -128,16 +128,16 @@ kubectl rollout restart deployment pipeline-deployment -n usccb
 The pipeline runs continuously and can be monitored via:
 
 **Dashboard (Recommended):**
-- Visit https://usccb.diocesanvitality.org/dashboard
+- Visit https://diocesan-vitality.diocesanvitality.org/dashboard
 - Real-time WebSocket monitoring with live logs, circuit breaker status, and progress
 
 **Command Line:**
 ```bash
 # Check pod status
-kubectl get pods -n usccb -l app=pipeline
+kubectl get pods -n diocesan-vitality -l app=pipeline
 
 # Watch live logs
-kubectl logs -f deployment/pipeline-deployment -n usccb
+kubectl logs -f deployment/pipeline-deployment -n diocesan-vitality
 
 # Check ArgoCD application health
 kubectl get applications -n argocd
@@ -146,7 +146,7 @@ kubectl get applications -n argocd
 ### Restarting Pipeline
 To manually restart the pipeline (triggers fresh execution):
 ```bash
-kubectl rollout restart deployment pipeline-deployment -n usccb
+kubectl rollout restart deployment pipeline-deployment -n diocesan-vitality
 ```
 
 ### Customizing Pipeline Arguments
@@ -173,19 +173,19 @@ Available arguments:
 
 **Check deployment status:**
 ```bash
-kubectl get deployments -n usccb
-kubectl describe deployment pipeline-deployment -n usccb
+kubectl get deployments -n diocesan-vitality
+kubectl describe deployment pipeline-deployment -n diocesan-vitality
 ```
 
 **Check pod issues:**
 ```bash
-kubectl get pods -n usccb -l app=pipeline
-kubectl describe pod <pod-name> -n usccb
+kubectl get pods -n diocesan-vitality -l app=pipeline
+kubectl describe pod <pod-name> -n diocesan-vitality
 ```
 
 **View detailed logs:**
 ```bash
-kubectl logs -f deployment/pipeline-deployment -n usccb --tail=50
+kubectl logs -f deployment/pipeline-deployment -n diocesan-vitality --tail=50
 ```
 
 **Common Issues:**
@@ -196,10 +196,10 @@ kubectl logs -f deployment/pipeline-deployment -n usccb --tail=50
 **Force refresh pipeline image:**
 ```bash
 # Restart deployment to pull latest image
-kubectl rollout restart deployment pipeline-deployment -n usccb
+kubectl rollout restart deployment pipeline-deployment -n diocesan-vitality
 
 # Check rollout status
-kubectl rollout status deployment pipeline-deployment -n usccb
+kubectl rollout status deployment pipeline-deployment -n diocesan-vitality
 ```
 
 ### Resource Configuration
@@ -225,7 +225,7 @@ This allows all three services (frontend, backend, pipeline) to run on a single 
 
 ### Accessing from Your Domain
 
-Since you have Cloudflare tunnel and `usccb.diocesanvitality.org`, you can:
+Since you have Cloudflare tunnel and `diocesan-vitality.diocesanvitality.org`, you can:
 
 1. **Add a web interface** by creating a FastAPI service that can trigger jobs
 2. **Set up monitoring** with endpoints that show job status

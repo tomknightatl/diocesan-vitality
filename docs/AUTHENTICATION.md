@@ -25,7 +25,7 @@ Create a PAT for git operations and GitHub CLI.
 
 #### 1.2 Configure Token Permissions
 
-**Token Name:** Give it a descriptive name like `usccb-project-token`
+**Token Name:** Give it a descriptive name like `diocesan-vitality-project-token`
 
 **Expiration:** Choose an appropriate expiration (90 days recommended for security)
 
@@ -88,7 +88,7 @@ git push origin main
 1. Log in to Docker Hub
 2. Go to **Account Settings** → **Security**
 3. Click **New Access Token**
-4. Give it a descriptive name (e.g., "USCCB Deployment")
+4. Give it a descriptive name (e.g., "Diocesan Vitality Deployment")
 5. Select access permissions (Read, Write, Delete - or just Read & Write)
 6. Click **Generate**
 7. **IMPORTANT:** Copy the token immediately (it won't be shown again)
@@ -151,10 +151,10 @@ docker login -u YOUR_DOCKERHUB_USERNAME
 1. Log in to [hub.docker.com](https://hub.docker.com)
 2. Click **Repositories** → **Create Repository**
 3. Create repositories for your project:
-   - Repository name: `usccb-backend`
-   - Description: "USCCB Backend API"
+   - Repository name: `diocesan-vitality-backend`
+   - Description: "Diocesan Vitality Backend API"
    - Visibility: **Public** (free) or **Private** (requires paid plan)
-4. Repeat for `usccb-frontend`
+4. Repeat for `diocesan-vitality-frontend`
 
 ### Step 4: Test Docker Hub Authentication
 
@@ -205,9 +205,9 @@ DOCKER_PASSWORD=your-dockerhub-access-token
 # Other project credentials
 SUPABASE_URL=your_supabase_url_here
 SUPABASE_KEY=your_supabase_key_here
-GENAI_API_KEY_USCCB=your_google_genai_api_key_here
-SEARCH_API_KEY_USCCB=your_google_search_api_key_here
-SEARCH_CX_USCCB=your_google_search_engine_id_here
+GENAI_API_KEY_Diocesan Vitality=your_google_genai_api_key_here
+SEARCH_API_KEY_Diocesan Vitality=your_google_search_api_key_here
+SEARCH_CX_Diocesan Vitality=your_google_search_engine_id_here
 ```
 
 ### Secure the .env File
@@ -241,7 +241,7 @@ kubectl create secret docker-registry dockerhub-secret \
   --docker-username=YOUR_DOCKERHUB_USERNAME \
   --docker-password=YOUR_DOCKERHUB_TOKEN \
   --docker-email=YOUR_EMAIL \
-  --namespace=usccb
+  --namespace=diocesan-vitality
 ```
 
 Then reference it in your deployments:

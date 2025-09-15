@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: pipeline-deployment
-  namespace: usccb
+  namespace: diocesan-vitality
 spec:
   replicas: 1
   selector:
@@ -20,7 +20,7 @@ spec:
         doks.digitalocean.com/node-pool: fast-pool
       containers:
       - name: pipeline
-        image: tomatl/usccb:pipeline
+        image: tomatl/diocesan-vitality:pipeline
         imagePullPolicy: Always
         resources:
           requests:
@@ -33,27 +33,27 @@ spec:
         - name: SUPABASE_URL
           valueFrom:
             secretKeyRef:
-              name: usccb-secrets
+              name: diocesan-vitality-secrets
               key: supabase-url
         - name: SUPABASE_KEY
           valueFrom:
             secretKeyRef:
-              name: usccb-secrets
+              name: diocesan-vitality-secrets
               key: supabase-key
-        - name: GENAI_API_KEY_USCCB
+        - name: GENAI_API_KEY_DIOCESAN_VITALITY
           valueFrom:
             secretKeyRef:
-              name: usccb-secrets
+              name: diocesan-vitality-secrets
               key: genai-api-key
-        - name: SEARCH_API_KEY_USCCB
+        - name: SEARCH_API_KEY_DIOCESAN_VITALITY
           valueFrom:
             secretKeyRef:
-              name: usccb-secrets
+              name: diocesan-vitality-secrets
               key: search-api-key
-        - name: SEARCH_CX_USCCB
+        - name: SEARCH_CX_DIOCESAN_VITALITY
           valueFrom:
             secretKeyRef:
-              name: usccb-secrets
+              name: diocesan-vitality-secrets
               key: search-cx
         - name: MPLCONFIGDIR
           value: "/tmp/matplotlib"
