@@ -173,6 +173,63 @@ const Dashboard = () => {
     return variants[state] || 'secondary';
   };
 
+  const getCircuitBreakerHealth = (status) => {
+    // Calculate health score: 0 (worst) to 100 (best)
+    const { state, success_rate, total_blocked, total_requests } = status;
+
+    // Unused circuits get neutral/inactive score
+    if (total_requests === 0) {
+      return 50; // Neutral score for inactive circuits
+    }
+
+    // Base score from state for active circuits
+    let score = 0;
+    if (state === 'CLOSED') score = 70;
+    else if (state === 'HALF_OPEN') score = 40;
+    else if (state === 'OPEN') score = 10;
+
+    // Adjust for success rate
+    score = score * 0.3 + success_rate * 0.7;
+
+    // Penalty for blocked requests
+    if (total_blocked > 0) {
+      const blockingRate = (total_blocked / total_requests) * 100;
+      score = Math.max(0, score - blockingRate * 0.5);
+    }
+
+    return Math.round(score);
+  };
+
+  const getHealthColor = (health) => {
+    if (health >= 80) return 'success';
+    if (health >= 60) return 'warning';
+    if (health >= 40) return 'danger';
+    return 'dark';
+  };
+
+  const getHealthIcon = (health) => {
+    if (health >= 80) return '🟢';
+    if (health >= 60) return '🟡';
+    if (health >= 40) return '🟠';
+    return '🔴';
+  };
+
+  const sortCircuitBreakersByHealth = (circuitBreakers) => {
+    return Object.entries(circuitBreakers).sort(([, a], [, b]) => {
+      const isActiveA = a.total_requests > 0;
+      const isActiveB = b.total_requests > 0;
+
+      // Active circuits first, then inactive circuits
+      if (isActiveA && !isActiveB) return -1;
+      if (!isActiveA && isActiveB) return 1;
+
+      // Within each group, sort by health (least healthy first for active, any order for inactive)
+      const healthA = getCircuitBreakerHealth(a);
+      const healthB = getCircuitBreakerHealth(b);
+      return healthA - healthB;
+    });
+  };
+
   const formatTimestamp = (timestamp) => {
     return new Date(timestamp).toLocaleTimeString();
   };
@@ -304,30 +361,77 @@ const Dashboard = () => {
             <Card.Body>
               <Card.Title>🛡️ Circuit Breaker Status</Card.Title>
               {Object.keys(circuitBreakers).length > 0 ? (
-                <Row>
-                  {Object.entries(circuitBreakers).map(([name, status]) => (
-                    <Col md={4} key={name} className="mb-3">
-                      <Card className="h-100">
-                        <Card.Body>
-                          <div className="d-flex justify-content-between align-items-center mb-2">
-                            <h6 className="mb-0">{name}</h6>
+                <div className="circuit-breaker-list">
+                  {/* Header Row */}
+                  <div className="circuit-breaker-header border-bottom pb-2 mb-3">
+                    <Row className="fw-bold text-muted">
+                      <Col md={5}>Name</Col>
+                      <Col md={1} className="text-center">State</Col>
+                      <Col md={1} className="text-center">Requests</Col>
+                      <Col md={1} className="text-center">Health</Col>
+                      <Col md={2} className="text-center">Success Rate</Col>
+                      <Col md={1} className="text-center">Failures</Col>
+                      <Col md={1} className="text-center">Blocked</Col>
+                    </Row>
+                  </div>
+
+                  {sortCircuitBreakersByHealth(circuitBreakers).map(([name, status]) => {
+                    const health = getCircuitBreakerHealth(status);
+                    const healthColor = getHealthColor(health);
+                    const healthIcon = getHealthIcon(health);
+
+                    return (
+                      <div key={name} className={`circuit-breaker-row border rounded p-3 mb-2 border-${healthColor}`}
+                           style={{ backgroundColor: `var(--bs-${healthColor}-subtle)` }}>
+                        <Row className="align-items-center">
+                          <Col md={5}>
+                            <div className="d-flex align-items-center">
+                              <span className="me-2" style={{ fontSize: '1.2em' }}>{healthIcon}</span>
+                              <div>
+                                <h6 className="mb-0">{name.replace(/_/g, ' ').toUpperCase()}</h6>
+                              </div>
+                            </div>
+                          </Col>
+
+                          <Col md={1} className="text-center">
                             <Badge bg={getCircuitBreakerBadge(status.state)}>
                               {status.state}
                             </Badge>
-                          </div>
-                          <small className="text-muted">
-                            <div>Requests: {status.total_requests}</div>
-                            <div>Success Rate: {formatDecimal(status.success_rate)}%</div>
-                            <div>Failures: {status.total_failures}</div>
-                            {status.total_blocked > 0 && (
-                              <div className="text-warning">Blocked: {status.total_blocked}</div>
-                            )}
-                          </small>
-                        </Card.Body>
-                      </Card>
-                    </Col>
-                  ))}
-                </Row>
+                          </Col>
+
+                          <Col md={1} className="text-center">
+                            <div className="fw-bold">{status.total_requests}</div>
+                          </Col>
+
+                          <Col md={1} className="text-center">
+                            <div className={`fw-bold text-${healthColor}`}>
+                              {health}%
+                            </div>
+                          </Col>
+
+                          <Col md={2} className="text-center">
+                            <div className={`fw-bold ${status.success_rate >= 90 ? 'text-success' :
+                                                     status.success_rate >= 70 ? 'text-warning' : 'text-danger'}`}>
+                              {formatDecimal(status.success_rate)}%
+                            </div>
+                          </Col>
+
+                          <Col md={1} className="text-center">
+                            <div className={`fw-bold ${status.total_failures > 0 ? 'text-danger' : 'text-success'}`}>
+                              {status.total_failures}
+                            </div>
+                          </Col>
+
+                          <Col md={1} className="text-center">
+                            <div className={`fw-bold ${status.total_blocked > 0 ? 'text-warning' : 'text-success'}`}>
+                              {status.total_blocked}
+                            </div>
+                          </Col>
+                        </Row>
+                      </div>
+                    );
+                  })}
+                </div>
               ) : (
                 <p className="text-muted">
                   <i className="fas fa-clock"></i> No circuit breaker data available
