@@ -40,12 +40,13 @@ spec:
             memory: "128Mi"
             cpu: "25m"
         env:
-        # It is strongly recommended to manage secrets using Kubernetes Secrets.
-        # 1. Create a secret like this:
-        #    kubectl create secret generic supabase-credentials \
-        #      --from-literal=SUPABASE_URL='your_supabase_url' \
-        #      --from-literal=SUPABASE_KEY='your_supabase_key'
-        # 2. Uncomment the envFrom block below.
-        envFrom:
-        - secretRef:
-            name: diocesan-vitality-secrets
+        - name: SUPABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: diocesan-vitality-secrets
+              key: supabase-url
+        - name: SUPABASE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: diocesan-vitality-secrets
+              key: supabase-key
