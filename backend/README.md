@@ -1,27 +1,19 @@
 # Backend API
 
-This directory contains the FastAPI backend for the Diocesan Vitality Diocese Vitality Index application.
+FastAPI backend for the Diocesan Vitality system.
 
-## Local Development
+## Quick Start
 
-### 1. Set up Environment
+See **[Local Development Guide](../docs/LOCAL_DEVELOPMENT.md#start-development-services)** for complete setup.
 
-This service requires Python and a virtual environment. Ensure the root `.env` file is populated with your Supabase credentials.
-
-### 2. Install Dependencies
-
-Install the required Python packages using pip:
-
-```sh
-pip install -r requirements.txt
+```bash
+cd backend
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### 3. Run the Development Server
+→ Backend available at http://localhost:8000
 
-To start the Uvicorn development server, run the following command from this directory:
+## API Documentation
 
-```sh
-uvicorn main:app --reload
-```
-
-The API will be available at `http://localhost:8000`.
+- **OpenAPI Docs**: http://localhost:8000/docs (when running locally)
+- **API Reference**: http://localhost:8000/redoc (when running locally)

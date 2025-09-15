@@ -214,7 +214,7 @@ The project uses Supabase (PostgreSQL) with the following key tables:
 
 - **[🚀 Deployment Guide](DEPLOYMENT_GUIDE.md)** - Complete guide for deploying new Docker images
 - **[📈 Scaling Guide](k8s/SCALING_README.md)** - Horizontal scaling and distributed pipeline setup
-- **[⚙️ Configuration Guide](config_README.md)** - Environment and database configuration
+- **[🔧 Local Development](docs/LOCAL_DEVELOPMENT.md)** - Development setup and testing
 
 ## Getting Started
 
