@@ -4,7 +4,9 @@
       "Bash(kubectl get:*)",
       "Bash(kubectl logs:*)",
       "Bash(kubectl describe pod:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run lint:*)"
     ],
     "deny": [],
     "ask": []
