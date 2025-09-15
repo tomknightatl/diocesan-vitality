@@ -8,6 +8,7 @@ including robots.txt compliance, rate limiting, and blocking detection.
 
 import argparse
 import time
+import json
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 import requests
@@ -27,6 +28,88 @@ from extract_schedule import (
 )
 
 logger = get_logger(__name__)
+
+
+class MonitoringClient:
+    """Client for sending updates to the monitoring API."""
+
+    def __init__(self, base_url: str = "http://127.0.0.1:8000"):
+        self.base_url = base_url
+        self.session = requests.Session()
+        self.session.timeout = 5  # Quick timeout for monitoring calls
+
+    def send_log(self, message: str, level: str = "INFO", parish_id: int = None):
+        """Send a log entry to the monitoring API."""
+        try:
+            data = {
+                "message": message,
+                "level": level,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "parish_id": parish_id
+            }
+            self.session.post(f"{self.base_url}/api/monitoring/log", json=data)
+        except Exception as e:
+            # Silently fail - don't let monitoring break the main process
+            pass
+
+    def update_extraction_status(self, status: str, current_diocese: str = None,
+                                parishes_processed: int = 0, total_parishes: int = 0,
+                                success_rate: float = 0.0, progress_percentage: float = 0.0):
+        """Update extraction status in the monitoring API."""
+        try:
+            data = {
+                "status": status,
+                "current_diocese": current_diocese,
+                "parishes_processed": parishes_processed,
+                "total_parishes": total_parishes,
+                "success_rate": success_rate,
+                "progress_percentage": progress_percentage,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+            if status == "running" and not hasattr(self, '_start_time'):
+                self._start_time = datetime.now(timezone.utc).isoformat()
+                data["started_at"] = self._start_time
+            elif hasattr(self, '_start_time'):
+                data["started_at"] = self._start_time
+
+            self.session.post(f"{self.base_url}/api/monitoring/extraction_status", json=data)
+        except Exception as e:
+            # Silently fail - don't let monitoring break the main process
+            pass
+
+    def update_performance_metrics(self, parishes_per_minute: float = 0.0,
+                                  queue_size: int = 0, total_requests: int = 0,
+                                  successful_requests: int = 0):
+        """Update performance metrics in the monitoring API."""
+        try:
+            data = {
+                "parishes_per_minute": parishes_per_minute,
+                "queue_size": queue_size,
+                "pool_utilization": 0.0,  # Not applicable for this script
+                "total_requests": total_requests,
+                "successful_requests": successful_requests,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+            self.session.post(f"{self.base_url}/api/monitoring/performance_metrics", json=data)
+        except Exception as e:
+            # Silently fail - don't let monitoring break the main process
+            pass
+
+    def report_error(self, error_message: str, error_type: str = "extraction_error",
+                    diocese: str = None, parish_id: int = None):
+        """Report an error to the monitoring API."""
+        try:
+            data = {
+                "message": error_message,
+                "type": error_type,
+                "diocese": diocese,
+                "parish_id": parish_id,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+            self.session.post(f"{self.base_url}/api/monitoring/report_error", json=data)
+        except Exception as e:
+            # Silently fail - don't let monitoring break the main process
+            pass
 
 
 def update_parish_blocking_data(supabase, parish_id: int, blocking_info: dict, robots_info: dict):
