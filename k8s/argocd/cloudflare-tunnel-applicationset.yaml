@@ -17,7 +17,7 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://github.com/tomknightatl/USCCB.git
+        repoURL: https://github.com/tomknightatl/diocesan-vitality.git
         targetRevision: HEAD
         path: 'k8s/argocd/cloudflare-tunnel/overlays/prd'  # Direct path to prd
       destination:

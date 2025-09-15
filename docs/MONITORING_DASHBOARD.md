@@ -2,7 +2,7 @@
 
 ## Overview
 
-The real-time monitoring dashboard provides **live operational visibility** into the USCCB parish extraction system. It displays real-time extraction progress, system health, circuit breaker status, performance metrics, and error tracking through an intuitive web interface.
+The real-time monitoring dashboard provides **live operational visibility** into the Diocesan Vitality parish extraction system. It displays real-time extraction progress, system health, circuit breaker status, performance metrics, and error tracking through an intuitive web interface.
 
 ## Features
 
@@ -371,4 +371,4 @@ spec:
       targetPort: 8001
 ```
 
-The real-time monitoring dashboard provides **enterprise-grade operational visibility** for the USCCB parish extraction system, enabling proactive monitoring, rapid issue resolution, and performance optimization.
+The real-time monitoring dashboard provides **enterprise-grade operational visibility** for the Diocesan Vitality parish extraction system, enabling proactive monitoring, rapid issue resolution, and performance optimization.

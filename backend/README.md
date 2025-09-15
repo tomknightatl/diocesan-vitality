@@ -1,6 +1,6 @@
 # Backend API
 
-This directory contains the FastAPI backend for the USCCB Diocese Vitality Index application.
+This directory contains the FastAPI backend for the Diocesan Vitality Diocese Vitality Index application.
 
 ## Local Development
 

@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend-deployment
-  namespace: usccb
+  namespace: diocesan-vitality
 spec:
   replicas: 1
   selector:
@@ -21,7 +21,7 @@ spec:
       - name: frontend
         # IMPORTANT: Replace YOUR_DOCKERHUB_USERNAME with your actual Docker Hub username
         # Using single repository with tags: usccb:frontend
-        image: tomatl/usccb:frontend
+        image: tomatl/diocesan-vitality:frontend
         imagePullPolicy: Always
         ports:
         - containerPort: 80

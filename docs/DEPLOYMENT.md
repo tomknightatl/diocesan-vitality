@@ -28,7 +28,7 @@ For authentication instructions with Docker Hub, please refer to the Docker Hub 
    - Log in to Docker Hub
    - Go to Account Settings → Security
    - Click "New Access Token"
-   - Give it a descriptive name (e.g., "USCCB Deployment")
+   - Give it a descriptive name (e.g., "Diocesan Vitality Deployment")
    - Copy the token and save it securely
 
 3. **Add Docker Hub credentials to .env file**:
@@ -53,12 +53,12 @@ For authentication instructions with Docker Hub, please refer to the Docker Hub 
 5. **Create repository on Docker Hub**:
    - Go to https://hub.docker.com/repositories
    - Click "Create Repository"
-   - Name it `usccb` (single repository for all images)
+   - Name it `diocesan-vitality` (single repository for all images)
    - Choose Public (free) or Private (1 private repo free)
    
    This single repository will hold both images using tags:
-   - `usccb:backend` for the backend service
-   - `usccb:frontend` for the frontend service
+   - `diocesan-vitality:backend` for the backend service
+   - `diocesan-vitality:frontend` for the frontend service
 
 ## Verification Steps
 
@@ -98,10 +98,10 @@ source .env
 cd backend
 
 # Build the Docker image with tag
-docker build -t $DOCKER_USERNAME/usccb:backend .
+docker build -t $DOCKER_USERNAME/diocesan-vitality:backend .
 
 # Push the backend image to Docker Hub
-docker push $DOCKER_USERNAME/usccb:backend
+docker push $DOCKER_USERNAME/diocesan-vitality:backend
 ```
 
 ### Frontend
@@ -111,10 +111,10 @@ docker push $DOCKER_USERNAME/usccb:backend
 cd ../frontend
 
 # Build the Docker image with tag
-docker build -t $DOCKER_USERNAME/usccb:frontend .
+docker build -t $DOCKER_USERNAME/diocesan-vitality:frontend .
 
 # Push the frontend image to Docker Hub
-docker push $DOCKER_USERNAME/usccb:frontend
+docker push $DOCKER_USERNAME/diocesan-vitality:frontend
 ```
 
 ### Pipeline
@@ -124,10 +124,10 @@ docker push $DOCKER_USERNAME/usccb:frontend
 cd ..
 
 # Build the Docker image with tag
-docker build -f Dockerfile.pipeline -t $DOCKER_USERNAME/usccb:pipeline .
+docker build -f Dockerfile.pipeline -t $DOCKER_USERNAME/diocesan-vitality:pipeline .
 
 # Push the pipeline image to Docker Hub
-docker push $DOCKER_USERNAME/usccb:pipeline
+docker push $DOCKER_USERNAME/diocesan-vitality:pipeline
 ```
 
 ## Step 2: Create Kubernetes Secret for Supabase
@@ -140,7 +140,7 @@ source .env
 
 # Create secret using environment variables
 kubectl create secret generic supabase-credentials \
-  -n usccb \
+  -n diocesan-vitality \
   --from-literal=SUPABASE_URL="$SUPABASE_URL" \
   --from-literal=SUPABASE_KEY="$SUPABASE_KEY"
 ```
@@ -157,7 +157,7 @@ source .env
 
 # Create image pull secret using environment variables
 kubectl create secret docker-registry dockerhub-secret \
-  -n usccb \
+  -n diocesan-vitality \
   --docker-server=docker.io \
   --docker-username="$DOCKER_USERNAME" \
   --docker-password="$DOCKER_PASSWORD" \
@@ -172,11 +172,11 @@ The Kubernetes manifests in the `k8s/` directory need to be updated with your Do
 
 ### Option A: Manual Update
 1. **`k8s/backend-deployment.yaml`**:
-   - Update `spec.template.spec.containers[0].image` to: `<your-dockerhub-username>/usccb:backend`
+   - Update `spec.template.spec.containers[0].image` to: `<your-dockerhub-username>/diocesan-vitality:backend`
    - If using public repos, comment out or remove the `imagePullSecrets` section
 
 2. **`k8s/frontend-deployment.yaml`**:
-   - Update `spec.template.spec.containers[0].image` to: `<your-dockerhub-username>/usccb:frontend`
+   - Update `spec.template.spec.containers[0].image` to: `<your-dockerhub-username>/diocesan-vitality:frontend`
    - If using public repos, comment out or remove the `imagePullSecrets` section
 
 ### Option B: Automated Update Using Environment Variables
@@ -224,7 +224,7 @@ After deploying the ApplicationSet, you can verify the successful deployment of 
 ### 1. Verify in ArgoCD Web UI
 
 1. **Access ArgoCD UI**: Log in to your ArgoCD instance.
-2. **Navigate to Applications**: You should see a new application, likely named `usccb-app` (or whatever name you configured in `applicationset.yaml`).
+2. **Navigate to Applications**: You should see a new application, likely named `diocesan-vitality-app` (or whatever name you configured in `applicationset.yaml`).
 3. **Check Status**: Ensure the application shows `Healthy` and `Synced` status.
 4. **Inspect Resources**: Click on the application to view its resources (Deployments, Services, Pods, Ingress).
 
@@ -232,19 +232,19 @@ After deploying the ApplicationSet, you can verify the successful deployment of 
 
 ```bash
 # Check Deployments
-kubectl get deployments -n usccb
+kubectl get deployments -n diocesan-vitality
 
 # Check Pods
-kubectl get pods -n usccb
+kubectl get pods -n diocesan-vitality
 
 # Check Services
-kubectl get services -n usccb
+kubectl get services -n diocesan-vitality
 
 # Get Ingress Controller External IP
 kubectl get services -n ingress-nginx ingress-nginx-controller
 
 # Check Ingress
-kubectl get ingress -n usccb
+kubectl get ingress -n diocesan-vitality
 
 # Check Ingress Controller Pods
 kubectl get pods -n ingress-nginx
@@ -286,10 +286,10 @@ Once the Ingress `ADDRESS` is available and you have configured your DNS:
 4. **Image Pull Errors in Kubernetes**:
    ```bash
    # Check pod events
-   kubectl describe pod <pod-name> -n usccb
+   kubectl describe pod <pod-name> -n diocesan-vitality
    
    # Verify image pull secret (for private repos)
-   kubectl get secret dockerhub-secret -n usccb -o yaml
+   kubectl get secret dockerhub-secret -n diocesan-vitality -o yaml
    ```
 
 ### General Deployment Issues
@@ -298,17 +298,17 @@ If the application is not working:
 
 1. **Check Pod Logs**:
    ```bash
-   kubectl logs <pod-name> -n usccb
+   kubectl logs <pod-name> -n diocesan-vitality
    ```
 
 2. **Check Events**:
    ```bash
-   kubectl get events -n usccb --sort-by='.lastTimestamp'
+   kubectl get events -n diocesan-vitality --sort-by='.lastTimestamp'
    ```
 
 3. **Verify Secrets**:
    ```bash
-   kubectl get secrets -n usccb
+   kubectl get secrets -n diocesan-vitality
    ```
 
 ## Quick Deployment Script
@@ -328,18 +328,18 @@ printf '%s' "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --pa
 # Build and push images
 echo "Building and pushing backend..."
 cd backend
-docker build -t $DOCKER_USERNAME/usccb:backend .
-docker push $DOCKER_USERNAME/usccb:backend
+docker build -t $DOCKER_USERNAME/diocesan-vitality:backend .
+docker push $DOCKER_USERNAME/diocesan-vitality:backend
 
 echo "Building and pushing frontend..."
 cd ../frontend
-docker build -t $DOCKER_USERNAME/usccb:frontend .
-docker push $DOCKER_USERNAME/usccb:frontend
+docker build -t $DOCKER_USERNAME/diocesan-vitality:frontend .
+docker push $DOCKER_USERNAME/diocesan-vitality:frontend
 
 echo "Building and pushing pipeline..."
 cd ..
-docker build -f Dockerfile.pipeline -t $DOCKER_USERNAME/usccb:pipeline .
-docker push $DOCKER_USERNAME/usccb:pipeline
+docker build -f Dockerfile.pipeline -t $DOCKER_USERNAME/diocesan-vitality:pipeline .
+docker push $DOCKER_USERNAME/diocesan-vitality:pipeline
 
 # Update Kubernetes manifests with Docker Hub username
 sed -i "s|YOUR_DOCKERHUB_USERNAME|$DOCKER_USERNAME|g" k8s/backend-deployment.yaml
@@ -348,17 +348,17 @@ sed -i "s|\$DOCKER_USERNAME|$DOCKER_USERNAME|g" k8s/pipeline-cronjob.yaml
 sed -i "s|\$DOCKER_USERNAME|$DOCKER_USERNAME|g" k8s/pipeline-job.yaml
 
 # Create Kubernetes secrets
-kubectl create namespace usccb --dry-run=client -o yaml | kubectl apply -f -
+kubectl create namespace diocesan-vitality --dry-run=client -o yaml | kubectl apply -f -
 
 kubectl create secret generic supabase-credentials \
-  -n usccb \
+  -n diocesan-vitality \
   --from-literal=SUPABASE_URL="$SUPABASE_URL" \
   --from-literal=SUPABASE_KEY="$SUPABASE_KEY" \
   --dry-run=client -o yaml | kubectl apply -f -
 
 # Create image pull secret if using private repository
 kubectl create secret docker-registry dockerhub-secret \
-  -n usccb \
+  -n diocesan-vitality \
   --docker-server=docker.io \
   --docker-username="$DOCKER_USERNAME" \
   --docker-password="$DOCKER_PASSWORD" \

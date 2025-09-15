@@ -18,61 +18,61 @@ The pipeline runs as a Deployment in Kubernetes. Here are the key commands to vi
 
 ```bash
 # View live logs (follows new entries)
-kubectl logs -f deployment/pipeline-deployment -n usccb
+kubectl logs -f deployment/pipeline-deployment -n diocesan-vitality
 
 # View last 50 lines of logs
-kubectl logs deployment/pipeline-deployment -n usccb --tail=50
+kubectl logs deployment/pipeline-deployment -n diocesan-vitality --tail=50
 
 # View logs with timestamps
-kubectl logs deployment/pipeline-deployment -n usccb --timestamps=true
+kubectl logs deployment/pipeline-deployment -n diocesan-vitality --timestamps=true
 
 # View logs from the last hour
-kubectl logs deployment/pipeline-deployment -n usccb --since=1h
+kubectl logs deployment/pipeline-deployment -n diocesan-vitality --since=1h
 ```
 
 ### Pipeline Pod Management
 ```bash
 # Check pipeline pod status
-kubectl get pods -n usccb -l app=pipeline
+kubectl get pods -n diocesan-vitality -l app=pipeline
 
 # Get detailed pod information
-kubectl describe pod -l app=pipeline -n usccb
+kubectl describe pod -l app=pipeline -n diocesan-vitality
 
 # View logs of specific pod (if multiple exist)
-kubectl logs <pod-name> -n usccb
+kubectl logs <pod-name> -n diocesan-vitality
 
 # Follow logs of specific pod
-kubectl logs -f <pod-name> -n usccb
+kubectl logs -f <pod-name> -n diocesan-vitality
 ```
 
 ### Pipeline Deployment Management
 ```bash
 # Check deployment status
-kubectl get deployment pipeline-deployment -n usccb
+kubectl get deployment pipeline-deployment -n diocesan-vitality
 
 # View deployment details and events
-kubectl describe deployment pipeline-deployment -n usccb
+kubectl describe deployment pipeline-deployment -n diocesan-vitality
 
 # Restart pipeline (triggers fresh execution)
-kubectl rollout restart deployment pipeline-deployment -n usccb
+kubectl rollout restart deployment pipeline-deployment -n diocesan-vitality
 
 # Check rollout status
-kubectl rollout status deployment pipeline-deployment -n usccb
+kubectl rollout status deployment pipeline-deployment -n diocesan-vitality
 ```
 
 ### Log Filtering and Analysis
 ```bash
 # Filter logs for errors only
-kubectl logs deployment/pipeline-deployment -n usccb | grep -i error
+kubectl logs deployment/pipeline-deployment -n diocesan-vitality | grep -i error
 
 # Filter logs for specific diocese processing
-kubectl logs deployment/pipeline-deployment -n usccb | grep "Diocese:"
+kubectl logs deployment/pipeline-deployment -n diocesan-vitality | grep "Diocese:"
 
 # Filter logs for circuit breaker events
-kubectl logs deployment/pipeline-deployment -n usccb | grep "Circuit breaker"
+kubectl logs deployment/pipeline-deployment -n diocesan-vitality | grep "Circuit breaker"
 
 # Save logs to file for analysis
-kubectl logs deployment/pipeline-deployment -n usccb > pipeline-logs.txt
+kubectl logs deployment/pipeline-deployment -n diocesan-vitality > pipeline-logs.txt
 ```
 
 ---
@@ -82,7 +82,7 @@ kubectl logs deployment/pipeline-deployment -n usccb > pipeline-logs.txt
 ### Dashboard Access
 The pipeline provides real-time monitoring through a web dashboard:
 
-**Production Dashboard:** https://usccb.diocesanvitality.org/dashboard
+**Production Dashboard:** https://diocesan-vitality.diocesanvitality.org/dashboard
 
 **Local Dashboard:** http://localhost:3000/dashboard (when running locally)
 
@@ -114,7 +114,7 @@ If you see "Dashboard disconnected", check:
 ### Prerequisites
 ```bash
 # Ensure you're in the project directory
-cd /path/to/USCCB
+cd /path/to/Diocesan Vitality
 
 # Activate virtual environment
 source venv/bin/activate
@@ -125,9 +125,9 @@ pip install -r requirements.txt
 # Set up environment variables (if needed)
 export SUPABASE_URL="your-supabase-url"
 export SUPABASE_KEY="your-supabase-key"
-export GENAI_API_KEY_USCCB="your-genai-key"
-export SEARCH_API_KEY_USCCB="your-search-key"
-export SEARCH_CX_USCCB="your-search-cx"
+export GENAI_API_KEY_Diocesan Vitality="your-genai-key"
+export SEARCH_API_KEY_Diocesan Vitality="your-search-key"
+export SEARCH_CX_Diocesan Vitality="your-search-cx"
 ```
 
 ### Running Individual Pipeline Components
@@ -304,22 +304,22 @@ python run_pipeline_monitored.py \
 ### Pipeline Not Starting
 ```bash
 # Check pod status
-kubectl get pods -n usccb -l app=pipeline
+kubectl get pods -n diocesan-vitality -l app=pipeline
 
 # Check events and errors
-kubectl describe pod -l app=pipeline -n usccb
+kubectl describe pod -l app=pipeline -n diocesan-vitality
 
 # Check deployment status
-kubectl get deployment pipeline-deployment -n usccb
+kubectl get deployment pipeline-deployment -n diocesan-vitality
 
 # Common fixes:
-kubectl rollout restart deployment pipeline-deployment -n usccb
+kubectl rollout restart deployment pipeline-deployment -n diocesan-vitality
 ```
 
 ### Missing Dependencies
 ```bash
 # Check logs for import errors
-kubectl logs deployment/pipeline-deployment -n usccb | grep -i "modulenotfounderror\|importerror"
+kubectl logs deployment/pipeline-deployment -n diocesan-vitality | grep -i "modulenotfounderror\|importerror"
 
 # If missing PyPDF2 or other packages:
 # 1. Add to requirements.txt
@@ -330,10 +330,10 @@ kubectl logs deployment/pipeline-deployment -n usccb | grep -i "modulenotfounder
 ### Database Connection Issues
 ```bash
 # Check if secrets exist
-kubectl get secrets -n usccb
+kubectl get secrets -n diocesan-vitality
 
 # Verify secret contents (without exposing values)
-kubectl describe secret usccb-secrets -n usccb
+kubectl describe secret diocesan-vitality-secrets -n diocesan-vitality
 
 # Test connection manually
 python -c "import config; print(config.validate_config())"
@@ -342,52 +342,52 @@ python -c "import config; print(config.validate_config())"
 ### WebDriver/Chrome Issues
 ```bash
 # Check Chrome installation in container
-kubectl exec -it deployment/pipeline-deployment -n usccb -- which google-chrome
+kubectl exec -it deployment/pipeline-deployment -n diocesan-vitality -- which google-chrome
 
 # Check ChromeDriver
-kubectl exec -it deployment/pipeline-deployment -n usccb -- chromedriver --version
+kubectl exec -it deployment/pipeline-deployment -n diocesan-vitality -- chromedriver --version
 
 # View Chrome-specific errors
-kubectl logs deployment/pipeline-deployment -n usccb | grep -i "chrome\|webdriver"
+kubectl logs deployment/pipeline-deployment -n diocesan-vitality | grep -i "chrome\|webdriver"
 ```
 
 ### Circuit Breaker Activation
 ```bash
 # View circuit breaker status
-kubectl logs deployment/pipeline-deployment -n usccb | grep "Circuit breaker"
+kubectl logs deployment/pipeline-deployment -n diocesan-vitality | grep "Circuit breaker"
 
 # Check dashboard for circuit breaker states
-# Visit: https://usccb.diocesanvitality.org/dashboard
+# Visit: https://diocesan-vitality.diocesanvitality.org/dashboard
 
 # Reset by restarting pipeline
-kubectl rollout restart deployment pipeline-deployment -n usccb
+kubectl rollout restart deployment pipeline-deployment -n diocesan-vitality
 ```
 
 ### Performance Issues
 ```bash
 # Check resource usage
-kubectl top pods -n usccb
+kubectl top pods -n diocesan-vitality
 
 # Check node capacity
 kubectl describe nodes
 
 # Monitor memory/CPU limits
-kubectl describe pod -l app=pipeline -n usccb | grep -A 10 "Limits\|Requests"
+kubectl describe pod -l app=pipeline -n diocesan-vitality | grep -A 10 "Limits\|Requests"
 ```
 
 ### Log Analysis Commands
 ```bash
 # Count error messages
-kubectl logs deployment/pipeline-deployment -n usccb | grep -c "ERROR"
+kubectl logs deployment/pipeline-deployment -n diocesan-vitality | grep -c "ERROR"
 
 # Find most recent errors
-kubectl logs deployment/pipeline-deployment -n usccb | grep "ERROR" | tail -10
+kubectl logs deployment/pipeline-deployment -n diocesan-vitality | grep "ERROR" | tail -10
 
 # Check processing statistics
-kubectl logs deployment/pipeline-deployment -n usccb | grep -E "processed|extracted|completed"
+kubectl logs deployment/pipeline-deployment -n diocesan-vitality | grep -E "processed|extracted|completed"
 
 # Monitor extraction progress
-kubectl logs -f deployment/pipeline-deployment -n usccb | grep -E "Diocese:|Parish:|Schedule:"
+kubectl logs -f deployment/pipeline-deployment -n diocesan-vitality | grep -E "Diocese:|Parish:|Schedule:"
 ```
 
 ---
@@ -398,7 +398,7 @@ kubectl logs -f deployment/pipeline-deployment -n usccb | grep -E "Diocese:|Pari
 ```
 2025-09-13 19:57:58,776 - core.circuit_breaker - INFO - 🔌 Circuit Breaker Manager initialized
 2025-09-13 19:57:58,789 - core.circuit_breaker - INFO - 🔌 Circuit breaker 'webdriver_javascript' initialized
-2025-09-13 19:57:59,123 - __main__ - INFO - Starting USCCB data extraction pipeline...
+2025-09-13 19:57:59,123 - __main__ - INFO - Starting Diocesan Vitality data extraction pipeline...
 2025-09-13 19:58:00,456 - __main__ - INFO - --- Running Diocese Extraction ---
 ```
 

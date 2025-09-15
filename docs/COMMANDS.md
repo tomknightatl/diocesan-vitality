@@ -3,7 +3,7 @@ Here are the commands and parameters for each `.py` script in the root directory
 ## Pipeline Scripts
 
 ### `run_pipeline.py`
-Standard USCCB data extraction pipeline without monitoring.
+Standard Diocesan Vitality data extraction pipeline without monitoring.
 *   **Command:** `python run_pipeline.py [OPTIONS]`
 *   **Parameters:**
     *   `--skip_dioceses` (action: `store_true`): Skip the diocese extraction step.
@@ -37,7 +37,7 @@ Standard USCCB data extraction pipeline without monitoring.
     *   WebSocket-based dashboard updates
 
 ### `extract_dioceses.py`
-Extracts dioceses information from the USCCB website.
+Extracts dioceses information from the Diocesan Vitality website.
 *   **Command:** `python extract_dioceses.py [OPTIONS]`
 *   **Parameters:**
     *   `--max_dioceses` (type: `int`, default: `5`): Maximum number of dioceses to extract. Set to 0 or None for no limit.

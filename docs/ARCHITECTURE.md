@@ -1,8 +1,8 @@
-# USCCB Data Project - Architecture Documentation
+# Diocesan Vitality Data Project - Architecture Documentation
 
 ## Project Overview
 
-The United States Conference of Catholic Bishops (USCCB) Data Project is a comprehensive data collection and analysis system for U.S. Catholic dioceses and parishes. It employs automated web scraping, AI-powered content analysis, and modern web technologies to build and maintain a detailed database of Catholic institutions across the United States.
+The United States Conference of Catholic Bishops (Diocesan Vitality) Data Project is a comprehensive data collection and analysis system for U.S. Catholic dioceses and parishes. It employs automated web scraping, AI-powered content analysis, and modern web technologies to build and maintain a detailed database of Catholic institutions across the United States.
 
 ## System Architecture
 
@@ -11,7 +11,7 @@ The United States Conference of Catholic Bishops (USCCB) Data Project is a compr
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                         Data Sources                             │
-│  (USCCB Website, Diocese Websites, Parish Websites)             │
+│  (Diocesan Vitality Website, Diocese Websites, Parish Websites)             │
 └────────────────────────┬────────────────────────────────────────┘
                          │
                          ▼
@@ -103,7 +103,7 @@ The United States Conference of Catholic Bishops (USCCB) Data Project is a compr
 The pipeline consists of four sequential stages:
 
 #### Stage 1: Extract Dioceses (`extract_dioceses.py`)
-- Scrapes the official USCCB website
+- Scrapes the official Diocesan Vitality website
 - Extracts diocese names, addresses, and official websites
 - Stores data in the `Dioceses` table
 
@@ -184,7 +184,7 @@ src/
 ### 4. Kubernetes Deployment Architecture
 
 ```yaml
-Namespace: usccb
+Namespace: diocesan-vitality
 ├── Deployments
 │   ├── backend-deployment
 │   └── frontend-deployment
@@ -197,7 +197,7 @@ Namespace: usccb
 │   ├── supabase-credentials
 │   └── ghcr-secret
 └── ArgoCD ApplicationSet
-    └── usccb-applicationset
+    └── diocesan-vitality-applicationset
 ```
 
 ## Database Schema
@@ -375,4 +375,4 @@ Code Push → GitHub → Docker Build → GHCR Push → ArgoCD Sync → K8s Depl
 
 ## Conclusion
 
-The USCCB Data Project demonstrates a modern, scalable approach to data collection and presentation. The architecture combines intelligent web scraping, cloud-native deployment, and modern web technologies to create a robust system for managing Catholic diocese and parish information. The modular design allows for easy maintenance, scaling, and future enhancements while maintaining high reliability and performance standards.
+The Diocesan Vitality Data Project demonstrates a modern, scalable approach to data collection and presentation. The architecture combines intelligent web scraping, cloud-native deployment, and modern web technologies to create a robust system for managing Catholic diocese and parish information. The modular design allows for easy maintenance, scaling, and future enhancements while maintaining high reliability and performance standards.
