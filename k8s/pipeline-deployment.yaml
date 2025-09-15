@@ -4,7 +4,7 @@ metadata:
   name: pipeline-deployment
   namespace: diocesan-vitality
 spec:
-  replicas: 1
+  replicas: 1  # HPA will manage this
   revisionHistoryLimit: 1
   selector:
     matchLabels:
@@ -13,6 +13,9 @@ spec:
     metadata:
       labels:
         app: pipeline
+      annotations:
+        # Force pod restart when config changes
+        configmap/checksum: "{{ include (print $.Template.BasePath \"/pipeline-configmap.yaml\") . | sha256sum }}"
     spec:
       serviceAccountName: default
       nodeSelector:
@@ -29,6 +32,7 @@ spec:
             memory: "4Gi"
             cpu: "1500m"
         env:
+        # Database configuration
         - name: SUPABASE_URL
           valueFrom:
             secretKeyRef:
@@ -39,6 +43,7 @@ spec:
             secretKeyRef:
               name: diocesan-vitality-secrets
               key: supabase-key
+        # AI and search API keys
         - name: GENAI_API_KEY
           valueFrom:
             secretKeyRef:
@@ -54,29 +59,88 @@ spec:
             secretKeyRef:
               name: diocesan-vitality-secrets
               key: search-cx
+        # Environment configuration for Chrome/Selenium
         - name: MPLCONFIGDIR
           value: "/tmp/matplotlib"
         - name: HOME
           value: "/tmp"
         - name: WDM_LOCAL_CACHE
           value: "/tmp/webdriver-cache"
-        # Command line arguments for specific processing
-        command: ["python", "run_pipeline.py"]
+        # Worker identification for coordination
+        - name: WORKER_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name  # Use pod name as worker ID
+        - name: HOSTNAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        # Pipeline configuration
+        - name: MAX_PARISHES_PER_DIOCESE
+          value: "50"
+        - name: NUM_PARISHES_FOR_SCHEDULE
+          value: "101"
+        - name: MONITORING_URL
+          value: "http://backend-service:8000"
+        # Use distributed pipeline runner
+        command: ["python", "distributed_pipeline_runner.py"]
         args:
         - "--max_parishes_per_diocese"
-        - "50"
+        - "$(MAX_PARISHES_PER_DIOCESE)"
         - "--num_parishes_for_schedule"
-        - "101"
+        - "$(NUM_PARISHES_FOR_SCHEDULE)"
         - "--monitoring_url"
-        - "http://backend-service:8000"
+        - "$(MONITORING_URL)"
+        - "--worker_id"
+        - "$(WORKER_ID)"
         volumeMounts:
         - name: tmp
           mountPath: /tmp
         - name: chrome-user-data
           mountPath: /app/.chrome-user-data
+        # Health checks for HPA
+        livenessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - |
+              import sys
+              import os
+              sys.path.append(os.getcwd())
+              from core.distributed_work_coordinator import DistributedWorkCoordinator
+              coordinator = DistributedWorkCoordinator()
+              # Simple health check - if we can create coordinator, we're healthy
+              print("healthy")
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - |
+              import sys
+              import os
+              sys.path.append(os.getcwd())
+              from core.db import get_supabase_client
+              # Check if we can connect to database
+              supabase = get_supabase_client()
+              if supabase:
+                  print("ready")
+              else:
+                  exit(1)
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 2
       volumes:
       - name: tmp
         emptyDir: {}
       - name: chrome-user-data
         emptyDir: {}
       restartPolicy: Always
+      # Graceful shutdown to allow coordination cleanup
+      terminationGracePeriodSeconds: 120
