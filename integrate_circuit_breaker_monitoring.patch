@@ -1,0 +1,79 @@
+# Circuit Breaker Monitoring Integration Patch
+# This file documents the changes needed to integrate circuit breaker monitoring
+# into the existing extraction scripts for real-time dashboard updates.
+
+# FILE: core/monitoring_client.py (ADD THIS METHOD)
+# Add this method to the MonitoringClient class:
+
+def report_circuit_breaker_status(self):
+    """Report current circuit breaker status to monitoring dashboard"""
+    try:
+        from core.circuit_breaker import CircuitBreakerManager
+        manager = CircuitBreakerManager()
+        circuit_data = manager.get_all_stats()
+
+        if circuit_data:
+            # Transform the data format for the monitoring API
+            monitoring_data = {}
+            for name, stats in circuit_data.items():
+                monitoring_data[name] = {
+                    "state": stats["state"].upper() if hasattr(stats["state"], "upper") else stats["state"],
+                    "total_requests": stats["total_requests"],
+                    "total_successes": stats["total_successes"],
+                    "total_failures": stats["total_failures"],
+                    "total_blocked": stats["total_blocked"],
+                    "success_rate": float(stats["success_rate"].replace("%", "")) if isinstance(stats["success_rate"], str) else stats["success_rate"]
+                }
+
+            return self.update_circuit_breakers(monitoring_data)
+    except Exception as e:
+        logger.debug(f"Failed to report circuit breaker status: {e}")
+        return False
+    return True
+
+# FILE: async_extract_parishes.py (ADD THESE LINES)
+# Add these imports at the top:
+from core.monitoring_client import get_monitoring_client
+
+# Add this line after creating the monitoring client:
+monitoring_client = get_monitoring_client("http://localhost:8000")
+
+# Add periodic circuit breaker reporting in the main extraction loop:
+# After processing every 10 parishes, add:
+if processed_count % 10 == 0:
+    monitoring_client.report_circuit_breaker_status()
+
+# Add final circuit breaker report at the end:
+monitoring_client.report_circuit_breaker_status()
+
+# FILE: run_pipeline.py (ADD THESE LINES)
+# The monitoring client is already initialized, just add:
+# After each major step completion, add:
+monitoring_client.report_circuit_breaker_status()
+
+# EXAMPLE USAGE IN EXTRACTION SCRIPTS:
+#
+# from core.monitoring_client import get_monitoring_client
+#
+# monitoring_client = get_monitoring_client()
+#
+# # During extraction loop:
+# for i, parish in enumerate(parishes):
+#     try:
+#         # ... extraction logic ...
+#
+#         # Report circuit breaker status every 10 parishes
+#         if i % 10 == 0:
+#             monitoring_client.report_circuit_breaker_status()
+#
+#     except Exception as e:
+#         # ... error handling ...
+#
+# # At the end:
+# monitoring_client.report_circuit_breaker_status()
+# monitoring_client.report_extraction_complete(
+#     diocese_name="Diocese Name",
+#     parishes_extracted=len(parishes),
+#     success_rate=calculate_success_rate(),
+#     duration=time.time() - start_time
+# )

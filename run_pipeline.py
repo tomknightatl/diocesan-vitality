@@ -77,6 +77,7 @@ def main():
             extract_dioceses_main(args.max_dioceses)
             
             monitoring_client.send_log("Step 1 │ ✅ Diocese extraction completed successfully", "INFO")
+            monitoring_client.report_circuit_breaker_status()
             
         except Exception as e:
             monitoring_client.report_error(
@@ -102,6 +103,7 @@ def main():
             find_parish_directories(diocese_id=args.diocese_id, max_dioceses_to_process=args.max_dioceses)
             
             monitoring_client.send_log("Step 2 │ ✅ Parish directory discovery completed", "INFO")
+            monitoring_client.report_circuit_breaker_status()
             
         except Exception as e:
             monitoring_client.report_error(
@@ -144,6 +146,7 @@ def main():
                 monitor.update_progress(args.max_parishes_per_diocese, int(args.max_parishes_per_diocese * 0.85))
             
             monitoring_client.send_log("Step 3 │ ✅ Parish extraction completed successfully", "INFO")
+            monitoring_client.report_circuit_breaker_status()
             
         except Exception as e:
             monitoring_client.report_error(
@@ -177,6 +180,7 @@ def main():
             )
             
             monitoring_client.send_log("Step 4 │ ✅ Schedule extraction completed successfully", "INFO")
+            monitoring_client.report_circuit_breaker_status()
             
         except Exception as e:
             monitoring_client.report_error(
@@ -211,6 +215,7 @@ def main():
     # Pipeline completion
     total_time = time.time() - start_time
     monitoring_client.update_extraction_status(status="idle")
+    monitoring_client.report_circuit_breaker_status()  # Final circuit breaker status report
     monitoring_client.send_log(f"Pipeline │ 🎉 Completed in {total_time:.1f} seconds", "INFO")
     
     logger.info("Data extraction pipeline completed!")
