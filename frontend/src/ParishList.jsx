@@ -21,12 +21,16 @@ function ParishList({ dioceseId }) {
 
   const [filterWebsite, setFilterWebsite] = useState('');
   const [filterDataExtracted, setFilterDataExtracted] = useState(initialFilter === 'with_data' ? 'true' : '');
+  const [filterDataAvailable, setFilterDataAvailable] = useState('');
+  const [filterBlocked, setFilterBlocked] = useState('');
 
   const [debouncedFilterName, setDebouncedFilterName] = useState(filterName);
   const [debouncedFilterDioceseName, setDebouncedFilterDioceseName] = useState(filterDioceseName);
 
   const [debouncedFilterWebsite, setDebouncedFilterWebsite] = useState(filterWebsite);
   const [debouncedFilterDataExtracted, setDebouncedFilterDataExtracted] = useState(filterDataExtracted);
+  const [debouncedFilterDataAvailable, setDebouncedFilterDataAvailable] = useState(filterDataAvailable);
+  const [debouncedFilterBlocked, setDebouncedFilterBlocked] = useState(filterBlocked);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -34,12 +38,14 @@ function ParishList({ dioceseId }) {
       setDebouncedFilterDioceseName(filterDioceseName);
       setDebouncedFilterWebsite(filterWebsite);
       setDebouncedFilterDataExtracted(filterDataExtracted);
+      setDebouncedFilterDataAvailable(filterDataAvailable);
+      setDebouncedFilterBlocked(filterBlocked);
     }, 500);
 
     return () => {
       clearTimeout(handler);
     };
-  }, [filterName, filterDioceseName, filterWebsite, filterDataExtracted]);
+  }, [filterName, filterDioceseName, filterWebsite, filterDataExtracted, filterDataAvailable, filterBlocked]);
 
   useEffect(() => {
     const fetchParishes = async () => {
@@ -58,6 +64,8 @@ function ParishList({ dioceseId }) {
 
         if (debouncedFilterWebsite) params.append('filter_website', debouncedFilterWebsite);
         if (debouncedFilterDataExtracted) params.append('filter_data_extracted', debouncedFilterDataExtracted);
+        if (debouncedFilterDataAvailable) params.append('filter_data_available', debouncedFilterDataAvailable);
+        if (debouncedFilterBlocked) params.append('filter_blocked', debouncedFilterBlocked);
 
         const url = dioceseId 
           ? `/api/dioceses/${dioceseId}/parishes?${params.toString()}`
@@ -81,7 +89,7 @@ function ParishList({ dioceseId }) {
     };
 
     fetchParishes();
-  }, [currentPage, itemsPerPage, sortBy, sortOrder, debouncedFilterName, debouncedFilterDioceseName, debouncedFilterWebsite, debouncedFilterDataExtracted, dioceseId]);
+  }, [currentPage, itemsPerPage, sortBy, sortOrder, debouncedFilterName, debouncedFilterDioceseName, debouncedFilterWebsite, debouncedFilterDataExtracted, debouncedFilterDataAvailable, debouncedFilterBlocked, dioceseId]);
 
   const handleSort = (column) => {
     if (sortBy === column) {
@@ -234,6 +242,16 @@ function ParishList({ dioceseId }) {
                 <div onClick={() => handleSort('is_blocked')}>
                   Blocked {sortBy === 'is_blocked' && (sortOrder === 'asc' ? '▲' : '▼')}
                 </div>
+                <Form.Select
+                  value={filterBlocked}
+                  onChange={(e) => setFilterBlocked(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="mt-1"
+                >
+                  <option value="">All</option>
+                  <option value="true">Yes</option>
+                  <option value="false">No</option>
+                </Form.Select>
               </th>
               <th style={{ cursor: 'pointer', width: '120px', minWidth: '120px' }}>
                 <div onClick={() => handleSort('data_extracted')}>
@@ -250,7 +268,19 @@ function ParishList({ dioceseId }) {
                   <option value="false">No</option>
                 </Form.Select>
               </th>
-              <th style={{ width: '120px', minWidth: '120px' }}>Data Available</th>
+              <th style={{ width: '120px', minWidth: '120px' }}>
+                Data Available
+                <Form.Select
+                  value={filterDataAvailable}
+                  onChange={(e) => setFilterDataAvailable(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="mt-1"
+                >
+                  <option value="">All</option>
+                  <option value="true">Yes</option>
+                  <option value="false">No</option>
+                </Form.Select>
+              </th>
             </tr>
           </thead>
           <tbody>

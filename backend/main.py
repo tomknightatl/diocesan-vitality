@@ -417,6 +417,8 @@ def get_parishes_for_diocese(
     filter_name: str = None,
     filter_website: str = None,
     filter_data_extracted: str = None,
+    filter_data_available: str = None,
+    filter_blocked: str = None,
     filter_diocese_name: str = None
 ):
     """
@@ -441,6 +443,44 @@ def get_parishes_for_diocese(
 
         if filter_website:
             query = query.ilike('Web', f'%{filter_website}%') # Use 'Web' for website column
+
+        if filter_blocked:
+            if filter_blocked.lower() == 'true':
+                query = query.eq('is_blocked', True)
+            elif filter_blocked.lower() == 'false':
+                query = query.eq('is_blocked', False)
+
+        # Handle data_extracted and data_available filters by pre-filtering parish IDs
+        if filter_data_extracted or filter_data_available:
+            # Get all parishes with data
+            all_parish_data_response = supabase.table('ParishData').select('parish_id, fact_value').execute()
+            parishes_with_data = {item['parish_id'] for item in all_parish_data_response.data if item['fact_value'] and item['fact_value'] != 'Information not found'}
+
+            # Determine which parish IDs to filter by
+            filter_parish_ids = None
+            if filter_data_extracted:
+                if filter_data_extracted.lower() == 'true':
+                    filter_parish_ids = list(parishes_with_data)
+                elif filter_data_extracted.lower() == 'false':
+                    # Get all parish IDs for this diocese, then subtract those with data
+                    all_parishes_response = supabase.table('parishes_with_diocese_name').select('id').eq('diocese_id', diocese_id).execute()
+                    all_parish_ids = {p['id'] for p in all_parishes_response.data}
+                    filter_parish_ids = list(all_parish_ids - parishes_with_data)
+            elif filter_data_available:
+                if filter_data_available.lower() == 'true':
+                    filter_parish_ids = list(parishes_with_data)
+                elif filter_data_available.lower() == 'false':
+                    # Get all parish IDs for this diocese, then subtract those with data
+                    all_parishes_response = supabase.table('parishes_with_diocese_name').select('id').eq('diocese_id', diocese_id).execute()
+                    all_parish_ids = {p['id'] for p in all_parishes_response.data}
+                    filter_parish_ids = list(all_parish_ids - parishes_with_data)
+
+            # Apply the parish ID filter to the query
+            if filter_parish_ids is not None:
+                if len(filter_parish_ids) == 0:
+                    # No parishes match the criteria, return empty result
+                    return {"data": [], "total_count": 0, "page": page, "page_size": page_size}
+                query = query.in_('id', filter_parish_ids)
 
         # Apply sorting and pagination
         if sort_by == "Name":
@@ -501,6 +541,18 @@ def get_parishes_for_diocese(
             elif filter_data_extracted.lower() == 'false':
                 parishes = [p for p in parishes if not p['data_extracted']]
 
+        if filter_data_available:
+            if filter_data_available.lower() == 'true':
+                parishes = [p for p in parishes if p['data_extracted']]
+            elif filter_data_available.lower() == 'false':
+                parishes = [p for p in parishes if not p['data_extracted']]
+
+        if filter_blocked:
+            if filter_blocked.lower() == 'true':
+                parishes = [p for p in parishes if p.get('is_blocked', False)]
+            elif filter_blocked.lower() == 'false':
+                parishes = [p for p in parishes if not p.get('is_blocked', False)]
+
         # Apply Python-side sorting for data_extracted and is_blocked if requested
         if sort_by == "data_extracted":
             parishes.sort(key=lambda p: p.get('data_extracted', False), reverse=sort_order.lower() == 'desc')
@@ -526,6 +578,8 @@ def get_all_parishes(
     filter_name: str = None,
     filter_website: str = None,
     filter_data_extracted: str = None,
+    filter_data_available: str = None,
+    filter_blocked: str = None,
     filter_diocese_name: str = None
 ):
     """
@@ -544,6 +598,44 @@ def get_all_parishes(
 
         if filter_website:
             query = query.ilike('Website', f'%{filter_website}%')
+
+        if filter_blocked:
+            if filter_blocked.lower() == 'true':
+                query = query.eq('is_blocked', True)
+            elif filter_blocked.lower() == 'false':
+                query = query.eq('is_blocked', False)
+
+        # Handle data_extracted and data_available filters by pre-filtering parish IDs
+        if filter_data_extracted or filter_data_available:
+            # Get all parishes with data
+            all_parish_data_response = supabase.table('ParishData').select('parish_id, fact_value').execute()
+            parishes_with_data = {item['parish_id'] for item in all_parish_data_response.data if item['fact_value'] and item['fact_value'] != 'Information not found'}
+
+            # Determine which parish IDs to filter by
+            filter_parish_ids = None
+            if filter_data_extracted:
+                if filter_data_extracted.lower() == 'true':
+                    filter_parish_ids = list(parishes_with_data)
+                elif filter_data_extracted.lower() == 'false':
+                    # Get all parish IDs from the current query, then subtract those with data
+                    all_parishes_response = supabase.table('parishes_with_diocese_name').select('id').execute()
+                    all_parish_ids = {p['id'] for p in all_parishes_response.data}
+                    filter_parish_ids = list(all_parish_ids - parishes_with_data)
+            elif filter_data_available:
+                if filter_data_available.lower() == 'true':
+                    filter_parish_ids = list(parishes_with_data)
+                elif filter_data_available.lower() == 'false':
+                    # Get all parish IDs from the current query, then subtract those with data
+                    all_parishes_response = supabase.table('parishes_with_diocese_name').select('id').execute()
+                    all_parish_ids = {p['id'] for p in all_parishes_response.data}
+                    filter_parish_ids = list(all_parish_ids - parishes_with_data)
+
+            # Apply the parish ID filter to the query
+            if filter_parish_ids is not None:
+                if len(filter_parish_ids) == 0:
+                    # No parishes match the criteria, return empty result
+                    return {"data": [], "total_count": 0, "page": page, "page_size": page_size}
+                query = query.in_('id', filter_parish_ids)
 
         # Apply sorting and pagination
         if sort_by == "Name":
@@ -589,6 +681,18 @@ def get_all_parishes(
                 parishes = [p for p in parishes if p['data_extracted']]
             elif filter_data_extracted.lower() == 'false':
                 parishes = [p for p in parishes if not p['data_extracted']]
+
+        if filter_data_available:
+            if filter_data_available.lower() == 'true':
+                parishes = [p for p in parishes if p['data_extracted']]
+            elif filter_data_available.lower() == 'false':
+                parishes = [p for p in parishes if not p['data_extracted']]
+
+        if filter_blocked:
+            if filter_blocked.lower() == 'true':
+                parishes = [p for p in parishes if p.get('is_blocked', False)]
+            elif filter_blocked.lower() == 'false':
+                parishes = [p for p in parishes if not p.get('is_blocked', False)]
 
         # Apply Python-side sorting for data_extracted and is_blocked if requested
         if sort_by == "data_extracted":
