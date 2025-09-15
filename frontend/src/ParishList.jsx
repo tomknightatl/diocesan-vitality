@@ -1,51 +1,88 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Container, Table, Spinner, Alert, Pagination, Form, Row, Col, OverlayTrigger, Tooltip } from 'react-bootstrap';
 
 function ParishList({ dioceseId }) {
   const [parishes, setParishes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(50);
-  const [totalParishes, setTotalParishes] = useState(0);
-  const [sortBy, setSortBy] = useState('Name');
-  const [sortOrder, setSortOrder] = useState('asc');
-
   const location = useLocation();
+  const navigate = useNavigate();
   const queryParams = new URLSearchParams(location.search);
-  const initialFilter = queryParams.get('filter') || '';
 
-  const [filterName, setFilterName] = useState('');
-  const [filterDioceseName, setFilterDioceseName] = useState('');
+  const currentPageFromUrl = parseInt(queryParams.get('page')) || 1;
+  const sortByFromUrl = queryParams.get('sortBy') || 'Name';
+  const sortOrderFromUrl = queryParams.get('sortOrder') || 'asc';
 
-  const [filterWebsite, setFilterWebsite] = useState('');
-  const [filterDataExtracted, setFilterDataExtracted] = useState(initialFilter === 'with_data' ? 'true' : '');
-  const [filterDataAvailable, setFilterDataAvailable] = useState('');
-  const [filterBlocked, setFilterBlocked] = useState('');
+  const [currentPage, setCurrentPage] = useState(currentPageFromUrl);
+  const [itemsPerPage, setItemsPerPage] = useState(parseInt(queryParams.get('itemsPerPage')) || 50);
+  const [totalParishes, setTotalParishes] = useState(0);
+  const [sortBy, setSortBy] = useState(sortByFromUrl);
+  const [sortOrder, setSortOrder] = useState(sortOrderFromUrl);
+
+  const [filterName, setFilterName] = useState(queryParams.get('filterName') || '');
+  const [filterDioceseName, setFilterDioceseName] = useState(queryParams.get('filterDioceseName') || '');
+  const [filterWebsite, setFilterWebsite] = useState(queryParams.get('filterWebsite') || '');
+  const [filterDataAvailable, setFilterDataAvailable] = useState(queryParams.get('filterDataAvailable') || '');
+  const [filterBlocked, setFilterBlocked] = useState(queryParams.get('filterBlocked') || '');
 
   const [debouncedFilterName, setDebouncedFilterName] = useState(filterName);
   const [debouncedFilterDioceseName, setDebouncedFilterDioceseName] = useState(filterDioceseName);
 
   const [debouncedFilterWebsite, setDebouncedFilterWebsite] = useState(filterWebsite);
-  const [debouncedFilterDataExtracted, setDebouncedFilterDataExtracted] = useState(filterDataExtracted);
   const [debouncedFilterDataAvailable, setDebouncedFilterDataAvailable] = useState(filterDataAvailable);
   const [debouncedFilterBlocked, setDebouncedFilterBlocked] = useState(filterBlocked);
+
+  const updateUrlParams = useCallback((params) => {
+    const currentParams = new URLSearchParams(location.search);
+
+    Object.entries(params).forEach(([key, value]) => {
+      const isDefaultValue = (
+        (key === 'sortOrder' && value === 'asc') ||
+        (key === 'sortBy' && value === 'Name') ||
+        (key === 'page' && value === 1) ||
+        (key === 'itemsPerPage' && value === 50) ||
+        value === '' ||
+        value === null ||
+        value === undefined
+      );
+
+      if (!isDefaultValue) {
+        currentParams.set(key, value);
+      } else {
+        currentParams.delete(key);
+      }
+    });
+
+    const newUrl = `${location.pathname}${currentParams.toString() ? '?' + currentParams.toString() : ''}`;
+    navigate(newUrl, { replace: true });
+  }, [location.pathname, location.search, navigate]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedFilterName(filterName);
       setDebouncedFilterDioceseName(filterDioceseName);
       setDebouncedFilterWebsite(filterWebsite);
-      setDebouncedFilterDataExtracted(filterDataExtracted);
       setDebouncedFilterDataAvailable(filterDataAvailable);
       setDebouncedFilterBlocked(filterBlocked);
+
+      updateUrlParams({
+        filterName,
+        filterDioceseName,
+        filterWebsite,
+        filterDataAvailable,
+        filterBlocked,
+        page: currentPage,
+        sortBy,
+        sortOrder,
+        itemsPerPage
+      });
     }, 500);
 
     return () => {
       clearTimeout(handler);
     };
-  }, [filterName, filterDioceseName, filterWebsite, filterDataExtracted, filterDataAvailable, filterBlocked]);
+  }, [filterName, filterDioceseName, filterWebsite, filterDataAvailable, filterBlocked, currentPage, sortBy, sortOrder, itemsPerPage, updateUrlParams]);
 
   useEffect(() => {
     const fetchParishes = async () => {
@@ -63,7 +100,6 @@ function ParishList({ dioceseId }) {
         if (debouncedFilterDioceseName) params.append('filter_diocese_name', debouncedFilterDioceseName);
 
         if (debouncedFilterWebsite) params.append('filter_website', debouncedFilterWebsite);
-        if (debouncedFilterDataExtracted) params.append('filter_data_extracted', debouncedFilterDataExtracted);
         if (debouncedFilterDataAvailable) params.append('filter_data_available', debouncedFilterDataAvailable);
         if (debouncedFilterBlocked) params.append('filter_blocked', debouncedFilterBlocked);
 
@@ -89,20 +125,56 @@ function ParishList({ dioceseId }) {
     };
 
     fetchParishes();
-  }, [currentPage, itemsPerPage, sortBy, sortOrder, debouncedFilterName, debouncedFilterDioceseName, debouncedFilterWebsite, debouncedFilterDataExtracted, debouncedFilterDataAvailable, debouncedFilterBlocked, dioceseId]);
+  }, [currentPage, itemsPerPage, sortBy, sortOrder, debouncedFilterName, debouncedFilterDioceseName, debouncedFilterWebsite, debouncedFilterDataAvailable, debouncedFilterBlocked, dioceseId]);
 
   const handleSort = (column) => {
-    if (sortBy === column) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(column);
-      setSortOrder('asc');
-    }
+    const newSortOrder = sortBy === column ? (sortOrder === 'asc' ? 'desc' : 'asc') : 'asc';
+    setSortBy(column);
+    setSortOrder(newSortOrder);
+
+    updateUrlParams({
+      filterName,
+      filterDioceseName,
+      filterWebsite,
+      filterDataAvailable,
+      filterBlocked,
+      page: currentPage,
+      sortBy: column,
+      sortOrder: newSortOrder,
+      itemsPerPage
+    });
   };
 
   const handleItemsPerPageChange = (newItemsPerPage) => {
     setItemsPerPage(newItemsPerPage);
     setCurrentPage(1); // Reset to first page
+
+    updateUrlParams({
+      filterName,
+      filterDioceseName,
+      filterWebsite,
+      filterDataAvailable,
+      filterBlocked,
+      page: 1,
+      sortBy,
+      sortOrder,
+      itemsPerPage: newItemsPerPage
+    });
+  };
+
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+    updateUrlParams({
+      filterName,
+      filterDioceseName,
+      filterWebsite,
+      filterDataAvailable,
+      filterBlocked,
+      page: newPage,
+      sortBy,
+      sortOrder,
+      itemsPerPage
+    });
   };
 
   const totalPages = Math.ceil(totalParishes / itemsPerPage);
@@ -110,17 +182,12 @@ function ParishList({ dioceseId }) {
   let paginationItems = [];
   for (let number = 1; number <= totalPages; number++) {
     paginationItems.push(
-      <Pagination.Item key={number} active={number === currentPage} onClick={() => setCurrentPage(number)}>
+      <Pagination.Item key={number} active={number === currentPage} onClick={() => handlePageChange(number)}>
         {number}
       </Pagination.Item>,
     );
   }
 
-  const renderTooltip = (props, text) => (
-    <Tooltip id="button-tooltip" {...props}>
-      {text}
-    </Tooltip>
-  );
 
   const renderBlockingTooltip = (props, parish) => {
     if (!parish.is_blocked) {
@@ -253,21 +320,6 @@ function ParishList({ dioceseId }) {
                   <option value="false">No</option>
                 </Form.Select>
               </th>
-              <th style={{ cursor: 'pointer', width: '120px', minWidth: '120px' }}>
-                <div onClick={() => handleSort('data_extracted')}>
-                  Data Extracted {sortBy === 'data_extracted' && (sortOrder === 'asc' ? '▲' : '▼')}
-                </div>
-                <Form.Select
-                  value={filterDataExtracted}
-                  onChange={(e) => setFilterDataExtracted(e.target.value)}
-                  onClick={(e) => e.stopPropagation()}
-                  className="mt-1"
-                >
-                  <option value="">All</option>
-                  <option value="true">Yes</option>
-                  <option value="false">No</option>
-                </Form.Select>
-              </th>
               <th style={{ width: '120px', minWidth: '120px' }}>
                 Data Available
                 <Form.Select
@@ -313,7 +365,6 @@ function ParishList({ dioceseId }) {
                     <span style={{ color: '#6c757d', fontSize: '0.8em' }}>Not tested</span>
                   )}
                 </td>
-                <td>{parish.data_extracted ? 'Yes' : 'No'}</td>
                 <td>
                   {parish.data_extracted ? (
                     <Link to={`/parish?id=${parish.id}`}>View Data</Link>
@@ -330,9 +381,9 @@ function ParishList({ dioceseId }) {
       {!loading && !error && totalPages > 1 && (
         <div className="d-flex justify-content-center mt-3">
           <Pagination>
-            <Pagination.Prev onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} disabled={currentPage === 1} />
+            <Pagination.Prev onClick={() => handlePageChange(Math.max(1, currentPage - 1))} disabled={currentPage === 1} />
             {paginationItems}
-            <Pagination.Next onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages} />
+            <Pagination.Next onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} />
           </Pagination>
         </div>
       )}
