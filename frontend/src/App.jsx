@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Container, Table, Spinner, Alert, Pagination, Form, Row, Col, OverlayTrigger, Tooltip } from 'react-bootstrap';
-import ParishList from './ParishList';
 import './App.css';
 
 function App() {
@@ -9,9 +8,6 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const [summary, setSummary] = useState(null);
-  const [summaryLoading, setSummaryLoading] = useState(true);
-  const [summaryError, setSummaryError] = useState(null);
 
   // State for pagination and sorting
   const [currentPage, setCurrentPage] = useState(1);
@@ -77,26 +73,6 @@ function App() {
     };
 
     fetchDioceses();
-
-    // Fetch summary data
-    fetch('/api/summary')
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        return response.json();
-      })
-      .then(data => {
-        if (data.error) {
-          throw new Error(data.error);
-        }
-        setSummary(data);
-        setSummaryLoading(false);
-      })
-      .catch(error => {
-        setSummaryError(error.message);
-        setSummaryLoading(false);
-      });
   }, [currentPage, sortBy, sortOrder, debouncedFilterName, debouncedFilterAddress, debouncedFilterWebsite]);
 
   // Function to handle sorting
@@ -121,11 +97,6 @@ function App() {
       </Pagination.Item>,
     );
   }
-  const renderTooltip = (props, text) => (
-    <Tooltip id="button-tooltip" {...props}>
-      {text}
-    </Tooltip>
-  );
 
   const renderBlockingTooltip = (props, diocese) => {
     if (!diocese.is_blocked) {
@@ -168,97 +139,25 @@ function App() {
     );
   };
 
+  const formatAddress = (address) => {
+    if (!address) return '';
+
+    // Extract city and state from address
+    // Typical format: "Street, City, State ZIP"
+    const parts = address.split(',');
+    if (parts.length >= 3) {
+      const city = parts[parts.length - 2].trim();
+      const stateZip = parts[parts.length - 1].trim();
+      const state = stateZip.split(' ')[0];
+      return `${city}, ${state}`;
+    }
+    return address; // fallback to full address if parsing fails
+  };
+
   return (
     <>
-      
-      <Container className="mt-4">
-        <h2>Data Summary</h2>
-        {summaryLoading && <Spinner animation="border" />}
-        {summaryError && <Alert variant="danger">Error fetching summary: {summaryError}</Alert>}
-        {!summaryLoading && !summaryError && summary && (
-          <div className="mb-4">
-            <Row className="text-center">
-              <Col>
-                <OverlayTrigger
-                  placement="top"
-                  delay={{ show: 250, hide: 400 }}
-                  overlay={(props) => renderTooltip(props, 'The total number of dioceses that have been processed to find a parish directory.')}
-                >
-                  <div>
-                    <strong>Total Dioceses Processed</strong>
-                    <div>{summary.total_dioceses_processed}</div>
-                  </div>
-                </OverlayTrigger>
-              </Col>
-              <Col>
-                <OverlayTrigger
-                  placement="top"
-                  delay={{ show: 250, hide: 400 }}
-                  overlay={(props) => renderTooltip(props, 'The number of dioceses for which a parish directory URL was successfully found.')}
-                >
-                  <div>
-                    <strong>Parish Directories Found</strong>
-                    <div>{summary.found_parish_directories}</div>
-                  </div>
-                </OverlayTrigger>
-              </Col>
-              <Col>
-                <OverlayTrigger
-                  placement="top"
-                  delay={{ show: 250, hide: 400 }}
-                  overlay={(props) => renderTooltip(props, 'The number of dioceses for which a parish directory URL could not be found.')}
-                >
-                  <div>
-                    <strong>Parish Directories Not Found</strong>
-                    <div>{summary.not_found_parish_directories}</div>
-                  </div>
-                </OverlayTrigger>
-              </Col>
-            </Row>
-            <hr />
-            <Row className="text-center">
-              <Col>
-                <OverlayTrigger
-                  placement="bottom"
-                  delay={{ show: 250, hide: 400 }}
-                  overlay={(props) => renderTooltip(props, 'The total number of parishes extracted from all found parish directories.')}
-                >
-                  <div>
-                    <strong>Parishes Extracted</strong>
-                    <div>{summary.parishes_extracted}</div>
-                  </div>
-                </OverlayTrigger>
-              </Col>
-              <Col>
-                <OverlayTrigger
-                  placement="bottom"
-                  delay={{ show: 250, hide: 400 }}
-                  overlay={(props) => renderTooltip(props, 'The number of parishes for which schedule information (adoration or reconciliation) has been successfully extracted.')}
-                >
-                  <div>
-                    <strong>Parishes with Data Extracted</strong>
-                    <div>{summary.parishes_with_data_extracted}</div>
-                  </div>
-                </OverlayTrigger>
-              </Col>
-              <Col>
-                <OverlayTrigger
-                  placement="bottom"
-                  delay={{ show: 250, hide: 400 }}
-                  overlay={(props) => renderTooltip(props, 'The number of parishes for which schedule information could not be extracted.')}
-                >
-                  <div>
-                    <strong>Parishes with Data Not Extracted</strong>
-                    <div>{summary.parishes_with_data_not_extracted}</div>
-                  </div>
-                </OverlayTrigger>
-              </Col>
-            </Row>
-          </div>
-        )}
 
-        <h2>Dioceses Data</h2>
-        <p>Displaying the first 20 records from the database.</p>
+      <Container className="mt-4">
         {loading && <Spinner animation="border" />}
         {error && <Alert variant="danger">Error fetching data: {error}</Alert>}
         {!loading && !error && (
@@ -320,7 +219,7 @@ function App() {
               {dioceses.map((diocese, index) => (
                 <tr key={diocese.id || index}>
                   <td>{diocese.Name}</td>
-                  <td>{diocese.Address}</td>
+                  <td>{formatAddress(diocese.Address)}</td>
                   <td><a href={diocese.Website} target="_blank" rel="noopener noreferrer">{diocese.Website}</a></td>
                   <td>
                     {diocese.parish_directory_url && 
@@ -372,8 +271,6 @@ function App() {
             </Pagination>
           </div>
         )}
-
-        <ParishList />
 
       </Container>
 
