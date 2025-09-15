@@ -18,6 +18,7 @@ from core.db import get_supabase_client
 from core.logger import get_logger
 from core.async_driver import get_async_driver_pool, shutdown_async_driver_pool
 from core.async_parish_extractor import get_async_parish_extractor
+from core.monitoring_client import get_monitoring_client
 from parish_extraction_core import enhanced_safe_upsert_to_supabase, PatternDetector
 from parish_extractors import ensure_chrome_installed
 
@@ -129,6 +130,9 @@ class AsyncDioceseProcessor:
         self.parish_extractor = await get_async_parish_extractor(self.pool_size, self.batch_size)
         
         logger.info("✅ Async diocese processor ready")
+
+        # Report initial circuit breaker status
+        monitoring_client.report_circuit_breaker_status()
     
     async def process_dioceses_concurrent(self, 
                                         dioceses_to_process: List[Dict],
@@ -206,7 +210,11 @@ class AsyncDioceseProcessor:
             if batch_num < len(diocese_batches):
                 logger.info(f"  🧹 Inter-batch cleanup...")
                 current_memory = force_garbage_collection()
-                
+
+                # Report circuit breaker status between batches
+                monitoring_client = get_monitoring_client()
+                monitoring_client.report_circuit_breaker_status()
+
                 # Small delay between batches
                 await asyncio.sleep(2.0)
         
@@ -397,6 +405,9 @@ async def main_async(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MA
     """
     Main async function for parish extraction with concurrent processing.
     """
+    # Initialize monitoring client
+    monitoring_client = get_monitoring_client()
+
     if not ensure_chrome_installed():
         logger.error("Chrome installation failed. Please install Chrome manually.")
         return
@@ -466,10 +477,13 @@ async def main_async(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MA
             num_parishes_per_diocese
         )
         
+        # Report final circuit breaker status
+        monitoring_client.report_circuit_breaker_status()
+
         # Final cleanup
         logger.info("  🧹 Final memory cleanup...")
         force_garbage_collection()
-        
+
         return results
         
     finally:

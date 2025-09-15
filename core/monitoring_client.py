@@ -211,6 +211,32 @@ class MonitoringClient:
             pool_utilization=pool_utilization
         )
 
+    def report_circuit_breaker_status(self) -> bool:
+        """Report current circuit breaker status to monitoring dashboard"""
+        try:
+            from core.circuit_breaker import CircuitBreakerManager
+            manager = CircuitBreakerManager()
+            circuit_data = manager.get_all_stats()
+
+            if circuit_data:
+                # Transform the data format for the monitoring API
+                monitoring_data = {}
+                for name, stats in circuit_data.items():
+                    monitoring_data[name] = {
+                        "state": stats["state"].upper() if hasattr(stats["state"], "upper") else stats["state"],
+                        "total_requests": stats["total_requests"],
+                        "total_successes": stats["total_successes"],
+                        "total_failures": stats["total_failures"],
+                        "total_blocked": stats["total_blocked"],
+                        "success_rate": float(stats["success_rate"].replace("%", "")) if isinstance(stats["success_rate"], str) else stats["success_rate"]
+                    }
+
+                return self.update_circuit_breakers(monitoring_data)
+        except Exception as e:
+            logger.debug(f"Failed to report circuit breaker status: {e}")
+            return False
+        return True
+
 
 # Global monitoring client instance
 _monitoring_client = None
