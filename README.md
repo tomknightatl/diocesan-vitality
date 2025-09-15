@@ -366,7 +366,7 @@ python run_pipeline.py
 
 **Option 2: Monitoring-Enabled Pipeline (Recommended)**
 ```bash
-python run_pipeline_monitored.py --max_parishes_per_diocese 10 --num_parishes_for_schedule 10
+python run_pipeline.py --max_parishes_per_diocese 10 --num_parishes_for_schedule 10
 ```
 
 #### Local Monitoring Dashboard
@@ -402,10 +402,10 @@ You can customize the run with the following parameters:
 **Examples:**
 ```bash
 # Full pipeline with no limits and monitoring
-source venv/bin/activate && timeout 7200 python3 run_pipeline_monitored.py --max_parishes_per_diocese 0 --num_parishes_for_schedule 0
+source venv/bin/activate && timeout 7200 python3 run_pipeline.py --max_parishes_per_diocese 0 --num_parishes_for_schedule 0
 
 # Process specific diocese with monitoring
-source venv/bin/activate && python3 run_pipeline_monitored.py --diocese_id 2024 --max_parishes_per_diocese 25
+source venv/bin/activate && python3 run_pipeline.py --diocese_id 2024 --max_parishes_per_diocese 25
 
 # Standard pipeline without monitoring
 python run_pipeline.py --max_parishes_per_diocese 0 --num_parishes_for_schedule 0
