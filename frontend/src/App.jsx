@@ -11,7 +11,7 @@ function App() {
 
   // State for pagination and sorting
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(20); // Fixed items per page
+  const [itemsPerPage, setItemsPerPage] = useState(50);
   const [totalDioceses, setTotalDioceses] = useState(0);
   const [sortBy, setSortBy] = useState('Name');
   const [sortOrder, setSortOrder] = useState('asc'); // 'asc' or 'desc'
@@ -73,7 +73,7 @@ function App() {
     };
 
     fetchDioceses();
-  }, [currentPage, sortBy, sortOrder, debouncedFilterName, debouncedFilterAddress, debouncedFilterWebsite]);
+  }, [currentPage, itemsPerPage, sortBy, sortOrder, debouncedFilterName, debouncedFilterAddress, debouncedFilterWebsite]);
 
   // Function to handle sorting
   const handleSort = (column) => {
@@ -83,6 +83,11 @@ function App() {
       setSortBy(column);
       setSortOrder('asc');
     }
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page
   };
 
   // Calculate total pages for pagination
@@ -158,13 +163,38 @@ function App() {
     <>
 
       <Container className="mt-4">
+        {/* Items per page control */}
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <div className="d-flex align-items-center">
+            <label htmlFor="itemsPerPage" className="me-2">Show:</label>
+            <Form.Select
+              id="itemsPerPage"
+              value={itemsPerPage}
+              onChange={(e) => handleItemsPerPageChange(parseInt(e.target.value))}
+              style={{ width: 'auto' }}
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value={totalDioceses}>All</option>
+            </Form.Select>
+            <span className="ms-2">dioceses per page</span>
+          </div>
+          {!loading && !error && (
+            <div className="text-muted">
+              Showing {Math.min((currentPage - 1) * itemsPerPage + 1, totalDioceses)} to {Math.min(currentPage * itemsPerPage, totalDioceses)} of {totalDioceses} dioceses
+            </div>
+          )}
+        </div>
+
         {loading && <Spinner animation="border" />}
         {error && <Alert variant="danger">Error fetching data: {error}</Alert>}
         {!loading && !error && (
           <Table striped bordered hover responsive>
             <thead>
               <tr>
-                <th style={{ cursor: 'pointer' }}>
+                <th style={{ cursor: 'pointer', width: '25%' }}>
                   <div onClick={() => handleSort('Name')}>
                     Name {sortBy === 'Name' && (sortOrder === 'asc' ? '▲' : '▼')}
                   </div>
@@ -177,7 +207,7 @@ function App() {
                     className="mt-1"
                   />
                 </th>
-                <th style={{ cursor: 'pointer' }}>
+                <th style={{ cursor: 'pointer', width: '15%' }}>
                   <div onClick={() => handleSort('Address')}>
                     Address {sortBy === 'Address' && (sortOrder === 'asc' ? '▲' : '▼')}
                   </div>
@@ -190,7 +220,7 @@ function App() {
                     className="mt-1"
                   />
                 </th>
-                <th style={{ cursor: 'pointer' }}>
+                <th style={{ cursor: 'pointer', width: '20%' }}>
                   <div onClick={() => handleSort('Website')}>
                     Website {sortBy === 'Website' && (sortOrder === 'asc' ? '▲' : '▼')}
                   </div>
@@ -203,14 +233,14 @@ function App() {
                     className="mt-1"
                   />
                 </th>
-                <th>Parishes Directory</th>
-                <th style={{ cursor: 'pointer' }} onClick={() => handleSort('parishes_in_db_count')}>
+                <th style={{ width: '15%' }}>Parishes Directory</th>
+                <th style={{ cursor: 'pointer', width: '10%' }} onClick={() => handleSort('parishes_in_db_count')}>
                   Parishes Extracted {sortBy === 'parishes_in_db_count' && (sortOrder === 'asc' ? '▲' : '▼')}
                 </th>
-                <th style={{ cursor: 'pointer' }} onClick={() => handleSort('parishes_with_data_extracted_count')}>
+                <th style={{ cursor: 'pointer', width: '10%' }} onClick={() => handleSort('parishes_with_data_extracted_count')}>
                   Parishes with Data Extracted {sortBy === 'parishes_with_data_extracted_count' && (sortOrder === 'asc' ? '▲' : '▼')}
                 </th>
-                <th style={{ cursor: 'pointer' }} onClick={() => handleSort('is_blocked')}>
+                <th style={{ cursor: 'pointer', width: '5%' }} onClick={() => handleSort('is_blocked')}>
                   Blocked {sortBy === 'is_blocked' && (sortOrder === 'asc' ? '▲' : '▼')}
                 </th>
               </tr>
@@ -218,18 +248,20 @@ function App() {
             <tbody>
               {dioceses.map((diocese, index) => (
                 <tr key={diocese.id || index}>
-                  <td>{diocese.Name}</td>
-                  <td>{formatAddress(diocese.Address)}</td>
-                  <td><a href={diocese.Website} target="_blank" rel="noopener noreferrer">{diocese.Website}</a></td>
-                  <td>
-                    {diocese.parish_directory_url && 
+                  <td style={{ wordBreak: 'break-word' }}>{diocese.Name}</td>
+                  <td style={{ wordBreak: 'break-word' }}>{formatAddress(diocese.Address)}</td>
+                  <td style={{ wordBreak: 'break-all', fontSize: '0.85em' }}>
+                    <a href={diocese.Website} target="_blank" rel="noopener noreferrer">{diocese.Website}</a>
+                  </td>
+                  <td style={{ wordBreak: 'break-all', fontSize: '0.85em' }}>
+                    {diocese.parish_directory_url &&
                         <a href={diocese.parish_directory_url} target="_blank" rel="noopener noreferrer">{diocese.parish_directory_url}</a>
                     }
                   </td>
-                  <td>
+                  <td style={{ textAlign: 'center' }}>
                     <Link to={`/diocese?id=${diocese.id}`}>{diocese.parishes_in_db_count}</Link>
                   </td>
-                  <td>
+                  <td style={{ textAlign: 'center' }}>
                     <Link to={`/diocese?id=${diocese.id}&filter=with_data`}>{diocese.parishes_with_data_extracted_count}</Link>
                   </td>
                   <td>

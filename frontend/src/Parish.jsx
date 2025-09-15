@@ -21,7 +21,7 @@ function Parish() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`/api/parishes/${id}`);
+        const response = await fetch(`/api/parish?parish_id=${id}`);
         if (!response.ok) {
           throw new Error('Network response was not ok');
         }

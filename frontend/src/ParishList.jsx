@@ -7,7 +7,7 @@ function ParishList({ dioceseId }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(20);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
   const [totalParishes, setTotalParishes] = useState(0);
   const [sortBy, setSortBy] = useState('Name');
   const [sortOrder, setSortOrder] = useState('asc');
@@ -81,7 +81,7 @@ function ParishList({ dioceseId }) {
     };
 
     fetchParishes();
-  }, [currentPage, sortBy, sortOrder, debouncedFilterName, debouncedFilterDioceseName, debouncedFilterWebsite, debouncedFilterDataExtracted, dioceseId]);
+  }, [currentPage, itemsPerPage, sortBy, sortOrder, debouncedFilterName, debouncedFilterDioceseName, debouncedFilterWebsite, debouncedFilterDataExtracted, dioceseId]);
 
   const handleSort = (column) => {
     if (sortBy === column) {
@@ -90,6 +90,11 @@ function ParishList({ dioceseId }) {
       setSortBy(column);
       setSortOrder('asc');
     }
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page
   };
 
   const totalPages = Math.ceil(totalParishes / itemsPerPage);
@@ -153,6 +158,32 @@ function ParishList({ dioceseId }) {
   return (
     <Container className="mt-4">
       {dioceseId && <h2>Parishes in Diocese</h2>}
+
+      {/* Items per page control */}
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <div className="d-flex align-items-center">
+          <label htmlFor="itemsPerPage" className="me-2">Show:</label>
+          <Form.Select
+            id="itemsPerPage"
+            value={itemsPerPage}
+            onChange={(e) => handleItemsPerPageChange(parseInt(e.target.value))}
+            style={{ width: 'auto' }}
+          >
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+            <option value={totalParishes}>All</option>
+          </Form.Select>
+          <span className="ms-2">parishes per page</span>
+        </div>
+        {!loading && !error && (
+          <div className="text-muted">
+            Showing {Math.min((currentPage - 1) * itemsPerPage + 1, totalParishes)} to {Math.min(currentPage * itemsPerPage, totalParishes)} of {totalParishes} parishes
+          </div>
+        )}
+      </div>
+
       {loading && <Spinner animation="border" />}
       {error && <Alert variant="danger">Error fetching parishes: {error}</Alert>}
       {!loading && !error && (
@@ -199,6 +230,11 @@ function ParishList({ dioceseId }) {
                   className="mt-1"
                 />
               </th>
+              <th style={{ cursor: 'pointer', width: '100px', minWidth: '100px' }}>
+                <div onClick={() => handleSort('is_blocked')}>
+                  Blocked {sortBy === 'is_blocked' && (sortOrder === 'asc' ? '▲' : '▼')}
+                </div>
+              </th>
               <th style={{ cursor: 'pointer', width: '120px', minWidth: '120px' }}>
                 <div onClick={() => handleSort('data_extracted')}>
                   Data Extracted {sortBy === 'data_extracted' && (sortOrder === 'asc' ? '▲' : '▼')}
@@ -214,12 +250,7 @@ function ParishList({ dioceseId }) {
                   <option value="false">No</option>
                 </Form.Select>
               </th>
-              <th style={{ cursor: 'pointer', width: '100px', minWidth: '100px' }}>
-                <div onClick={() => handleSort('is_blocked')}>
-                  Blocked {sortBy === 'is_blocked' && (sortOrder === 'asc' ? '▲' : '▼')}
-                </div>
-              </th>
-              <th style={{ width: '120px', minWidth: '120px' }}>Schedules</th>
+              <th style={{ width: '120px', minWidth: '120px' }}>Data Available</th>
             </tr>
           </thead>
           <tbody>
@@ -229,7 +260,6 @@ function ParishList({ dioceseId }) {
                 <td>{parish.diocese_name}</td>
 
                 <td><a href={parish.Website} target="_blank" rel="noopener noreferrer">{parish.Website}</a></td>
-                <td>{parish.data_extracted ? 'Yes' : 'No'}</td>
                 <td>
                   {parish.respectful_automation_used ? (
                     <OverlayTrigger
@@ -253,8 +283,13 @@ function ParishList({ dioceseId }) {
                     <span style={{ color: '#6c757d', fontSize: '0.8em' }}>Not tested</span>
                   )}
                 </td>
+                <td>{parish.data_extracted ? 'Yes' : 'No'}</td>
                 <td>
-                  <Link to={`/parish?id=${parish.id}`}>View Schedules</Link>
+                  {parish.data_extracted ? (
+                    <Link to={`/parish?id=${parish.id}`}>View Data</Link>
+                  ) : (
+                    <span style={{ color: '#6c757d', fontSize: '0.9em' }}>No data</span>
+                  )}
                 </td>
               </tr>
             ))}
