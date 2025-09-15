@@ -225,12 +225,12 @@ app = FastAPI(lifespan=lifespan)
 
 # Configure CORS middleware
 origins = [
-    "http://usccb.diocesevitality.org",
-    "https://usccb.diocesevitality.org",
-    "http://ui.diocesanvitality.org",
-    "https://ui.diocesanvitality.org.org",
     "http://diocesanvitality.org",
-    "https://diocesanvitality.org.org",
+    "https://diocesanvitality.org",
+    "http://ui.diocesanvitality.org",
+    "https://ui.diocesanvitality.org",
+    "http://diocesanvitality.org",
+    "https://diocesanvitality.org",
     "http://localhost:3000",    # React development server
     "http://localhost:8080",
     "http://localhost:8081",
