@@ -27,10 +27,11 @@ This guide provides everything you need to develop and test the Diocesan Vitalit
    
    # Edit .env with your API keys (see Environment Setup section, above)
 
-2. **Create and Activate Virtual Environment**
+2. **Create and Activate Virtual Environment, and Load environment Variables**
    ```bash
    python3 -m venv venv
    source venv/bin/activate
+   export $(cat .env | grep -v '^#' | xargs)  # Load environment variables
    ```
 
 3. **Install Dependencies**
