@@ -58,8 +58,11 @@ This guide provides everything you need to develop and test the Diocesan Vitalit
 5. **Run Data Collection Pipeline and/or Components**
    Open a third terminal.     
    ```bash
+   # Start the venv with the requried Python packages:
+   source venv/bin/activate
+   
    # Full pipeline with monitoring (recommended)
-   python run_pipeline_monitored.py --monitoring_url http://localhost:8000 \
+   python run_pipeline.py --monitoring_url http://localhost:8000 \
      --max_parishes_per_diocese 10 --num_parishes_for_schedule 5
 
    # Individual steps for development
@@ -69,13 +72,13 @@ This guide provides everything you need to develop and test the Diocesan Vitalit
    python extract_schedule.py --num_parishes 20
 
    # Development shortcuts
-   python run_pipeline_monitored.py --diocese_id 123 --max_parishes_per_diocese 5
+   python run_pipeline.py --diocese_id 123 --max_parishes_per_diocese 5
    ```
 
 6. **Common Development Commands**
    ```bash
    # Test with minimal data
-   python run_pipeline_monitored.py --diocese_id 123 --max_parishes_per_diocese 5 \
+   python run_pipeline.py --diocese_id 123 --max_parishes_per_diocese 5 \
      --skip_dioceses --skip_parish_directories
 
    # Debug single parish
@@ -98,7 +101,7 @@ This guide provides everything you need to develop and test the Diocesan Vitalit
 python run_pipeline.py --max_parishes_per_diocese 10 --num_parishes_for_schedule 5
 
 # Focus on specific diocese with larger dataset
-python run_pipeline_monitored.py --diocese_id 123 --max_parishes_per_diocese 20
+python run_pipeline.py --diocese_id 123 --max_parishes_per_diocese 20
 ```
 
 ## Testing
@@ -244,7 +247,7 @@ export WDM_LOCAL_CACHE=/tmp/webdriver-cache
             "name": "Run Pipeline",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/run_pipeline_monitored.py",
+            "program": "${workspaceFolder}/run_pipeline.py",
             "args": [
                 "--max_parishes_per_diocese", "5",
                 "--num_parishes_for_schedule", "3",
@@ -361,7 +364,7 @@ Create `.vscode/launch.json`:
       "name": "Run Pipeline",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder}/run_pipeline_monitored.py",
+      "program": "${workspaceFolder}/run_pipeline.py",
       "args": [
         "--max_parishes_per_diocese", "5",
         "--num_parishes_for_schedule", "3",
@@ -470,7 +473,7 @@ python run_pipeline.py \
   --num_parishes_for_schedule 1
 
 # Test monitoring-enabled pipeline
-python run_pipeline_monitored.py \
+python run_pipeline.py \
   --diocese_id 123 \
   --max_parishes_per_diocese 5 \
   --monitoring_url http://localhost:8000
@@ -586,7 +589,7 @@ jobs:
 
 
 ### Key Files
-- `run_pipeline_monitored.py` - Main pipeline with monitoring
+- `run_pipeline.py` - Main pipeline with monitoring
 - `core/db.py` - Database utilities
 - `core/ai_client.py` - AI/LLM integration
 - `core/driver.py` - Chrome WebDriver setup

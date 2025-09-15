@@ -222,18 +222,18 @@ python run_pipeline.py \
 #### Monitored Pipeline (With Dashboard Integration)
 ```bash
 # Monitored pipeline with dashboard updates
-python run_pipeline_monitored.py \
+python run_pipeline.py \
   --max_parishes_per_diocese 50 \
   --num_parishes_for_schedule 100
 
 # Background execution with monitoring
-nohup python run_pipeline_monitored.py \
+nohup python run_pipeline.py \
   --max_parishes_per_diocese 50 \
   --num_parishes_for_schedule 100 \
   > pipeline.log 2>&1 &
 
 # Disable monitoring (fallback mode)
-python run_pipeline_monitored.py \
+python run_pipeline.py \
   --disable_monitoring \
   --max_parishes_per_diocese 25
 ```
@@ -289,7 +289,7 @@ npm run dev
 ```bash
 # Run monitored pipeline locally
 source venv/bin/activate
-python run_pipeline_monitored.py \
+python run_pipeline.py \
   --max_parishes_per_diocese 5 \
   --num_parishes_for_schedule 10 \
   --monitoring_url "http://localhost:8000"

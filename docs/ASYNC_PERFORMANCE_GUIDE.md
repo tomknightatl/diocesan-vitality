@@ -33,7 +33,7 @@ python3 async_extract_parishes.py \
 The async extraction integrates seamlessly with the monitoring dashboard:
 ```bash
 # Run monitoring-enabled pipeline (includes async processing)
-source venv/bin/activate && timeout 7200 python3 run_pipeline_monitored.py \
+source venv/bin/activate && timeout 7200 python3 run_pipeline.py \
   --max_parishes_per_diocese 50 \
   --num_parishes_for_schedule 25
 ```
@@ -284,12 +284,12 @@ done
 ### Integration with Pipeline and Monitoring
 ```bash
 # Run full pipeline with async processing and monitoring
-source venv/bin/activate && timeout 7200 python3 run_pipeline_monitored.py \
+source venv/bin/activate && timeout 7200 python3 run_pipeline.py \
   --max_parishes_per_diocese 25 \
   --num_parishes_for_schedule 15
 
 # Background processing with monitoring logs
-source venv/bin/activate && nohup python3 run_pipeline_monitored.py \
+source venv/bin/activate && nohup python3 run_pipeline.py \
   --max_parishes_per_diocese 0 \
   --num_parishes_for_schedule 50 > pipeline_async.log 2>&1 &
 ```

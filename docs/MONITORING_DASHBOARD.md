@@ -85,7 +85,7 @@ The real-time monitoring dashboard provides **live operational visibility** into
 5. **Run Monitoring-Enabled Pipeline**:
    ```bash
    # Basic run with monitoring and 2-hour timeout
-   source venv/bin/activate && timeout 7200 python3 run_pipeline_monitored.py --max_parishes_per_diocese 10 --num_parishes_for_schedule 10
+   source venv/bin/activate && timeout 7200 python3 run_pipeline.py --max_parishes_per_diocese 10 --num_parishes_for_schedule 10
    
    # Or test dashboard functionality
    python3 test_dashboard.py --mode extraction

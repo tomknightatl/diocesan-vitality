@@ -2,22 +2,9 @@ Here are the commands and parameters for each `.py` script in the root directory
 
 ## Pipeline Scripts
 
-### `run_pipeline.py`
-Standard Diocesan Vitality data extraction pipeline without monitoring.
-*   **Command:** `python run_pipeline.py [OPTIONS]`
-*   **Parameters:**
-    *   `--skip_dioceses` (action: `store_true`): Skip the diocese extraction step.
-    *   `--skip_parish_directories` (action: `store_true`): Skip finding parish directories.
-    *   `--skip_parishes` (action: `store_true`): Skip the parish extraction step.
-    *   `--skip_schedules` (action: `store_true`): Skip the schedule extraction step.
-    *   `--skip_reporting` (action: `store_true`): Skip the reporting step.
-    *   `--diocese_id` (type: `int`): ID of a specific diocese to process.
-    *   `--max_parishes_per_diocese` (type: `int`, default: `config.DEFAULT_MAX_PARISHES_PER_DIOCESE`): Max parishes to extract per diocese.
-    *   `--num_parishes_for_schedule` (type: `int`, default: `config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE`): Number of parishes to extract schedules for.
-
-### `run_pipeline_monitored.py` 🖥️
-**NEW** - Monitoring-enabled pipeline with real-time dashboard integration and WebSocket updates.
-*   **Command:** `source venv/bin/activate && timeout 7200 python3 run_pipeline_monitored.py [OPTIONS]`
+### `run_pipeline.py` 🖥️
+Diocesan Vitality data extraction pipeline with monitoring and real-time dashboard integration.
+*   **Command:** `source venv/bin/activate && timeout 7200 python3 run_pipeline.py [OPTIONS]`
 *   **Parameters:**
     *   `--skip_dioceses` (action: `store_true`): Skip the diocese extraction step.
     *   `--skip_parish_directories` (action: `store_true`): Skip finding parish directories.
@@ -28,6 +15,7 @@ Standard Diocesan Vitality data extraction pipeline without monitoring.
     *   `--max_parishes_per_diocese` (type: `int`, default: `config.DEFAULT_MAX_PARISHES_PER_DIOCESE`): Max parishes to extract per diocese.
     *   `--num_parishes_for_schedule` (type: `int`, default: `config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE`): Number of parishes to extract schedules for.
     *   `--monitoring_url` (type: `str`, default: `"http://localhost:8000"`): Monitoring backend URL.
+
     *   `--disable_monitoring` (action: `store_true`): Disable monitoring integration.
 *   **Features:**
     *   Real-time extraction progress tracking
@@ -109,16 +97,16 @@ The following scripts are primarily modules or configuration files and do not ac
 #### Monitoring-Enabled Pipeline (Recommended) 🖥️
 ```bash
 # Basic monitored run with limits and 2-hour timeout
-source venv/bin/activate && timeout 7200 python3 run_pipeline_monitored.py --max_parishes_per_diocese 10 --num_parishes_for_schedule 10
+source venv/bin/activate && timeout 7200 python3 run_pipeline.py --max_parishes_per_diocese 10 --num_parishes_for_schedule 10
 
 # Full extraction with monitoring (no limits)
-source venv/bin/activate && timeout 7200 python3 run_pipeline_monitored.py --max_parishes_per_diocese 0 --num_parishes_for_schedule 0
+source venv/bin/activate && timeout 7200 python3 run_pipeline.py --max_parishes_per_diocese 0 --num_parishes_for_schedule 0
 
 # Background processing with monitoring
-source venv/bin/activate && nohup python3 run_pipeline_monitored.py --max_parishes_per_diocese 10 --num_parishes_for_schedule 10 > pipeline.log 2>&1 &
+source venv/bin/activate && nohup python3 run_pipeline.py --max_parishes_per_diocese 10 --num_parishes_for_schedule 10 > pipeline.log 2>&1 &
 
 # Process specific diocese with monitoring
-source venv/bin/activate && python3 run_pipeline_monitored.py --diocese_id 2024 --max_parishes_per_diocese 25
+source venv/bin/activate && python3 run_pipeline.py --diocese_id 2024 --max_parishes_per_diocese 25
 ```
 
 #### Standard Pipeline (Without Monitoring)
