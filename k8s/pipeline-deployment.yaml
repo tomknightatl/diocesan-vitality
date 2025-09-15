@@ -82,8 +82,8 @@ spec:
           value: "101"
         - name: MONITORING_URL
           value: "http://backend-service:8000"
-        # Use distributed pipeline runner
-        command: ["python", "distributed_pipeline_runner.py"]
+        # Use original pipeline runner (distributed runner needs Docker image update)
+        command: ["python", "run_pipeline.py"]
         args:
         - "--max_parishes_per_diocese"
         - "$(MAX_PARISHES_PER_DIOCESE)"
@@ -91,8 +91,6 @@ spec:
         - "$(NUM_PARISHES_FOR_SCHEDULE)"
         - "--monitoring_url"
         - "$(MONITORING_URL)"
-        - "--worker_id"
-        - "$(WORKER_ID)"
         volumeMounts:
         - name: tmp
           mountPath: /tmp

@@ -9,7 +9,7 @@ spec:
     kind: Deployment
     name: pipeline-deployment
   minReplicas: 1
-  maxReplicas: 5
+  maxReplicas: 1  # Limit to 1 replica due to single fast-pool node capacity
   metrics:
   # Scale based on CPU usage
   - type: Resource
