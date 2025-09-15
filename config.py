@@ -17,6 +17,9 @@ GENAI_API_KEY = os.getenv("GENAI_API_KEY")
 SEARCH_API_KEY = os.getenv("SEARCH_API_KEY")
 SEARCH_CX = os.getenv("SEARCH_CX")
 
+# --- Docker Configuration ---
+DOCKER_USERNAME = "tomatl"
+
 # --- Pipeline Defaults ---
 DEFAULT_MAX_DIOCESES = 5
 DEFAULT_MAX_PARISHES_PER_DIOCESE = 5

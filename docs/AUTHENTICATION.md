@@ -2,6 +2,8 @@
 
 This document provides comprehensive instructions for authenticating with GitHub (for git operations) and Docker Hub (for container registry operations).
 
+**Note:** GitHub authentication is only required if you plan to use the GitHub CLI (`gh`) for development tasks like creating pull requests. The core diocesan vitality extraction pipeline only requires Docker Hub and Supabase credentials.
+
 ## Prerequisites
 
 - Git installed on your system
@@ -105,11 +107,10 @@ docker login -u YOUR_DOCKERHUB_USERNAME
 #### Option B: Non-Interactive Login (Using Environment Variables)
 ```bash
 # Export credentials
-export DOCKER_USERNAME=your-dockerhub-username
 export DOCKER_PASSWORD=your-dockerhub-token
 
-# Login using environment variables
-echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+# Login using environment variables (username is 'tomatl')
+echo $DOCKER_PASSWORD | docker login -u tomatl --password-stdin
 ```
 
 #### Option C: Using Docker Credential Helper (Most Secure)
@@ -193,22 +194,25 @@ nano .env  # or use your preferred editor
 Add the following lines:
 
 ```bash
-# GitHub Credentials (for git operations)
-GH_TOKEN=ghp_YourGitHubTokenHere
-GITHUB_TOKEN=ghp_YourGitHubTokenHere
-GITHUB_USERNAME=your-github-username
-
-# Docker Hub Credentials (for container registry)
-DOCKER_USERNAME=your-dockerhub-username
+# Docker Hub Credentials (for container registry operations)
 DOCKER_PASSWORD=your-dockerhub-access-token
 
-# Other project credentials
+# Supabase Database Credentials (required)
 SUPABASE_URL=your_supabase_url_here
 SUPABASE_KEY=your_supabase_key_here
-GENAI_API_KEY_Diocesan Vitality=your_google_genai_api_key_here
-SEARCH_API_KEY_Diocesan Vitality=your_google_search_api_key_here
-SEARCH_CX_Diocesan Vitality=your_google_search_engine_id_here
+
+# Google AI API Keys (required for extraction pipeline)
+GENAI_API_KEY=your_google_genai_api_key_here
+SEARCH_API_KEY=your_google_search_api_key_here
+SEARCH_CX=your_google_search_engine_id_here
+
+# GitHub Credentials (optional - only needed for GitHub CLI operations)
+# GH_TOKEN=ghp_YourGitHubTokenHere
+# GITHUB_TOKEN=ghp_YourGitHubTokenHere
+# GITHUB_USERNAME=your-github-username
 ```
+
+**Note:** Docker Hub username (`tomatl`) is configured in `config.py`, not in environment variables, since it's an application configuration rather than a secret.
 
 ### Secure the .env File
 
@@ -227,8 +231,8 @@ chmod 600 .env
 export $(cat .env | grep -v '^#' | xargs)
 
 # Verify variables are loaded
-echo $DOCKER_USERNAME  # Should show your Docker Hub username
-echo $GITHUB_USERNAME  # Should show your GitHub username
+echo $DOCKER_PASSWORD  # Should show your Docker Hub token (first few chars)
+echo "Docker username is configured as 'tomatl' in config.py"
 ```
 
 ## Part 4: Kubernetes Secrets for Container Registry
@@ -341,7 +345,7 @@ echo $GH_TOKEN | gh auth login --with-token
 gh auth setup-git
 
 # Docker Hub setup
-echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+echo $DOCKER_PASSWORD | docker login -u tomatl --password-stdin
 
 # Verify authentication
 gh auth status

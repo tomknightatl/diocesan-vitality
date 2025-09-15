@@ -9,10 +9,21 @@ This guide provides everything you need to develop and test the Diocesan Vitalit
 - Active internet connection
 - Valid API keys (see Environment Setup)
 
+
+## Required API Keys
+
+1. **Supabase**: Get URL and service role key from your Supabase project dashboard
+2. **Google Gemini**: Create API key at https://ai.google.dev/
+3. **Google Custom Search**:
+   - Create API key at Google Cloud Console
+   - Set up Custom Search Engine at https://cse.google.com/
+
+
 ## Quick Start
 
-1. **Activate Virtual Environment**
+1. **Create and Activate Virtual Environment**
    ```bash
+   python3 -m venv venv
    source venv/bin/activate
    ```
 
@@ -21,19 +32,33 @@ This guide provides everything you need to develop and test the Diocesan Vitalit
    pip install -r requirements.txt
    ```
 
-3. **Configure Environment**
+3. **Configure Secrets as Environment Variables**
    ```bash
    cp .env.example .env
    # Edit .env with your API keys (see Environment Setup section)
    ```
 
-4. **Start Local Services** (see Environment Setup for details)
+  ```bash
+  # Supabase Configuration
+  SUPABASE_URL=https://your-project.supabase.co
+  SUPABASE_KEY=your-supabase-service-role-key
+
+  # Google AI API Keys
+  GENAI_API_KEY=your-google-gemini-api-key
+  SEARCH_API_KEY=your-google-search-api-key
+  SEARCH_CX=your-google-search-cx-id
+  ```
+
+  **Note:** Docker Hub username (`tomatl`) is configured in `config.py`, not in environment variables.
+
+4. **Start Local Services**
 
    **Terminal 1 - Backend (required for monitoring):**
    ```bash
    cd backend
    uvicorn main:app --reload --host 0.0.0.0 --port 8000
    ```
+   Server runs at http://localhost:8000
 
    **Terminal 2 - Frontend (optional):**
    ```bash
@@ -41,127 +66,51 @@ This guide provides everything you need to develop and test the Diocesan Vitalit
    npm install  # First time only
    npm run dev
    ```
+   Dashboard available at http://localhost:5173
 
 5. **Run Extraction Scripts**
    ```bash
-   # Full pipeline with monitoring
-   python run_pipeline_monitored.py --monitoring_url http://localhost:8000
+   # Full pipeline with monitoring (recommended)
+   python run_pipeline_monitored.py --monitoring_url http://localhost:8000 \
+     --max_parishes_per_diocese 10 --num_parishes_for_schedule 5
 
-   # Individual steps
+   # Individual steps for development
    python extract_dioceses.py
-   python find_parishes.py
-   python extract_parishes.py
-   python extract_schedule.py
+   python find_parishes.py --diocese_id 123
+   python extract_parishes.py --diocese_id 123 --max_parishes 10
+   python extract_schedule.py --num_parishes 20
+
+   # Development shortcuts
+   python run_pipeline_monitored.py --diocese_id 123 --max_parishes_per_diocese 5
    ```
 
-## Environment Setup
+6. **Common Development Commands**
+   ```bash
+   # Test with minimal data
+   python run_pipeline_monitored.py --diocese_id 123 --max_parishes_per_diocese 5 \
+     --skip_dioceses --skip_parish_directories
 
-### Required Environment Variables
+   # Debug single parish
+   python extract_parishes.py --diocese_id 123 --max_parishes 1
 
-Copy `.env.example` to `.env` and configure:
+   # Run tests
+   pytest -v
 
-```bash
-# Supabase Configuration
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_KEY=your-supabase-service-role-key
+   # View logs
+   tail -f logs/pipeline.log
+   ```
 
-# Google AI API Keys
-GENAI_API_KEY_Diocesan Vitality=your-google-gemini-api-key
-SEARCH_API_KEY_Diocesan Vitality=your-google-search-api-key
-SEARCH_CX_Diocesan Vitality=your-google-search-cx-id
-```
 
-### API Key Setup
+## Advanced Development
 
-1. **Supabase**: Get URL and service role key from your Supabase project dashboard
-2. **Google Gemini**: Create API key at https://ai.google.dev/
-3. **Google Custom Search**:
-   - Create API key at Google Cloud Console
-   - Set up Custom Search Engine at https://cse.google.com/
-
-### Local Services Setup
-
-#### Backend Server (Required for Monitoring)
-
-Start the FastAPI backend server:
-```bash
-cd backend
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
-Server runs at http://localhost:8000
-
-#### Frontend Dashboard (Optional)
-
-For the full monitoring dashboard experience:
-```bash
-cd frontend
-npm install  # First time only
-npm run dev
-```
-Dashboard available at http://localhost:5173
-
-### Monitoring Features
-
-- **Real-time Logs**: View extraction progress live
-- **Error Tracking**: See detailed error messages
-- **Progress Tracking**: Monitor parishes processed
-- **WebSocket Connection**: Live updates without refresh
-
-### Available API Endpoints
-
-- `GET /api/logs` - Recent log entries
-- `GET /api/statistics` - Current extraction stats
-- `GET /api/parishes` - Parish data
-- `GET /api/dioceses` - Diocese data
-- `WS /ws/monitoring` - WebSocket for live updates
-
-## Development Workflow
-
-### Running Individual Scripts
+### Alternative Pipeline Options
 
 ```bash
-# Extract dioceses (Step 1)
-python extract_dioceses.py
+# Run without monitoring
+python run_pipeline.py --max_parishes_per_diocese 10 --num_parishes_for_schedule 5
 
-# Find parish directories (Step 2)
-python find_parishes.py --diocese_id 123
-
-# Extract parish details (Step 3)
-python extract_parishes.py --diocese_id 123 --max_parishes 10
-
-# Extract schedules (Step 4)
-python extract_schedule.py --num_parishes 20
-```
-
-### Running Full Pipeline
-
-```bash
-# With monitoring (recommended)
-python run_pipeline_monitored.py \
-  --max_parishes_per_diocese 10 \
-  --num_parishes_for_schedule 5 \
-  --monitoring_url http://localhost:8000
-
-# Without monitoring
-python run_pipeline.py \
-  --max_parishes_per_diocese 10 \
-  --num_parishes_for_schedule 5
-```
-
-### Common Development Options
-
-```bash
-# Skip steps for faster iteration
-python run_pipeline_monitored.py \
-  --skip_dioceses \
-  --skip_parish_directories \
-  --diocese_id 123 \
-  --max_parishes_per_diocese 5
-
-# Focus on specific diocese
-python run_pipeline_monitored.py \
-  --diocese_id 123 \
-  --max_parishes_per_diocese 20
+# Focus on specific diocese with larger dataset
+python run_pipeline_monitored.py --diocese_id 123 --max_parishes_per_diocese 20
 ```
 
 ## Testing
@@ -627,33 +576,6 @@ jobs:
 
 ## Development Workflow
 
-### Feature Development Process
-```bash
-# 1. Create feature branch
-git checkout -b feature/your-feature-name
-
-# 2. Set up environment
-source venv/bin/activate
-export $(cat .env | grep -v '^#' | xargs)
-
-# 3. Start services (see Environment Setup section for details)
-cd backend && uvicorn main:app --reload  # Terminal 1
-cd frontend && npm run dev               # Terminal 2
-
-# 4. Make changes and test
-python extract_dioceses.py --max_dioceses 1
-pytest tests/ -v
-
-# 5. Test Docker builds before committing
-docker build -t diocesan-vitality-backend:test ./backend
-docker build -t diocesan-vitality-frontend:test ./frontend
-docker build -f Dockerfile.pipeline -t diocesan-vitality-pipeline:test .
-
-# 6. Commit and push
-git add .
-git commit -m "feat: your feature description"
-git push origin feature/your-feature-name
-```
 
 ## Architecture Overview
 
@@ -674,20 +596,6 @@ git push origin feature/your-feature-name
 
 ## Quick Reference
 
-### Most Common Commands
-```bash
-# Daily development workflow
-source venv/bin/activate
-# Start services (see Environment Setup section)
-cd backend && uvicorn main:app --reload &
-python run_pipeline_monitored.py --diocese_id 123 --max_parishes_per_diocese 10
-
-# Quick test single parish
-python extract_parishes.py --diocese_id 123 --max_parishes 1
-
-# Debug specific parish website
-python extract_schedule.py --num_parishes 1 --parish_id 456
-```
 
 ### Key Files
 - `run_pipeline_monitored.py` - Main pipeline with monitoring
