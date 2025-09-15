@@ -41,6 +41,87 @@ spec:
    - Conservative scale-down, aggressive scale-up
    - Pod Disruption Budget ensures availability
 
+## 🐳 Docker Image Management
+
+### Building and Deploying New Images
+
+To deploy new code changes, you need to build new Docker images with timestamped tags and update the Kubernetes manifests.
+
+#### 1. Build and Tag Images with Timestamp
+
+```bash
+# Generate timestamp
+TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)
+echo "Using timestamp: $TIMESTAMP"
+
+# Build images with timestamped tags
+docker build -f backend/Dockerfile -t tomatl/diocesan-vitality:backend-$TIMESTAMP backend/
+docker build -f frontend/Dockerfile -t tomatl/diocesan-vitality:frontend-$TIMESTAMP frontend/
+docker build -f Dockerfile.pipeline -t tomatl/diocesan-vitality:pipeline-$TIMESTAMP .
+
+# Push to Docker Hub
+docker push tomatl/diocesan-vitality:backend-$TIMESTAMP
+docker push tomatl/diocesan-vitality:frontend-$TIMESTAMP
+docker push tomatl/diocesan-vitality:pipeline-$TIMESTAMP
+
+echo "All images pushed with timestamp: $TIMESTAMP"
+```
+
+#### 2. Update Kubernetes Manifests
+
+Update the image tags in the deployment files:
+
+```bash
+# Update backend deployment
+sed -i "s|image: tomatl/diocesan-vitality:backend-.*|image: tomatl/diocesan-vitality:backend-$TIMESTAMP|g" k8s/backend-deployment.yaml
+
+# Update frontend deployment
+sed -i "s|image: tomatl/diocesan-vitality:frontend-.*|image: tomatl/diocesan-vitality:frontend-$TIMESTAMP|g" k8s/frontend-deployment.yaml
+
+# Update pipeline deployment
+sed -i "s|image: tomatl/diocesan-vitality:pipeline-.*|image: tomatl/diocesan-vitality:pipeline-$TIMESTAMP|g" k8s/pipeline-deployment.yaml
+```
+
+#### 3. Commit and Deploy via GitOps
+
+```bash
+# Stage changes
+git add k8s/backend-deployment.yaml k8s/frontend-deployment.yaml k8s/pipeline-deployment.yaml
+
+# Commit with descriptive message
+git commit -m "Update all deployments to use timestamped Docker images ($TIMESTAMP)
+
+- backend: tomatl/diocesan-vitality:backend-$TIMESTAMP
+- frontend: tomatl/diocesan-vitality:frontend-$TIMESTAMP
+- pipeline: tomatl/diocesan-vitality:pipeline-$TIMESTAMP
+
+[Include description of changes in this deployment]"
+
+# Push to trigger ArgoCD sync
+git push origin main
+```
+
+#### 4. Monitor Deployment
+
+```bash
+# Watch ArgoCD sync status
+kubectl get application diocesan-vitality-app -n argocd -w
+
+# Monitor pod rollout
+kubectl get pods -n diocesan-vitality -w
+
+# Check new image is deployed
+kubectl describe pod -n diocesan-vitality $(kubectl get pods -n diocesan-vitality -l app=pipeline -o name | head -1) | grep Image:
+```
+
+### Why Timestamped Tags?
+
+- **Immutable deployments**: Each timestamp creates a unique, traceable deployment
+- **Easy rollbacks**: Can revert to any previous timestamp instantly
+- **No caching issues**: Kubernetes must pull new tagged images
+- **GitOps compatibility**: Works seamlessly with ArgoCD workflows
+- **Audit trail**: Git history shows exactly when each image was deployed
+
 ## 🚀 Deployment Process
 
 ### 1. Prerequisites

@@ -210,6 +210,12 @@ The project uses Supabase (PostgreSQL) with the following key tables:
 - **JSON**: Configuration and result serialization
 - **Regular Expressions**: Text pattern matching and extraction
 
+## 📚 Documentation
+
+- **[🚀 Deployment Guide](DEPLOYMENT_GUIDE.md)** - Complete guide for deploying new Docker images
+- **[📈 Scaling Guide](k8s/SCALING_README.md)** - Horizontal scaling and distributed pipeline setup
+- **[⚙️ Configuration Guide](config_README.md)** - Environment and database configuration
+
 ## Getting Started
 
 ### Prerequisites
