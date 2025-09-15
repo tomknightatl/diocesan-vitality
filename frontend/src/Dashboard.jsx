@@ -46,7 +46,6 @@ const Dashboard = () => {
           backendHost = 'api.diocesevitality.org'; 
           break;
 
-        case 'ui.diocesanvitality.org':
         case 'diocesanvitality.org':
           // The new frontend domains point to the new backend API
           backendHost = 'api.diocesanvitality.org';

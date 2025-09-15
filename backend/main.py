@@ -227,8 +227,6 @@ app = FastAPI(lifespan=lifespan)
 origins = [
     "http://diocesanvitality.org",
     "https://diocesanvitality.org",
-    "http://ui.diocesanvitality.org",
-    "https://ui.diocesanvitality.org",
     "http://diocesanvitality.org",
     "https://diocesanvitality.org",
     "http://localhost:3000",    # React development server
