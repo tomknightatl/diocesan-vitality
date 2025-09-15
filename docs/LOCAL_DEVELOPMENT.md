@@ -24,8 +24,8 @@ This guide provides everything you need to develop and test the Diocesan Vitalit
 1. **Configure Secrets as Environment Variables**
    ```bash
    cp .env.example .env
+   
    # Edit .env with your API keys (see Environment Setup section, above)
-   ```
 
 2. **Create and Activate Virtual Environment**
    ```bash
@@ -43,7 +43,7 @@ This guide provides everything you need to develop and test the Diocesan Vitalit
    cd backend
    uvicorn main:app --reload --host 0.0.0.0 --port 8000
    ```
-   Backend API Server runs at http://localhost:8000
+   Backend API Server available at http://localhost:8000
 
 5. **Start Frontend**
    Open a second terminal.     
