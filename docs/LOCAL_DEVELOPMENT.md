@@ -12,7 +12,7 @@ For complete setup instructions, see the main **[Getting Started section in READ
 - Node.js 20+
 - Chrome browser (for Selenium WebDriver)
 - Active internet connection
-- Valid API keys (see [Configuration Guide](../config_README.md))
+- Valid API keys (see [Environment Setup](../README.md#environment-setup))
 
 ## 🔧 Development Setup
 
@@ -172,7 +172,7 @@ python -c "from core.ai_client import get_genai_client; print('AI:', get_genai_c
 
 - **[📈 Scaling Guide](../k8s/SCALING_README.md)** - Horizontal scaling setup
 - **[🚀 Deployment Guide](../DEPLOYMENT_GUIDE.md)** - Production deployment
-- **[⚙️ Configuration Guide](../config_README.md)** - Environment setup
+- **[⚙️ Environment Setup](../README.md#environment-setup)** - Configuration and API keys
 - **[🏗️ Architecture](ARCHITECTURE.md)** - System architecture details
 - **[📊 Monitoring](LOGGING_AND_MONITORING.md)** - Logging and monitoring setup
 - **[🗄️ Database](DATABASE.md)** - Database schema and operations

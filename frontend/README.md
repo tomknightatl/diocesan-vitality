@@ -1,23 +1,21 @@
 # Frontend Application
 
-This directory contains the React frontend for the Diocesan Vitality Diocese Vitality Index application.
+React frontend for the Diocesan Vitality system.
 
-## Local Development
+## Quick Start
 
-### 1. Install Dependencies
+See **[Local Development Guide](../docs/LOCAL_DEVELOPMENT.md#start-development-services)** for complete setup.
 
-Before running the application for the first time, install the required Node.js packages:
-
-```sh
-npm install
-```
-
-### 2. Run the Development Server
-
-To start the Vite development server, run:
-
-```sh
+```bash
+cd frontend
+npm install  # First time only
 npm run dev
 ```
 
-The application will be available at `http://localhost:5173`. API requests to `/api` will be automatically proxied to the backend running on `http://localhost:8000`.
+→ Frontend available at http://localhost:5173
+
+## Development Features
+
+- **Hot Module Replacement**: Instant updates during development
+- **API Proxy**: Requests to `/api` automatically proxy to backend at http://localhost:8000
+- **Production Build**: `npm run build` creates optimized static files

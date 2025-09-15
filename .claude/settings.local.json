@@ -6,7 +6,15 @@
       "Bash(kubectl describe pod:*)",
       "Bash(git add:*)",
       "Bash(npm run build:*)",
-      "Bash(npm run lint:*)"
+      "Bash(npm run lint:*)",
+      "Bash(curl:*)",
+      "Bash(find:*)",
+      "Bash(python3:*)",
+      "Bash(chmod:*)",
+      "Bash(source:*)",
+      "Bash(kubectl describe:*)",
+      "Bash(docker build:*)",
+      "Bash(docker run:*)"
     ],
     "deny": [],
     "ask": []
