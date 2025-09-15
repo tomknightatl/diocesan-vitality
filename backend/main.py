@@ -22,6 +22,11 @@ class MonitoringManager:
     def __init__(self):
         self.websocket_connections: Set[WebSocket] = set()
         self.start_time = time.time()
+
+        # Dead man's switch configuration
+        self.extraction_timeout = 300  # 5 minutes without updates = stale
+        self.circuit_breaker_timeout = 600  # 10 minutes without updates = stale
+
         self.extraction_status = {
             "status": "idle",
             "current_diocese": None,
@@ -32,7 +37,11 @@ class MonitoringManager:
             "progress_percentage": 0,
             "estimated_completion": None
         }
+        self.extraction_last_updated = time.time()
+
         self.circuit_breakers = {}
+        self.circuit_breakers_last_updated = time.time()
+
         self.performance_metrics = {
             "parishes_per_minute": 0,
             "queue_size": 0,
@@ -129,6 +138,7 @@ class MonitoringManager:
     async def update_extraction_status(self, status_data: Dict):
         """Update and broadcast extraction status"""
         self.extraction_status.update(status_data)
+        self.extraction_last_updated = time.time()  # Update timestamp
         await self.broadcast({
             "type": "extraction_status",
             "payload": self.extraction_status
@@ -137,6 +147,7 @@ class MonitoringManager:
     async def update_circuit_breakers(self, circuit_data: Dict):
         """Update and broadcast circuit breaker status"""
         self.circuit_breakers.update(circuit_data)
+        self.circuit_breakers_last_updated = time.time()  # Update timestamp
         await self.broadcast({
             "type": "circuit_breaker_status",
             "payload": self.circuit_breakers
@@ -189,19 +200,80 @@ class MonitoringManager:
             "payload": log_entry
         })
 
+    def check_and_reset_stale_data(self):
+        """Check for stale data and reset to safe defaults"""
+        current_time = time.time()
+        changes_made = False
+
+        # Check extraction status staleness
+        if (self.extraction_status["status"] in ["running", "paused"] and
+            current_time - self.extraction_last_updated > self.extraction_timeout):
+
+            print(f"⚠️ Extraction status is stale (last updated {current_time - self.extraction_last_updated:.0f}s ago), resetting to stale")
+            self.extraction_status = {
+                "status": "stale",
+                "current_diocese": None,
+                "parishes_processed": 0,
+                "total_parishes": 0,
+                "success_rate": 0,
+                "started_at": None,
+                "progress_percentage": 0,
+                "estimated_completion": None,
+                "stale_reason": f"No updates for {(current_time - self.extraction_last_updated)/60:.1f} minutes"
+            }
+            self.extraction_last_updated = current_time
+            changes_made = True
+
+        # Check circuit breaker staleness
+        if (self.circuit_breakers and
+            current_time - self.circuit_breakers_last_updated > self.circuit_breaker_timeout):
+
+            print(f"⚠️ Circuit breaker data is stale (last updated {current_time - self.circuit_breakers_last_updated:.0f}s ago), clearing")
+            self.circuit_breakers = {}
+            self.circuit_breakers_last_updated = current_time
+            changes_made = True
+
+        return changes_made
+
+    async def get_current_extraction_status(self):
+        """Get extraction status with staleness check"""
+        self.check_and_reset_stale_data()
+        return self.extraction_status
+
+    async def get_current_circuit_breakers(self):
+        """Get circuit breakers with staleness check"""
+        self.check_and_reset_stale_data()
+        return self.circuit_breakers
+
 # Global monitoring manager instance
 monitoring_manager = MonitoringManager()
 
 # Background task to periodically update system health
 async def periodic_health_update():
-    """Periodically broadcast system health updates"""
+    """Periodically broadcast system health updates and check for stale data"""
     while True:
         try:
+            # Check for stale data and reset if needed
+            changes_made = monitoring_manager.check_and_reset_stale_data()
+
+            # Broadcast system health
             health_data = monitoring_manager.get_system_health()
             await monitoring_manager.broadcast({
                 "type": "system_health",
                 "payload": health_data
             })
+
+            # If stale data was detected and reset, broadcast the updates
+            if changes_made:
+                await monitoring_manager.broadcast({
+                    "type": "extraction_status",
+                    "payload": monitoring_manager.extraction_status
+                })
+                await monitoring_manager.broadcast({
+                    "type": "circuit_breaker_status",
+                    "payload": monitoring_manager.circuit_breakers
+                })
+
             await asyncio.sleep(10)  # Update every 10 seconds
         except Exception as e:
             print(f"Error in periodic health update: {e}")
@@ -773,11 +845,11 @@ async def websocket_monitoring(websocket: WebSocket):
 # Monitoring API endpoints
 @app.get("/api/monitoring/status")
 async def get_monitoring_status():
-    """Get current monitoring status"""
+    """Get current monitoring status with staleness checking"""
     return {
         "system_health": monitoring_manager.get_system_health(),
-        "extraction_status": monitoring_manager.extraction_status,
-        "circuit_breakers": monitoring_manager.circuit_breakers,
+        "extraction_status": await monitoring_manager.get_current_extraction_status(),
+        "circuit_breakers": await monitoring_manager.get_current_circuit_breakers(),
         "performance_metrics": monitoring_manager.performance_metrics,
         "recent_errors": monitoring_manager.recent_errors[:10],  # Last 10 errors
         "extraction_history": monitoring_manager.extraction_history[:10],  # Last 10 extractions
