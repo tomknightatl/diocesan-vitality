@@ -38,17 +38,17 @@ spec:
             secretKeyRef:
               name: diocesan-vitality-secrets
               key: supabase-key
-        - name: GENAI_API_KEY_DIOCESAN_VITALITY
+        - name: GENAI_API_KEY
           valueFrom:
             secretKeyRef:
               name: diocesan-vitality-secrets
               key: genai-api-key
-        - name: SEARCH_API_KEY_DIOCESAN_VITALITY
+        - name: SEARCH_API_KEY
           valueFrom:
             secretKeyRef:
               name: diocesan-vitality-secrets
               key: search-api-key
-        - name: SEARCH_CX_DIOCESAN_VITALITY
+        - name: SEARCH_CX
           valueFrom:
             secretKeyRef:
               name: diocesan-vitality-secrets
