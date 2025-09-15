@@ -132,6 +132,7 @@ class AsyncDioceseProcessor:
         logger.info("✅ Async diocese processor ready")
 
         # Report initial circuit breaker status
+        monitoring_client = get_monitoring_client()
         monitoring_client.report_circuit_breaker_status()
     
     async def process_dioceses_concurrent(self, 
