@@ -96,53 +96,6 @@ def ensure_chrome_installed():
 # PDF PARISH DIRECTORY EXTRACTOR
 # =============================================================================
 
-class PDFDirectoryExtractor(BaseExtractor):
-    """Wrapper extractor for PDF-based parish directories"""
-    
-    def __init__(self, pattern: DioceseSitePattern):
-        super().__init__(pattern)
-        self.pdf_extractor = PDFParishExtractor()
-    
-    def can_extract(self, driver) -> bool:
-        """Determine if this extractor can handle the current page"""
-        try:
-            current_url = driver.current_url
-            page_source = driver.page_source
-            confidence = self.pdf_extractor.can_handle(current_url, page_source)
-            return confidence > 0.5
-        except:
-            return False
-    
-    def extract_parishes_from_page(self, driver) -> List[ParishData]:
-        """Extract parishes using PDF extraction methods"""
-        try:
-            current_url = driver.current_url
-            logger.info(f"    🎯 PDF Directory Extractor processing: {current_url}")
-            
-            # Use the PDF extractor to get parishes
-            pdf_parishes = self.pdf_extractor.extract_parishes(current_url)
-            
-            # Convert to ParishData objects compatible with the infrastructure
-            parishes = []
-            for pdf_parish in pdf_parishes:
-                parish = ParishData(
-                    name=pdf_parish.name,
-                    city=pdf_parish.city,
-                    state=pdf_parish.state,
-                    address=pdf_parish.address,
-                    phone=pdf_parish.phone,
-                    website=pdf_parish.website,
-                    pastor=pdf_parish.pastor
-                )
-                parishes.append(parish)
-            
-            logger.info(f"    📊 Successfully extracted {len(parishes)} parishes from PDF")
-            return parishes
-            
-        except Exception as e:
-            logger.error(f"    ❌ PDF Directory extraction failed: {e}")
-            return []
-
 # =============================================================================
 # ENHANCED DIOCESE CARD EXTRACTOR WITH DETAIL PAGE NAVIGATION
 # =============================================================================
@@ -3364,19 +3317,71 @@ def create_pdf_parish_extractor(timeout: int = 30) -> PDFParishExtractor:
     return PDFParishExtractor(timeout)
 
 
+# =============================================================================
+# PDF DIRECTORY EXTRACTOR WRAPPER (MUST BE AFTER PDFParishExtractor)
+# =============================================================================
+
+class PDFDirectoryExtractor(BaseExtractor):
+    """Wrapper extractor for PDF-based parish directories"""
+
+    def __init__(self, pattern: DioceseSitePattern):
+        super().__init__(pattern)
+        self.pdf_extractor = PDFParishExtractor()
+
+    def can_extract(self, driver) -> bool:
+        """Determine if this extractor can handle the current page"""
+        try:
+            current_url = driver.current_url
+            page_source = driver.page_source
+            confidence = self.pdf_extractor.can_handle(current_url, page_source)
+            return confidence > 0.5
+        except:
+            return False
+
+    def extract_parishes_from_page(self, driver) -> List[ParishData]:
+        """Extract parishes using PDF extraction methods"""
+        try:
+            current_url = driver.current_url
+            logger.info(f"    🎯 PDF Directory Extractor processing: {current_url}")
+
+            # Use the PDF extractor to get parishes
+            pdf_parishes = self.pdf_extractor.extract_parishes(current_url)
+
+            # Convert to ParishData objects compatible with the infrastructure
+            parishes = []
+            for pdf_parish in pdf_parishes:
+                parish = ParishData(
+                    name=pdf_parish.name,
+                    city=pdf_parish.city,
+                    state=pdf_parish.state,
+                    address=pdf_parish.address,
+                    phone=pdf_parish.phone,
+                    website=pdf_parish.website,
+                    pastor=pdf_parish.pastor
+                )
+                parishes.append(parish)
+
+            logger.info(f"    📊 Successfully extracted {len(parishes)} parishes from PDF")
+            return parishes
+
+        except Exception as e:
+            logger.error(f"    ❌ PDF Directory extraction failed: {e}")
+            return []
+
+
 # Test function
 def test_pdf_extractor():
     """Test the PDF extractor with a known PDF URL."""
     extractor = PDFParishExtractor()
-    
+
     # Test with San Francisco Archdiocese PDF (observed in pipeline output)
     test_url = "https://www.sfarchdiocese.org/wp-content/uploads/2022/02/2020-2021-PCL-DIRECTORY-almost-final.pub_.pdf"
-    
+
     parishes = extractor.extract_parishes(test_url)
-    
+
     print(f"\n📊 PDF Extraction Test Results:")
     print(f"Total parishes found: {len(parishes)}")
-    
+
     for i, parish in enumerate(parishes[:10], 1):  # Show first 10
         print(f"{i:2d}. {parish.name}")
         if parish.city:
