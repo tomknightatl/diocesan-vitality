@@ -14,8 +14,6 @@ spec:
         app: pipeline
     spec:
       serviceAccountName: default
-      imagePullSecrets:
-      - name: dockerhub-secret
       nodeSelector:
         doks.digitalocean.com/node-pool: fast-pool
       containers:
