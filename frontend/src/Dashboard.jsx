@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Container, Row, Col, Card, Badge, Table, Alert, Spinner, Button, ProgressBar } from 'react-bootstrap';
+import { Container, Row, Col, Card, Badge, Table, Alert, Spinner, Button } from 'react-bootstrap';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -296,114 +296,6 @@ const Dashboard = () => {
         </Col>
       </Row>
 
-      {/* Extraction Progress */}
-      {extractionStatus && extractionStatus.status === 'running' && (
-        <Row className="mb-4">
-          <Col>
-            <Card>
-              <Card.Body>
-                <Card.Title>📊 Current Extraction Progress</Card.Title>
-                <Row>
-                  <Col md={6}>
-                    <h6>Diocese: {extractionStatus.current_diocese}</h6>
-                    <ProgressBar 
-                      now={extractionStatus.progress_percentage || 0} 
-                      label={`${formatDecimal(extractionStatus.progress_percentage || 0)}%`}
-                      variant="info"
-                      className="mb-2"
-                    />
-                    <small className="text-muted">
-                      {extractionStatus.parishes_processed || 0} / {extractionStatus.total_parishes || 0} parishes
-                    </small>
-                  </Col>
-                  <Col md={6}>
-                    <p><strong>Started:</strong> {formatTimestamp(extractionStatus.started_at)}</p>
-                    <p><strong>ETA:</strong> {extractionStatus.estimated_completion || 'Calculating...'}</p>
-                    <p><strong>Speed:</strong> {formatDecimal(performanceMetrics?.parishes_per_minute || 0)} parishes/min</p>
-                  </Col>
-                </Row>
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
-      )}
-
-      {/* Pipeline Progress Overview */}
-      <Row className="mb-4">
-        <Col>
-          <Card>
-            <Card.Body>
-              <Card.Title>🔄 Pipeline Progress Overview</Card.Title>
-              <Row>
-                <Col md={6}>
-                  <h6>Pipeline Components</h6>
-                  <div className="pipeline-steps mb-3">
-                    <div className={`pipeline-step ${pipelineStatus?.current_step === 'extract_dioceses' ? 'active' : pipelineStatus?.completed_steps?.includes('extract_dioceses') ? 'completed' : 'pending'}`}>
-                      <div className="step-icon">1</div>
-                      <div className="step-content">
-                        <strong>Extract Dioceses</strong>
-                        <br />
-                        <small>Scrapes the USCCB website for all U.S. dioceses</small>
-                      </div>
-                    </div>
-                    <div className={`pipeline-step ${pipelineStatus?.current_step === 'find_parish_directories' ? 'active' : pipelineStatus?.completed_steps?.includes('find_parish_directories') ? 'completed' : 'pending'}`}>
-                      <div className="step-icon">2</div>
-                      <div className="step-content">
-                        <strong>Find Parish Directories</strong>
-                        <br />
-                        <small>Uses AI to locate parish directory pages on diocese websites</small>
-                      </div>
-                    </div>
-                    <div className={`pipeline-step ${pipelineStatus?.current_step === 'extract_parishes' ? 'active' : pipelineStatus?.completed_steps?.includes('extract_parishes') ? 'completed' : 'pending'}`}>
-                      <div className="step-icon">3</div>
-                      <div className="step-content">
-                        <strong>Extract Parishes</strong>
-                        <br />
-                        <small>Collects detailed parish information using specialized extractors</small>
-                      </div>
-                    </div>
-                    <div className={`pipeline-step ${pipelineStatus?.current_step === 'extract_schedules' ? 'active' : pipelineStatus?.completed_steps?.includes('extract_schedules') ? 'completed' : 'pending'}`}>
-                      <div className="step-icon">4</div>
-                      <div className="step-content">
-                        <strong>Extract Schedules</strong>
-                        <br />
-                        <small>Visits individual parish websites to gather mass and service times</small>
-                      </div>
-                    </div>
-                  </div>
-                </Col>
-                <Col md={6}>
-                  <h6>Diocese Processing Progress</h6>
-                  <div className="mb-3">
-                    <div className="d-flex justify-content-between align-items-center mb-2">
-                      <span>Dioceses Processed</span>
-                      <strong>{pipelineStatus?.dioceses_processed || 0} / {pipelineStatus?.total_dioceses || 0}</strong>
-                    </div>
-                    <ProgressBar 
-                      now={pipelineStatus?.dioceses_processed || 0}
-                      max={pipelineStatus?.total_dioceses || 100}
-                      label={`${formatDecimal((pipelineStatus?.dioceses_processed || 0) / (pipelineStatus?.total_dioceses || 1) * 100)}%`}
-                      variant="primary"
-                      className="mb-2"
-                    />
-                    <small className="text-muted">
-                      Current: {pipelineStatus?.current_diocese || 'None'}
-                    </small>
-                  </div>
-                  {pipelineStatus?.current_step && (
-                    <div>
-                      <strong>Currently Processing:</strong> 
-                      <Badge bg="info" className="ms-2">
-                        {pipelineStatus.current_step.replace(/_/g, ' ').toUpperCase()}
-                      </Badge>
-                    </div>
-                  )}
-                </Col>
-              </Row>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
 
       {/* Circuit Breaker Status */}
       <Row className="mb-4">
