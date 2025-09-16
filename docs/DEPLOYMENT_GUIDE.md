@@ -1,0 +1,221 @@
+# 🚀 Deployment Guide
+
+This guide explains how to deploy new code changes to production using GitOps principles with ArgoCD.
+
+## 📋 Overview
+
+The deployment process follows GitOps best practices:
+1. **Build** new Docker images with timestamped tags
+2. **Update** Kubernetes manifests with new image tags
+3. **Commit** changes to Git
+4. **ArgoCD** automatically syncs and deploys
+
+## 🐳 Building and Deploying New Images
+
+### Step 1: Build Images with Timestamp
+
+```bash
+# Generate timestamp for this deployment
+TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)
+echo "🏷️ Using timestamp: $TIMESTAMP"
+
+# Build all three images with timestamped tags
+echo "🔨 Building backend image..."
+docker build -f backend/Dockerfile -t tomatl/diocesan-vitality:backend-$TIMESTAMP backend/
+
+echo "🔨 Building frontend image..."
+docker build -f frontend/Dockerfile -t tomatl/diocesan-vitality:frontend-$TIMESTAMP frontend/
+
+echo "🔨 Building pipeline image..."
+docker build -f Dockerfile.pipeline -t tomatl/diocesan-vitality:pipeline-$TIMESTAMP .
+
+echo "✅ All images built successfully!"
+```
+
+### Step 2: Push Images to Docker Hub
+
+```bash
+# Push all images to Docker Hub
+echo "📤 Pushing backend image..."
+docker push tomatl/diocesan-vitality:backend-$TIMESTAMP
+
+echo "📤 Pushing frontend image..."
+docker push tomatl/diocesan-vitality:frontend-$TIMESTAMP
+
+echo "📤 Pushing pipeline image..."
+docker push tomatl/diocesan-vitality:pipeline-$TIMESTAMP
+
+echo "🎉 All images pushed to Docker Hub with timestamp: $TIMESTAMP"
+```
+
+### Step 3: Update Kubernetes Manifests
+
+```bash
+# Update image tags in deployment manifests
+echo "📝 Updating Kubernetes manifests..."
+
+# Backend deployment
+sed -i "s|image: tomatl/diocesan-vitality:backend-.*|image: tomatl/diocesan-vitality:backend-$TIMESTAMP|g" k8s/backend-deployment.yaml
+
+# Frontend deployment
+sed -i "s|image: tomatl/diocesan-vitality:frontend-.*|image: tomatl/diocesan-vitality:frontend-$TIMESTAMP|g" k8s/frontend-deployment.yaml
+
+# Pipeline deployment
+sed -i "s|image: tomatl/diocesan-vitality:pipeline-.*|image: tomatl/diocesan-vitality:pipeline-$TIMESTAMP|g" k8s/pipeline-deployment.yaml
+
+echo "✅ Kubernetes manifests updated with new image tags"
+```
+
+### Step 4: Deploy via GitOps
+
+```bash
+# Stage the updated manifests
+git add k8s/backend-deployment.yaml k8s/frontend-deployment.yaml k8s/pipeline-deployment.yaml
+
+# Commit with descriptive message
+git commit -m "Deploy timestamped images ($TIMESTAMP)
+
+🐳 Image Updates:
+- backend: tomatl/diocesan-vitality:backend-$TIMESTAMP
+- frontend: tomatl/diocesan-vitality:frontend-$TIMESTAMP
+- pipeline: tomatl/diocesan-vitality:pipeline-$TIMESTAMP
+
+📝 Changes in this deployment:
+- [Add description of what changed]
+- [List any new features or fixes]
+- [Note any breaking changes]"
+
+# Push to trigger ArgoCD deployment
+echo "🚀 Pushing to Git to trigger ArgoCD deployment..."
+git push origin main
+
+echo "✅ Deployment initiated! ArgoCD will sync automatically."
+```
+
+## 📊 Monitoring Deployment
+
+### Watch ArgoCD Sync
+
+```bash
+# Monitor ArgoCD application sync status
+kubectl get application diocesan-vitality-app -n argocd -w
+
+# Check sync status once
+kubectl get application diocesan-vitality-app -n argocd -o jsonpath='{.status.sync.status}'
+```
+
+### Monitor Pod Rollout
+
+```bash
+# Watch pods being updated
+kubectl get pods -n diocesan-vitality -w
+
+# Check current pod status
+kubectl get pods -n diocesan-vitality -o wide
+
+# Verify new images are deployed
+kubectl describe pods -n diocesan-vitality | grep "Image:" | sort | uniq
+```
+
+### Verify Specific Services
+
+```bash
+# Check backend deployment
+kubectl describe deployment backend-deployment -n diocesan-vitality | grep Image:
+
+# Check frontend deployment
+kubectl describe deployment frontend-deployment -n diocesan-vitality | grep Image:
+
+# Check pipeline deployment
+kubectl describe deployment pipeline-deployment -n diocesan-vitality | grep Image:
+```
+
+## 🔄 Rollback Process
+
+If you need to rollback to a previous version:
+
+```bash
+# Find previous image timestamp from git history
+git log --oneline -10 | grep "Deploy timestamped images"
+
+# Update manifests to previous timestamp
+ROLLBACK_TIMESTAMP="2025-09-15-17-30-45"  # Replace with desired timestamp
+
+# Update manifests
+sed -i "s|image: tomatl/diocesan-vitality:backend-.*|image: tomatl/diocesan-vitality:backend-$ROLLBACK_TIMESTAMP|g" k8s/backend-deployment.yaml
+sed -i "s|image: tomatl/diocesan-vitality:frontend-.*|image: tomatl/diocesan-vitality:frontend-$ROLLBACK_TIMESTAMP|g" k8s/frontend-deployment.yaml
+sed -i "s|image: tomatl/diocesan-vitality:pipeline-.*|image: tomatl/diocesan-vitality:pipeline-$ROLLBACK_TIMESTAMP|g" k8s/pipeline-deployment.yaml
+
+# Commit and push rollback
+git add k8s/*.yaml
+git commit -m "Rollback to images from $ROLLBACK_TIMESTAMP"
+git push origin main
+```
+
+## 🎯 Complete Deployment Script
+
+For convenience, here's a complete script that handles the entire process:
+
+```bash
+#!/bin/bash
+# deploy.sh - Complete deployment script
+
+set -e  # Exit on any error
+
+echo "🚀 Starting deployment process..."
+
+# Generate timestamp
+TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)
+echo "🏷️ Using timestamp: $TIMESTAMP"
+
+# Build images
+echo "🔨 Building Docker images..."
+docker build -f backend/Dockerfile -t tomatl/diocesan-vitality:backend-$TIMESTAMP backend/
+docker build -f frontend/Dockerfile -t tomatl/diocesan-vitality:frontend-$TIMESTAMP frontend/
+docker build -f Dockerfile.pipeline -t tomatl/diocesan-vitality:pipeline-$TIMESTAMP .
+
+# Push images
+echo "📤 Pushing images to Docker Hub..."
+docker push tomatl/diocesan-vitality:backend-$TIMESTAMP
+docker push tomatl/diocesan-vitality:frontend-$TIMESTAMP
+docker push tomatl/diocesan-vitality:pipeline-$TIMESTAMP
+
+# Update manifests
+echo "📝 Updating Kubernetes manifests..."
+sed -i "s|image: tomatl/diocesan-vitality:backend-.*|image: tomatl/diocesan-vitality:backend-$TIMESTAMP|g" k8s/backend-deployment.yaml
+sed -i "s|image: tomatl/diocesan-vitality:frontend-.*|image: tomatl/diocesan-vitality:frontend-$TIMESTAMP|g" k8s/frontend-deployment.yaml
+sed -i "s|image: tomatl/diocesan-vitality:pipeline-.*|image: tomatl/diocesan-vitality:pipeline-$TIMESTAMP|g" k8s/pipeline-deployment.yaml
+
+# Commit and push
+echo "📦 Committing changes..."
+git add k8s/backend-deployment.yaml k8s/frontend-deployment.yaml k8s/pipeline-deployment.yaml
+git commit -m "Deploy timestamped images ($TIMESTAMP)"
+git push origin main
+
+echo "🎉 Deployment complete! ArgoCD will sync automatically."
+echo "📊 Monitor with: kubectl get pods -n diocesan-vitality -w"
+```
+
+## 💡 Best Practices
+
+- **Always test locally** before deploying to production
+- **Use descriptive commit messages** explaining what changed
+- **Monitor deployments** to ensure they complete successfully
+- **Keep timestamps** for easy rollback identification
+- **Document breaking changes** in commit messages
+- **Verify health checks** pass after deployment
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+1. **Image pull errors**: Verify images were pushed to Docker Hub successfully
+2. **ArgoCD not syncing**: Check application status with `kubectl describe application diocesan-vitality-app -n argocd`
+3. **Pods stuck in pending**: Check resource constraints and node capacity
+4. **Health check failures**: Review pod logs with `kubectl logs -n diocesan-vitality <pod-name>`
+
+### Getting Help
+
+- Check ArgoCD dashboard for sync status
+- Review pod events: `kubectl describe pods -n diocesan-vitality`
+- Check application logs: `kubectl logs -n diocesan-vitality deployment/<deployment-name>`

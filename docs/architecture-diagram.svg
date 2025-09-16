@@ -1,0 +1,232 @@
+<svg width="1200" height="900" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1200" height="900" fill="#f8f9fa"/>
+  
+  <!-- Title -->
+  <text x="600" y="40" font-family="Arial, sans-serif" font-size="28" font-weight="bold" text-anchor="middle" fill="#2c3e50">
+    USCCB Data Extraction Pipeline Architecture
+  </text>
+  
+  <!-- Data Sources Section -->
+  <g id="data-sources">
+    <rect x="40" y="80" width="200" height="280" rx="10" fill="#e8f5e9" stroke="#4caf50" stroke-width="2"/>
+    <text x="140" y="110" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#2e7d32">Data Sources</text>
+    
+    <rect x="60" y="130" width="160" height="40" rx="5" fill="#ffffff" stroke="#81c784" stroke-width="1"/>
+    <text x="140" y="155" font-family="Arial" font-size="12" text-anchor="middle">USCCB Website</text>
+    
+    <rect x="60" y="180" width="160" height="40" rx="5" fill="#ffffff" stroke="#81c784" stroke-width="1"/>
+    <text x="140" y="205" font-family="Arial" font-size="12" text-anchor="middle">Diocese Websites</text>
+    
+    <rect x="60" y="230" width="160" height="40" rx="5" fill="#ffffff" stroke="#81c784" stroke-width="1"/>
+    <text x="140" y="255" font-family="Arial" font-size="12" text-anchor="middle">Parish Websites</text>
+  </g>
+  
+  <!-- Pipeline Steps -->
+  <g id="pipeline">
+    <!-- Step 1: Extract Dioceses -->
+    <rect x="320" y="80" width="180" height="120" rx="10" fill="#fff3e0" stroke="#ff9800" stroke-width="2"/>
+    <text x="410" y="105" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="#e65100">Step 1: Extract Dioceses</text>
+    <text x="410" y="125" font-family="Arial" font-size="11" text-anchor="middle">extract_dioceses.py</text>
+    <text x="410" y="145" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Scrapes USCCB site</text>
+    <text x="410" y="160" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Gets diocese info</text>
+    <text x="410" y="175" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Stores in Dioceses table</text>
+    
+    <!-- Step 2: Find Parish Directories -->
+    <rect x="320" y="230" width="180" height="120" rx="10" fill="#fce4ec" stroke="#e91e63" stroke-width="2"/>
+    <text x="410" y="255" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="#880e4f">Step 2: Find Directories</text>
+    <text x="410" y="275" font-family="Arial" font-size="11" text-anchor="middle">find_parishes.py</text>
+    <text x="410" y="295" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• AI-powered detection</text>
+    <text x="410" y="310" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Searches for parish URLs</text>
+    <text x="410" y="325" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Uses Gemini AI</text>
+    
+    <!-- Step 3: Extract Parishes -->
+    <rect x="320" y="380" width="180" height="120" rx="10" fill="#e3f2fd" stroke="#2196f3" stroke-width="2"/>
+    <text x="410" y="405" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="#0d47a1">Step 3: Extract Parishes</text>
+    <text x="410" y="425" font-family="Arial" font-size="11" text-anchor="middle">extract_parishes.py</text>
+    <text x="410" y="445" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Pattern detection</text>
+    <text x="410" y="460" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Multi-platform support</text>
+    <text x="410" y="475" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Detail page navigation</text>
+    
+    <!-- Step 4: Extract Schedules -->
+    <rect x="320" y="530" width="180" height="120" rx="10" fill="#f3e5f5" stroke="#9c27b0" stroke-width="2"/>
+    <text x="410" y="555" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="#4a148c">Step 4: Extract Schedules</text>
+    <text x="410" y="575" font-family="Arial" font-size="11" text-anchor="middle">extract_schedule.py</text>
+    <text x="410" y="595" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Visits parish sites</text>
+    <text x="410" y="610" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Finds mass times</text>
+    <text x="410" y="625" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Adoration/Reconciliation</text>
+  </g>
+  
+  <!-- Extractors Box -->
+  <g id="extractors">
+    <rect x="550" y="320" width="200" height="240" rx="10" fill="#f5f5f5" stroke="#9e9e9e" stroke-width="2" stroke-dasharray="5,5"/>
+    <text x="650" y="345" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="#424242">Parish Extractors</text>
+    <text x="650" y="365" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">(parish_extractors.py)</text>
+    
+    <rect x="570" y="380" width="160" height="25" rx="5" fill="#e1f5fe" stroke="#0288d1" stroke-width="1"/>
+    <text x="650" y="397" font-family="Arial" font-size="10" text-anchor="middle">Diocese Card Extractor</text>
+    
+    <rect x="570" y="415" width="160" height="25" rx="5" fill="#e1f5fe" stroke="#0288d1" stroke-width="1"/>
+    <text x="650" y="432" font-family="Arial" font-size="10" text-anchor="middle">Parish Finder Extractor</text>
+    
+    <rect x="570" y="450" width="160" height="25" rx="5" fill="#e1f5fe" stroke="#0288d1" stroke-width="1"/>
+    <text x="650" y="467" font-family="Arial" font-size="10" text-anchor="middle">Table Extractor</text>
+    
+    <rect x="570" y="485" width="160" height="25" rx="5" fill="#e1f5fe" stroke="#0288d1" stroke-width="1"/>
+    <text x="650" y="502" font-family="Arial" font-size="10" text-anchor="middle">Interactive Map Extractor</text>
+    
+    <rect x="570" y="520" width="160" height="25" rx="5" fill="#e1f5fe" stroke="#0288d1" stroke-width="1"/>
+    <text x="650" y="537" font-family="Arial" font-size="10" text-anchor="middle">Generic Extractor</text>
+  </g>
+  
+  <!-- Technologies -->
+  <g id="technologies">
+    <rect x="550" y="80" width="200" height="200" rx="10" fill="#fff8e1" stroke="#ffc107" stroke-width="2"/>
+    <text x="650" y="105" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="#f57c00">Core Technologies</text>
+    
+    <text x="650" y="130" font-family="Arial" font-size="11" text-anchor="middle" fill="#666">Selenium WebDriver</text>
+    <text x="650" y="150" font-family="Arial" font-size="11" text-anchor="middle" fill="#666">Google Gemini AI</text>
+    <text x="650" y="170" font-family="Arial" font-size="11" text-anchor="middle" fill="#666">BeautifulSoup4</text>
+    <text x="650" y="190" font-family="Arial" font-size="11" text-anchor="middle" fill="#666">Python + Pandas</text>
+    <text x="650" y="210" font-family="Arial" font-size="11" text-anchor="middle" fill="#666">Tenacity (Retry Logic)</text>
+    <text x="650" y="230" font-family="Arial" font-size="11" text-anchor="middle" fill="#666">Google Search API</text>
+    <text x="650" y="250" font-family="Arial" font-size="11" text-anchor="middle" fill="#666">Requests Library</text>
+  </g>
+  
+  <!-- Database -->
+  <g id="database">
+    <rect x="820" y="80" width="340" height="520" rx="10" fill="#e8f5e9" stroke="#4caf50" stroke-width="2"/>
+    <text x="990" y="110" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#2e7d32">Supabase Database</text>
+    <text x="990" y="130" font-family="Arial" font-size="11" text-anchor="middle" fill="#666">(PostgreSQL)</text>
+    
+    <!-- Dioceses Table -->
+    <rect x="850" y="150" width="280" height="90" rx="5" fill="#ffffff" stroke="#81c784" stroke-width="1"/>
+    <text x="990" y="170" font-family="Arial" font-size="12" font-weight="bold" text-anchor="middle">Dioceses Table</text>
+    <text x="990" y="190" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Diocese names</text>
+    <text x="990" y="205" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Addresses</text>
+    <text x="990" y="220" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Official websites</text>
+    
+    <!-- DiocesesParishDirectory Table -->
+    <rect x="850" y="260" width="280" height="90" rx="5" fill="#ffffff" stroke="#81c784" stroke-width="1"/>
+    <text x="990" y="280" font-family="Arial" font-size="12" font-weight="bold" text-anchor="middle">DiocesesParishDirectory</text>
+    <text x="990" y="300" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Diocese URLs</text>
+    <text x="990" y="315" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Parish directory URLs</text>
+    <text x="990" y="330" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Detection method + status</text>
+    
+    <!-- Parishes Table -->
+    <rect x="850" y="370" width="280" height="105" rx="5" fill="#ffffff" stroke="#81c784" stroke-width="1"/>
+    <text x="990" y="390" font-family="Arial" font-size="12" font-weight="bold" text-anchor="middle">Parishes Table</text>
+    <text x="990" y="410" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Names, addresses, contacts</text>
+    <text x="990" y="425" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Websites, coordinates</text>
+    <text x="990" y="440" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Clergy info, service times</text>
+    <text x="990" y="455" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Extraction metadata</text>
+    
+    <!-- ParishSchedules Table -->
+    <rect x="850" y="495" width="280" height="85" rx="5" fill="#ffffff" stroke="#81c784" stroke-width="1"/>
+    <text x="990" y="515" font-family="Arial" font-size="12" font-weight="bold" text-anchor="middle">ParishSchedules Table</text>
+    <text x="990" y="535" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Adoration schedules</text>
+    <text x="990" y="550" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Reconciliation times</text>
+    <text x="990" y="565" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Mass schedules</text>
+  </g>
+  
+  <!-- Orchestration -->
+  <g id="orchestration">
+    <rect x="40" y="700" width="460" height="140" rx="10" fill="#e1bee7" stroke="#7b1fa2" stroke-width="2"/>
+    <text x="270" y="730" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#4a148c">Pipeline Orchestration</text>
+    
+    <rect x="60" y="750" width="180" height="70" rx="5" fill="#ffffff" stroke="#ba68c8" stroke-width="1"/>
+    <text x="150" y="770" font-family="Arial" font-size="12" font-weight="bold" text-anchor="middle">run_pipeline.py</text>
+    <text x="150" y="790" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Orchestrates all steps</text>
+    <text x="150" y="805" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Configurable limits</text>
+    
+    <rect x="260" y="750" width="220" height="70" rx="5" fill="#ffffff" stroke="#ba68c8" stroke-width="1"/>
+    <text x="370" y="770" font-family="Arial" font-size="12" font-weight="bold" text-anchor="middle">Configuration</text>
+    <text x="370" y="790" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• config.py (API keys, defaults)</text>
+    <text x="370" y="805" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• .env file (sensitive data)</text>
+  </g>
+  
+  <!-- Reporting -->
+  <g id="reporting">
+    <rect x="550" y="700" width="200" height="140" rx="10" fill="#c8e6c9" stroke="#388e3c" stroke-width="2"/>
+    <text x="650" y="730" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#1b5e20">Reporting</text>
+    
+    <rect x="570" y="750" width="160" height="70" rx="5" fill="#ffffff" stroke="#66bb6a" stroke-width="1"/>
+    <text x="650" y="770" font-family="Arial" font-size="12" font-weight="bold" text-anchor="middle">report_statistics.py</text>
+    <text x="650" y="790" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Database statistics</text>
+    <text x="650" y="805" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">• Time-series charts</text>
+  </g>
+  
+  <!-- Simple arrows without markers -->
+  <!-- From USCCB Website to Step 1 -->
+  <line x1="220" y1="150" x2="315" y2="140" stroke="#666" stroke-width="2"/>
+  <polygon points="315,140 310,137 310,143" fill="#666"/>
+  
+  <!-- From Diocese Websites to Step 2 and Step 3 -->
+  <line x1="220" y1="200" x2="315" y2="290" stroke="#666" stroke-width="2"/>
+  <polygon points="315,290 310,287 310,293" fill="#666"/>
+  
+  <line x1="220" y1="200" x2="315" y2="440" stroke="#666" stroke-width="2"/>
+  <polygon points="315,440 310,437 310,443" fill="#666"/>
+  
+  <!-- From Parish Websites to Step 4 -->
+  <line x1="220" y1="250" x2="315" y2="590" stroke="#666" stroke-width="2"/>
+  <polygon points="315,590 310,587 310,593" fill="#666"/>
+  
+  <!-- Between pipeline steps -->
+  <line x1="500" y1="140" x2="545" y2="140" stroke="#666" stroke-width="2"/>
+  <polygon points="545,140 540,137 540,143" fill="#666"/>
+  
+  <line x1="410" y1="200" x2="410" y2="225" stroke="#ff9800" stroke-width="2"/>
+  <polygon points="410,225 407,220 413,220" fill="#ff9800"/>
+  
+  <line x1="410" y1="350" x2="410" y2="375" stroke="#e91e63" stroke-width="2"/>
+  <polygon points="410,375 407,370 413,370" fill="#e91e63"/>
+  
+  <line x1="500" y1="440" x2="545" y2="440" stroke="#2196f3" stroke-width="2"/>
+  <polygon points="545,440 540,437 540,443" fill="#2196f3"/>
+  
+  <line x1="410" y1="500" x2="410" y2="525" stroke="#2196f3" stroke-width="2"/>
+  <polygon points="410,525 407,520 413,520" fill="#2196f3"/>
+  
+  <!-- To database arrows (dashed) -->
+  <line x1="750" y1="140" x2="815" y2="140" stroke="#4caf50" stroke-width="2"/>
+  <polygon points="815,140 810,137 810,143" fill="#4caf50"/>
+  
+  <line x1="500" y1="140" x2="815" y2="195" stroke="#ff9800" stroke-width="2" stroke-dasharray="5,5"/>
+  <polygon points="815,195 810,192 810,198" fill="#ff9800"/>
+  
+  <line x1="500" y1="290" x2="815" y2="305" stroke="#e91e63" stroke-width="2" stroke-dasharray="5,5"/>
+  <polygon points="815,305 810,302 810,308" fill="#e91e63"/>
+  
+  <line x1="500" y1="440" x2="815" y2="422" stroke="#2196f3" stroke-width="2" stroke-dasharray="5,5"/>
+  <polygon points="815,422 810,419 810,425" fill="#2196f3"/>
+  
+  <line x1="500" y1="590" x2="815" y2="537" stroke="#9c27b0" stroke-width="2" stroke-dasharray="5,5"/>
+  <polygon points="815,537 810,534 810,540" fill="#9c27b0"/>
+  
+  <!-- Legend -->
+  <g id="legend">
+    <rect x="820" y="640" width="340" height="200" rx="10" fill="#ffffff" stroke="#bdbdbd" stroke-width="1"/>
+    <text x="990" y="665" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="#424242">Legend</text>
+    
+    <line x1="850" y1="680" x2="890" y2="680" stroke="#666" stroke-width="2"/>
+    <polygon points="890,680 885,677 885,683" fill="#666"/>
+    <text x="900" y="685" font-family="Arial" font-size="11" fill="#666">Sequential flow</text>
+    
+    <line x1="850" y1="700" x2="890" y2="700" stroke="#666" stroke-width="2" stroke-dasharray="5,5"/>
+    <polygon points="890,700 885,697 885,703" fill="#666"/>
+    <text x="900" y="705" font-family="Arial" font-size="11" fill="#666">Data storage</text>
+    
+    <rect x="850" y="720" width="40" height="20" rx="5" fill="#e8f5e9" stroke="#4caf50" stroke-width="1"/>
+    <text x="900" y="735" font-family="Arial" font-size="11" fill="#666">Database/Storage</text>
+    
+    <rect x="850" y="750" width="40" height="20" rx="5" fill="#fff3e0" stroke="#ff9800" stroke-width="1"/>
+    <text x="900" y="765" font-family="Arial" font-size="11" fill="#666">Processing step</text>
+    
+    <rect x="850" y="780" width="40" height="20" rx="5" fill="#f5f5f5" stroke="#9e9e9e" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="900" y="795" font-family="Arial" font-size="11" fill="#666">Supporting module</text>
+    
+    <rect x="850" y="810" width="40" height="20" rx="5" fill="#fff8e1" stroke="#ffc107" stroke-width="1"/>
+    <text x="900" y="825" font-family="Arial" font-size="11" fill="#666">Technology stack</text>
+  </g>
+</svg>
