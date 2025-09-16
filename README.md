@@ -215,18 +215,6 @@ python async_extract_parishes.py --diocese_id 2024 --pool_size 6 --batch_size 12
 
 
 
-## Documentation
-
-### Core Documentation
-- **[README.md](README.md)**: Main project documentation
-- **[COMMANDS.md](docs/COMMANDS.md)**: Complete command reference for all scripts
-- **[Async Performance Guide](docs/ASYNC_PERFORMANCE_GUIDE.md)**: ⚡ High-performance concurrent extraction optimization
-- **[Monitoring Guide](docs/MONITORING.md)**: 🖥️ Real-time monitoring and operational visibility
-
-### Setup and Deployment
-- **[supabase-setup.md](docs/supabase-setup.md)**: Database setup instructions
-- **[Backend Setup](backend/README.md)**: FastAPI backend server documentation
-- **[Frontend Setup](frontend/README.md)**: React frontend application setup
 
 ## Reporting and Analytics
 
@@ -244,65 +232,7 @@ The script will generate PNG image files (e.g., `dioceses_records_over_time.png`
 
 ---
 
-## Automation and Scheduling
 
-### Using Cron (Linux/macOS)
-```bash
-# Add to crontab for daily execution at 2 AM
-0 2 * * * /usr/bin/python3 /path/to/extract_parishes.py >> /path/to/logs/extraction.log 2>&1
-```
-
-### Using Task Scheduler (Windows)
-1. Open Task Scheduler
-2. Create Basic Task
-3. Set trigger (daily, weekly, etc.)
-4. Set action to run Python script
-
-### Using Python Scheduler
-```python
-import schedule
-import time
-
-def run_extraction():
-    exec(open('extract_parishes.py').read())
-
-schedule.every().day.at("02:00").do(run_extraction)
-
-while True:
-    schedule.run_pending()
-    time.sleep(60)
-```
-
-## Troubleshooting
-
-### Common Issues and Solutions
-
-1. **Import Errors**:
-   - Ensure all dependencies are installed: `pip install -r requirements.txt`
-   - Check Python path and virtual environment activation
-
-2. **Chrome/ChromeDriver Issues**:
-   - Ensure Chrome is installed
-   - ChromeDriver should auto-download via webdriver-manager
-   - For manual installation: Download from [ChromeDriver](https://chromedriver.chromium.org/)
-
-3. **Supabase Connection Issues**:
-   ```python
-   # Test connection
-   from supabase import create_client
-   client = create_client(url, key)
-   response = client.table('Dioceses').select('*').limit(1).execute()
-   print(response)
-   ```
-
-4. **API Key Issues**:
-   - Verify `.env` file is in the project root
-   - Check environment variables are loaded: `print(os.getenv('SUPABASE_URL'))`
-   - Ensure API keys have correct permissions
-
-5. **Memory Issues**:
-   - Process dioceses in smaller batches
-   - Add garbage collection: `import gc; gc.collect()`
 
 ## Data Coverage
 
@@ -364,79 +294,46 @@ The web application uses **Docker Hub** for container image storage. Docker Hub 
 - **Wide compatibility**: Supported by all Kubernetes distributions
 - **No vendor lock-in**: Works independently of any specific cloud provider
 
-To use Docker Hub:
-1. Create a free account at [hub.docker.com](https://hub.docker.com)
-2. Create a repository for your images (e.g., `app` with tags for different services)
-3. Configure your credentials in the `.env` file:
-   ```bash
-   DOCKER_USERNAME=your-dockerhub-username
-   DOCKER_PASSWORD=your-dockerhub-access-token
-   ```
-4. Build and push your images:
-   ```bash
-   # Load environment variables
-   source .env
-   
-   # Login to Docker Hub
-   printf '%s' "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
-   
-   # Build and push backend
-   cd backend
-   docker build -t $DOCKER_USERNAME/app:backend .
-   docker push $DOCKER_USERNAME/app:backend
-
-   # Build and push frontend
-   cd ../frontend
-   docker build -t $DOCKER_USERNAME/app:frontend .
-   docker push $DOCKER_USERNAME/app:frontend
-
-   # Build and push pipeline
-   cd ..
-   docker build -f Dockerfile.pipeline -t $DOCKER_USERNAME/app:pipeline .
-   docker push $DOCKER_USERNAME/app:pipeline
-   ```
-
-For detailed instructions on how to build and deploy the web application, please see the [**Deployment Guide (DEPLOYMENT.md)**](./DEPLOYMENT.md).
+**→ See [Deployment Guide](docs/DEPLOYMENT_GUIDE.md) for complete Docker Hub setup and deployment instructions.**
 
 ---
 
-## See Also
+## Documentation
 
-### 📁 Core Documentation
-- **[docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md)** - Complete local development environment setup and workflow
-- **[supabase-setup.md](supabase-setup.md)** - Database setup and configuration instructions
-- **[CONVERSATION_SUMMARY.md](CONVERSATION_SUMMARY.md)** - Development history and implementation decisions
+### 📖 Core Documentation
+- **[README.md](README.md)**: Main project documentation
+- **[docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md)**: Complete local development setup and workflow
+- **[docs/COMMANDS.md](docs/COMMANDS.md)**: Complete command reference for all scripts
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**: System architecture and design patterns
+- **[docs/MONITORING.md](docs/MONITORING.md)**: Real-time monitoring and operational visibility
 
-### 📊 Data Extraction Modules
-- **[extract_dioceses_README.md](extract_dioceses_README.md)** - Diocese extraction from the official conference website
-- **[find_parishes_README.md](find_parishes_README.md)** - AI-powered parish directory discovery
-- **[extract_parishes_README.md](extract_parishes_README.md)** - Parish information extraction and processing
-- **[extract_schedule_README.md](extract_schedule_README.md)** - **🧪 NEW** - A/B testing schedule extraction (keyword vs AI methods)
-- **[parish_extraction_core_README.md](parish_extraction_core_README.md)** - Core extraction components and data models
+### ⚡ Performance & Optimization
+- **[docs/ASYNC_PERFORMANCE_GUIDE.md](docs/ASYNC_PERFORMANCE_GUIDE.md)**: High-performance concurrent extraction optimization
+- **[docs/ml-model-training.md](docs/ml-model-training.md)**: ML-based URL prediction system training
 
-### 🔧 System Configuration
-- **[config_README.md](config_README.md)** - Configuration management and environment variables
-- **[llm_utils_README.md](llm_utils_README.md)** - Google Gemini AI integration utilities
+### 🚀 Deployment & Infrastructure
+- **[docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md)**: Docker and Kubernetes deployment instructions
+- **[docs/DATABASE.md](docs/DATABASE.md)**: Database schema and data management
+- **[docs/supabase-setup.md](docs/supabase-setup.md)**: Database setup instructions
+- **[docs/AUTHENTICATION.md](docs/AUTHENTICATION.md)**: Authentication and security configuration
+- **[docs/CLOUDFLARE.md](docs/CLOUDFLARE.md)**: Cloudflare tunnel and DNS configuration
 
-### 🖥️ Web Application
-- **[backend/README.md](backend/README.md)** - FastAPI backend server documentation
-- **[frontend/README.md](frontend/README.md)** - React frontend application setup
+### 🖥️ Application Components
+- **[backend/README.md](backend/README.md)**: FastAPI backend server documentation
+- **[frontend/README.md](frontend/README.md)**: React frontend application setup
 
-### ☁️ Cloud Infrastructure
-- **[k8s/README.md](k8s/README.md)** - Kubernetes deployment and pipeline management
-- **[k8s/argocd/README.md](k8s/argocd/README.md)** - ArgoCD GitOps configuration
-- **[k8s/argocd/bitnami-sealed-secrets-application-set-README.md](k8s/argocd/bitnami-sealed-secrets-application-set-README.md)** - Sealed secrets management
-- **[k8s/argocd/cloudflare-tunnel-applicationsetREADME.md](k8s/argocd/cloudflare-tunnel-applicationsetREADME.md)** - Cloudflare tunnel configuration
+### ☁️ Kubernetes & GitOps
+- **[k8s/README.md](k8s/README.md)**: Kubernetes deployment and pipeline management
+- **[k8s/SCALING_README.md](k8s/SCALING_README.md)**: Horizontal scaling documentation
+- **[k8s/argocd/README.md](k8s/argocd/README.md)**: ArgoCD GitOps configuration
+- **[k8s/argocd/bitnami-sealed-secrets-application-set-README.md](k8s/argocd/bitnami-sealed-secrets-application-set-README.md)**: Sealed secrets management
+- **[k8s/argocd/cloudflare-tunnel-applicationsetREADME.md](k8s/argocd/cloudflare-tunnel-applicationsetREADME.md)**: Cloudflare tunnel configuration
 
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture and design patterns
-- **[docs/DATABASE.md](docs/DATABASE.md)** - Database schema and data management
-- **[docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md)** - Docker and Kubernetes deployment instructions
-- **[docs/AUTHENTICATION.md](docs/AUTHENTICATION.md)** - Authentication and security configuration
-- **[docs/CLOUDFLARE.md](docs/CLOUDFLARE.md)** - Cloudflare tunnel and DNS configuration
+### 🧪 Testing & Quality Assurance
+- **[tests/TESTING.md](tests/TESTING.md)**: Testing framework and test procedures
 
-### 🤖 Machine Learning & Optimization
-- **[docs/ml-model-training.md](docs/ml-model-training.md)** - ML-based URL prediction system training and optimization
+### 🗄️ Database & Migrations
+- **[sql/migrations/README.md](sql/migrations/README.md)**: Database migration procedures
 
-### 🧪 Testing & Quality
-- **[tests/TESTING.md](tests/TESTING.md)** - Testing framework and test procedures
-- **[sql/migrations/README.md](sql/migrations/README.md)** - Database migration procedures
+### 📊 Advanced Features
+- **[docs/DIOCESE_PARISH_DIRECTORY_OVERRIDE.md](docs/DIOCESE_PARISH_DIRECTORY_OVERRIDE.md)**: Directory URL override system
