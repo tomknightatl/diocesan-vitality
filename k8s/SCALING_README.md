@@ -7,7 +7,8 @@ This document describes how to deploy and manage the horizontally-scalable pipel
 The distributed pipeline uses:
 - **Diocese-based work partitioning** to prevent scraping conflicts
 - **Database coordination** via Supabase for worker management
-- **Kubernetes HPA** for automatic scaling based on resource usage
+- **Kubernetes HPA** with **integer scaling** (1 pod = 1 node)
+- **Pod anti-affinity** ensuring dedicated node per pipeline pod
 - **ArgoCD GitOps** for declarative deployments
 
 ## 📦 ArgoCD Integration
@@ -235,20 +236,60 @@ kubectl get hpa pipeline-hpa -n diocesan-vitality -w
 
 ## 🔧 Configuration
 
-### HPA Tuning
-Edit `k8s/pipeline-hpa.yaml` to adjust scaling behavior:
+### HPA Integer Scaling Configuration
+
+The HPA is configured for **integer scaling** where each scaling operation adds or removes exactly 1 pod:
 
 ```yaml
 spec:
   minReplicas: 1    # Minimum pods
-  maxReplicas: 5    # Maximum pods
+  maxReplicas: 3    # Maximum pods (1 pod per node)
   metrics:
   - type: Resource
     resource:
       name: cpu
       target:
         averageUtilization: 70  # Scale up when CPU > 70%
+  behavior:
+    scaleDown:
+      policies:
+      - type: Pods
+        value: 1     # Scale down by exactly 1 pod at a time
+        periodSeconds: 60
+      selectPolicy: Min  # No percentage scaling
+    scaleUp:
+      policies:
+      - type: Pods
+        value: 1     # Scale up by exactly 1 pod at a time
+        periodSeconds: 60
+      selectPolicy: Max  # No percentage scaling
 ```
+
+### Pod Anti-Affinity (1 Pod Per Node)
+
+Each pipeline pod gets its own dedicated node via pod anti-affinity:
+
+```yaml
+spec:
+  template:
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - pipeline
+            topologyKey: "kubernetes.io/hostname"
+```
+
+**Benefits:**
+- 🎯 **Predictable scaling**: 1 → 2 → 3 pods (not 1 → 2 → 4)
+- 🏠 **Resource isolation**: Each pod gets dedicated node resources
+- 🚫 **No pod competition**: Eliminates inter-pod resource conflicts
+- 📈 **Linear scaling**: Each additional pod = proportional capacity increase
 
 ### Pipeline Configuration
 Environment variables in `pipeline-deployment.yaml`:

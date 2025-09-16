@@ -20,13 +20,23 @@ spec:
       serviceAccountName: default
       nodeSelector:
         doks.digitalocean.com/node-pool: fast-pool
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - pipeline
+            topologyKey: "kubernetes.io/hostname"  # Ensures no 2 pipeline pods on same node
       containers:
       - name: pipeline
         image: tomatl/diocesan-vitality:pipeline-2025-09-15-19-32-52
         imagePullPolicy: Always
         resources:
           requests:
-            memory: "1.8Gi"  # Based on observed 1091Mi-1760Mi usage
+            memory: "2.2Gi"  # Increased based on observed 2052Mi peak usage
             cpu: "800m"      # Based on observed 670m-1271m usage
           limits:
             memory: "4Gi"
