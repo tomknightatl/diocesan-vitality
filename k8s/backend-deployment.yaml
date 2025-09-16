@@ -29,7 +29,7 @@ spec:
       - name: backend
         # IMPORTANT: Replace YOUR_DOCKERHUB_USERNAME with your actual Docker Hub username
         # Using single repository with tags: diocesan-vitality:backend
-        image: tomatl/diocesan-vitality:backend-
+        image: tomatl/diocesan-vitality:backend-2025-09-15-20-27-14
         imagePullPolicy: Always
         ports:
         - containerPort: 8000
