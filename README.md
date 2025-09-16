@@ -52,6 +52,56 @@ The Data Extraction Pipeline is a multi-step process that systematically collect
 3. **Extract Parishes**: Collects detailed parish information using specialized extractors
 4. **Extract Schedules**: Visits individual parish websites to gather mass and service times
 
+## Distributed Pipeline Architecture
+
+**Production Deployment**: The system currently runs a **distributed pipeline** designed for continuous operation and horizontal scaling, which differs from the traditional sequential pipeline described above.
+
+### How the Distributed Pipeline Works
+
+When you see pipeline pods running in Kubernetes, they operate in **distributed mode**:
+
+#### ✅ **Continuous Operation**
+- Pods run **indefinitely** (not one-time execution)
+- Workers register with a coordination system and process dioceses continuously
+- Each worker gets assigned specific dioceses to avoid conflicts
+- Workers automatically restart processing when new work becomes available
+
+#### ⚙️ **Modified Pipeline Steps**
+The distributed pipeline **skips initial setup steps** and focuses on the core extraction:
+
+1. **Diocese Data**: ~~Extract Dioceses~~ (assumes diocese data already exists in database)
+2. **Parish Directories**: ~~Find Parish Directories~~ (assumes directory URLs already discovered)
+3. **✅ Parish Extraction**: Workers coordinate to extract parishes from assigned dioceses
+4. **📊 Reporting**: Only the "lead" worker generates statistical reports
+
+#### 🔄 **Worker Coordination**
+- **Database-backed coordination**: Workers register in `pipeline_workers` table
+- **Diocese assignment**: Work is distributed via `diocese_work_assignments` table
+- **Conflict prevention**: No two workers process the same diocese simultaneously
+- **Automatic failover**: If a worker becomes unresponsive, its work is reassigned
+- **Real-time monitoring**: Workers report status to the monitoring dashboard
+
+#### 📈 **Scaling Behavior**
+- **HPA (Horizontal Pod Autoscaler)**: Automatically scales from 1-5 workers based on CPU/memory
+- **Pod anti-affinity**: Each worker gets its own dedicated node
+- **Graceful scaling**: Workers coordinate during scale-up/scale-down events
+
+### When to Use Each Pipeline Mode
+
+| **Traditional Pipeline** | **Distributed Pipeline** |
+|--------------------------|---------------------------|
+| Initial data collection   | Production continuous operation |
+| Complete database setup   | Ongoing data maintenance |
+| Single-machine execution  | Kubernetes cluster deployment |
+| `python run_pipeline.py`  | Kubernetes pods with `distributed_pipeline_runner.py` |
+
+### Monitoring the Distributed Pipeline
+
+- **Dashboard**: [https://diocesanvitality.org/dashboard](https://diocesanvitality.org/dashboard)
+- **Active Workers**: Shows currently running workers and their assignments
+- **Real-time Logs**: Live extraction progress and status updates
+- **Performance Metrics**: CPU, memory, and extraction rate monitoring
+
 ## Key Features
 
 ### 🚀 **Core Data Extraction**
