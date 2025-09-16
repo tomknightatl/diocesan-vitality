@@ -1,0 +1,3 @@
+# Claude Settings
+
+includeClaudeAttribution: false
