@@ -14,23 +14,18 @@ The deployment process follows GitOps best practices:
 
 ### Step 1: Build Images with Timestamp
 
+For comprehensive Docker commands and deployment scripts, see the **[📝 Commands Guide](COMMANDS.md#docker-commands)**.
+
+**Quick Build Example:**
 ```bash
-# Generate timestamp for this deployment
+# Generate timestamp and build images
 TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)
-echo "🏷️ Using timestamp: $TIMESTAMP"
-
-# Build all three images with timestamped tags
-echo "🔨 Building backend image..."
 docker build -f backend/Dockerfile -t tomatl/diocesan-vitality:backend-$TIMESTAMP backend/
-
-echo "🔨 Building frontend image..."
 docker build -f frontend/Dockerfile -t tomatl/diocesan-vitality:frontend-$TIMESTAMP frontend/
-
-echo "🔨 Building pipeline image..."
 docker build -f Dockerfile.pipeline -t tomatl/diocesan-vitality:pipeline-$TIMESTAMP .
-
-echo "✅ All images built successfully!"
 ```
+
+**→ See [Commands Guide - Docker Section](COMMANDS.md#docker-commands) for complete build and deployment commands.**
 
 ### Step 2: Push Images to Docker Hub
 
@@ -154,47 +149,15 @@ git push origin main
 
 ## 🎯 Complete Deployment Script
 
-For convenience, here's a complete script that handles the entire process:
+For the complete deployment script and all deployment commands, see the **[📝 Commands Guide - Complete Deployment Script](COMMANDS.md#complete-deployment-script)**.
 
-```bash
-#!/bin/bash
-# deploy.sh - Complete deployment script
+The script handles:
+- Timestamped image building
+- Docker Hub pushing
+- Kubernetes manifest updates
+- GitOps commit and push
 
-set -e  # Exit on any error
-
-echo "🚀 Starting deployment process..."
-
-# Generate timestamp
-TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)
-echo "🏷️ Using timestamp: $TIMESTAMP"
-
-# Build images
-echo "🔨 Building Docker images..."
-docker build -f backend/Dockerfile -t tomatl/diocesan-vitality:backend-$TIMESTAMP backend/
-docker build -f frontend/Dockerfile -t tomatl/diocesan-vitality:frontend-$TIMESTAMP frontend/
-docker build -f Dockerfile.pipeline -t tomatl/diocesan-vitality:pipeline-$TIMESTAMP .
-
-# Push images
-echo "📤 Pushing images to Docker Hub..."
-docker push tomatl/diocesan-vitality:backend-$TIMESTAMP
-docker push tomatl/diocesan-vitality:frontend-$TIMESTAMP
-docker push tomatl/diocesan-vitality:pipeline-$TIMESTAMP
-
-# Update manifests
-echo "📝 Updating Kubernetes manifests..."
-sed -i "s|image: tomatl/diocesan-vitality:backend-.*|image: tomatl/diocesan-vitality:backend-$TIMESTAMP|g" k8s/backend-deployment.yaml
-sed -i "s|image: tomatl/diocesan-vitality:frontend-.*|image: tomatl/diocesan-vitality:frontend-$TIMESTAMP|g" k8s/frontend-deployment.yaml
-sed -i "s|image: tomatl/diocesan-vitality:pipeline-.*|image: tomatl/diocesan-vitality:pipeline-$TIMESTAMP|g" k8s/pipeline-deployment.yaml
-
-# Commit and push
-echo "📦 Committing changes..."
-git add k8s/backend-deployment.yaml k8s/frontend-deployment.yaml k8s/pipeline-deployment.yaml
-git commit -m "Deploy timestamped images ($TIMESTAMP)"
-git push origin main
-
-echo "🎉 Deployment complete! ArgoCD will sync automatically."
-echo "📊 Monitor with: kubectl get pods -n diocesan-vitality -w"
-```
+**→ See [Commands Guide](COMMANDS.md#complete-deployment-script) for the full automated deployment script.**
 
 ## 💡 Best Practices
 

@@ -221,120 +221,16 @@ The project uses Supabase (PostgreSQL) with the following key tables:
 
 ## Getting Started
 
-### Prerequisites
+For complete setup instructions including prerequisites, environment configuration, and development workflow, see the **[🔧 Local Development Guide](docs/LOCAL_DEVELOPMENT.md)**.
 
-1. **Install Python 3.x** (3.8 or higher recommended)
+### Quick Setup Summary
 
-2. **Install Google Chrome**
+1. **Prerequisites**: Python 3.12+, Node.js 20+, Chrome browser
+2. **Environment**: Clone repository, create virtual environment, install dependencies
+3. **Configuration**: Set up `.env` file with API keys
+4. **Development**: Start backend, frontend, and pipeline services
 
-   The project uses Selenium for web scraping, which requires a Chrome browser and ChromeDriver. While `webdriver-manager` will attempt to download the correct ChromeDriver automatically, it does *not* install Chrome itself.
-
-   **For Linux (Debian/Ubuntu-based systems):**
-
-   ```bash
-   # Download the Google Chrome signing key and save it to /usr/share/keyrings/
-   wget -O- https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg
-
-   # Add the Google Chrome repository to your sources list, referencing the new keyring file
-   echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list > /dev/null
-
-   # Update your package list
-   sudo apt update
-
-   # Install Google Chrome
-   sudo apt install google-chrome-stable
-   ```
-
-   **For other operating systems:**
-
-   Please download and install Chrome from the official website: [https://www.google.com/chrome/](https://www.google.com/chrome/)
-
-### Environment Setup
-
-This project uses a virtual environment to manage dependencies and environment variables to securely store API keys.
-
-3.  **Create and Activate a Virtual Environment**
-
-    It is highly recommended to use a virtual environment to manage project dependencies.
-
-    ```bash
-    # Navigate to the root of your project directory
-    cd /path/to/your/project
-
-    # Create a virtual environment named 'venv'
-    python3 -m venv venv
-
-    # Activate the virtual environment
-    # On macOS/Linux:
-    source venv/bin/activate
-
-    # On Windows:
-    # .\venv\Scripts\activate
-    ```
-
-    Your command prompt should now show `(venv)` indicating the virtual environment is active.
-
-4.  **Install Dependencies**
-
-    With your virtual environment activated, install the required Python packages using `pip`:
-
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-5.  **Configure Environment Variables**
-
-    This project.
-
-    Create a file named `.env` in the project root. 
-    
-    Either (1) copy the contents of the LastPass password ".env file for the repo" and paste that text into the .env file, or (2) Replacing the following placeholder values with the actual keys:
-
-    ```
-    SUPABASE_URL="your_supabase_url_here"
-    SUPABASE_KEY="your_supabase_anon_key_here"
-    GENAI_API_KEY="your_google_genai_api_key_here"
-    SEARCH_API_KEY="your_google_custom_search_api_key_here"
-    SEARCH_CX="your_google_custom_search_engine_id_here"
-    # Docker Hub credentials (for deployment)
-    DOCKER_USERNAME="your_dockerhub_username"
-    DOCKER_PASSWORD="your_dockerhub_password_or_token"
-    ```
-
-    **Important:**
-       *   The code reads these variables using `python-dotenv`.
-    *   .gitignore is set to ignore these files.    **Do not commit your `.env` file to version control (e.g., Git).** It contains sensitive information.  
-
-### Running Python Scripts
-
-You can run the Python scripts directly from your terminal:
-
-```bash
-python YOUR_SCRIPT_NAME.py
-```
-
-### Chrome Installation for Selenium
-
-The project uses Selenium for web scraping, which requires a Chrome browser and ChromeDriver.
-
-**Important:** You must have Google Chrome installed on your system. While `webdriver-manager` will attempt to download the correct ChromeDriver automatically, it does *not* install Chrome itself.
-
-If you are on Linux and Chrome is not installed, you can typically install it using:
-
-```bash
-sudo apt-get update
-sudo apt-get install google-chrome-stable
-```
-
-For other operating systems, please download and install Chrome from the official website: [https://www.google.com/chrome/](https://www.google.com/chrome/)
-
-**Troubleshooting Chrome Installation Errors:**
-
-If you encounter errors like "Permission denied" or "Chrome not found" when running the Python scripts, it's likely due to Chrome not being installed or the script attempting to install it without sufficient permissions. In such cases:
-
-1.  **Manually install Chrome** using the appropriate method for your operating system (e.g., `sudo apt-get install google-chrome-stable` for Debian/Ubuntu).
-2.  Ensure Chrome is up-to-date.
-3.  Check the `webdriver-manager` documentation for any specific troubleshooting related to ChromeDriver.
+**→ Follow the [Local Development Guide](docs/LOCAL_DEVELOPMENT.md) for detailed step-by-step instructions.**
 
 
 
@@ -359,149 +255,25 @@ The production system runs automatically in Kubernetes with:
 
 ### 💻 **Local Development**
 
-For development, testing, or running custom extractions on your local machine:
+For development, testing, or running custom extractions on your local machine, see the **[🔧 Local Development Guide](docs/LOCAL_DEVELOPMENT.md)** for complete setup instructions.
 
-#### Running the Pipeline
+### 📝 **Command Reference**
 
-**IMPORTANT:** Always activate your virtual environment first:
+For comprehensive command examples, parameters, and usage instructions for all scripts, see the **[📝 Commands Guide](docs/COMMANDS.md)**.
+
+**Quick Examples:**
 ```bash
-source venv/bin/activate
+# Full pipeline with monitoring
+source venv/bin/activate && python run_pipeline.py --max_parishes_per_diocese 10
+
+# Process specific diocese
+python run_pipeline.py --diocese_id 2024 --max_parishes_per_diocese 25
+
+# High-performance concurrent extraction
+python async_extract_parishes.py --diocese_id 2024 --pool_size 6 --batch_size 12
 ```
 
-**Option 1: Standard Pipeline**
-```bash
-python run_pipeline.py
-```
-
-**Option 2: Monitoring-Enabled Pipeline (Recommended)**
-```bash
-python run_pipeline.py --max_parishes_per_diocese 10 --num_parishes_for_schedule 10
-```
-
-#### Local Monitoring Dashboard
-
-To use real-time monitoring during development:
-
-1. **Start Backend** (terminal 1):
-   ```bash
-   cd backend && uvicorn main:app --reload --host 0.0.0.0 --port 8000
-   ```
-2. **Start Frontend** (terminal 2):
-   ```bash
-   cd frontend && npm install && npm run dev
-   ```
-3. **Open Dashboard**: `http://localhost:5173/dashboard`
-4. **Run Pipeline** (terminal 3): Use monitoring-enabled option above
-
-### Pipeline Parameters
-
-You can customize the run with the following parameters:
-- `--skip_dioceses`: Skip the diocese extraction step.
-- `--skip_parish_directories`: Skip finding parish directories.
-- `--skip_parishes`: Skip the parish extraction step.
-- `--skip_schedules`: Skip the schedule extraction step.
-- `--skip_reporting`: Skip the reporting step.
-- `--diocese_id <number>`: Process only a specific diocese ID.
-- `--max_parishes_per_diocese <number>`: Set the maximum number of parishes to extract per diocese.
-- `--num_parishes_for_schedule <number>`: Set the number of parishes to extract schedules for.
-- `--schedule_ab_test_ratio <float>`: Fraction of parishes assigned to AI-enhanced extraction (0.0-1.0, default: 0.5).
-- `--monitoring_url <url>`: Monitoring backend URL (default: http://localhost:8000).
-- `--disable_monitoring`: Disable monitoring integration.
-
-**Examples:**
-```bash
-# Full pipeline with no limits and monitoring
-source venv/bin/activate && timeout 7200 python3 run_pipeline.py --max_parishes_per_diocese 0 --num_parishes_for_schedule 0
-
-# Process specific diocese with monitoring
-source venv/bin/activate && python3 run_pipeline.py --diocese_id 2024 --max_parishes_per_diocese 25
-
-# Standard pipeline without monitoring
-python run_pipeline.py --max_parishes_per_diocese 0 --num_parishes_for_schedule 0
-```
-
-### Running Individual Scripts (for Testing or Debugging)
-
-While the pipeline is the recommended approach, you can run the individual scripts for testing, debugging, or targeted data extraction.
-
-#### Step 1: Build Diocese Database
-```bash
-python extract_dioceses.py
-```
-This script scrapes the official conference website for all U.S. dioceses, extracts their details, and stores them in the `Dioceses` table. Use the `--max_dioceses` argument to limit the number of dioceses processed.
-
-#### Step 2: Find Parish Directories
-```bash
-python find_parishes.py
-```
-This script fetches dioceses without parish directory URLs, uses Selenium and AI to find the correct pages, and stores them in the `DiocesesParishDirectory` table. Use `--max_dioceses_to_process` to limit the run.
-
-#### Step 3: Extract Parish Information
-
-##### Standard Sequential Processing
-```bash
-python extract_parishes.py --diocese_id 2024 --num_parishes_per_diocese 5
-```
-This script extracts detailed parish information from the directory URLs using sequential processing. Use `--diocese_id` to target a specific diocese and `--num_parishes_per_diocese` to limit extraction.
-
-##### ⚡ High-Performance Concurrent Processing (Recommended)
-```bash
-# Basic usage with default settings (4 drivers, batch size 8)
-python async_extract_parishes.py --diocese_id 2024 --num_parishes_per_diocese 10
-
-# High-performance configuration for large dioceses
-python async_extract_parishes.py \
-  --diocese_id 2024 \
-  --num_parishes_per_diocese 50 \
-  --pool_size 6 \
-  --batch_size 12 \
-  --max_concurrent_dioceses 2
-
-# Process all parishes in a diocese with maximum concurrency
-python async_extract_parishes.py \
-  --diocese_id 2024 \
-  --num_parishes_per_diocese 0 \
-  --pool_size 8 \
-  --batch_size 15
-```
-
-**Async Performance Parameters:**
-- `--pool_size`: Number of concurrent WebDriver instances (2-8 recommended)
-- `--batch_size`: Number of concurrent parish detail requests (8-15 optimal)
-- `--max_concurrent_dioceses`: Maximum dioceses processed simultaneously (1-3)
-
-**Expected Performance:** 60% faster than sequential processing, optimal for dioceses with 20+ parishes.
-
-#### Step 4: Extract Liturgical Schedules (Respectful Automation)
-```bash
-# Respectful automation with blocking detection
-python extract_schedule_respectful.py --num_parishes 10
-
-# Diocese-specific extraction (NEW: diocese filtering)
-python extract_schedule_respectful.py --diocese_id 2024 --num_parishes 10
-
-# Full diocese extraction (respects all blocking)
-python extract_schedule_respectful.py --diocese_id 2024
-```
-
-**🤝 Respectful Automation Features:**
-- **Gold-Standard Web Ethics**: Comprehensive robots.txt compliance with immediate cessation when blocked
-- **Advanced Blocking Detection**: Real-time detection of 403 Forbidden, rate limiting, and Cloudflare protection
-- **Thoughtful Rate Limiting**: 2-5 second delays between requests with randomized timing
-- **Diocese Filtering**: Target specific dioceses for focused research (NEW)
-- **AI-Powered Extraction**: Google Gemini integration for intelligent schedule parsing
-- **Transparency Logging**: Detailed documentation of respectful behavior and blocking compliance
-
-**🧪 A/B Testing (Alternative Method):**
-```bash
-# A/B testing approach (default 50/50 split)
-python extract_schedule_ab_test_simple.py --num_parishes 10
-
-# Custom A/B ratio (75% AI, 25% keyword-based)
-python extract_schedule_ab_test_simple.py --num_parishes 20 --test_ratio 0.75
-```
-
-**Recent Results**: Respectful automation achieved 62.5% accessibility rate with 80% schedule detection success among accessible parishes, while maintaining 100% robots.txt compliance.
+**→ See [Commands Guide](docs/COMMANDS.md) for complete command reference and examples.**
 
 
 

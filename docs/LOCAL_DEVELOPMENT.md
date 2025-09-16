@@ -51,19 +51,23 @@ python run_pipeline.py --diocese_id 123 --max_parishes_per_diocese 5
 ## 🧪 Testing & Development Commands
 
 ### Pipeline Testing
+
+For comprehensive command examples and parameters, see the **[📝 Commands Guide](COMMANDS.md)**.
+
+**Quick Testing Examples:**
 ```bash
 # Test with minimal data
-python run_pipeline.py --diocese_id 123 --max_parishes_per_diocese 5 \
-  --skip_dioceses --skip_parish_directories
+python run_pipeline.py --diocese_id 123 --max_parishes_per_diocese 5 --skip_dioceses
 
 # Debug single parish
 python extract_parishes.py --diocese_id 123 --max_parishes 1
 
 # Individual pipeline steps
 python extract_dioceses.py
-python find_parishes.py --diocese_id 123
 python async_extract_parishes.py --diocese_id 123 --num_parishes_per_diocese 10
 ```
+
+**→ See [Commands Guide](COMMANDS.md) for complete testing and debugging commands.**
 
 ### Database Testing
 ```bash

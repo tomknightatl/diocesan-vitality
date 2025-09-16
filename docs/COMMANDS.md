@@ -86,13 +86,20 @@ Tests the real-time monitoring dashboard with simulated extraction activity.
         *   `extraction`: Simulates complete extraction activity for dashboard testing
         *   `continuous`: Runs continuous monitoring demo with periodic updates
 
+### `report_statistics.py`
+Generates statistics and visualizations of collected data from the database.
+*   **Command:** `python report_statistics.py`
+*   **Features:**
+    *   Database record counts and trends
+    *   Time-series visualizations
+    *   PNG file generation for charts
+
 ### Scripts without Command-Line Parameters:
 The following scripts are primarily modules or configuration files and do not accept direct command-line arguments:
 *   `config.py`
 *   `llm_utils.py`
 *   `parish_extraction_core.py`
 *   `parish_extractors.py`
-*   `report_statistics.py` (though it can be run directly, its `main` function doesn't take parameters)
 
 ## Usage Examples
 
@@ -184,5 +191,330 @@ python test_dashboard.py --mode continuous
 ### Configuration and Reporting
 - **`config.py`**: Environment variables and central application configuration
 - **`report_statistics.py`**: Generates statistics and time-series plots from database data
+
+All scripts are well-structured with clear purposes in the data extraction pipeline.
+
+---
+
+## Development Commands
+
+### Local Development Setup
+```bash
+# Create and activate virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On macOS/Linux
+# .\venv\Scripts\activate  # On Windows
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Set up environment variables
+cp .env.example .env  # Edit with your API keys
+```
+
+### Start Development Services
+```bash
+# Terminal 1 - Backend API
+cd backend
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+# Terminal 2 - Frontend Application
+cd frontend
+npm install  # First time only
+npm run dev
+
+# Terminal 3 - Pipeline with Monitoring
+source venv/bin/activate
+python run_pipeline.py --monitoring_url http://localhost:8000 \
+  --max_parishes_per_diocese 10 --num_parishes_for_schedule 5
+```
+
+### Testing and Debugging Commands
+```bash
+# Test database connection
+python -c "from core.db import get_supabase_client; print('DB:', get_supabase_client().table('Dioceses').select('*').limit(1).execute())"
+
+# Test API endpoints
+curl http://localhost:8000/api/dioceses
+curl http://localhost:8000/api/monitoring/status
+
+# Test frontend build
+cd frontend && npm run build
+
+# Clear Chrome cache (if issues)
+rm -rf /tmp/chrome-*
+
+# Check running processes
+ps aux | grep chrome
+ps aux | grep python
+```
+
+### Chrome WebDriver Debugging
+```bash
+# Update webdriver
+python -c "from webdriver_manager.chrome import ChromeDriverManager; ChromeDriverManager().install()"
+
+# Run with visible Chrome (for debugging)
+export CHROME_VISIBLE=true
+python extract_schedule.py --num_parishes 1
+
+# Test individual API keys
+python -c "from core.ai_client import get_genai_client; print('AI:', get_genai_client().generate_content('Hello').text[:50])"
+```
+
+---
+
+## Docker Commands
+
+### Building Images Locally
+```bash
+# Build individual services for testing
+docker build -f backend/Dockerfile -t diocesan-vitality:backend-dev backend/
+docker build -f frontend/Dockerfile -t diocesan-vitality:frontend-dev frontend/
+docker build -f Dockerfile.pipeline -t diocesan-vitality:pipeline-dev .
+
+# Test pipeline container
+docker run --rm --env-file .env diocesan-vitality:pipeline-dev python run_pipeline.py --skip_schedules
+```
+
+### Production Image Building with Timestamps
+```bash
+# Generate timestamp for deployment
+TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)
+echo "🏷️ Using timestamp: $TIMESTAMP"
+
+# Build all three images with timestamped tags
+docker build -f backend/Dockerfile -t tomatl/diocesan-vitality:backend-$TIMESTAMP backend/
+docker build -f frontend/Dockerfile -t tomatl/diocesan-vitality:frontend-$TIMESTAMP frontend/
+docker build -f Dockerfile.pipeline -t tomatl/diocesan-vitality:pipeline-$TIMESTAMP .
+
+# Push to Docker Hub
+docker push tomatl/diocesan-vitality:backend-$TIMESTAMP
+docker push tomatl/diocesan-vitality:frontend-$TIMESTAMP
+docker push tomatl/diocesan-vitality:pipeline-$TIMESTAMP
+```
+
+---
+
+## Deployment Commands
+
+### GitOps Deployment Process
+```bash
+# Update Kubernetes manifests with new image tags
+sed -i "s|image: tomatl/diocesan-vitality:backend-.*|image: tomatl/diocesan-vitality:backend-$TIMESTAMP|g" k8s/backend-deployment.yaml
+sed -i "s|image: tomatl/diocesan-vitality:frontend-.*|image: tomatl/diocesan-vitality:frontend-$TIMESTAMP|g" k8s/frontend-deployment.yaml
+sed -i "s|image: tomatl/diocesan-vitality:pipeline-.*|image: tomatl/diocesan-vitality:pipeline-$TIMESTAMP|g" k8s/pipeline-deployment.yaml
+
+# Commit and push to trigger ArgoCD deployment
+git add k8s/backend-deployment.yaml k8s/frontend-deployment.yaml k8s/pipeline-deployment.yaml
+git commit -m "Deploy timestamped images ($TIMESTAMP)"
+git push origin main
+```
+
+### Monitoring Deployment
+```bash
+# Watch ArgoCD application sync
+kubectl get application diocesan-vitality-app -n argocd -w
+
+# Monitor pod rollout
+kubectl get pods -n diocesan-vitality -w
+
+# Verify new images are deployed
+kubectl describe pods -n diocesan-vitality | grep "Image:" | sort | uniq
+```
+
+### Deployment Rollback
+```bash
+# Find previous image timestamp from git history
+git log --oneline -10 | grep "Deploy timestamped images"
+
+# Rollback to previous timestamp
+ROLLBACK_TIMESTAMP="2025-09-15-17-30-45"  # Replace with desired timestamp
+sed -i "s|image: tomatl/diocesan-vitality:backend-.*|image: tomatl/diocesan-vitality:backend-$ROLLBACK_TIMESTAMP|g" k8s/backend-deployment.yaml
+sed -i "s|image: tomatl/diocesan-vitality:frontend-.*|image: tomatl/diocesan-vitality:frontend-$ROLLBACK_TIMESTAMP|g" k8s/frontend-deployment.yaml
+sed -i "s|image: tomatl/diocesan-vitality:pipeline-.*|image: tomatl/diocesan-vitality:pipeline-$ROLLBACK_TIMESTAMP|g" k8s/pipeline-deployment.yaml
+
+git add k8s/*.yaml
+git commit -m "Rollback to images from $ROLLBACK_TIMESTAMP"
+git push origin main
+```
+
+---
+
+## Kubernetes Operations
+
+### Pipeline Management
+```bash
+# View live pipeline logs
+kubectl logs -f deployment/pipeline-deployment -n diocesan-vitality
+
+# View last 50 lines of logs
+kubectl logs deployment/pipeline-deployment -n diocesan-vitality --tail=50
+
+# View logs with timestamps
+kubectl logs deployment/pipeline-deployment -n diocesan-vitality --timestamps=true
+
+# Check pipeline pod status
+kubectl get pods -n diocesan-vitality -l app=pipeline
+
+# Restart pipeline (triggers fresh execution)
+kubectl rollout restart deployment pipeline-deployment -n diocesan-vitality
+```
+
+### Log Analysis and Filtering
+```bash
+# Filter logs for errors only
+kubectl logs deployment/pipeline-deployment -n diocesan-vitality | grep -i error
+
+# Filter logs for specific diocese processing
+kubectl logs deployment/pipeline-deployment -n diocesan-vitality | grep "Diocese:"
+
+# Filter logs for circuit breaker events
+kubectl logs deployment/pipeline-deployment -n diocesan-vitality | grep "Circuit breaker"
+
+# Save logs to file for analysis
+kubectl logs deployment/pipeline-deployment -n diocesan-vitality > pipeline-logs.txt
+
+# Count error messages
+kubectl logs deployment/pipeline-deployment -n diocesan-vitality | grep -c "ERROR"
+
+# Monitor extraction progress
+kubectl logs -f deployment/pipeline-deployment -n diocesan-vitality | grep -E "Diocese:|Parish:|Schedule:"
+```
+
+### Resource Monitoring
+```bash
+# Check resource usage
+kubectl top pods -n diocesan-vitality
+
+# Check node capacity
+kubectl describe nodes
+
+# Monitor memory/CPU limits
+kubectl describe pod -l app=pipeline -n diocesan-vitality | grep -A 10 "Limits\|Requests"
+
+# Get detailed pod information
+kubectl describe pod -l app=pipeline -n diocesan-vitality
+```
+
+---
+
+## Database and API Testing
+
+### Database Testing
+```bash
+# Test Supabase connection
+python -c "
+import config
+from core.db import get_supabase_client
+client = get_supabase_client()
+response = client.table('Dioceses').select('*').limit(1).execute()
+print('DB Connection:', 'SUCCESS' if response.data else 'FAILED')
+"
+
+# Test distributed coordination tables (if using scaling)
+python -c "
+from core.distributed_work_coordinator import DistributedWorkCoordinator
+coordinator = DistributedWorkCoordinator()
+print('✅ Coordination tables accessible')
+"
+
+# Validate configuration
+python -c "import config; print(config.validate_config())"
+```
+
+### API Testing
+```bash
+# Test backend endpoints
+curl http://localhost:8000/api/dioceses
+curl http://localhost:8000/api/monitoring/status
+
+# Test WebSocket connection (requires wscat: npm install -g wscat)
+wscat -c ws://localhost:8000/ws/monitoring
+
+# Check environment variables
+cat .env | grep -v "^#"
+```
+
+---
+
+## Troubleshooting Commands
+
+### Common Issue Resolution
+```bash
+# Chrome/ChromeDriver issues
+kubectl exec -it deployment/pipeline-deployment -n diocesan-vitality -- which google-chrome
+kubectl exec -it deployment/pipeline-deployment -n diocesan-vitality -- chromedriver --version
+kubectl logs deployment/pipeline-deployment -n diocesan-vitality | grep -i "chrome\|webdriver"
+
+# Database connection issues
+kubectl get secrets -n diocesan-vitality
+kubectl describe secret diocesan-vitality-secrets -n diocesan-vitality
+
+# Missing dependencies
+kubectl logs deployment/pipeline-deployment -n diocesan-vitality | grep -i "modulenotfounderror\|importerror"
+
+# Circuit breaker status
+kubectl logs deployment/pipeline-deployment -n diocesan-vitality | grep "Circuit breaker"
+```
+
+### Performance Analysis
+```bash
+# Find most recent errors
+kubectl logs deployment/pipeline-deployment -n diocesan-vitality | grep "ERROR" | tail -10
+
+# Check processing statistics
+kubectl logs deployment/pipeline-deployment -n diocesan-vitality | grep -E "processed|extracted|completed"
+
+# Monitor system resources
+htop  # Local development
+kubectl top pods -n diocesan-vitality  # Kubernetes
+```
+
+---
+
+## Complete Deployment Script
+
+For convenience, here's a complete script that handles the entire deployment process:
+
+```bash
+#!/bin/bash
+# deploy.sh - Complete deployment script
+
+set -e  # Exit on any error
+
+echo "🚀 Starting deployment process..."
+
+# Generate timestamp
+TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)
+echo "🏷️ Using timestamp: $TIMESTAMP"
+
+# Build images
+echo "🔨 Building Docker images..."
+docker build -f backend/Dockerfile -t tomatl/diocesan-vitality:backend-$TIMESTAMP backend/
+docker build -f frontend/Dockerfile -t tomatl/diocesan-vitality:frontend-$TIMESTAMP frontend/
+docker build -f Dockerfile.pipeline -t tomatl/diocesan-vitality:pipeline-$TIMESTAMP .
+
+# Push images
+echo "📤 Pushing images to Docker Hub..."
+docker push tomatl/diocesan-vitality:backend-$TIMESTAMP
+docker push tomatl/diocesan-vitality:frontend-$TIMESTAMP
+docker push tomatl/diocesan-vitality:pipeline-$TIMESTAMP
+
+# Update manifests
+echo "📝 Updating Kubernetes manifests..."
+sed -i "s|image: tomatl/diocesan-vitality:backend-.*|image: tomatl/diocesan-vitality:backend-$TIMESTAMP|g" k8s/backend-deployment.yaml
+sed -i "s|image: tomatl/diocesan-vitality:frontend-.*|image: tomatl/diocesan-vitality:frontend-$TIMESTAMP|g" k8s/frontend-deployment.yaml
+sed -i "s|image: tomatl/diocesan-vitality:pipeline-.*|image: tomatl/diocesan-vitality:pipeline-$TIMESTAMP|g" k8s/pipeline-deployment.yaml
+
+# Commit and push
+echo "📦 Committing changes..."
+git add k8s/backend-deployment.yaml k8s/frontend-deployment.yaml k8s/pipeline-deployment.yaml
+git commit -m "Deploy timestamped images ($TIMESTAMP)"
+git push origin main
+
+echo "🎉 Deployment complete! ArgoCD will sync automatically."
+echo "📊 Monitor with: kubectl get pods -n diocesan-vitality -w"
+```
 
 All scripts are well-structured with clear purposes in the data extraction pipeline.

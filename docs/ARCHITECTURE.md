@@ -87,7 +87,7 @@ The United States Conference of Catholic Bishops (Diocesan Vitality) Data Projec
 | **Docker** | Application containerization |
 | **Kubernetes** | Container orchestration platform |
 | **ArgoCD** | GitOps continuous deployment |
-| **GitHub Container Registry** | Container image storage |
+| **Docker Hub** | Container image storage |
 
 ### Data Storage
 
