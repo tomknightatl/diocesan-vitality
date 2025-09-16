@@ -424,17 +424,41 @@ class MonitoringManager:
         return aggregate_circuits
 
     def get_worker_list(self):
-        """Get list of all workers with their basic status"""
-        return [
-            {
+        """Get list of all workers with their basic status, classified by activity"""
+        current_time = time.time()
+        worker_list = []
+
+        for worker_id, worker_data in self.workers.items():
+            last_updated = worker_data["last_updated"]
+            time_since_update = current_time - last_updated
+
+            # Classify worker status based on last update time
+            if time_since_update <= 60:  # Active: updated within 1 minute
+                worker_status = "active"
+            elif time_since_update <= 300:  # Recent: updated within 5 minutes
+                worker_status = "recent"
+            else:  # Stale: no updates for more than 5 minutes
+                worker_status = "stale"
+
+            worker_list.append({
                 "worker_id": worker_id,
                 "status": worker_data["extraction_status"]["status"],
+                "worker_status": worker_status,  # New field for activity classification
                 "current_diocese": worker_data["extraction_status"]["current_diocese"],
                 "parishes_processed": worker_data["extraction_status"]["parishes_processed"],
-                "last_updated": worker_data["last_updated"]
-            }
-            for worker_id, worker_data in self.workers.items()
-        ]
+                "last_updated": worker_data["last_updated"],
+                "time_since_update": int(time_since_update)
+            })
+
+        # Sort by activity: active first, then recent, then stale
+        # Within each group, sort by most recently updated
+        worker_list.sort(key=lambda w: (
+            0 if w["worker_status"] == "active" else
+            1 if w["worker_status"] == "recent" else 2,
+            -w["last_updated"]  # Most recent first within each group
+        ))
+
+        return worker_list
 
 # Global monitoring manager instance
 monitoring_manager = MonitoringManager()
