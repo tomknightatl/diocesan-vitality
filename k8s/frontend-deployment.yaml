@@ -29,7 +29,7 @@ spec:
       - name: frontend
         # IMPORTANT: Replace YOUR_DOCKERHUB_USERNAME with your actual Docker Hub username
         # Using single repository with tags: diocesan-vitality:frontend
-        image: tomatl/diocesan-vitality:frontend-2025-09-15-18-05-07
+        image: tomatl/diocesan-vitality:frontend-2025-09-15-19-20-09
         imagePullPolicy: Always
         ports:
         - containerPort: 80
