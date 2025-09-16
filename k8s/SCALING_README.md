@@ -261,6 +261,92 @@ env:
   value: "101" # Adjust based on your processing requirements
 ```
 
+## ⚠️ Prevention Best Practices
+
+### ArgoCD Degradation Prevention
+
+To prevent ArgoCD from entering a degraded state, follow these practices:
+
+1. **Docker Image Verification**
+   ```bash
+   # Always verify images exist before updating manifests
+   docker images | grep "diocesan-vitality.*backend"
+   docker images | grep "diocesan-vitality.*frontend"
+   docker images | grep "diocesan-vitality.*pipeline"
+
+   # Test image pull before committing
+   docker pull tomatl/diocesan-vitality:backend-$TIMESTAMP
+   ```
+
+2. **Resource Planning Before Scaling**
+   ```bash
+   # Check current resource usage before scaling up
+   kubectl get hpa -n diocesan-vitality
+   kubectl top pods -n diocesan-vitality
+
+   # Example: High usage indicates need for resource adjustment
+   # CPU: 945%/70%, Memory: 223%/80% -> scale gradually, not 1→5
+   ```
+
+3. **Gradual Scaling Strategy**
+   ```bash
+   # Instead of jumping from 1 to 5 pods:
+   # Step 1: Scale to 2 pods, monitor stability
+   sed -i 's/maxReplicas: 1/maxReplicas: 2/' k8s/pipeline-hpa.yaml
+   git add k8s/pipeline-hpa.yaml && git commit -m "Scale up to 2 pods" && git push
+
+   # Step 2: Monitor for stability, then scale to 5
+   # Wait for ArgoCD sync and verify no ImagePullBackOff or pod evictions
+   kubectl get pods -n diocesan-vitality
+   kubectl get applications -n argocd
+   ```
+
+4. **GitOps Compliance**
+   ```bash
+   # ❌ Never use direct kubectl commands for config changes:
+   # kubectl scale deployment pipeline-deployment --replicas=5
+
+   # ✅ Always use Git commits for configuration changes:
+   git add k8s/pipeline-hpa.yaml
+   git commit -m "Scale HPA maxReplicas to 5 for load testing"
+   git push
+   ```
+
+5. **ArgoCD Health Monitoring**
+   ```bash
+   # Regular health checks before major changes
+   kubectl get applications -n argocd
+
+   # Look for these healthy states:
+   # diocesan-vitality-app   Synced   Healthy
+
+   # Investigate any OutOfSync or Degraded status:
+   kubectl describe application diocesan-vitality-app -n argocd
+   ```
+
+### Resource Pressure Prevention
+
+1. **Memory Request Alignment**
+   ```yaml
+   # In pipeline-deployment.yaml, align requests with actual usage
+   resources:
+     requests:
+       memory: "1.6Gi"  # Match actual usage patterns
+       cpu: "100m"
+     limits:
+       memory: "2Gi"    # Allow some headroom
+       cpu: "500m"
+   ```
+
+2. **Node Capacity Planning**
+   ```bash
+   # Check node capacity before scaling
+   kubectl describe nodes | grep -A 5 "Allocated resources"
+
+   # Ensure sufficient memory/CPU for pod scaling
+   kubectl top nodes
+   ```
+
 ## 🛠️ Troubleshooting
 
 ### Common Issues
@@ -290,6 +376,54 @@ env:
 
    # Check for sync errors
    kubectl describe application diocesan-vitality-app -n argocd
+   ```
+
+4. **ArgoCD Degraded Status (OutOfSync/Degraded)**
+
+   **Symptoms**: ArgoCD shows `OutOfSync` or `Degraded` status with constant sync thrashing
+
+   **Common Causes & Fixes**:
+
+   a) **Missing Docker Images (ImagePullBackOff)**
+   ```bash
+   # Identify failed pods
+   kubectl get pods -n diocesan-vitality | grep ImagePullBackOff
+
+   # Check specific pod events
+   kubectl describe pod <pod-name> -n diocesan-vitality | grep -A 10 "Events:"
+
+   # Fix: Create missing image from existing one
+   docker tag tomatl/diocesan-vitality:backend-<existing-tag> tomatl/diocesan-vitality:backend-<missing-tag>
+   docker push tomatl/diocesan-vitality:backend-<missing-tag>
+
+   # Delete failed pod to restart
+   kubectl delete pod <pod-name> -n diocesan-vitality
+   ```
+
+   b) **Resource Pressure (Pod Evictions)**
+   ```bash
+   # Check for evicted/failed pods
+   kubectl get pods -n diocesan-vitality | grep -E "(Error|ContainerStatusUnknown|Evicted)"
+
+   # Check pod resource usage vs requests
+   kubectl top pods -n diocesan-vitality
+   kubectl describe pod <pod-name> -n diocesan-vitality | grep -A 5 "Limits:"
+
+   # Clean up failed pods
+   kubectl get pods -n diocesan-vitality | grep -E "(Error|ContainerStatusUnknown)" | awk '{print $1}' | xargs -I {} kubectl delete pod {} -n diocesan-vitality
+
+   # Scale down HPA to reduce pressure
+   sed -i 's/maxReplicas: 5/maxReplicas: 2/' k8s/pipeline-hpa.yaml
+   git add k8s/pipeline-hpa.yaml && git commit -m "Scale down HPA to reduce resource pressure" && git push
+   ```
+
+   c) **Force ArgoCD Sync**
+   ```bash
+   # Trigger manual sync
+   kubectl patch application diocesan-vitality-app -n argocd --type merge -p '{"operation": {"initiatedBy": {"username": "admin"}, "sync": {"revision": "HEAD"}}}'
+
+   # Monitor sync progress
+   kubectl get applications -n argocd -w
    ```
 
 ### Cleanup Stale Assignments
