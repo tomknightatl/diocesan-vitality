@@ -21,28 +21,16 @@ spec:
       namespace: argocd
     spec:
       project: default
-      source:
-        repoURL: https://kubernetes-sigs.github.io/metrics-server/
+      sources:
+      - repoURL: https://kubernetes-sigs.github.io/metrics-server/
         chart: metrics-server
         targetRevision: "3.12.1"
         helm:
-          parameters:
-          - name: args[0]
-            value: "--cert-dir=/tmp"
-          - name: args[1]
-            value: "--secure-port=4443"
-          - name: args[2]
-            value: "--kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname"
-          - name: args[3]
-            value: "--kubelet-use-node-status-port"
-          - name: args[4]
-            value: "--metric-resolution=15s"
-          - name: args[5]
-            value: "--kubelet-insecure-tls"
-          - name: resources.requests.cpu
-            value: "100m"
-          - name: resources.requests.memory
-            value: "200Mi"
+          valueFiles:
+          - $values/k8s/argocd/metrics-server-values.yaml
+      - repoURL: https://github.com/tomknightatl/diocesan-vitality
+        targetRevision: HEAD
+        ref: values
       destination:
         server: '{{server}}'
         namespace: kube-system
