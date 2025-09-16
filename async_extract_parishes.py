@@ -132,7 +132,8 @@ class AsyncDioceseProcessor:
         logger.info("✅ Async diocese processor ready")
 
         # Report initial circuit breaker status
-        monitoring_client = get_monitoring_client()
+        worker_id = os.environ.get('WORKER_ID', os.environ.get('HOSTNAME'))
+        monitoring_client = get_monitoring_client(worker_id=worker_id)
         monitoring_client.report_circuit_breaker_status()
     
     async def process_dioceses_concurrent(self, 
@@ -213,7 +214,8 @@ class AsyncDioceseProcessor:
                 current_memory = force_garbage_collection()
 
                 # Report circuit breaker status between batches
-                monitoring_client = get_monitoring_client()
+                worker_id = os.environ.get('WORKER_ID', os.environ.get('HOSTNAME'))
+                monitoring_client = get_monitoring_client(worker_id=worker_id)
                 monitoring_client.report_circuit_breaker_status()
 
                 # Small delay between batches
@@ -406,8 +408,9 @@ async def main_async(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MA
     """
     Main async function for parish extraction with concurrent processing.
     """
-    # Initialize monitoring client
-    monitoring_client = get_monitoring_client()
+    # Initialize monitoring client with worker ID
+    worker_id = os.environ.get('WORKER_ID', os.environ.get('HOSTNAME'))
+    monitoring_client = get_monitoring_client(worker_id=worker_id)
 
     if not ensure_chrome_installed():
         logger.error("Chrome installation failed. Please install Chrome manually.")

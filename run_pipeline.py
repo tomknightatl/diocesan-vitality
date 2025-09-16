@@ -6,6 +6,7 @@ and comprehensive blocking detection. Integrates with real-time dashboard.
 """
 
 import argparse
+import os
 import time
 from core.logger import get_logger
 from core.monitoring_client import get_monitoring_client, ExtractionMonitoring
@@ -36,8 +37,9 @@ def main():
     
     args = parser.parse_args()
 
-    # Initialize monitoring client
-    monitoring_client = get_monitoring_client(args.monitoring_url)
+    # Initialize monitoring client with worker ID support
+    worker_id = os.environ.get('WORKER_ID', os.environ.get('HOSTNAME'))
+    monitoring_client = get_monitoring_client(args.monitoring_url, worker_id)
     if args.disable_monitoring:
         monitoring_client.disable()
         logger.info("📊 Monitoring disabled")
