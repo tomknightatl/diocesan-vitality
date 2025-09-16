@@ -69,7 +69,10 @@ The Data Extraction Pipeline is a multi-step process that systematically collect
 - **🛡️ Circuit Breaker Protection**: Automatic failure detection and recovery for external services
 
 ### 📊 **Analytics & Monitoring**
-- **🖥️ Live Production Dashboard**: Real-time extraction monitoring at [diocesanvitality.org](https://diocesanvitality.org)
+- **🖥️ Hybrid Multi-Worker Dashboard**: Real-time extraction monitoring at [diocesanvitality.org](https://diocesanvitality.org)
+- **🔧 Worker Selector**: Switch between aggregate view and individual worker monitoring
+- **🛡️ Enhanced Circuit Breaker Visualization**: 17+ circuit breakers with health-based sorting and color coding
+- **📊 Health Scoring**: Dynamic health calculation with green/yellow/red indicators
 - **🔍 Comprehensive URL Visit Tracking**: Detailed visit analytics with response times, quality scores, and error classification
 - **📈 Quality-Weighted ML Training**: Advanced machine learning training using visit success data
 - **🎯 Intelligent Parish Prioritization**: Multi-factor scoring for optimal extraction order
@@ -509,7 +512,8 @@ python extract_schedule_ab_test_simple.py --num_parishes 20 --test_ratio 0.75
 - **[COMMANDS.md](docs/COMMANDS.md)**: Complete command reference for all scripts
 - **[Async Performance Guide](docs/ASYNC_PERFORMANCE_GUIDE.md)**: ⚡ **NEW** - Comprehensive guide to high-performance concurrent extraction
 - **[Async Extract Parishes README](async_extract_parishes_README.md)**: ⚡ **NEW** - Detailed documentation for concurrent processing
-- **[Monitoring Dashboard Guide](docs/MONITORING_DASHBOARD.md)**: 🖥️ **NEW** - Real-time monitoring and operational visibility
+- **[Monitoring Guide](docs/MONITORING.md)**: 🖥️ Real-time monitoring and operational visibility
+- **[Multi-Worker Monitoring](docs/MULTI_WORKER_MONITORING.md)**: 🔧 **NEW** - Distributed worker monitoring and hybrid dashboard
 
 ### Module-Specific Documentation
 - **[extract_dioceses_README.md](extract_dioceses_README.md)**: Diocese extraction workflow

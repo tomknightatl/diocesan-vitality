@@ -37,11 +37,14 @@ The real-time monitoring dashboard provides **live operational visibility** into
 - **Worker Status**: Individual worker health indicators and activity status
 - **Distributed Progress**: System-wide extraction progress across multiple workers
 
-#### 🛡️ **Circuit Breaker Visualization**
-- **Circuit States**: CLOSED/OPEN/HALF-OPEN status for all circuit breakers
-- **Statistics**: Request counts, success rates, failure tracking
-- **Real-time Updates**: Instant notification of circuit state changes
-- **Historical Data**: Blocked requests and recovery patterns
+#### 🛡️ **Enhanced Circuit Breaker Visualization**
+- **Horizontal Layout**: 17+ circuit breakers displayed in organized rows with header columns
+- **Health-Based Sorting**: Automatically sorts by health score with least healthy circuits at top
+- **Color-Coded Health Indicators**: Green (healthy), yellow (warning), red (critical) status
+- **Circuit States**: CLOSED/OPEN/HALF-OPEN status with real-time updates
+- **Statistics**: Request counts, success rates, failure tracking with zero-value highlighting
+- **Health Scoring**: Dynamic health calculation based on state, success rate, and blocked requests
+- **Comprehensive Metrics**: Name, State, Requests, Health %, Success Rate, Failures, Blocked columns
 
 #### 📈 **Performance Analytics**
 - **Live Metrics**: Real-time performance tracking and trends
