@@ -17,7 +17,7 @@ spec:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: 70
+        averageUtilization: 25  # Temporarily lowered for scaling test
   # Scale based on memory usage
   - type: Resource
     resource:
