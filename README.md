@@ -43,7 +43,7 @@ The system runs in the cloud using a **two-tier architecture** designed for cost
 
 The Data Extraction Pipeline is a multi-step process that systematically collects and organizes Catholic diocese and parish information from across the United States.
 
-![Data Extraction Pipeline Architecture](./architecture-diagram.svg)
+![Data Extraction Pipeline Architecture](./docs/architecture-diagram.svg)
 
 ### Pipeline Steps
 
@@ -212,7 +212,7 @@ The project uses Supabase (PostgreSQL) with the following key tables:
 
 ## 📚 Documentation
 
-- **[🚀 Deployment Guide](DEPLOYMENT_GUIDE.md)** - Complete guide for deploying new Docker images
+- **[🚀 Deployment Guide](docs/DEPLOYMENT_GUIDE.md)** - Complete guide for deploying new Docker images
 - **[📈 Scaling Guide](k8s/SCALING_README.md)** - Horizontal scaling and distributed pipeline setup
 - **[🔧 Local Development](docs/LOCAL_DEVELOPMENT.md)** - Development setup and testing
 

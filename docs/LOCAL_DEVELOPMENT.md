@@ -102,7 +102,7 @@ docker run --rm --env-file .env diocesan-vitality:pipeline-dev python run_pipeli
 ```
 
 ### Production Deployment
-For production deployments, see the **[🚀 Deployment Guide](../DEPLOYMENT_GUIDE.md)** which covers:
+For production deployments, see the **[🚀 Deployment Guide](DEPLOYMENT_GUIDE.md)** which covers:
 - Timestamped image tagging
 - GitOps workflow with ArgoCD
 - Complete deployment process
@@ -171,10 +171,10 @@ python -c "from core.ai_client import get_genai_client; print('AI:', get_genai_c
 ## 📚 Additional Documentation
 
 - **[📈 Scaling Guide](../k8s/SCALING_README.md)** - Horizontal scaling setup
-- **[🚀 Deployment Guide](../DEPLOYMENT_GUIDE.md)** - Production deployment
+- **[🚀 Deployment Guide](DEPLOYMENT_GUIDE.md)** - Production deployment
 - **[⚙️ Environment Setup](../README.md#environment-setup)** - Configuration and API keys
 - **[🏗️ Architecture](ARCHITECTURE.md)** - System architecture details
-- **[📊 Monitoring](LOGGING_AND_MONITORING.md)** - Logging and monitoring setup
+- **[📊 Monitoring](MONITORING.md)** - Logging and monitoring setup
 - **[🗄️ Database](DATABASE.md)** - Database schema and operations
 
 ## 💡 Best Practices

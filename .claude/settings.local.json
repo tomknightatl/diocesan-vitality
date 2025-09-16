@@ -14,7 +14,8 @@
       "Bash(source:*)",
       "Bash(kubectl describe:*)",
       "Bash(docker build:*)",
-      "Bash(docker run:*)"
+      "Bash(docker run:*)",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": []

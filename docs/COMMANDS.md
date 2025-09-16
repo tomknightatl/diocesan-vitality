@@ -1,6 +1,10 @@
-Here are the commands and parameters for each `.py` script in the root directory:
+# Python Scripts and Commands
 
-## Pipeline Scripts
+This document provides comprehensive information about all Python scripts in the root directory, including their commands, parameters, and purposes.
+
+## Scripts Overview
+
+### Pipeline Scripts (Execution Order)
 
 ### `run_pipeline.py` 🖥️
 Diocesan Vitality data extraction pipeline with monitoring and real-time dashboard integration.
@@ -160,3 +164,25 @@ python test_dashboard.py --mode extraction
 # Continuous monitoring demo
 python test_dashboard.py --mode continuous
 ```
+
+---
+
+## Script Categories and Functions
+
+### Core Pipeline Scripts (Execution Order)
+- **`run_pipeline.py`**: Main entry point orchestrating the entire data extraction pipeline
+- **`extract_dioceses.py`**: Step 1 - Extracts diocese information from the conference website
+- **`find_parishes.py`**: Step 2 - Analyzes diocese websites to find parish directory URLs
+- **`async_extract_parishes.py`**: Step 3 - Asynchronously extracts detailed parish information
+- **`extract_schedule_respectful.py`**: Step 4 - Extracts Mass schedules using respectful automation
+
+### Core Components and Utilities
+- **`parish_extraction_core.py`**: Data models (ParishData), enums, and fundamental utilities
+- **`parish_extractors.py`**: Extractor classes for parsing different website layouts
+- **`respectful_automation.py`**: Respectful web scraping with robots.txt compliance and rate limiting
+
+### Configuration and Reporting
+- **`config.py`**: Environment variables and central application configuration
+- **`report_statistics.py`**: Generates statistics and time-series plots from database data
+
+All scripts are well-structured with clear purposes in the data extraction pipeline.
