@@ -461,7 +461,7 @@ const Dashboard = () => {
                     <strong>Legend:</strong>
                     <span className="ms-2">🟢 Active (≤1min)</span>
                     <span className="ms-2">🟡 Recent (≤5min)</span>
-                    <span className="ms-2">⚪ Stale (>5min)</span>
+                    <span className="ms-2">⚪ Stale (&gt;5min)</span>
                   </small>
                 </div>
               </Card.Body>
