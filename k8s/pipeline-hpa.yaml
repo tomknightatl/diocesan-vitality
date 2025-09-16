@@ -8,8 +8,8 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: pipeline-deployment
-  minReplicas: 2
-  maxReplicas: 3  # Scale to max 3 pods with 1 pod per node
+  minReplicas: 1
+  maxReplicas: 1  # Fixed to 1 pod for consistent single-worker operation
   metrics:
   # Scale based on CPU usage
   - type: Resource
