@@ -62,6 +62,11 @@ cd infra
 bash
 kubectl apply -f argocd/<ApplicationSet.yaml>
 
+# Example ApplicationSets to deploy:
+kubectl apply -f argocd/bitnami-sealed-secrets-application-set.yaml
+kubectl apply -f argocd/cloudflare-tunnel-applicationset.yaml
+kubectl apply -f argocd/metrics-server-application-set.yaml
+
 
 # Step 5: Verify Deployment
 Check that the ApplicationSets are running:
