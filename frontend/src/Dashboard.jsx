@@ -312,8 +312,9 @@ const Dashboard = () => {
 
   const getWorkerStatusBadge = (workerStatus) => {
     const variants = {
-      'active': 'success',
-      'recent': 'warning',
+      'running': 'success',
+      'idle': 'warning',
+      'error': 'danger',
       'stale': 'secondary'
     };
     return variants[workerStatus] || 'secondary';
@@ -321,8 +322,9 @@ const Dashboard = () => {
 
   const getWorkerStatusIcon = (workerStatus) => {
     const icons = {
-      'active': '🟢',
-      'recent': '🟡',
+      'running': '🟢',
+      'idle': '🟡',
+      'error': '🔴',
       'stale': '⚪'
     };
     return icons[workerStatus] || '⚪';
@@ -373,89 +375,171 @@ const Dashboard = () => {
             <Card>
               <Card.Body>
                 <Card.Title>👥 Worker Status & Selection</Card.Title>
-                <Row>
-                  <Col md={6}>
-                    <h6 className="text-muted mb-3">Active Workers</h6>
-                    <div className="worker-selection">
-                      <Form.Check
-                        type="radio"
-                        id="worker-aggregate"
-                        name="worker-selection"
-                        label={
-                          <div className="d-flex justify-content-between align-items-center">
-                            <span>📈 <strong>Aggregate View</strong></span>
-                            <Badge bg="info" className="ms-2">
-                              {workers.filter(w => w.worker_status === 'active').length} active
-                            </Badge>
-                          </div>
-                        }
-                        checked={selectedWorker === 'aggregate'}
-                        onChange={() => handleWorkerSelect('aggregate')}
-                        className="mb-2 p-2 border rounded"
-                      />
-                      {workers.filter(w => w.worker_status === 'active').map(worker => (
-                        <Form.Check
-                          key={worker.worker_id}
-                          type="radio"
-                          id={`worker-${worker.worker_id}`}
-                          name="worker-selection"
-                          label={
-                            <div className="d-flex justify-content-between align-items-center">
-                              <div>
-                                <span className="me-2">{getWorkerStatusIcon(worker.worker_status)}</span>
-                                <strong>{worker.worker_id}</strong>
-                                {worker.current_diocese && (
-                                  <div className="small text-muted">Processing: {worker.current_diocese}</div>
-                                )}
-                              </div>
-                              <div className="text-end">
-                                <Badge bg={getStatusBadge(worker.status)} className="me-1">
-                                  {worker.status}
-                                </Badge>
-                                {worker.parishes_processed > 0 && (
-                                  <small className="text-muted d-block">
-                                    {worker.parishes_processed} parishes
-                                  </small>
-                                )}
-                              </div>
-                            </div>
-                          }
-                          checked={selectedWorker === worker.worker_id}
-                          onChange={() => handleWorkerSelect(worker.worker_id)}
-                          className="mb-2 p-2 border rounded"
-                        />
-                      ))}
-                    </div>
-                  </Col>
-                  <Col md={6}>
-                    <h6 className="text-muted mb-3">Recent & Inactive Workers</h6>
-                    <div className="recent-workers">
-                      {workers.filter(w => w.worker_status !== 'active').length === 0 ? (
-                        <p className="text-muted small">No recent or inactive workers</p>
-                      ) : (
-                        workers.filter(w => w.worker_status !== 'active').map(worker => (
-                          <div key={worker.worker_id} className="d-flex justify-content-between align-items-center mb-2 p-2 border rounded bg-light">
+
+                {/* Active Workers List */}
+                <div className="mb-4">
+                  <h6 className="text-muted mb-3">Active Workers</h6>
+                  <div className="worker-list">
+                    {/* Aggregate View Option */}
+                    <div
+                      className={`worker-row border rounded p-3 mb-2 cursor-pointer ${
+                        selectedWorker === 'aggregate' ? 'border-primary bg-primary-subtle' : 'border-secondary'
+                      }`}
+                      onClick={() => handleWorkerSelect('aggregate')}
+                      style={{ cursor: 'pointer', transition: 'all 0.2s ease' }}
+                    >
+                      <Row className="align-items-center">
+                        <Col md={3}>
+                          <div className="d-flex align-items-center">
+                            <span className="me-2" style={{ fontSize: '1.2em' }}>📈</span>
                             <div>
-                              <span className="me-2">{getWorkerStatusIcon(worker.worker_status)}</span>
-                              <span className="text-muted">{worker.worker_id}</span>
-                              <div className="small text-muted">
-                                Last seen: {formatTimeAgo(worker.time_since_update)}
+                              <h6 className="mb-0"><strong>Aggregate View</strong></h6>
+                              <small className="text-muted">Combined view of all workers</small>
+                            </div>
+                          </div>
+                        </Col>
+                        <Col md={2} className="text-center">
+                          <Badge bg="info">
+                            {workers.filter(w => w.status === 'running').length} active
+                          </Badge>
+                        </Col>
+                        <Col md={2} className="text-center">
+                          <div className="fw-bold text-success">N/A</div>
+                          <small className="text-muted d-block">System Health</small>
+                        </Col>
+                        <Col md={2} className="text-center">
+                          <div className="fw-bold">N/A</div>
+                          <small className="text-muted d-block">CPU/Memory</small>
+                        </Col>
+                        <Col md={2} className="text-center">
+                          <div className="fw-bold">0</div>
+                          <small className="text-muted d-block">Recent Errors</small>
+                        </Col>
+                        <Col md={1} className="text-center">
+                          <span className="text-primary">
+                            {selectedWorker === 'aggregate' ? '✓' : '○'}
+                          </span>
+                        </Col>
+                      </Row>
+                    </div>
+
+                    {/* Active Workers */}
+                    {workers.filter(w => w.status === 'running').map(worker => (
+                      <div
+                        key={worker.worker_id}
+                        className={`worker-row border rounded p-3 mb-2 cursor-pointer ${
+                          selectedWorker === worker.worker_id ? 'border-primary bg-primary-subtle' : 'border-success'
+                        }`}
+                        onClick={() => handleWorkerSelect(worker.worker_id)}
+                        style={{ cursor: 'pointer', transition: 'all 0.2s ease' }}
+                      >
+                        <Row className="align-items-center">
+                          <Col md={3}>
+                            <div className="d-flex align-items-center">
+                              <span className="me-2" style={{ fontSize: '1.2em' }}>{getWorkerStatusIcon(worker.status)}</span>
+                              <div>
+                                <h6 className="mb-0">{worker.worker_id}</h6>
+                                <small className="text-muted">
+                                  {worker.current_diocese ? `Processing: ${worker.current_diocese}` : 'Ready'}
+                                </small>
                               </div>
                             </div>
-                            <div className="text-end">
-                              <Badge bg={getWorkerStatusBadge(worker.worker_status)} className="me-1">
-                                {worker.worker_status}
-                              </Badge>
-                              <Badge bg={getStatusBadge(worker.status)}>
+                          </Col>
+                          <Col md={2} className="text-center">
+                            <Badge bg={getStatusBadge(worker.status)}>
+                              {worker.status}
+                            </Badge>
+                            <small className="text-muted d-block">Extraction Status</small>
+                          </Col>
+                          <Col md={2} className="text-center">
+                            <div className="fw-bold text-success">95%</div>
+                            <small className="text-muted d-block">System Health</small>
+                          </Col>
+                          <Col md={2} className="text-center">
+                            <div className="fw-bold">45%/60%</div>
+                            <small className="text-muted d-block">CPU/Memory</small>
+                          </Col>
+                          <Col md={2} className="text-center">
+                            <div className="fw-bold">0</div>
+                            <small className="text-muted d-block">Recent Errors</small>
+                          </Col>
+                          <Col md={1} className="text-center">
+                            <span className="text-primary">
+                              {selectedWorker === worker.worker_id ? '✓' : '○'}
+                            </span>
+                          </Col>
+                        </Row>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Recent & Inactive Workers */}
+                {workers.filter(w => w.status !== 'running').length > 0 && (
+                  <div className="mb-3">
+                    <h6 className="text-muted mb-3">Recent & Inactive Workers</h6>
+                    <div className="worker-list">
+                      {workers.filter(w => w.status !== 'running').map(worker => (
+                        <div
+                          key={worker.worker_id}
+                          className="worker-row border rounded p-3 mb-2 bg-light opacity-75"
+                          style={{ cursor: 'not-allowed' }}
+                        >
+                          <Row className="align-items-center">
+                            <Col md={3}>
+                              <div className="d-flex align-items-center">
+                                <span className="me-2" style={{ fontSize: '1.2em' }}>{getWorkerStatusIcon(worker.status)}</span>
+                                <div>
+                                  <h6 className="mb-0 text-muted">{worker.worker_id}</h6>
+                                  <small className="text-muted">
+                                    Last seen: {formatTimeAgo(worker.time_since_update)}
+                                  </small>
+                                </div>
+                              </div>
+                            </Col>
+                            <Col md={2} className="text-center">
+                              <Badge bg={getWorkerStatusBadge(worker.status)}>
                                 {worker.status}
                               </Badge>
-                            </div>
-                          </div>
-                        ))
-                      )}
+                              <small className="text-muted d-block">Worker Status</small>
+                            </Col>
+                            <Col md={2} className="text-center">
+                              <div className="fw-bold text-muted">N/A</div>
+                              <small className="text-muted d-block">System Health</small>
+                            </Col>
+                            <Col md={2} className="text-center">
+                              <div className="fw-bold text-muted">N/A</div>
+                              <small className="text-muted d-block">CPU/Memory</small>
+                            </Col>
+                            <Col md={2} className="text-center">
+                              <div className="fw-bold text-muted">N/A</div>
+                              <small className="text-muted d-block">Recent Errors</small>
+                            </Col>
+                            <Col md={1} className="text-center">
+                              <span className="text-muted">○</span>
+                            </Col>
+                          </Row>
+                        </div>
+                      ))}
                     </div>
-                  </Col>
-                </Row>
+                  </div>
+                )}
+
+                {/* Worker Selection Prompt */}
+                <div className="worker-selection-prompt mt-4 pt-4 border-top text-center">
+                  <div className="d-flex justify-content-center align-items-center mb-2">
+                    <hr className="flex-grow-1" />
+                    <span className="mx-3 text-muted fw-bold">SELECTED WORKER DETAILS</span>
+                    <hr className="flex-grow-1" />
+                  </div>
+                  <p className="text-muted mb-1">
+                    <i className="fas fa-cursor-pointer"></i> <strong>Click any worker above to view detailed monitoring data</strong>
+                  </p>
+                  <small className="text-muted">
+                    Currently viewing: <Badge bg="primary">{selectedWorker === 'aggregate' ? 'Aggregate View' : selectedWorker}</Badge>
+                  </small>
+                </div>
+
                 <div className="mt-3 pt-3 border-top">
                   <small className="text-muted">
                     <strong>Legend:</strong>
