@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Container, Row, Col, Card, Badge, Table, Alert, Spinner, Button, Dropdown } from 'react-bootstrap';
+import { Container, Row, Col, Card, Badge, Table, Alert, Spinner, Button, Form } from 'react-bootstrap';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -310,46 +310,40 @@ const Dashboard = () => {
     return `${minutes}m ${remainingSeconds}s`;
   };
 
+  const getWorkerStatusBadge = (workerStatus) => {
+    const variants = {
+      'active': 'success',
+      'recent': 'warning',
+      'stale': 'secondary'
+    };
+    return variants[workerStatus] || 'secondary';
+  };
+
+  const getWorkerStatusIcon = (workerStatus) => {
+    const icons = {
+      'active': '🟢',
+      'recent': '🟡',
+      'stale': '⚪'
+    };
+    return icons[workerStatus] || '⚪';
+  };
+
+  const formatTimeAgo = (seconds) => {
+    if (seconds < 60) return `${seconds}s ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    return `${hours}h ago`;
+  };
+
   return (
     <Container fluid className="dashboard">
       {/* Header */}
       <Row className="mb-4">
         <Col>
           <div className="d-flex justify-content-between align-items-center">
-            <h2>Current Health of Data Collection Servers</h2>
+            <h2>Pipeline Monitoring Dashboard</h2>
             <div className="d-flex align-items-center">
-              {workers.length > 0 && (
-                <Dropdown className="me-3">
-                  <Dropdown.Toggle variant="outline-secondary" size="sm">
-                    📊 {selectedWorker === 'aggregate' ? 'All Workers' : `Worker: ${selectedWorker}`}
-                  </Dropdown.Toggle>
-                  <Dropdown.Menu>
-                    <Dropdown.Item
-                      active={selectedWorker === 'aggregate'}
-                      onClick={() => handleWorkerSelect('aggregate')}
-                    >
-                      📈 Aggregate View ({workers.length} workers)
-                    </Dropdown.Item>
-                    <Dropdown.Divider />
-                    {workers.map(worker => (
-                      <Dropdown.Item
-                        key={worker.worker_id}
-                        active={selectedWorker === worker.worker_id}
-                        onClick={() => handleWorkerSelect(worker.worker_id)}
-                      >
-                        🔧 {worker.worker_id}
-                        <Badge
-                          bg={worker.status === 'running' ? 'success' :
-                              worker.status === 'idle' ? 'secondary' : 'warning'}
-                          className="ms-2"
-                        >
-                          {worker.status}
-                        </Badge>
-                      </Dropdown.Item>
-                    ))}
-                  </Dropdown.Menu>
-                </Dropdown>
-              )}
               <Badge bg={connected ? 'success' : 'danger'} className="me-2">
                 {connected ? '🟢 Connected' : '🔴 Disconnected'}
               </Badge>
@@ -370,6 +364,110 @@ const Dashboard = () => {
         <Alert variant="warning" className="mb-4">
           ⚠️ Dashboard disconnected from monitoring service. Attempting to reconnect...
         </Alert>
+      )}
+
+      {/* Worker Status Section */}
+      {workers.length > 0 && (
+        <Row className="mb-4">
+          <Col>
+            <Card>
+              <Card.Body>
+                <Card.Title>👥 Worker Status & Selection</Card.Title>
+                <Row>
+                  <Col md={6}>
+                    <h6 className="text-muted mb-3">Active Workers</h6>
+                    <div className="worker-selection">
+                      <Form.Check
+                        type="radio"
+                        id="worker-aggregate"
+                        name="worker-selection"
+                        label={
+                          <div className="d-flex justify-content-between align-items-center">
+                            <span>📈 <strong>Aggregate View</strong></span>
+                            <Badge bg="info" className="ms-2">
+                              {workers.filter(w => w.worker_status === 'active').length} active
+                            </Badge>
+                          </div>
+                        }
+                        checked={selectedWorker === 'aggregate'}
+                        onChange={() => handleWorkerSelect('aggregate')}
+                        className="mb-2 p-2 border rounded"
+                      />
+                      {workers.filter(w => w.worker_status === 'active').map(worker => (
+                        <Form.Check
+                          key={worker.worker_id}
+                          type="radio"
+                          id={`worker-${worker.worker_id}`}
+                          name="worker-selection"
+                          label={
+                            <div className="d-flex justify-content-between align-items-center">
+                              <div>
+                                <span className="me-2">{getWorkerStatusIcon(worker.worker_status)}</span>
+                                <strong>{worker.worker_id}</strong>
+                                {worker.current_diocese && (
+                                  <div className="small text-muted">Processing: {worker.current_diocese}</div>
+                                )}
+                              </div>
+                              <div className="text-end">
+                                <Badge bg={getStatusBadge(worker.status)} className="me-1">
+                                  {worker.status}
+                                </Badge>
+                                {worker.parishes_processed > 0 && (
+                                  <small className="text-muted d-block">
+                                    {worker.parishes_processed} parishes
+                                  </small>
+                                )}
+                              </div>
+                            </div>
+                          }
+                          checked={selectedWorker === worker.worker_id}
+                          onChange={() => handleWorkerSelect(worker.worker_id)}
+                          className="mb-2 p-2 border rounded"
+                        />
+                      ))}
+                    </div>
+                  </Col>
+                  <Col md={6}>
+                    <h6 className="text-muted mb-3">Recent & Inactive Workers</h6>
+                    <div className="recent-workers">
+                      {workers.filter(w => w.worker_status !== 'active').length === 0 ? (
+                        <p className="text-muted small">No recent or inactive workers</p>
+                      ) : (
+                        workers.filter(w => w.worker_status !== 'active').map(worker => (
+                          <div key={worker.worker_id} className="d-flex justify-content-between align-items-center mb-2 p-2 border rounded bg-light">
+                            <div>
+                              <span className="me-2">{getWorkerStatusIcon(worker.worker_status)}</span>
+                              <span className="text-muted">{worker.worker_id}</span>
+                              <div className="small text-muted">
+                                Last seen: {formatTimeAgo(worker.time_since_update)}
+                              </div>
+                            </div>
+                            <div className="text-end">
+                              <Badge bg={getWorkerStatusBadge(worker.worker_status)} className="me-1">
+                                {worker.worker_status}
+                              </Badge>
+                              <Badge bg={getStatusBadge(worker.status)}>
+                                {worker.status}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </Col>
+                </Row>
+                <div className="mt-3 pt-3 border-top">
+                  <small className="text-muted">
+                    <strong>Legend:</strong>
+                    <span className="ms-2">🟢 Active (≤1min)</span>
+                    <span className="ms-2">🟡 Recent (≤5min)</span>
+                    <span className="ms-2">⚪ Stale (>5min)</span>
+                  </small>
+                </div>
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
       )}
 
       {/* System Health Overview */}
