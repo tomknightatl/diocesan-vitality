@@ -54,8 +54,8 @@ class DistributedPipelineRunner:
         # Initialize coordinator
         self.coordinator = DistributedWorkCoordinator(worker_id=worker_id)
 
-        # Initialize monitoring
-        self.monitoring_client = get_monitoring_client(monitoring_url)
+        # Initialize monitoring with the actual worker_id from coordinator
+        self.monitoring_client = get_monitoring_client(monitoring_url, self.coordinator.worker_id)
         if disable_monitoring:
             self.monitoring_client.disable()
             logger.info("📊 Monitoring disabled")
