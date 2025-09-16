@@ -28,13 +28,11 @@ spec:
         helm:
           parameters:
           - name: args
-            value: "{--cert-dir=/tmp,--secure-port=4443,--kubelet-preferred-address-types=InternalIP\\,ExternalIP\\,Hostname,--kubelet-use-node-status-port,--metric-resolution=15s,--kubelet-insecure-tls,--kubelet-port=10250}"
+            value: "{--cert-dir=/tmp,--secure-port=4443,--kubelet-preferred-address-types=InternalIP\\,ExternalIP\\,Hostname,--kubelet-use-node-status-port,--metric-resolution=15s,--kubelet-insecure-tls}"
           - name: resources.requests.cpu
             value: "100m"
           - name: resources.requests.memory
             value: "200Mi"
-          - name: hostNetwork
-            value: "false"
       destination:
         server: '{{server}}'
         namespace: kube-system
