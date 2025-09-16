@@ -9,7 +9,7 @@ spec:
     kind: Deployment
     name: pipeline-deployment
   minReplicas: 1
-  maxReplicas: 2  # Start with 2 replicas for initial testing
+  maxReplicas: 5  # Scale up to 5 replicas to test full autoscaling
   metrics:
   # Scale based on CPU usage
   - type: Resource
