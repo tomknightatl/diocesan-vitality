@@ -1,9 +1,11 @@
 # Pipeline Monitoring and Real-time Dashboard
 
-This comprehensive guide covers monitoring the pipeline through logs, real-time dashboard, and manual script execution for debugging and development.
+This comprehensive guide covers monitoring the pipeline through logs, real-time dashboard, multi-worker support, and manual script execution for debugging and development.
 
 ## 📋 Table of Contents
 - [Real-time Dashboard](#real-time-dashboard)
+- [Multi-Worker Monitoring](#multi-worker-monitoring)
+- [API Endpoints](#api-endpoints)
 - [Kubernetes Pipeline Logs](#kubernetes-pipeline-logs)
 - [Manual Python Script Execution](#manual-python-script-execution)
 - [Local Development Monitoring](#local-development-monitoring)
@@ -16,7 +18,7 @@ This comprehensive guide covers monitoring the pipeline through logs, real-time 
 ### Overview
 The real-time monitoring dashboard provides **live operational visibility** into the Diocesan Vitality parish extraction system. It displays real-time extraction progress, system health, circuit breaker status, performance metrics, and error tracking through an intuitive web interface.
 
-**Multi-Worker Support**: The dashboard now supports monitoring multiple distributed workers with both aggregate and individual views. See [Multi-Worker Monitoring](MULTI_WORKER_MONITORING.md) for detailed information.
+**Multi-Worker Support**: The dashboard supports monitoring multiple distributed workers with both aggregate and individual views, enabling scalable monitoring for distributed pipeline deployments.
 
 ### Dashboard Access
 **Production Dashboard:** https://diocesan-vitality.diocesanvitality.org/dashboard
@@ -106,6 +108,157 @@ If you see "Dashboard disconnected", check:
    # Or test dashboard functionality
    python3 test_dashboard.py --mode extraction
    ```
+
+---
+
+## 🔧 Multi-Worker Monitoring
+
+### Overview
+The monitoring system supports both single and multi-worker deployments with two distinct modes:
+
+1. **Aggregate View** - Combined metrics from all workers (default)
+2. **Individual Worker View** - Detailed view of a specific worker
+
+### Architecture
+
+#### MonitoringManager Backend
+- **Multi-worker support**: Tracks individual worker data in `self.workers` dictionary
+- **Aggregate calculations**: Combines metrics across workers for system-wide view
+- **Backward compatibility**: Maintains single-worker functionality
+
+#### Dashboard Features
+- **Worker Selector**: Switch between aggregate view and individual workers
+- **Aggregate Metrics**: Shows combined data from all active workers
+- **Worker Status Indicators**: Color-coded badges for each worker (🟢 running, 🟡 idle, 🔴 error, ⚪ stale)
+- **Enhanced Extraction Status**: Displays active worker count and distributed progress
+
+### Worker Status Classifications
+Workers are classified based on their last update time:
+- **running**: Currently active and processing (≤1min since last update)
+- **idle**: Available but not currently processing
+- **error**: Encountered an error state
+- **stale**: No updates for >5 minutes
+
+### Usage
+
+#### Single Worker Deployment
+No changes required - existing scripts continue to work:
+
+```python
+# Standard single-worker setup
+monitoring_client = get_monitoring_client("http://localhost:8000")
+```
+
+#### Multi-Worker Deployment
+
+**1. Initialize Workers with IDs**
+```python
+import os
+from core.monitoring_client import get_monitoring_client
+
+# Generate unique worker ID
+worker_id = os.environ.get('WORKER_ID', os.environ.get('HOSTNAME'))
+
+# Initialize monitoring with worker ID
+monitoring_client = get_monitoring_client(
+    base_url="http://localhost:8000",
+    worker_id=worker_id
+)
+```
+
+**2. Context Manager Usage**
+```python
+# Extraction monitoring with worker identification
+with ExtractionMonitoring("Diocese Name", 100, worker_id="worker-pod-12345") as monitor:
+    # Extraction work here
+    monitor.update_progress(50, 45)
+```
+
+### Data Aggregation
+
+#### Extraction Status
+```python
+{
+    "status": "running",  # running if any worker active
+    "active_workers": 2,
+    "total_workers": 3,
+    "parishes_processed": 150,  # sum across workers
+    "total_parishes": 500,      # sum across workers
+    "success_rate": 87.5,       # weighted average
+    "current_diocese": "Diocese A, Diocese B"  # comma-separated
+}
+```
+
+#### Circuit Breakers
+```python
+{
+    "circuit_name": {
+        "state": "CLOSED",           # worst state wins (OPEN > HALF_OPEN > CLOSED)
+        "total_requests": 1250,      # sum across workers
+        "total_successes": 1100,     # sum across workers
+        "total_failures": 150,       # sum across workers
+        "total_blocked": 25,         # sum across workers
+        "success_rate": 88.0         # calculated from aggregated data
+    }
+}
+```
+
+### Kubernetes Configuration
+Configure workers with unique identifiers:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pipeline-workers
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+      - name: pipeline
+        env:
+        - name: WORKER_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: MONITORING_URL
+          value: "http://monitoring-service:8000"
+```
+
+### Benefits
+1. **Scalability**: Monitor unlimited number of workers
+2. **Visibility**: See both system-wide and individual worker performance
+3. **Troubleshooting**: Isolate issues to specific workers
+4. **Load Balancing**: Identify uneven work distribution
+5. **Backward Compatibility**: Existing single-worker setups continue working
+
+---
+
+## 🔌 API Endpoints
+
+### Current Monitoring API
+
+#### Worker Management
+- `GET /api/monitoring/workers` - List all workers with basic status
+- `GET /api/monitoring/worker/{worker_id}` - Get detailed worker status
+- `POST /api/monitoring/mode/{mode}` - Switch between aggregate/individual mode
+
+#### Status Updates
+- `POST /api/monitoring/worker/{worker_id}/extraction_status` - Update worker extraction status
+- `POST /api/monitoring/worker/{worker_id}/circuit_breakers` - Update worker circuit breakers
+- `POST /api/monitoring/extraction_status` - Update extraction status (single-worker compatibility)
+- `POST /api/monitoring/circuit_breakers` - Update circuit breaker status (single-worker compatibility)
+
+#### Real-time Data
+- `POST /api/monitoring/performance` - Update performance metrics
+- `POST /api/monitoring/error` - Report an error
+- `POST /api/monitoring/extraction_complete` - Report extraction completion
+- `POST /api/monitoring/log` - Send live log entry
+
+#### Monitoring Status
+- `GET /api/monitoring/status` - Get current monitoring status
+- `WS /ws/monitoring` - WebSocket endpoint for real-time updates
 
 ---
 
@@ -405,20 +558,6 @@ kubectl logs -f deployment/pipeline-deployment -n diocesan-vitality | grep -E "D
 ---
 
 ## 📊 Dashboard Integration
-
-### API Endpoints
-
-#### WebSocket
-- **`/ws/monitoring`**: WebSocket endpoint for real-time updates
-
-#### REST API
-- **`GET /api/monitoring/status`**: Get current monitoring status
-- **`POST /api/monitoring/extraction_status`**: Update extraction status
-- **`POST /api/monitoring/circuit_breakers`**: Update circuit breaker status
-- **`POST /api/monitoring/performance`**: Update performance metrics
-- **`POST /api/monitoring/error`**: Report an error
-- **`POST /api/monitoring/extraction_complete`**: Report extraction completion
-- **`POST /api/monitoring/log`**: Send live log entry
 
 ### Integration with Extraction Scripts
 

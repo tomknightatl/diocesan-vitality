@@ -361,6 +361,55 @@
 }
 
 /* Worker Status Section Styles */
+.worker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.worker-row {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.worker-row:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.worker-row.cursor-pointer:hover {
+  border-color: #0d6efd !important;
+}
+
+.worker-row .bg-primary-subtle {
+  background-color: rgba(13, 110, 253, 0.1) !important;
+}
+
+.worker-row.border-primary {
+  border-color: #0d6efd !important;
+  box-shadow: 0 0 0 0.125rem rgba(13, 110, 253, 0.25);
+}
+
+.worker-row.border-success {
+  border-color: #198754 !important;
+}
+
+.worker-row.border-secondary {
+  border-color: #6c757d !important;
+}
+
+.worker-selection-prompt hr {
+  border-color: #dee2e6;
+  opacity: 0.5;
+}
+
+.worker-selection-prompt .mx-3 {
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+  color: #6c757d !important;
+}
+
+/* Legacy worker selection styles (keeping for compatibility) */
 .worker-selection .form-check {
   cursor: pointer;
   transition: all 0.2s ease;

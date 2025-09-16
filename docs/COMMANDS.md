@@ -517,4 +517,224 @@ echo "🎉 Deployment complete! ArgoCD will sync automatically."
 echo "📊 Monitor with: kubectl get pods -n diocesan-vitality -w"
 ```
 
+---
+
+## Testing Commands
+
+### Running Tests
+
+**Run All Tests:**
+```bash
+# Run complete test suite
+pytest
+
+# Run with verbose output
+pytest -v
+
+# Run specific test file
+pytest tests/test_circuit_breaker.py
+
+# Run specific test function
+pytest tests/test_utils.py::test_normalize_url_join
+```
+
+**Test Categories:**
+```bash
+# Core functionality tests
+pytest tests/test_utils.py tests/test_extractors.py
+
+# Monitoring and dashboard tests
+pytest tests/test_monitoring.py tests/test_dashboard.py
+
+# Async and performance tests
+pytest tests/test_async_logic.py tests/test_async_extraction.py
+
+# Circuit breaker and reliability tests
+pytest tests/test_circuit_breaker.py tests/test_dead_mans_switch.py
+
+# AI and extraction tests
+pytest tests/test_ai_schedule_extraction.py tests/test_ai_fallback_extractor.py
+
+# Data validation tests
+pytest tests/test_parish_validation.py tests/test_deduplication.py
+```
+
+### Dashboard and Monitoring Testing
+
+**Dashboard Functionality Testing:**
+```bash
+# Basic monitoring test
+python test_dashboard.py --mode basic
+
+# Full extraction simulation for dashboard testing
+python test_dashboard.py --mode extraction
+
+# Continuous monitoring demo
+python test_dashboard.py --mode continuous
+```
+
+**Circuit Breaker Testing:**
+```bash
+# Test circuit breaker functionality
+python test_circuit_breaker.py
+
+# Test with different failure scenarios
+pytest tests/test_circuit_breaker.py -v
+```
+
+### Async Processing Testing
+
+**Async Logic Testing:**
+```bash
+# Test async concurrent processing logic
+python test_async_logic.py
+
+# Test async extraction system (requires WebDriver)
+python test_async_extraction.py
+
+# Run async-specific tests
+pytest tests/test_async_*.py -v
+```
+
+### Integration Testing
+
+**Database Testing:**
+```bash
+# Test database connection
+python -c "from core.db import get_supabase_client; print('DB:', get_supabase_client().table('Dioceses').select('*').limit(1).execute())"
+
+# Test distributed coordination (if using scaling)
+python -c "from core.distributed_work_coordinator import DistributedWorkCoordinator; coordinator = DistributedWorkCoordinator(); print('✅ Coordination tables accessible')"
+```
+
+**API Testing:**
+```bash
+# Test backend endpoints
+curl http://localhost:8000/api/dioceses
+curl http://localhost:8000/api/monitoring/status
+
+# Test WebSocket connection (requires wscat: npm install -g wscat)
+wscat -c ws://localhost:8000/ws/monitoring
+```
+
+**End-to-End Pipeline Testing:**
+```bash
+# Test with minimal data
+python run_pipeline.py --diocese_id 123 --max_parishes_per_diocese 5 --skip_dioceses
+
+# Test individual pipeline components
+python extract_dioceses.py --max_dioceses 2
+python find_parishes.py --diocese_id 123
+python async_extract_parishes.py --diocese_id 123 --num_parishes_per_diocese 5
+```
+
+### Performance Testing
+
+**Async Performance Comparison:**
+```bash
+# Sequential extraction (baseline)
+time python extract_parishes.py --diocese_id 123 --num_parishes_per_diocese 20
+
+# Concurrent extraction (60% faster expected)
+time python async_extract_parishes.py --diocese_id 123 --num_parishes_per_diocese 20 --pool_size 4
+
+# High-performance configuration
+time python async_extract_parishes.py --diocese_id 123 --num_parishes_per_diocese 50 --pool_size 6 --batch_size 12
+```
+
+### Code Quality Testing
+
+**Linting and Formatting:**
+```bash
+# Run linting (if configured)
+python -m flake8 .
+
+# Format code (if configured)
+python -m black .
+
+# Type checking (if configured)
+python -m mypy .
+```
+
+### Test Coverage
+
+**Coverage Analysis:**
+```bash
+# Install coverage tool
+pip install pytest-cov
+
+# Run tests with coverage
+pytest --cov=. --cov-report=html
+
+# View coverage report
+open htmlcov/index.html  # Or browse to the file
+```
+
+### Testing Best Practices
+
+1. **Isolated Tests**: Each test should be independent and not rely on external state
+2. **Mock External Services**: Use `pytest-mock` for database and API interactions
+3. **Test Edge Cases**: Include tests for error conditions and boundary cases
+4. **Descriptive Names**: Use clear, descriptive test function names
+5. **Setup/Teardown**: Use pytest fixtures for common test setup
+
+### Test File Organization
+
+- **tests/test_utils.py**: Core utility function tests
+- **tests/test_extractors.py**: Parish extraction logic tests
+- **tests/test_monitoring.py**: Monitoring system tests
+- **tests/test_dashboard.py**: Dashboard functionality tests
+- **tests/test_async_*.py**: Async processing tests
+- **tests/test_circuit_breaker.py**: Circuit breaker pattern tests
+- **tests/test_ai_*.py**: AI integration tests
+- **tests/test_*_validation.py**: Data validation tests
+
+**→ See [tests/TESTING.md](../tests/TESTING.md) for detailed testing framework documentation.**
+
+---
+
+## Async Performance Optimization
+
+### High-Performance Extraction
+
+The async extraction system provides **60% faster processing** through concurrent processing, connection pooling, and intelligent batching.
+
+**Quick Performance Examples:**
+```bash
+# Standard async extraction
+python async_extract_parishes.py --diocese_id 2024 --num_parishes_per_diocese 20
+
+# High-performance configuration (large dioceses)
+python async_extract_parishes.py \
+  --diocese_id 2024 \
+  --num_parishes_per_diocese 50 \
+  --pool_size 6 \
+  --batch_size 12
+
+# Maximum performance (all parishes)
+python async_extract_parishes.py \
+  --diocese_id 2024 \
+  --num_parishes_per_diocese 0 \
+  --pool_size 8 \
+  --batch_size 15
+```
+
+### Performance Parameters
+
+- **`--pool_size`**: WebDriver instances (2-8, optimal: 4-6)
+- **`--batch_size`**: Concurrent parish requests (8-15, optimal: 10-12)
+- **`--max_concurrent_dioceses`**: Parallel diocese processing (1-3)
+
+### Performance Comparison Testing
+
+```bash
+# Sequential baseline
+time python extract_parishes.py --diocese_id 2024 --num_parishes_per_diocese 20
+
+# Async comparison (expect 60% improvement)
+time python async_extract_parishes.py --diocese_id 2024 --num_parishes_per_diocese 20
+```
+
+**→ See [Async Performance Guide](../docs/ASYNC_PERFORMANCE_GUIDE.md) for comprehensive optimization strategies and detailed parameter tuning.**
+
 All scripts are well-structured with clear purposes in the data extraction pipeline.
