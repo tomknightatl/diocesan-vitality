@@ -198,111 +198,42 @@ export SEARCH_CX_Diocesan Vitality="your-search-cx"
 
 ### Running Individual Pipeline Components
 
-#### 1. Diocese Extraction
-```bash
-# Extract all dioceses
-python extract_dioceses.py --max_dioceses 0
+For comprehensive command examples and parameters for all scripts, see the **[📝 Commands Guide](COMMANDS.md)**.
 
-# Extract limited number of dioceses
+**Quick Examples:**
+```bash
+# Diocese extraction
 python extract_dioceses.py --max_dioceses 5
 
-# View progress with verbose output
-python extract_dioceses.py --max_dioceses 10
-```
-
-#### 2. Parish Directory Discovery
-```bash
-# Find parish directories for all dioceses
-python find_parishes.py --max_dioceses_to_process 0
-
-# Process specific diocese
+# Parish directory discovery
 python find_parishes.py --diocese_id 123
 
-# Limit processing to 3 dioceses
-python find_parishes.py --max_dioceses_to_process 3
-```
+# High-performance parish extraction
+python async_extract_parishes.py --diocese_id 123 --pool_size 6 --batch_size 12
 
-#### 3. Parish Data Extraction
-
-**Sequential Processing (Standard):**
-```bash
-# Extract from specific diocese
-python extract_parishes.py --diocese_id 123 --num_parishes_per_diocese 25
-
-# Extract from all dioceses (limited parishes)
-python extract_parishes.py --num_parishes_per_diocese 10
-
-# Extract all parishes (no limit)
-python extract_parishes.py --num_parishes_per_diocese 0
-```
-
-**Concurrent Processing (60% Faster):**
-```bash
-# High-performance extraction
-python async_extract_parishes.py \
-  --diocese_id 123 \
-  --num_parishes_per_diocese 50 \
-  --pool_size 6 \
-  --batch_size 12
-
-# Maximum performance configuration
-python async_extract_parishes.py \
-  --num_parishes_per_diocese 0 \
-  --pool_size 8 \
-  --batch_size 15 \
-  --max_concurrent_dioceses 3
-```
-
-#### 4. Schedule Extraction
-```bash
-# Extract schedules from first 100 parishes
+# Schedule extraction
 python extract_schedule.py --num_parishes 100
-
-# Extract from specific parish
-python extract_schedule.py --parish_id 456
-
-# Extract from all parishes
-python extract_schedule.py --num_parishes 0
 ```
+
+**→ See [Commands Guide](COMMANDS.md) for complete parameters and usage examples.**
 
 ### Complete Pipeline Execution
 
-#### Standard Pipeline (No Monitoring)
-```bash
-# Basic pipeline run
-python run_pipeline.py \
-  --max_parishes_per_diocese 50 \
-  --num_parishes_for_schedule 100
+For comprehensive pipeline execution examples, see the **[📝 Commands Guide](COMMANDS.md)**.
 
-# Skip specific steps
-python run_pipeline.py \
-  --skip_schedules \
-  --max_parishes_per_diocese 25
+**Quick Examples:**
+```bash
+# Basic pipeline with monitoring
+python run_pipeline.py --max_parishes_per_diocese 50 --num_parishes_for_schedule 100
+
+# Background execution
+nohup python run_pipeline.py --max_parishes_per_diocese 25 > pipeline.log 2>&1 &
 
 # Process specific diocese
-python run_pipeline.py \
-  --diocese_id 123 \
-  --max_parishes_per_diocese 0
+python run_pipeline.py --diocese_id 123 --max_parishes_per_diocese 0
 ```
 
-#### Monitored Pipeline (With Dashboard Integration)
-```bash
-# Monitored pipeline with dashboard updates
-python run_pipeline.py \
-  --max_parishes_per_diocese 50 \
-  --num_parishes_for_schedule 100
-
-# Background execution with monitoring
-nohup python run_pipeline.py \
-  --max_parishes_per_diocese 50 \
-  --num_parishes_for_schedule 100 \
-  > pipeline.log 2>&1 &
-
-# Disable monitoring (fallback mode)
-python run_pipeline.py \
-  --disable_monitoring \
-  --max_parishes_per_diocese 25
-```
+**→ See [Commands Guide](COMMANDS.md) for complete pipeline execution options.**
 
 ### Testing Scripts
 
