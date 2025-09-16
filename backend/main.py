@@ -27,6 +27,11 @@ class MonitoringManager:
         self.extraction_timeout = 300  # 5 minutes without updates = stale
         self.circuit_breaker_timeout = 600  # 10 minutes without updates = stale
 
+        # Multi-worker support: worker_id -> worker_data
+        self.workers = {}  # worker_id -> worker monitoring data
+        self.aggregate_mode = True  # Default to aggregate view
+
+        # Legacy single-worker data (for backward compatibility)
         self.extraction_status = {
             "status": "idle",
             "current_diocese": None,
@@ -244,6 +249,192 @@ class MonitoringManager:
         """Get circuit breakers with staleness check"""
         self.check_and_reset_stale_data()
         return self.circuit_breakers
+
+    # Multi-worker support methods
+    def init_worker(self, worker_id: str):
+        """Initialize a new worker in the monitoring system"""
+        if worker_id not in self.workers:
+            self.workers[worker_id] = {
+                "worker_id": worker_id,
+                "extraction_status": {
+                    "status": "idle",
+                    "current_diocese": None,
+                    "parishes_processed": 0,
+                    "total_parishes": 0,
+                    "success_rate": 0,
+                    "started_at": None,
+                    "progress_percentage": 0,
+                    "estimated_completion": None
+                },
+                "circuit_breakers": {},
+                "performance_metrics": {
+                    "parishes_per_minute": 0,
+                    "queue_size": 0,
+                    "pool_utilization": 0,
+                    "total_requests": 0,
+                    "successful_requests": 0
+                },
+                "last_updated": time.time(),
+                "recent_errors": [],
+                "extraction_history": []
+            }
+            print(f"📊 Initialized monitoring for worker: {worker_id}")
+
+    async def update_worker_extraction_status(self, worker_id: str, status_data: Dict):
+        """Update extraction status for a specific worker"""
+        self.init_worker(worker_id)
+        self.workers[worker_id]["extraction_status"].update(status_data)
+        self.workers[worker_id]["last_updated"] = time.time()
+
+        # Also update legacy data for backward compatibility with single worker
+        if not self.aggregate_mode:
+            self.extraction_status.update(status_data)
+            self.extraction_last_updated = time.time()
+
+        # Broadcast worker-specific update
+        await self.broadcast({
+            "type": "worker_extraction_status",
+            "payload": {
+                "worker_id": worker_id,
+                "status": self.workers[worker_id]["extraction_status"]
+            }
+        })
+
+        # If in aggregate mode, also broadcast aggregate data
+        if self.aggregate_mode:
+            aggregate_status = self.get_aggregate_extraction_status()
+            await self.broadcast({
+                "type": "extraction_status",
+                "payload": aggregate_status
+            })
+
+    async def update_worker_circuit_breakers(self, worker_id: str, circuit_data: Dict):
+        """Update circuit breaker status for a specific worker"""
+        self.init_worker(worker_id)
+        self.workers[worker_id]["circuit_breakers"].update(circuit_data)
+        self.workers[worker_id]["last_updated"] = time.time()
+
+        # Broadcast aggregate circuit breaker data
+        aggregate_circuits = self.get_aggregate_circuit_breakers()
+        await self.broadcast({
+            "type": "circuit_breaker_status",
+            "payload": aggregate_circuits
+        })
+
+    def get_aggregate_extraction_status(self):
+        """Calculate aggregate extraction status across all workers"""
+        if not self.workers:
+            return self.extraction_status
+
+        active_workers = [w for w in self.workers.values()
+                         if w["extraction_status"]["status"] in ["running", "paused"]]
+
+        if not active_workers:
+            return {
+                "status": "idle",
+                "current_diocese": None,
+                "parishes_processed": 0,
+                "total_parishes": 0,
+                "success_rate": 0,
+                "started_at": None,
+                "progress_percentage": 0,
+                "estimated_completion": None,
+                "active_workers": len([w for w in self.workers.values()
+                                     if w["extraction_status"]["status"] != "idle"])
+            }
+
+        # Aggregate data from active workers
+        total_parishes_processed = sum(w["extraction_status"]["parishes_processed"] for w in active_workers)
+        total_parishes = sum(w["extraction_status"]["total_parishes"] for w in active_workers)
+
+        # Calculate weighted success rate
+        success_rates = [w["extraction_status"]["success_rate"] for w in active_workers if w["extraction_status"]["parishes_processed"] > 0]
+        avg_success_rate = sum(success_rates) / len(success_rates) if success_rates else 0
+
+        # Get earliest start time
+        start_times = [w["extraction_status"]["started_at"] for w in active_workers if w["extraction_status"]["started_at"]]
+        earliest_start = min(start_times) if start_times else None
+
+        # Get current dioceses being processed
+        current_dioceses = [w["extraction_status"]["current_diocese"] for w in active_workers
+                           if w["extraction_status"]["current_diocese"]]
+
+        return {
+            "status": "running" if active_workers else "idle",
+            "current_diocese": ", ".join(current_dioceses) if current_dioceses else None,
+            "parishes_processed": total_parishes_processed,
+            "total_parishes": total_parishes,
+            "success_rate": round(avg_success_rate, 1),
+            "started_at": earliest_start,
+            "progress_percentage": (total_parishes_processed / max(total_parishes, 1)) * 100 if total_parishes > 0 else 0,
+            "estimated_completion": None,  # Could be calculated based on processing rate
+            "active_workers": len(active_workers),
+            "total_workers": len(self.workers)
+        }
+
+    def get_aggregate_circuit_breakers(self):
+        """Aggregate circuit breaker data across all workers"""
+        if not self.workers:
+            return self.circuit_breakers
+
+        aggregate_circuits = {}
+
+        # Collect all unique circuit breaker names
+        all_circuit_names = set()
+        for worker in self.workers.values():
+            all_circuit_names.update(worker["circuit_breakers"].keys())
+
+        # Aggregate data for each circuit breaker
+        for circuit_name in all_circuit_names:
+            total_requests = 0
+            total_successes = 0
+            total_failures = 0
+            total_blocked = 0
+            states = []
+
+            for worker in self.workers.values():
+                if circuit_name in worker["circuit_breakers"]:
+                    cb = worker["circuit_breakers"][circuit_name]
+                    total_requests += cb.get("total_requests", 0)
+                    total_successes += cb.get("total_successes", 0)
+                    total_failures += cb.get("total_failures", 0)
+                    total_blocked += cb.get("total_blocked", 0)
+                    states.append(cb.get("state", "CLOSED"))
+
+            # Determine aggregate state (worst state wins)
+            if "OPEN" in states:
+                aggregate_state = "OPEN"
+            elif "HALF_OPEN" in states:
+                aggregate_state = "HALF_OPEN"
+            else:
+                aggregate_state = "CLOSED"
+
+            # Calculate success rate
+            success_rate = (total_successes / max(total_requests, 1)) * 100 if total_requests > 0 else 0
+
+            aggregate_circuits[circuit_name] = {
+                "state": aggregate_state,
+                "total_requests": total_requests,
+                "total_successes": total_successes,
+                "total_failures": total_failures,
+                "total_blocked": total_blocked,
+                "success_rate": round(success_rate, 1)
+            }
+
+        return aggregate_circuits
+
+    def get_worker_list(self):
+        """Get list of all workers with their basic status"""
+        return [
+            {
+                "worker_id": worker_id,
+                "status": worker_data["extraction_status"]["status"],
+                "current_diocese": worker_data["extraction_status"]["current_diocese"],
+                "parishes_processed": worker_data["extraction_status"]["parishes_processed"],
+                "last_updated": worker_data["last_updated"]
+            }
+            for worker_id, worker_data in self.workers.items()
+        ]
 
 # Global monitoring manager instance
 monitoring_manager = MonitoringManager()
@@ -907,6 +1098,66 @@ async def send_log_endpoint(log_data: dict):
     try:
         await monitoring_manager.send_live_log(log_data)
         return {"status": "success"}
+    except Exception as e:
+        return {"error": str(e)}
+
+# Multi-worker endpoints
+@app.post("/api/monitoring/worker/{worker_id}/extraction_status")
+async def update_worker_extraction_status(worker_id: str, status_data: dict):
+    """Update extraction status for a specific worker"""
+    try:
+        await monitoring_manager.update_worker_extraction_status(worker_id, status_data)
+        return {"status": "success"}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/monitoring/worker/{worker_id}/circuit_breakers")
+async def update_worker_circuit_breakers(worker_id: str, circuit_data: dict):
+    """Update circuit breaker status for a specific worker"""
+    try:
+        await monitoring_manager.update_worker_circuit_breakers(worker_id, circuit_data)
+        return {"status": "success"}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/monitoring/workers")
+async def get_workers():
+    """Get list of all workers"""
+    try:
+        return {
+            "workers": monitoring_manager.get_worker_list(),
+            "aggregate_mode": monitoring_manager.aggregate_mode
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/monitoring/worker/{worker_id}")
+async def get_worker_details(worker_id: str):
+    """Get detailed status for a specific worker"""
+    try:
+        if worker_id not in monitoring_manager.workers:
+            raise HTTPException(status_code=404, detail="Worker not found")
+
+        worker_data = monitoring_manager.workers[worker_id]
+        return {
+            "worker_id": worker_id,
+            "extraction_status": worker_data["extraction_status"],
+            "circuit_breakers": worker_data["circuit_breakers"],
+            "performance_metrics": worker_data["performance_metrics"],
+            "last_updated": worker_data["last_updated"]
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/monitoring/mode/{mode}")
+async def set_monitoring_mode(mode: str):
+    """Switch between aggregate and individual worker view"""
+    try:
+        if mode not in ["aggregate", "individual"]:
+            raise HTTPException(status_code=400, detail="Mode must be 'aggregate' or 'individual'")
+
+        monitoring_manager.aggregate_mode = (mode == "aggregate")
+        return {"status": "success", "mode": mode}
     except Exception as e:
         return {"error": str(e)}
 

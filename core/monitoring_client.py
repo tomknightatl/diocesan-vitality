@@ -19,13 +19,17 @@ class MonitoringClient:
     Provides easy integration for async extraction scripts.
     """
     
-    def __init__(self, base_url: str = "http://localhost:8000"):
+    def __init__(self, base_url: str = "http://localhost:8000", worker_id: Optional[str] = None):
         self.base_url = base_url.rstrip('/')
         self.session = requests.Session()
         self.session.timeout = 5  # 5 second timeout for monitoring calls
         self.enabled = True
-        
-        logger.info(f"🖥️ Monitoring client initialized: {base_url}")
+        self.worker_id = worker_id
+
+        if worker_id:
+            logger.info(f"🖥️ Monitoring client initialized for worker {worker_id}: {base_url}")
+        else:
+            logger.info(f"🖥️ Monitoring client initialized: {base_url}")
     
     def disable(self):
         """Disable monitoring (useful for testing or standalone operation)"""
@@ -41,9 +45,14 @@ class MonitoringClient:
         """Make monitoring request with error handling"""
         if not self.enabled:
             return True
-        
+
         try:
-            url = f"{self.base_url}/api/monitoring{endpoint}"
+            # Use worker-specific endpoint if worker_id is set
+            if self.worker_id and endpoint in ["/extraction_status", "/circuit_breakers"]:
+                url = f"{self.base_url}/api/monitoring/worker/{self.worker_id}{endpoint}"
+            else:
+                url = f"{self.base_url}/api/monitoring{endpoint}"
+
             response = self.session.post(url, json=data)
             response.raise_for_status()
             return True
@@ -242,13 +251,13 @@ class MonitoringClient:
 _monitoring_client = None
 
 
-def get_monitoring_client(base_url: str = "http://localhost:8000") -> MonitoringClient:
+def get_monitoring_client(base_url: str = "http://localhost:8000", worker_id: Optional[str] = None) -> MonitoringClient:
     """Get or create the global monitoring client instance"""
     global _monitoring_client
-    
+
     if _monitoring_client is None:
-        _monitoring_client = MonitoringClient(base_url)
-    
+        _monitoring_client = MonitoringClient(base_url, worker_id)
+
     return _monitoring_client
 
 
@@ -268,10 +277,10 @@ def enable_monitoring():
 class ExtractionMonitoring:
     """Context manager for automatic extraction monitoring"""
     
-    def __init__(self, diocese_name: str, total_parishes: int = 0, base_url: str = "http://localhost:8000"):
+    def __init__(self, diocese_name: str, total_parishes: int = 0, base_url: str = "http://localhost:8000", worker_id: Optional[str] = None):
         self.diocese_name = diocese_name
         self.total_parishes = total_parishes
-        self.client = get_monitoring_client(base_url)
+        self.client = get_monitoring_client(base_url, worker_id)
         self.start_time = None
         self.parishes_processed = 0
         self.successful_parishes = 0

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Container, Row, Col, Card, Badge, Table, Alert, Spinner, Button } from 'react-bootstrap';
+import { Container, Row, Col, Card, Badge, Table, Alert, Spinner, Button, Dropdown } from 'react-bootstrap';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -14,6 +14,11 @@ const Dashboard = () => {
   const [extractionHistory, setExtractionHistory] = useState([]);
   const [liveLog, setLiveLog] = useState([]);
   const [pipelineStatus, setPipelineStatus] = useState(null);
+
+  // Multi-worker support
+  const [workers, setWorkers] = useState([]);
+  const [selectedWorker, setSelectedWorker] = useState('aggregate');
+  const [aggregateMode, setAggregateMode] = useState(true);
   
   const wsRef = useRef(null);
   const maxLogEntries = 100;
@@ -22,12 +27,71 @@ const Dashboard = () => {
   // WebSocket connection management
   useEffect(() => {
     connectWebSocket();
+    fetchWorkers(); // Fetch initial worker list
     return () => {
       if (wsRef.current) {
         wsRef.current.close();
       }
     };
   }, []);
+
+  // Fetch worker list
+  const fetchWorkers = async () => {
+    try {
+      const response = await fetch(`${getBackendHost()}/api/monitoring/workers`);
+      const data = await response.json();
+      if (data.workers) {
+        setWorkers(data.workers);
+        setAggregateMode(data.aggregate_mode);
+      }
+    } catch (error) {
+      console.error('Error fetching workers:', error);
+    }
+  };
+
+  // Get backend host from current hostname
+  const getBackendHost = () => {
+    const hostname = window.location.hostname;
+    switch (hostname) {
+      case 'localhost':
+      case '127.0.0.1':
+        return 'http://localhost:8000';
+      case 'usccb.diocesevitality.org':
+      case 'diocesanvitality.org':
+        return 'https://api.diocesanvitality.org';
+      default:
+        return 'https://api.diocesanvitality.org';
+    }
+  };
+
+  // Handle worker selection
+  const handleWorkerSelect = async (workerId) => {
+    setSelectedWorker(workerId);
+    if (workerId === 'aggregate') {
+      // Switch to aggregate mode
+      try {
+        await fetch(`${getBackendHost()}/api/monitoring/mode/aggregate`, { method: 'POST' });
+        setAggregateMode(true);
+      } catch (error) {
+        console.error('Error setting aggregate mode:', error);
+      }
+    } else {
+      // Fetch specific worker data
+      try {
+        await fetch(`${getBackendHost()}/api/monitoring/mode/individual`, { method: 'POST' });
+        setAggregateMode(false);
+
+        const response = await fetch(`${getBackendHost()}/api/monitoring/worker/${workerId}`);
+        const workerData = await response.json();
+        if (!workerData.error) {
+          setExtractionStatus(workerData.extraction_status);
+          setCircuitBreakers(workerData.circuit_breakers);
+        }
+      } catch (error) {
+        console.error('Error fetching worker data:', error);
+      }
+    }
+  };
 
   const connectWebSocket = () => {
     try {
@@ -254,11 +318,43 @@ const Dashboard = () => {
           <div className="d-flex justify-content-between align-items-center">
             <h2>Current Health of Data Collection Servers</h2>
             <div className="d-flex align-items-center">
+              {workers.length > 0 && (
+                <Dropdown className="me-3">
+                  <Dropdown.Toggle variant="outline-secondary" size="sm">
+                    📊 {selectedWorker === 'aggregate' ? 'All Workers' : `Worker: ${selectedWorker}`}
+                  </Dropdown.Toggle>
+                  <Dropdown.Menu>
+                    <Dropdown.Item
+                      active={selectedWorker === 'aggregate'}
+                      onClick={() => handleWorkerSelect('aggregate')}
+                    >
+                      📈 Aggregate View ({workers.length} workers)
+                    </Dropdown.Item>
+                    <Dropdown.Divider />
+                    {workers.map(worker => (
+                      <Dropdown.Item
+                        key={worker.worker_id}
+                        active={selectedWorker === worker.worker_id}
+                        onClick={() => handleWorkerSelect(worker.worker_id)}
+                      >
+                        🔧 {worker.worker_id}
+                        <Badge
+                          bg={worker.status === 'running' ? 'success' :
+                              worker.status === 'idle' ? 'secondary' : 'warning'}
+                          className="ms-2"
+                        >
+                          {worker.status}
+                        </Badge>
+                      </Dropdown.Item>
+                    ))}
+                  </Dropdown.Menu>
+                </Dropdown>
+              )}
               <Badge bg={connected ? 'success' : 'danger'} className="me-2">
                 {connected ? '🟢 Connected' : '🔴 Disconnected'}
               </Badge>
-              <Button 
-                variant="outline-primary" 
+              <Button
+                variant="outline-primary"
                 size="sm"
                 onClick={() => window.location.reload()}
               >
@@ -321,6 +417,39 @@ const Dashboard = () => {
                   <small className="text-muted">
                     <i className="fas fa-exclamation-triangle"></i> {extractionStatus.stale_reason}
                   </small>
+                )}
+                {extractionStatus && aggregateMode && extractionStatus.active_workers !== undefined && (
+                  <div className="mt-2">
+                    <small className="text-muted">
+                      <div>
+                        <strong>Active Workers:</strong> {extractionStatus.active_workers}/{extractionStatus.total_workers}
+                      </div>
+                      {extractionStatus.current_diocese && (
+                        <div>
+                          <strong>Processing:</strong> {extractionStatus.current_diocese}
+                        </div>
+                      )}
+                      {extractionStatus.parishes_processed > 0 && (
+                        <div>
+                          <strong>Progress:</strong> {extractionStatus.parishes_processed}/{extractionStatus.total_parishes} parishes
+                        </div>
+                      )}
+                    </small>
+                  </div>
+                )}
+                {extractionStatus && !aggregateMode && selectedWorker !== 'aggregate' && (
+                  <div className="mt-2">
+                    <small className="text-muted">
+                      <div>
+                        <strong>Worker:</strong> {selectedWorker}
+                      </div>
+                      {extractionStatus.current_diocese && (
+                        <div>
+                          <strong>Diocese:</strong> {extractionStatus.current_diocese}
+                        </div>
+                      )}
+                    </small>
+                  </div>
                 )}
               </div>
             </Card.Body>
