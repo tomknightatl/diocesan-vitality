@@ -4,49 +4,116 @@ This guide provides everything you need to develop and test the Diocesan Vitalit
 
 ## 🚀 Quick Start
 
-For complete setup instructions, see the main **[Getting Started section in README.md](../README.md#getting-started)**.
+### Prerequisites
+- **Python 3.12+** and **Node.js 20+**
+- **Google Chrome** browser installed
+- **API Keys**: Supabase, Google Gemini AI, Google Custom Search
 
-## 📋 Prerequisites
+### Complete Setup (5 minutes)
 
-- Python 3.12+
-- Node.js 20+
-- Chrome browser (for Selenium WebDriver)
-- Active internet connection
-- Valid API keys (see [Environment Setup](../README.md#environment-setup))
+1. **Clone and Setup Environment**
+   ```bash
+   git clone https://github.com/your-repo/diocesan-vitality.git
+   cd diocesan-vitality
 
-## 🔧 Development Setup
+   # Create virtual environment
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows: .\venv\Scripts\activate
 
-### 1. Environment Setup
-Follow the **[Environment Setup](../README.md#environment-setup)** section in the main README.
+   # Install dependencies
+   pip install -r requirements.txt
+   ```
 
-### 2. Start Development Services
+2. **Configure Environment Variables**
+   ```bash
+   # Copy environment template
+   cp .env.example .env
 
-**Terminal 1 - Backend:**
+   # Edit .env file with your API keys:
+   # SUPABASE_URL="your_supabase_url"
+   # SUPABASE_KEY="your_supabase_key"
+   # GENAI_API_KEY="your_google_genai_api_key"
+   # SEARCH_API_KEY="your_google_search_api_key"
+   # SEARCH_CX="your_google_search_engine_id"
+   ```
+
+3. **Start All Services**
+   ```bash
+   # Terminal 1 - Backend
+   cd backend && uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+   # Terminal 2 - Frontend
+   cd frontend && npm install && npm run dev
+
+   # Terminal 3 - Pipeline
+   source venv/bin/activate
+   python run_pipeline.py --max_parishes_per_diocese 5
+   ```
+
+4. **Access Applications**
+   - **Dashboard**: http://localhost:5173
+   - **Backend API**: http://localhost:8000/docs
+
+## 📋 Detailed Prerequisites
+
+- **Python 3.12+**: Required for pipeline scripts and backend
+- **Node.js 20+**: Required for frontend development
+- **Chrome Browser**: Selenium WebDriver requires Chrome for automated browsing
+- **API Keys**: Required for cloud services:
+  - **Supabase**: Database access (URL + Service Role Key)
+  - **Google Gemini AI**: Content analysis and parish directory detection
+  - **Google Custom Search**: Enhanced search capabilities
+- **Active Internet Connection**: Required for web scraping and API calls
+
+## 🔧 Detailed Development Setup
+
+### Environment Variables Configuration
+
+Create a `.env` file in the project root with the following structure:
+
 ```bash
-cd backend
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
-→ Backend API available at http://localhost:8000
+# Database Configuration
+SUPABASE_URL="https://your-project.supabase.co"
+SUPABASE_KEY="your_supabase_service_role_key"
 
-**Terminal 2 - Frontend:**
+# AI Integration
+GENAI_API_KEY="your_google_gemini_api_key"
+
+# Search Integration
+SEARCH_API_KEY="your_google_custom_search_api_key"
+SEARCH_CX="your_custom_search_engine_id"
+
+# Docker Hub (for deployment)
+DOCKER_USERNAME="your_dockerhub_username"
+DOCKER_PASSWORD="your_dockerhub_password_or_token"
+```
+
+### Getting API Keys
+
+**1. Supabase Setup:**
+- Create account at [supabase.com](https://supabase.com)
+- Create new project → Get URL and service role key from Settings > API
+
+**2. Google Gemini AI:**
+- Visit [Google AI Studio](https://aistudio.google.com)
+- Create API key for Gemini model access
+
+**3. Google Custom Search:**
+- Create project in [Google Cloud Console](https://console.cloud.google.com)
+- Enable Custom Search API → Create credentials
+- Setup Custom Search Engine at [cse.google.com](https://cse.google.com)
+
+### Chrome Installation
+
+**Linux (Ubuntu/Debian):**
 ```bash
-cd frontend
-npm install  # First time only
-npm run dev
+wget -O- https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+sudo apt update && sudo apt install google-chrome-stable
 ```
-→ Frontend UI available at http://localhost:5173
 
-**Terminal 3 - Pipeline:**
-```bash
-source venv/bin/activate
-
-# Full pipeline with monitoring
-python run_pipeline.py --monitoring_url http://localhost:8000 \
-  --max_parishes_per_diocese 10 --num_parishes_for_schedule 5
-
-# Quick test with single diocese
-python run_pipeline.py --diocese_id 123 --max_parishes_per_diocese 5
-```
+**Other Platforms:**
+Download from [google.com/chrome](https://www.google.com/chrome/)
 
 ## 🧪 Testing & Development Commands
 

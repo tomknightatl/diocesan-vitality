@@ -369,8 +369,7 @@ const Dashboard = () => {
       )}
 
       {/* Worker Status Section */}
-      {workers.length > 0 && (
-        <Row className="mb-4">
+      <Row className="mb-4">
           <Col>
             <Card>
               <Card.Body>
@@ -471,6 +470,17 @@ const Dashboard = () => {
                         </Row>
                       </div>
                     ))}
+
+                    {/* No Workers Message */}
+                    {workers.filter(w => w.status === 'running').length === 0 && (
+                      <div className="text-center py-4">
+                        <div className="text-muted">
+                          <i className="fas fa-info-circle mb-2" style={{ fontSize: '2em' }}></i>
+                          <h6>No Active Workers</h6>
+                          <p className="mb-0">No pipeline workers are currently running. Workers will appear here when the pipeline starts.</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -552,7 +562,6 @@ const Dashboard = () => {
             </Card>
           </Col>
         </Row>
-      )}
 
       {/* System Health Overview */}
       <Row className="mb-4">

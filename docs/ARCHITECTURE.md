@@ -100,7 +100,16 @@ The United States Conference of Catholic Bishops (Diocesan Vitality) Data Projec
 
 ### 1. Data Extraction Pipeline
 
-The pipeline consists of four sequential stages:
+The pipeline consists of four sequential stages with both standard and high-performance processing options:
+
+#### Pipeline Workflow
+1. **Diocese Collection** → Scrapes the official source for basic diocese information
+2. **Parish Directory Discovery** → AI-powered detection of parish listing pages
+3. **Parish Extraction** → Advanced scraping with platform-specific extractors
+4. **Data Enhancement** → Extracts detailed parish information including addresses, contact info, and schedules
+5. **Quality Assurance** → Validation and deduplication of extracted data
+
+#### Pipeline Stages
 
 #### Stage 1: Extract Dioceses (`extract_dioceses.py`)
 - Scrapes the official Diocesan Vitality website

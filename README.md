@@ -124,94 +124,32 @@ Our investment in respectful automation reflects a core commitment to **ethical 
 
 ## Project Architecture
 
-### Core Components
+The system uses a modern, scalable architecture designed for automated data collection and real-time monitoring:
 
-- **Python Scripts**: Primary execution environment for data collection and processing
-- **Supabase Database**: Cloud-hosted PostgreSQL database for scalable data storage
-- **Selenium WebDriver**: Handles dynamic content and JavaScript-heavy websites
-- **Google Gemini AI**: Provides intelligent content analysis and link classification
-- **Pattern Detection System**: Automatically identifies website types and optimal extraction strategies
+- **Python Pipeline**: Core extraction engine with AI-powered content analysis
+- **React Dashboard**: Real-time monitoring interface with WebSocket updates
+- **Kubernetes Deployment**: Production-ready containerized infrastructure
+- **Supabase Database**: Cloud PostgreSQL with comprehensive schema
 
-### Data Pipeline
+**→ See [Architecture Documentation](docs/ARCHITECTURE.md) for detailed technical information.**
 
-1. **Diocese Collection** → Scrapes the official source for basic diocese information
-2. **Parish Directory Discovery** → AI-powered detection of parish listing pages
-3. **Parish Extraction** → Advanced scraping with platform-specific extractors
-4. **Data Enhancement** → Extracts detailed parish information including addresses, contact info, and schedules
-5. **Quality Assurance** → Validation and deduplication of extracted data
+## Project Structure
 
-## Project Files
+### Key Components
+- **`run_pipeline.py`**: Main orchestration script for the entire extraction pipeline
+- **`async_extract_parishes.py`**: High-performance concurrent extraction (60% faster)
+- **`core/`**: Essential utilities for database, WebDriver, and circuit breaker management
+- **`frontend/`**: React dashboard with real-time monitoring
+- **`backend/`**: FastAPI server for monitoring and data APIs
+- **`k8s/`**: Kubernetes deployment manifests
 
-### Core Pipeline
-- **`run_pipeline.py`**: The main entry point for running the entire data extraction pipeline. This script orchestrates the execution of the other modules.
+### Technology Stack
+- **Python 3.12+** with Selenium, BeautifulSoup, Google Gemini AI
+- **React + FastAPI** for real-time monitoring dashboard
+- **Supabase PostgreSQL** for cloud database storage
+- **Docker + Kubernetes** for containerized deployment
 
-### Data Extraction Modules
-
-#### Standard (Sequential) Processing
-- **`extract_dioceses.py`**: Scrapes the official conference website to build the initial list of dioceses.
-- **`find_parishes.py`**: Analyzes diocese websites to find the parish directory URL.
-- **`extract_parishes.py`**: Extracts parish information from the parish directory URLs.
-- **`extract_schedule.py`**: Extracts liturgical schedules (Adoration and Reconciliation) from parish websites.
-
-#### High-Performance (Concurrent) Processing ⚡
-- **`async_extract_parishes.py`**: **NEW** - High-performance concurrent parish extraction with 60% faster processing
-  - Asyncio-based concurrent request handling
-  - Connection pooling with intelligent rate limiting
-  - Circuit breaker protection for external service failures
-  - Batch processing optimization (8-15x faster than sequential)
-  - Memory-efficient processing with automatic garbage collection
-
-### Core Components & Utilities
-
-- **`config.py`**: Centralized configuration for the project, including API keys and pipeline defaults.
-- **`parish_extraction_core.py`**: Core components for parish extraction, including data models and database utilities.
-- **`parish_extractors.py`**: Specialized extractor implementations for different website platforms.
-- **`core/`**: Directory containing core modules:
-  - **`db.py`**: Database connection management
-  - **`driver.py`**: WebDriver setup with circuit breaker protection
-  - **`async_driver.py`**: **NEW** - Async WebDriver pool with connection management
-  - **`async_parish_extractor.py`**: **NEW** - Concurrent parish detail extraction
-  - **`circuit_breaker.py`**: **NEW** - Circuit breaker pattern for external service protection
-  - **`utils.py`**: General utility functions
-- **`llm_utils.py`**: Utilities for interacting with the Google Gemini AI.
-
-## Database Schema
-
-The project uses Supabase (PostgreSQL) with the following key tables:
-
-### `Dioceses`
-- **Primary Data**: Diocese names, addresses, official websites
-- **Source**: Official directory
-
-### `DiocesesParishDirectory`
-- **Links**: Diocese URLs to their parish directory pages
-- **Metadata**: Detection method, success status, AI confidence scores
-
-### `Parishes`
-- **Comprehensive Data**: Names, addresses, contact information, websites
-- **Enhanced Fields**: Geographic coordinates, clergy information, service schedules
-- **Extraction Metadata**: Confidence scores, extraction methods, data quality indicators
-
-## Technology Stack
-
-### Core Technologies
-- **Python 3.x**
-- **Supabase** (PostgreSQL) for cloud database
-- **Selenium WebDriver** with Chrome for dynamic content
-- **BeautifulSoup4** for HTML parsing
-- **Google Gemini AI** for content analysis
-
-### Web Scraping Libraries
-- **Selenium**: JavaScript-enabled browsing and interaction
-- **Requests**: HTTP client for simple requests
-- **BeautifulSoup**: HTML/XML parsing and navigation
-- **Tenacity**: Retry logic with exponential backoff
-- **WebDriver Manager**: Automatic ChromeDriver management
-
-### Data Processing
-- **Pandas**: Data manipulation and analysis
-- **JSON**: Configuration and result serialization
-- **Regular Expressions**: Text pattern matching and extraction
+**→ See [Architecture Documentation](docs/ARCHITECTURE.md) for complete technical details, database schema, and component specifications.**
 
 ## 📚 Documentation
 
@@ -282,18 +220,13 @@ python async_extract_parishes.py --diocese_id 2024 --pool_size 6 --batch_size 12
 ### Core Documentation
 - **[README.md](README.md)**: Main project documentation
 - **[COMMANDS.md](docs/COMMANDS.md)**: Complete command reference for all scripts
-- **[Async Performance Guide](docs/ASYNC_PERFORMANCE_GUIDE.md)**: ⚡ **NEW** - Comprehensive guide to high-performance concurrent extraction
-- **[Async Extract Parishes README](async_extract_parishes_README.md)**: ⚡ **NEW** - Detailed documentation for concurrent processing
+- **[Async Performance Guide](docs/ASYNC_PERFORMANCE_GUIDE.md)**: ⚡ High-performance concurrent extraction optimization
 - **[Monitoring Guide](docs/MONITORING.md)**: 🖥️ Real-time monitoring and operational visibility
-- **[Multi-Worker Monitoring](docs/MULTI_WORKER_MONITORING.md)**: 🔧 **NEW** - Distributed worker monitoring and hybrid dashboard
 
-### Module-Specific Documentation
-- **[extract_dioceses_README.md](extract_dioceses_README.md)**: Diocese extraction workflow
-- **[find_parishes_README.md](find_parishes_README.md)**: Parish directory discovery process
-- **[parish_extraction_core_README.md](parish_extraction_core_README.md)**: Core extraction components
-- **[config_README.md](config_README.md)**: Configuration management
-- **[llm_utils_README.md](llm_utils_README.md)**: AI integration utilities
-- **[supabase-setup.md](supabase-setup.md)**: Database setup instructions
+### Setup and Deployment
+- **[supabase-setup.md](docs/supabase-setup.md)**: Database setup instructions
+- **[Backend Setup](backend/README.md)**: FastAPI backend server documentation
+- **[Frontend Setup](frontend/README.md)**: React frontend application setup
 
 ## Reporting and Analytics
 
@@ -479,7 +412,6 @@ For detailed instructions on how to build and deploy the web application, please
 - **[find_parishes_README.md](find_parishes_README.md)** - AI-powered parish directory discovery
 - **[extract_parishes_README.md](extract_parishes_README.md)** - Parish information extraction and processing
 - **[extract_schedule_README.md](extract_schedule_README.md)** - **🧪 NEW** - A/B testing schedule extraction (keyword vs AI methods)
-- **[async_extract_parishes_README.md](async_extract_parishes_README.md)** - High-performance concurrent parish extraction
 - **[parish_extraction_core_README.md](parish_extraction_core_README.md)** - Core extraction components and data models
 
 ### 🔧 System Configuration
@@ -496,15 +428,10 @@ For detailed instructions on how to build and deploy the web application, please
 - **[k8s/argocd/bitnami-sealed-secrets-application-set-README.md](k8s/argocd/bitnami-sealed-secrets-application-set-README.md)** - Sealed secrets management
 - **[k8s/argocd/cloudflare-tunnel-applicationsetREADME.md](k8s/argocd/cloudflare-tunnel-applicationsetREADME.md)** - Cloudflare tunnel configuration
 
-### 📖 Technical Guides
-- **[docs/COMMANDS.md](docs/COMMANDS.md)** - Complete command reference for all scripts
-- **[docs/ASYNC_PERFORMANCE_GUIDE.md](docs/ASYNC_PERFORMANCE_GUIDE.md)** - High-performance concurrent extraction guide
-- **[docs/MONITORING_DASHBOARD.md](docs/MONITORING_DASHBOARD.md)** - Real-time monitoring and dashboard usage
-- **[docs/LOGGING_AND_MONITORING.md](docs/LOGGING_AND_MONITORING.md)** - Kubernetes logging and monitoring procedures
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture and design patterns
 - **[docs/DATABASE.md](docs/DATABASE.md)** - Database schema and data management
-- **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Docker and Kubernetes deployment instructions
-- **[docs/AUTHENTICATION.md](docs.md)** - Authentication and security configuration
+- **[docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md)** - Docker and Kubernetes deployment instructions
+- **[docs/AUTHENTICATION.md](docs/AUTHENTICATION.md)** - Authentication and security configuration
 - **[docs/CLOUDFLARE.md](docs/CLOUDFLARE.md)** - Cloudflare tunnel and DNS configuration
 
 ### 🤖 Machine Learning & Optimization
