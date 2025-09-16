@@ -15,7 +15,8 @@
       "Bash(kubectl describe:*)",
       "Bash(docker build:*)",
       "Bash(docker run:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(TIMESTAMP=\"2025-09-15-19-20-09\")"
     ],
     "deny": [],
     "ask": []
