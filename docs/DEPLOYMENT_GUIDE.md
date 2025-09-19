@@ -16,9 +16,39 @@ The deployment process follows GitOps best practices:
 
 For comprehensive Docker commands and deployment scripts, see the **[📝 Commands Guide](COMMANDS.md#docker-commands)**.
 
-**Quick Build Example:**
+**Multi-Architecture Build (Recommended):**
 ```bash
-# Generate timestamp and build images
+# Generate timestamp
+TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)
+
+# Enable buildx for multi-arch builds
+docker buildx create --use --name multi-arch-builder 2>/dev/null || docker buildx use multi-arch-builder
+
+# Build multi-arch images for both ARM64 (development) and AMD64 (production)
+echo "🏗️ Building multi-arch backend image..."
+docker buildx build --platform linux/amd64,linux/arm64 \
+  -f backend/Dockerfile \
+  -t tomatl/diocesan-vitality:backend-$TIMESTAMP \
+  --push backend/
+
+echo "🏗️ Building multi-arch frontend image..."
+docker buildx build --platform linux/amd64,linux/arm64 \
+  -f frontend/Dockerfile \
+  -t tomatl/diocesan-vitality:frontend-$TIMESTAMP \
+  --push frontend/
+
+echo "🏗️ Building multi-arch pipeline image..."
+docker buildx build --platform linux/amd64,linux/arm64 \
+  -f Dockerfile.pipeline \
+  -t tomatl/diocesan-vitality:pipeline-$TIMESTAMP \
+  --push .
+
+echo "✅ All multi-arch images built and pushed with timestamp: $TIMESTAMP"
+```
+
+**Single Architecture Build (Alternative):**
+```bash
+# Generate timestamp and build images for current architecture only
 TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)
 docker build -f backend/Dockerfile -t tomatl/diocesan-vitality:backend-$TIMESTAMP backend/
 docker build -f frontend/Dockerfile -t tomatl/diocesan-vitality:frontend-$TIMESTAMP frontend/
@@ -27,10 +57,12 @@ docker build -f Dockerfile.pipeline -t tomatl/diocesan-vitality:pipeline-$TIMEST
 
 **→ See [Commands Guide - Docker Section](COMMANDS.md#docker-commands) for complete build and deployment commands.**
 
-### Step 2: Push Images to Docker Hub
+### Step 2: Push Images to Docker Hub (Single-Arch Only)
+
+*Note: Multi-arch builds automatically push during build with `--push` flag*
 
 ```bash
-# Push all images to Docker Hub
+# Push all images to Docker Hub (only needed for single-arch builds)
 echo "📤 Pushing backend image..."
 docker push tomatl/diocesan-vitality:backend-$TIMESTAMP
 
@@ -86,6 +118,19 @@ git push origin main
 
 echo "✅ Deployment initiated! ArgoCD will sync automatically."
 ```
+
+## 🏗️ Multi-Architecture Support
+
+This project supports both ARM64 (development on Raspberry Pi/Apple Silicon) and AMD64 (production deployment) architectures.
+
+### Why Multi-Arch?
+- **Development Flexibility**: Build on ARM64 (Raspberry Pi, Mac M1/M2) and AMD64 (traditional x86)
+- **Production Compatibility**: Deploy to x86 clusters while developing on ARM
+- **Future-Proof**: Ready for ARM64 server adoption
+
+### Architecture Considerations
+- **Pipeline Image**: Requires Chrome/Chromium for web scraping - multi-arch build handles architecture-specific browser installation
+- **Backend/Frontend**: Platform-agnostic Python and Node.js applications work on both architectures
 
 ## 📊 Monitoring Deployment
 
@@ -162,6 +207,7 @@ The script handles:
 ## 💡 Best Practices
 
 - **Always test locally** before deploying to production
+- **Use multi-arch builds** for development flexibility and production compatibility
 - **Use descriptive commit messages** explaining what changed
 - **Monitor deployments** to ensure they complete successfully
 - **Keep timestamps** for easy rollback identification
@@ -176,6 +222,20 @@ The script handles:
 2. **ArgoCD not syncing**: Check application status with `kubectl describe application diocesan-vitality-app -n argocd`
 3. **Pods stuck in pending**: Check resource constraints and node capacity
 4. **Health check failures**: Review pod logs with `kubectl logs -n diocesan-vitality <pod-name>`
+5. **Architecture mismatch**: Use multi-arch builds to support both ARM64 and AMD64
+
+### Multi-Arch Troubleshooting
+
+```bash
+# Check if buildx is available
+docker buildx version
+
+# List available builders
+docker buildx ls
+
+# Inspect multi-arch image
+docker buildx imagetools inspect tomatl/diocesan-vitality:backend-$TIMESTAMP
+```
 
 ### Getting Help
 
