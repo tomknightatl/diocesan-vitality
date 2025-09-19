@@ -69,9 +69,17 @@ def _setup_chrome_driver():
 
     logger.info(f"🔧 Creating Chrome session with ID: {session_id}")
 
-    return webdriver.Chrome(
-        service=ChromeService(ChromeDriverManager().install()), options=chrome_options
-    )
+    # Try system ChromeDriver first (for ARM64 compatibility)
+    try:
+        chrome_service = ChromeService('/usr/bin/chromedriver')
+        # Set Chromium binary path for Raspberry Pi
+        chrome_options.binary_location = '/usr/bin/chromium-browser'
+        return webdriver.Chrome(service=chrome_service, options=chrome_options)
+    except Exception as e:
+        logger.warning(f"System ChromeDriver failed: {e}, falling back to ChromeDriverManager")
+        return webdriver.Chrome(
+            service=ChromeService(ChromeDriverManager().install()), options=chrome_options
+        )
 
 def _setup_firefox_driver():
     """Set up Firefox WebDriver as fallback."""
@@ -155,7 +163,7 @@ def close_driver():
             logger.warning(f"Error during WebDriver cleanup: {e}")
         driver = None
         logger.info("WebDriver closed.")
-        
+
         # Log circuit breaker summary on close
         circuit_manager.log_summary()
 
@@ -164,7 +172,7 @@ def recover_driver():
     """Recovers WebDriver by closing current instance and creating a new one."""
     global driver
     logger.info("🔄 Attempting WebDriver recovery...")
-    
+
     try:
         # Force close existing driver
         if driver:
@@ -173,7 +181,7 @@ def recover_driver():
             except Exception as e:
                 logger.warning(f"Error closing driver during recovery: {e}")
             driver = None
-        
+
         # Create new driver instance
         driver = _setup_driver_with_retry()
         if driver:
@@ -182,7 +190,7 @@ def recover_driver():
         else:
             logger.error("❌ WebDriver recovery failed")
             return None
-            
+
     except Exception as e:
         logger.error(f"❌ WebDriver recovery failed with error: {e}")
         driver = None
@@ -192,11 +200,11 @@ def recover_driver():
 def ensure_driver_available():
     """Ensures WebDriver is available, recovers if necessary."""
     global driver
-    
+
     if driver is None:
         logger.info("Driver is None, setting up new driver...")
         return setup_driver()
-    
+
     # Test if driver is responsive
     try:
         _ = driver.current_url
@@ -211,7 +219,7 @@ class ProtectedWebDriver:
     WebDriver wrapper with circuit breaker protection and timeout handling.
     Provides robust protection against hanging requests and service failures.
     """
-    
+
     def __init__(self, driver, default_timeout=30):
         self.driver = driver
         self.default_timeout = default_timeout
@@ -228,18 +236,18 @@ class ProtectedWebDriver:
         logger.debug(f"   • Element interaction threshold: {self.element_cb_config.failure_threshold}")
         logger.debug(f"   • Page load threshold: {self.page_load_cb_config.failure_threshold}")
         logger.debug(f"   • JavaScript threshold: {self.javascript_cb_config.failure_threshold}")
-    
+
     def get(self, url, timeout=None):
         """Load a web page with circuit breaker protection"""
         timeout = timeout or self.default_timeout
         logger.debug(f"🌐 Loading page: {url} (timeout: {timeout}s)")
-        
+
         cb = circuit_manager.get_circuit_breaker('webdriver_page_load', self.page_load_cb_config)
-        
+
         def _load_page():
             # Set page load timeout
             self.driver.set_page_load_timeout(timeout)
-            
+
             start_time = time.time()
             try:
                 self.driver.get(url)
@@ -254,19 +262,19 @@ class ProtectedWebDriver:
                 load_time = time.time() - start_time
                 logger.error(f"❌ WebDriver error after {load_time:.2f}s for {url}: {str(e)}")
                 raise
-        
+
         return cb.call(_load_page)
-    
+
     def find_element(self, *args, **kwargs):
         """Find element with circuit breaker protection"""
         cb = circuit_manager.get_circuit_breaker('webdriver_element_interaction', self.element_cb_config)
         return cb.call(self.driver.find_element, *args, **kwargs)
-    
+
     def find_elements(self, *args, **kwargs):
         """Find elements with circuit breaker protection"""
         cb = circuit_manager.get_circuit_breaker('webdriver_element_interaction', self.element_cb_config)
         return cb.call(self.driver.find_elements, *args, **kwargs)
-    
+
     def execute_script(self, script, *args, timeout=None):
         """Execute JavaScript with optimized circuit breaker protection"""
         timeout = timeout or 15

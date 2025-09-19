@@ -17,7 +17,10 @@ from urllib.parse import urlparse
 import threading
 import json
 
-from supabase import Client
+try:
+    from supabase import Client
+except ImportError:
+    Client = None
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -37,13 +40,29 @@ class ResponseMetrics:
     def avg_response_time(self) -> float:
         if not self.response_times:
             return 10.0
-        return statistics.mean(self.response_times)
+        try:
+            # Ensure all values are numeric
+            numeric_times = [float(t) for t in self.response_times if isinstance(t, (int, float, str)) and str(t).replace('.', '').isdigit()]
+            if not numeric_times:
+                return 10.0
+            return statistics.mean(numeric_times)
+        except (ValueError, TypeError) as e:
+            logger.debug(f"⏱️ Error calculating avg response time: {e}")
+            return 10.0
 
     @property
     def p95_response_time(self) -> float:
         if len(self.response_times) < 5:
             return self.avg_response_time * 1.5
-        return statistics.quantiles(self.response_times, n=20)[18]  # 95th percentile
+        try:
+            # Ensure all values are numeric
+            numeric_times = [float(t) for t in self.response_times if isinstance(t, (int, float, str)) and str(t).replace('.', '').isdigit()]
+            if len(numeric_times) < 5:
+                return self.avg_response_time * 1.5
+            return statistics.quantiles(numeric_times, n=20)[18]  # 95th percentile
+        except (ValueError, TypeError, IndexError) as e:
+            logger.debug(f"⏱️ Error calculating p95 response time: {e}")
+            return self.avg_response_time * 1.5
 
     @property
     def success_rate(self) -> float:
@@ -100,7 +119,7 @@ class AdaptiveTimeoutManager:
     to optimize timeout values dynamically.
     """
 
-    def __init__(self, supabase: Client = None):
+    def __init__(self, supabase = None):
         self.supabase = supabase
         self.logger = logger
 
@@ -371,6 +390,13 @@ class AdaptiveTimeoutManager:
 
                 metrics = self.domain_metrics[domain]
 
+                # Ensure response_time is numeric
+                try:
+                    response_time = float(response_time)
+                except (ValueError, TypeError):
+                    self.logger.debug(f"⏱️ Invalid response time for {url}: {response_time}")
+                    return
+
                 # Record response time
                 metrics.response_times.append(response_time)
 
@@ -381,9 +407,14 @@ class AdaptiveTimeoutManager:
                     metrics.failure_times.append(response_time)
 
                 # Update complexity indicators
-                if complexity_indicators:
+                if complexity_indicators and isinstance(complexity_indicators, dict):
                     for key, value in complexity_indicators.items():
-                        metrics.complexity_indicators[key] = value
+                        try:
+                            metrics.complexity_indicators[key] = float(value)
+                        except (ValueError, TypeError):
+                            self.logger.debug(f"⏱️ Invalid complexity indicator {key}: {value}")
+                elif complexity_indicators:
+                    self.logger.debug(f"⏱️ Invalid complexity_indicators type for {url}: {type(complexity_indicators)}")
 
                 metrics.last_updated = time.time()
 

@@ -133,13 +133,33 @@ class OptimizedCircuitBreakerConfigs:
         )
 
     @staticmethod
+    def get_ai_content_analysis_config() -> CircuitBreakerConfig:
+        """
+        Optimized config for AI content analysis operations.
+
+        Key optimizations:
+        - Higher failure threshold (5) since AI processing can be variable
+        - Extended recovery timeout (120s) for AI service recovery
+        - Longer timeout for large content processing (up to 2 minutes)
+        - Minimal retries since AI operations are expensive
+        """
+        return CircuitBreakerConfig(
+            failure_threshold=5,       # AI processing can have occasional failures
+            recovery_timeout=120,      # AI services need time to recover from overload
+            success_threshold=2,       # Need consistent AI responses
+            request_timeout=120,       # Allow up to 2 minutes for large content processing
+            max_retries=1,             # Minimal retries for expensive AI operations
+            retry_delay=5.0            # Longer delay for AI retry attempts
+        )
+
+    @staticmethod
     def get_adaptive_config(operation_type: str) -> CircuitBreakerConfig:
         """
         Get adaptive circuit breaker config based on operation type.
 
         Args:
             operation_type: Type of operation ('element', 'page_load', 'javascript',
-                          'search', 'map', or 'default')
+                          'search', 'map', 'ai_content_analysis', or 'default')
 
         Returns:
             Optimized CircuitBreakerConfig for the operation type
@@ -151,6 +171,7 @@ class OptimizedCircuitBreakerConfigs:
             'search': OptimizedCircuitBreakerConfigs.get_search_interaction_config(),
             'map': OptimizedCircuitBreakerConfigs.get_map_interaction_config(),
             'url_verification': OptimizedCircuitBreakerConfigs.get_url_verification_config(),
+            'ai_content_analysis': OptimizedCircuitBreakerConfigs.get_ai_content_analysis_config(),
         }
 
         config = configs.get(operation_type)

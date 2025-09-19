@@ -12,11 +12,13 @@ Before starting development, ensure you have these components installed in the c
 - **Git**: Version control system
 - **Active Internet Connection**: Required for web scraping and API calls
 
-### 2. Chrome Browser Installation (Critical!)
+### 2. Browser and WebDriver Installation (Critical!)
 
-**⚠️ Chrome must be installed BEFORE running any pipeline commands!**
+**⚠️ Browser and WebDriver must be installed BEFORE running any pipeline commands!**
 
-**Linux (Ubuntu/Debian):**
+The system requires a browser (Chrome/Chromium) and corresponding WebDriver. Installation varies by platform and architecture:
+
+#### **Linux x86-64 (Standard Desktop/Server):**
 ```bash
 # Install Chrome browser
 wget -O- https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg
@@ -27,18 +29,92 @@ sudo apt update && sudo apt install google-chrome-stable
 google-chrome --version
 ```
 
-**macOS:**
+#### **Linux ARM64 (Raspberry Pi, Apple Silicon, etc.):**
 ```bash
-# Option 1: Download from website
-# Visit https://www.google.com/chrome/ and download
+# Chrome is not available for ARM64, use Chromium instead
+sudo apt update && sudo apt install chromium-browser chromium-chromedriver
 
-# Option 2: Using Homebrew
-brew install --cask google-chrome
+# Verify installation
+chromium-browser --version
+chromedriver --version
+
+# Ensure ChromeDriver is in PATH
+which chromedriver  # Should return /usr/bin/chromedriver
 ```
 
-**Windows:**
-- Download from [google.com/chrome](https://www.google.com/chrome/)
-- Run installer as Administrator
+#### **macOS (Intel and Apple Silicon):**
+```bash
+# Install Chrome
+brew install --cask google-chrome
+
+# Install ChromeDriver
+brew install chromedriver
+
+# For Apple Silicon Macs, you may need Rosetta for some drivers
+# If you encounter issues, try:
+brew install --cask chromedriver
+
+# Verify installation
+google-chrome --version
+chromedriver --version
+```
+
+#### **Windows:**
+```powershell
+# Install Chrome
+# Download from https://www.google.com/chrome/ and run installer as Administrator
+
+# ChromeDriver will be automatically managed by the Python webdriver-manager
+# No manual installation required
+```
+
+#### **Docker/Containerized Environments:**
+```dockerfile
+# For x86-64 containers
+RUN wget -O- https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && echo "deb http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list \
+    && apt-get update && apt-get install -y google-chrome-stable
+
+# For ARM64 containers
+RUN apt-get update && apt-get install -y chromium-browser chromium-chromedriver
+```
+
+#### **Troubleshooting WebDriver Issues:**
+
+**Architecture Mismatch (Common on ARM64):**
+```bash
+# Check your architecture
+uname -m
+
+# If you see "aarch64" and get "Exec format error":
+sudo apt install chromium-chromedriver  # Use system ChromeDriver
+sudo rm -rf ~/.wdm/drivers/chromedriver  # Remove incompatible drivers
+
+# Verify the fix
+file /usr/bin/chromedriver  # Should show ARM aarch64
+```
+
+**WebDriver Not Found:**
+```bash
+# Check ChromeDriver location
+which chromedriver
+
+# If not found, install manually:
+# Linux ARM64:
+sudo apt install chromium-chromedriver
+
+# Linux x86-64:
+# Download from https://chromedriver.chromium.org/
+```
+
+**Permission Issues:**
+```bash
+# Fix ChromeDriver permissions
+sudo chmod +x /usr/bin/chromedriver
+
+# Fix cache directory permissions
+sudo chown -R $USER:$USER ~/.wdm/
+```
 
 ### 3. API Keys Setup (Required Before Running Pipeline)
 
@@ -106,17 +182,26 @@ DOCKER_PASSWORD="your_dockerhub_password_or_token"
 
 ### Step 3: Verify Installation
 ```bash
-# Test environment setup
-make env-check
+# Test all components in order
+make env-check     # Check environment variables
+make db-check      # Test database connection  
+make ai-check      # Test AI API connection
+make webdriver-check  # Test Chrome WebDriver
 
-# Test database connection
-make db-check
+# Manual WebDriver test (if make commands fail)
+source .venv/bin/activate
+python -c "
+from core.driver import setup_driver
+driver = setup_driver()
+if driver:
+    print('✅ WebDriver: SUCCESS')
+    driver.quit()
+else:
+    print('❌ WebDriver: FAILED - Check browser installation')
+"
 
-# Test AI API connection
-make ai-check
-
-# Test Chrome WebDriver
-make webdriver-check
+# Test pipeline with minimal data
+python run_pipeline.py --diocese_id 123 --max_parishes_per_diocese 1
 ```
 
 ### Step 4: Start Development Environment
@@ -315,16 +400,36 @@ rm -rf /tmp/chrome-*
 
 **Chrome WebDriver Issues:**
 ```bash
-# Update webdriver
+# Test WebDriver setup
+source .venv/bin/activate
+python -c "
+from core.driver import setup_driver
+driver = setup_driver()
+if driver:
+    print('✅ WebDriver working!')
+    driver.quit()
+else:
+    print('❌ WebDriver failed')
+"
+
+# Architecture mismatch (ARM64/Raspberry Pi):
+uname -m  # Check if you're on aarch64/arm64
+sudo apt install chromium-chromedriver  # Use system driver
+sudo rm -rf ~/.wdm/drivers/chromedriver  # Remove x86 drivers
+
+# Verify correct architecture
+file /usr/bin/chromedriver  # Should match your system architecture
+
+# For x86-64 systems, update webdriver-manager:
 python -c "from webdriver_manager.chrome import ChromeDriverManager; ChromeDriverManager().install()"
 
 # Run with visible Chrome (for debugging)
 export CHROME_VISIBLE=true
 python extract_schedule.py --diocese_id 123 --max_parishes 1
 
-# Check Chrome installation
-google-chrome --version
-which google-chrome
+# Check browser installation
+google-chrome --version || chromium-browser --version
+which google-chrome || which chromium-browser
 ```
 
 **API Connection Issues:**
@@ -409,16 +514,44 @@ make test-quick # Run tests
 ## 🚨 Common Setup Issues
 
 ### Issue: Chrome WebDriver Not Found
-**Solution:** Make sure Chrome is installed first:
+**Symptoms:** `WebDriverException`, `chromedriver not found`, `No such file or directory`
+**Solution:** Install browser and WebDriver correctly:
 ```bash
-# Verify Chrome installation
-google-chrome --version
+# 1. Check your system architecture first
+uname -m
 
-# If not installed, install Chrome (see Prerequisites section)
-# Then restart your terminal and reactivate virtual environment
+# 2. For ARM64 (Raspberry Pi, Apple Silicon under Linux):
+sudo apt install chromium-browser chromium-chromedriver
+
+# 3. For x86-64 (Standard Linux/Windows):
+# Install Chrome browser first, then WebDriver is auto-managed
+
+# 4. Verify installation
+source .venv/bin/activate
+make webdriver-check
+```
+
+### Issue: Architecture Mismatch (Exec format error)
+**Symptoms:** `[Errno 8] Exec format error`, ChromeDriver fails to start
+**Common on:** Raspberry Pi, ARM64 systems, Apple Silicon
+**Solution:**
+```bash
+# Remove incompatible x86 drivers
+sudo rm -rf ~/.wdm/drivers/chromedriver
+
+# Install ARM64 compatible drivers
+sudo apt install chromium-chromedriver
+
+# Verify correct architecture
+file /usr/bin/chromedriver  # Should show ARM aarch64 for ARM systems
+
+# Test the fix
+source .venv/bin/activate
+python -c "from core.driver import setup_driver; print('✅ Success' if setup_driver() else '❌ Failed')"
 ```
 
 ### Issue: API Keys Not Working
+**Symptoms:** API authentication errors, connection failures
 **Solution:** Verify your `.env` file:
 ```bash
 # Check if .env exists and has correct format
@@ -447,6 +580,41 @@ cd frontend
 rm -rf node_modules package-lock.json
 npm install
 npm run dev
+```
+
+## 🔧 Platform-Specific Notes
+
+### **Raspberry Pi / ARM64 Systems**
+- **Use Chromium**: Chrome is not available for ARM64, use `chromium-browser` instead
+- **System WebDriver**: Install `chromium-chromedriver` via apt, avoid webdriver-manager
+- **Memory Considerations**: Consider using `--max_parishes_per_diocese 5` for memory-constrained systems
+- **Performance**: ARM systems are slower, expect longer processing times
+
+### **Apple Silicon Macs (M1/M2/M3)**
+- **Use x86-64 Chrome**: Install standard Chrome via Homebrew
+- **Rosetta Required**: Some WebDriver components may require Rosetta 2
+- **Docker Considerations**: Use `--platform linux/amd64` for x86 containers
+
+### **Windows Subsystem for Linux (WSL)**
+- **GUI Applications**: May need X11 forwarding for visible browser debugging
+- **File Permissions**: Use `sudo chown -R $USER:$USER .` for permission issues
+- **Chrome Installation**: Install Chrome for Linux, not Windows Chrome
+
+### **Docker Development**
+- **Architecture Matching**: Use `linux/amd64` for x86 hosts, `linux/arm64` for ARM hosts
+- **Headless Required**: Always use headless mode in containers
+- **Volume Mounts**: Mount `/tmp` for Chrome cache directories
+
+### **Performance Optimization by Platform**
+```bash
+# Raspberry Pi / Low Memory Systems
+python run_pipeline.py --diocese_id 123 --max_parishes_per_diocese 2
+
+# Standard Desktop/Server
+python run_pipeline.py --diocese_id 123 --max_parishes_per_diocese 10
+
+# High-Performance Systems  
+python run_pipeline.py --diocese_id 123 --max_parishes_per_diocese 25
 ```
 
 ---
