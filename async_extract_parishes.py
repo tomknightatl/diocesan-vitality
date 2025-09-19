@@ -76,19 +76,19 @@ def get_memory_usage():
 def force_garbage_collection():
     """Force garbage collection and log memory usage"""
     initial_memory = get_memory_usage()
-    
+
     # Force garbage collection
     collected = gc.collect()
-    
+
     final_memory = get_memory_usage()
     memory_freed = initial_memory - final_memory
-    
+
     if memory_freed > 0:
         logger.info(f"  🧹 Memory cleanup: Freed {memory_freed:.1f} MB (collected {collected} objects)")
         logger.info(f"  💾 Current memory usage: {final_memory:.1f} MB")
     else:
         logger.debug(f"  💾 Current memory usage: {final_memory:.1f} MB (collected {collected} objects)")
-    
+
     return final_memory
 
 
@@ -97,7 +97,7 @@ class AsyncDioceseProcessor:
     Async diocese processor with intelligent batching and parallel processing.
     Provides significant performance improvements over sequential processing.
     """
-    
+
     def __init__(self, pool_size: int = 4, batch_size: int = 8, max_concurrent_dioceses: int = 2):
         self.pool_size = pool_size
         self.batch_size = batch_size
@@ -113,73 +113,73 @@ class AsyncDioceseProcessor:
             'total_processing_time': 0,
             'average_time_per_diocese': 0
         }
-        
+
         logger.info(f"🚀 Async Diocese Processor initialized")
         logger.info(f"   • Pool size: {pool_size} drivers")
         logger.info(f"   • Batch size: {batch_size} requests")
         logger.info(f"   • Max concurrent dioceses: {max_concurrent_dioceses}")
-    
+
     async def initialize(self):
         """Initialize async components"""
         logger.info("🔧 Initializing async diocese processor...")
-        
+
         # Initialize driver pool
         self.driver_pool = await get_async_driver_pool(self.pool_size)
-        
+
         # Initialize parish extractor
         self.parish_extractor = await get_async_parish_extractor(self.pool_size, self.batch_size)
-        
+
         logger.info("✅ Async diocese processor ready")
 
         # Report initial circuit breaker status
         worker_id = os.environ.get('WORKER_ID', os.environ.get('HOSTNAME'))
         monitoring_client = get_monitoring_client(worker_id=worker_id)
         monitoring_client.report_circuit_breaker_status()
-    
-    async def process_dioceses_concurrent(self, 
+
+    async def process_dioceses_concurrent(self,
                                         dioceses_to_process: List[Dict],
                                         num_parishes_per_diocese: int = 5) -> Dict[str, Any]:
         """
         Process multiple dioceses concurrently with intelligent batching.
-        
+
         Args:
             dioceses_to_process: List of diocese information dictionaries
             num_parishes_per_diocese: Maximum parishes to extract per diocese
-            
+
         Returns:
             Dictionary with processing results and statistics
         """
         if not dioceses_to_process:
             return {'success': False, 'error': 'No dioceses to process'}
-        
+
         if not self.driver_pool:
             await self.initialize()
-        
+
         start_time = time.time()
         initial_memory = get_memory_usage()
-        
+
         logger.info(f"🚀 Starting concurrent diocese processing")
         logger.info(f"   • Dioceses to process: {len(dioceses_to_process)}")
         logger.info(f"   • Max parishes per diocese: {num_parishes_per_diocese}")
         logger.info(f"   • Initial memory: {initial_memory:.1f} MB")
-        
+
         results = {
             'successful_dioceses': [],
             'failed_dioceses': [],
             'total_parishes_extracted': 0,
             'processing_summary': {}
         }
-        
+
         # Process dioceses in controlled batches
         diocese_batches = [
             dioceses_to_process[i:i + self.max_concurrent_dioceses]
             for i in range(0, len(dioceses_to_process), self.max_concurrent_dioceses)
         ]
-        
+
         for batch_num, diocese_batch in enumerate(diocese_batches, 1):
             logger.info(f"📦 Processing diocese batch {batch_num}/{len(diocese_batches)} "
                        f"({len(diocese_batch)} dioceses)")
-            
+
             # Create concurrent tasks for this batch
             batch_tasks = []
             for diocese_info in diocese_batch:
@@ -187,10 +187,10 @@ class AsyncDioceseProcessor:
                     self._process_single_diocese_async(diocese_info, num_parishes_per_diocese)
                 )
                 batch_tasks.append(task)
-            
+
             # Wait for batch completion
             batch_results = await asyncio.gather(*batch_tasks, return_exceptions=True)
-            
+
             # Process batch results
             for diocese_info, result in zip(diocese_batch, batch_results):
                 if isinstance(result, Exception):
@@ -207,7 +207,7 @@ class AsyncDioceseProcessor:
                     results['total_parishes_extracted'] += result['parishes_count']
                     self.processing_stats['successful_dioceses'] += 1
                     self.processing_stats['total_parishes_found'] += result['parishes_count']
-            
+
             # Memory management between batches
             if batch_num < len(diocese_batches):
                 logger.info(f"  🧹 Inter-batch cleanup...")
@@ -220,17 +220,17 @@ class AsyncDioceseProcessor:
 
                 # Small delay between batches
                 await asyncio.sleep(2.0)
-        
+
         # Final statistics
         total_time = time.time() - start_time
         final_memory = get_memory_usage()
-        
+
         self.processing_stats.update({
             'total_dioceses': len(dioceses_to_process),
             'total_processing_time': total_time,
             'average_time_per_diocese': total_time / max(len(dioceses_to_process), 1)
         })
-        
+
         results['processing_summary'] = {
             'total_time': total_time,
             'average_time_per_diocese': self.processing_stats['average_time_per_diocese'],
@@ -242,24 +242,24 @@ class AsyncDioceseProcessor:
             'performance_metrics': {
                 'dioceses_per_minute': (len(dioceses_to_process) / (total_time / 60)),
                 'parishes_per_minute': (results['total_parishes_extracted'] / (total_time / 60)),
-                'success_rate': (self.processing_stats['successful_dioceses'] / 
+                'success_rate': (self.processing_stats['successful_dioceses'] /
                                max(len(dioceses_to_process), 1)) * 100
             }
         }
-        
+
         # Log comprehensive results
         self._log_final_results(results)
-        
+
         return results
-    
+
     async def _process_single_diocese_async(self, diocese_info: Dict, max_parishes: int) -> Dict[str, Any]:
         """Process a single diocese with async parish detail extraction"""
         diocese_name = diocese_info['name']
         diocese_id = diocese_info['id']
         parish_directory_url = diocese_info['parish_directory_url']
-        
+
         logger.info(f"🔍 Processing {diocese_name} (async mode)")
-        
+
         result = {
             'diocese_id': diocese_id,
             'diocese_name': diocese_name,
@@ -270,22 +270,22 @@ class AsyncDioceseProcessor:
             'extraction_time': 0,
             'success': False
         }
-        
+
         start_time = time.time()
-        
+
         try:
             # Step 1: Load main parish directory page
             def load_parish_directory(driver):
                 """Load parish directory and return parsed content"""
                 driver.get(parish_directory_url)
                 return driver.page_source
-            
+
             html_content = await self.driver_pool.submit_request(
                 url=parish_directory_url,
                 callback=load_parish_directory,
                 priority=1
             )
-            
+
             # Step 2: Extract basic parish information (synchronous for now)
             from bs4 import BeautifulSoup
 
@@ -299,34 +299,34 @@ class AsyncDioceseProcessor:
                 raise TypeError(f"Expected string but got {type(html_content)}")
 
             soup = BeautifulSoup(html_content, 'html.parser')
-            
+
             # Detect pattern and extract parishes
             detector = PatternDetector()
             pattern = detector.detect_pattern(html_content, parish_directory_url)
-            
+
             # Use existing synchronous extraction logic for basic parish info
             # This could be further optimized in future iterations
             parishes_found = await self._extract_basic_parish_info_async(
                 soup, pattern, diocese_info, max_parishes
             )
-            
+
             if not parishes_found:
                 result['success'] = False
                 result['error'] = 'No parishes found'
                 return result
-            
+
             logger.info(f"   📋 Found {len(parishes_found)} parishes for {diocese_name}")
-            
+
             # Step 3: Enhanced concurrent parish detail extraction
             if parishes_found:
                 enhanced_parishes = await self.parish_extractor.extract_parish_details_concurrent(
                     parishes_found, diocese_name, max_concurrent=self.batch_size
                 )
-                
+
                 result['parishes_count'] = len(enhanced_parishes)
-                result['enhanced_parishes'] = sum(1 for p in enhanced_parishes 
+                result['enhanced_parishes'] = sum(1 for p in enhanced_parishes
                                                  if getattr(p, 'enhanced_extraction', False))
-                
+
                 # Step 4: Save to database
                 if enhanced_parishes:
                     supabase = get_supabase_client()
@@ -338,18 +338,18 @@ class AsyncDioceseProcessor:
                         parish_directory_url,
                         supabase
                     )
-            
+
             result['success'] = True
-            
+
         except Exception as e:
             logger.error(f"❌ Error processing {diocese_name}: {e}")
             result['error'] = str(e)
-        
+
         finally:
             result['extraction_time'] = time.time() - start_time
-        
+
         return result
-    
+
     async def _extract_basic_parish_info_async(self, soup, pattern, diocese_info, max_parishes):
         """Extract basic parish information (placeholder for now - could be optimized further)"""
         # For now, use existing synchronous logic
@@ -357,26 +357,26 @@ class AsyncDioceseProcessor:
         try:
             from parish_extractors import process_diocese_with_detailed_extraction
             from core.driver import get_protected_driver
-            
+
             # This is a temporary bridge - ideally we'd make this fully async
             driver = get_protected_driver()
             if not driver:
                 return []
-            
+
             result = process_diocese_with_detailed_extraction(diocese_info, driver, max_parishes)
             driver.quit()
-            
+
             return result.get('parishes_found', [])
-            
+
         except Exception as e:
             logger.error(f"Error in basic parish extraction: {e}")
             return []
-    
+
     def _log_final_results(self, results: Dict[str, Any]):
         """Log comprehensive final results"""
         summary = results['processing_summary']
         metrics = summary['performance_metrics']
-        
+
         logger.info("🎯 Async Diocese Processing Results:")
         logger.info("=" * 50)
         logger.info(f"✅ Successful dioceses: {len(results['successful_dioceses'])}")
@@ -391,14 +391,14 @@ class AsyncDioceseProcessor:
         logger.info(f"   • Initial: {summary['memory_usage']['initial']:.1f} MB")
         logger.info(f"   • Final: {summary['memory_usage']['final']:.1f} MB")
         logger.info(f"   • Growth: {summary['memory_usage']['peak_growth']:.1f} MB")
-    
+
     async def shutdown(self):
         """Shutdown async components"""
         logger.info("🛑 Shutting down async diocese processor...")
-        
+
         if self.parish_extractor:
             self.parish_extractor.log_stats()
-        
+
         await shutdown_async_driver_pool()
         logger.info("✅ Async diocese processor shutdown complete")
 
@@ -413,8 +413,9 @@ async def main_async(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MA
     monitoring_client = get_monitoring_client(worker_id=worker_id)
 
     if not ensure_chrome_installed():
-        logger.error("Chrome installation failed. Please install Chrome manually.")
-        return
+        logger.warning("Chrome/Chromium not available. Step 3 will be skipped, but pipeline can continue.")
+        logger.info("💡 Step 4 (Schedule Extraction) can still work with existing parish data.")
+        # Don't return here - allow pipeline to continue without Step 3
 
     supabase = get_supabase_client()
     if not supabase:
@@ -474,13 +475,13 @@ async def main_async(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MA
 
     # Process dioceses with async processor
     processor = AsyncDioceseProcessor(pool_size, batch_size, max_concurrent_dioceses)
-    
+
     try:
         results = await processor.process_dioceses_concurrent(
-            dioceses_to_process, 
+            dioceses_to_process,
             num_parishes_per_diocese
         )
-        
+
         # Report final circuit breaker status
         monitoring_client.report_circuit_breaker_status()
 
@@ -489,7 +490,7 @@ async def main_async(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MA
         force_garbage_collection()
 
         return results
-        
+
     finally:
         await processor.shutdown()
 
@@ -500,7 +501,7 @@ def main(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MAX_PARISHES_P
     Synchronous wrapper for the async main function.
     """
     return asyncio.run(main_async(
-        diocese_id, num_parishes_per_diocese, 
+        diocese_id, num_parishes_per_diocese,
         pool_size, batch_size, max_concurrent_dioceses
     ))
 
@@ -537,12 +538,12 @@ if __name__ == "__main__":
         default=2,
         help="Maximum dioceses to process concurrently. Defaults to 2.",
     )
-    
+
     args = parser.parse_args()
 
     config.validate_config()
     main(
-        args.diocese_id, 
+        args.diocese_id,
         args.num_parishes_per_diocese,
         args.pool_size,
         args.batch_size,
