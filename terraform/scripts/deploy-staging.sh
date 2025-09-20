@@ -38,15 +38,19 @@ check_prerequisites() {
     # Check environment variables
     if [[ -z "${DIGITALOCEAN_TOKEN:-}" ]]; then
         echo "❌ DIGITALOCEAN_TOKEN environment variable is required"
-        echo "   Get token from: https://cloud.digitalocean.com/account/api/tokens"
+        echo "   1. Copy environment template: cp .env.example .env"
+        echo "   2. Edit .env with your DigitalOcean token from: https://cloud.digitalocean.com/account/api/tokens"
+        echo "   3. Load variables: source .env"
         exit 1
     fi
     echo "✅ DigitalOcean token is configured"
 
     if [[ -z "${CLOUDFLARE_API_TOKEN:-}" ]]; then
         echo "❌ CLOUDFLARE_API_TOKEN environment variable is required"
-        echo "   Create token at: https://dash.cloudflare.com/profile/api-tokens"
-        echo "   Required permissions: Zone:Read, DNS:Edit, Cloudflare Tunnel:Edit"
+        echo "   1. Copy environment template: cp .env.example .env"
+        echo "   2. Edit .env with your Cloudflare token from: https://dash.cloudflare.com/profile/api-tokens"
+        echo "   3. Required permissions: Zone:Read, DNS:Edit, Cloudflare Tunnel:Edit"
+        echo "   4. Load variables: source .env"
         exit 1
     fi
     echo "✅ Cloudflare API token is configured"
