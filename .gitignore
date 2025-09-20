@@ -107,3 +107,7 @@ dmypy.json
 
 # Reports directory
 /reports
+
+# Infrastructure secrets and passwords
+.argocd-admin-password
+.cloudflare-tunnel-token

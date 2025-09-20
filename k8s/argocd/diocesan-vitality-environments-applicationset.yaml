@@ -23,8 +23,6 @@ spec:
     metadata:
       name: "{{cluster}}-diocesan-vitality"
       namespace: argocd
-      finalizers:
-        - resources-finalizer.argocd.argoproj.io
     spec:
       project: default
       source:
