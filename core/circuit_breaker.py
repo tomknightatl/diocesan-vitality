@@ -195,8 +195,8 @@ class CircuitBreaker:
                     self.state = CircuitState.OPEN
                     self.next_attempt_time = time.time() + self.config.recovery_timeout
                 else:
-                    logger.warning(f"⚠️ Failure #{self.failure_count} for '{self.name}' "
-                                 f"({self.config.failure_threshold - self.failure_count} until circuit opens)")
+                    logger.debug(f"⚠️ Failure #{self.failure_count} for '{self.name}' "
+                                f"({self.config.failure_threshold - self.failure_count} until circuit opens)")
             
             elif self.state == CircuitState.HALF_OPEN:
                 logger.warning(f"🔴 Circuit breaker '{self.name}' back to OPEN - test request failed")
