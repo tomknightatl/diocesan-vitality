@@ -1,16 +1,16 @@
 output "tunnel_id" {
   description = "ID of the created Cloudflare tunnel"
-  value       = cloudflare_tunnel.diocesan_vitality.id
+  value       = cloudflare_zero_trust_tunnel_cloudflared.diocesan_vitality.id
 }
 
 output "tunnel_name" {
   description = "Name of the created Cloudflare tunnel"
-  value       = cloudflare_tunnel.diocesan_vitality.name
+  value       = cloudflare_zero_trust_tunnel_cloudflared.diocesan_vitality.name
 }
 
 output "tunnel_cname" {
   description = "CNAME target for the tunnel"
-  value       = "${cloudflare_tunnel.diocesan_vitality.id}.cfargotunnel.com"
+  value       = "${cloudflare_zero_trust_tunnel_cloudflared.diocesan_vitality.id}.cfargotunnel.com"
 }
 
 output "ui_hostname" {
