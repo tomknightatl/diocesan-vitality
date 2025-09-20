@@ -99,7 +99,7 @@ When you make changes to the pipeline code and need to deploy a new version:
    kubectl logs -f deployment/pipeline-deployment -n diocesan-vitality
 
    # Monitor via dashboard
-   # Visit: https://diocesan-vitality.diocesanvitality.org/dashboard
+   # Visit: https://diocesanvitality.org/dashboard
    ```
 
 ### Manual Pipeline Restart
@@ -128,7 +128,7 @@ kubectl rollout restart deployment pipeline-deployment -n diocesan-vitality
 The pipeline runs continuously and can be monitored via:
 
 **Dashboard (Recommended):**
-- Visit https://diocesan-vitality.diocesanvitality.org/dashboard
+- Visit https://diocesanvitality.org/dashboard
 - Real-time WebSocket monitoring with live logs, circuit breaker status, and progress
 
 **Command Line:**
@@ -225,7 +225,7 @@ This allows all three services (frontend, backend, pipeline) to run on a single 
 
 ### Accessing from Your Domain
 
-Since you have Cloudflare tunnel and `diocesan-vitality.diocesanvitality.org`, you can:
+Since you have Cloudflare tunnel and `diocesanvitality.org`, you can:
 
 1. **Add a web interface** by creating a FastAPI service that can trigger jobs
 2. **Set up monitoring** with endpoints that show job status

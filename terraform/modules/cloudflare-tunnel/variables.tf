@@ -19,9 +19,9 @@ variable "cluster_name" {
 }
 
 variable "domain_name" {
-  description = "Base domain name (e.g., diocesan-vitality.org)"
+  description = "Base domain name (e.g., diocesanvitality.org)"
   type        = string
-  default     = "diocesan-vitality.org"
+  default     = "diocesanvitality.org"
 }
 
 variable "ui_subdomain" {
@@ -40,19 +40,19 @@ variable "argocd_subdomain" {
 }
 
 variable "create_ui_record" {
-  description = "Whether to create DNS record for UI"
+  description = "Whether to create public hostname and DNS record for UI"
   type        = bool
   default     = true
 }
 
 variable "create_api_record" {
-  description = "Whether to create DNS record for API"
+  description = "Whether to create public hostname and DNS record for API"
   type        = bool
   default     = true
 }
 
 variable "create_argocd_record" {
-  description = "Whether to create DNS record for ArgoCD"
+  description = "Whether to create public hostname and DNS record for ArgoCD"
   type        = bool
   default     = true
 }

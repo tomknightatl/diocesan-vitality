@@ -65,7 +65,7 @@ check_prerequisites() {
 
     if [[ -z "${CLOUDFLARE_ZONE_ID:-}" ]]; then
         echo "❌ CLOUDFLARE_ZONE_ID environment variable is required"
-        echo "   1. Edit .env with your zone ID from diocesan-vitality.org domain overview"
+        echo "   1. Edit .env with your zone ID from diocesanvitality.org domain overview"
         echo "   2. Load variables: source .env"
         exit 1
     fi
@@ -108,12 +108,15 @@ setup_kubernetes() {
     echo "=== Setting up Kubernetes Access ==="
     cd "$STAGING_DIR"
 
-    # Get kubeconfig path from Terraform output
-    KUBECONFIG_PATH=$(terraform output -raw kubeconfig_path)
+    # Get kubectl context information from Terraform output
+    KUBECTL_CONTEXT=$(terraform output -raw kubectl_context.name 2>/dev/null)
+    CONTEXT_ADDED=$(terraform output -raw kubectl_context.added 2>/dev/null)
 
-    if [[ -f "$KUBECONFIG_PATH" ]]; then
-        echo "Setting up kubectl access..."
-        export KUBECONFIG="$KUBECONFIG_PATH"
+    if [[ "$CONTEXT_ADDED" == "true" ]] && [[ -n "$KUBECTL_CONTEXT" ]]; then
+        echo "Using kubectl context: $KUBECTL_CONTEXT"
+
+        # Switch to the new context
+        kubectl config use-context "$KUBECTL_CONTEXT"
 
         # Test cluster access
         if kubectl get nodes &>/dev/null; then
@@ -124,8 +127,26 @@ setup_kubernetes() {
             exit 1
         fi
     else
-        echo "❌ Kubeconfig file not found at: $KUBECONFIG_PATH"
-        exit 1
+        # Fallback to traditional kubeconfig method
+        echo "Falling back to kubeconfig file method..."
+        KUBECONFIG_PATH=$(terraform output -raw kubeconfig_path)
+
+        if [[ -f "$KUBECONFIG_PATH" ]]; then
+            echo "Setting up kubectl access..."
+            export KUBECONFIG="$KUBECONFIG_PATH"
+
+            # Test cluster access
+            if kubectl get nodes &>/dev/null; then
+                echo "✅ Cluster access confirmed"
+                kubectl get nodes
+            else
+                echo "❌ Failed to access cluster"
+                exit 1
+            fi
+        else
+            echo "❌ Kubeconfig file not found at: $KUBECONFIG_PATH"
+            exit 1
+        fi
     fi
 
     echo
@@ -206,9 +227,15 @@ show_access_info() {
     echo
 
     echo "⚡ Quick Commands:"
-    echo "   Set kubeconfig: export KUBECONFIG=$(terraform output -raw kubeconfig_path)"
+    KUBECTL_CONTEXT=$(terraform output -raw kubectl_context.name 2>/dev/null)
+    if [[ -n "$KUBECTL_CONTEXT" ]]; then
+        echo "   Switch context: kubectl config use-context $KUBECTL_CONTEXT"
+    else
+        echo "   Set kubeconfig: export KUBECONFIG=$(terraform output -raw kubeconfig_path)"
+    fi
     echo "   Port forward:   kubectl port-forward svc/argocd-server -n argocd 8080:443"
     echo "   View apps:      kubectl get applications -n argocd"
+    echo "   List contexts:  kubectl config get-contexts"
     echo
 
     echo "📚 Next Steps:"

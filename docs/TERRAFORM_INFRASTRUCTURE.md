@@ -93,22 +93,22 @@ Set up environment variables using the `.env` file pattern:
    - Use "Custom token" template
    - Token name: "Terraform Infrastructure"
    - **Required Permissions (add these 3 permission rows):**
-     
+
      **Permission 1:**
-     - Resource: `Zone` 
+     - Resource: `Zone`
      - Permission: `Zone`
      - Zone Resources: All zones
-     
-     **Permission 2:** 
+
+     **Permission 2:**
      - Resource: `Zone`
      - Permission: `DNS`
-     - Zone Resources: Include specific zones → select "diocesan-vitality.org"
-     
+     - Zone Resources: Include specific zones → select "diocesanvitality.org"
+
      **Permission 3:**
      - Resource: `Account`
-     - Permission: `Cloudflare Tunnel`  
+     - Permission: `Cloudflare Tunnel`
      - Account Resources: Include your account
-   
+
    - Click "Continue to summary"
    - **Verify the summary shows:**
      ```
@@ -131,7 +131,7 @@ Set up environment variables using the `.env` file pattern:
    CLOUDFLARE_ZONE_ID=your-zone-id-here
    ```
    - Visit: https://dash.cloudflare.com
-   - Click on your "diocesan-vitality.org" domain
+   - Click on your "diocesanvitality.org" domain
    - Scroll down to "API" section in the right sidebar
    - Copy the "Zone ID" value
 
@@ -161,14 +161,10 @@ export CLOUDFLARE_API_TOKEN="your-token"
 ```
 
 This script will:
-1. ✅ Check all prerequisites
-2. 🏗️ Deploy DigitalOcean cluster with Terraform
-3. 🌐 Create Cloudflare tunnel and DNS records
-4. ⚙️ Configure kubectl access
-5. 🔐 Apply tunnel secrets
-6. 🚀 Install ArgoCD
-7. 📋 Apply ApplicationSets for GitOps
-8. 📊 Display access information
+1. 🏗️ **Deploy Infrastructure** - Create DigitalOcean cluster and Cloudflare tunnels with Terraform
+2. ⚙️ **Configure Access** - Set up kubectl and apply tunnel secrets
+3. 🚀 **Install ArgoCD** - Deploy GitOps management system
+4. 📊 **Display Information** - Show access URLs and next steps
 
 ### Deploy Staging Environment
 
@@ -209,26 +205,26 @@ terraform destroy
 
 ### Development (dev)
 - **Cluster**: `dv-dev` (2 nodes, s-2vcpu-2gb)
-- **Domains**: 
-  - UI: `dev.ui.diocesan-vitality.org`
-  - API: `dev.api.diocesan-vitality.org`
-  - ArgoCD: `dev.argocd.diocesan-vitality.org`
+- **Domains**:
+  - UI: `dev.ui.diocesanvitality.org`
+  - API: `dev.api.diocesanvitality.org`
+  - ArgoCD: `dev.argocd.diocesanvitality.org`
 - **Auto-scaling**: 1-3 nodes
 
 ### Staging (staging)
 - **Cluster**: `dv-stg` (2 nodes, s-2vcpu-4gb)
 - **Domains**:
-  - UI: `stg.ui.diocesan-vitality.org`
-  - API: `stg.api.diocesan-vitality.org`
-  - ArgoCD: `stg.argocd.diocesan-vitality.org`
+  - UI: `stg.ui.diocesanvitality.org`
+  - API: `stg.api.diocesanvitality.org`
+  - ArgoCD: `stg.argocd.diocesanvitality.org`
 - **Auto-scaling**: 2-4 nodes
 
 ### Production (existing)
 - **Cluster**: `dv-prd` (managed manually)
 - **Domains**:
-  - UI: `ui.diocesan-vitality.org`
-  - API: `api.diocesan-vitality.org`
-  - ArgoCD: `argocd.diocesan-vitality.org`
+  - UI: `ui.diocesanvitality.org`
+  - API: `api.diocesanvitality.org`
+  - ArgoCD: `argocd.diocesanvitality.org`
 
 ## Integration with GitOps
 
@@ -257,7 +253,7 @@ ArgoCD ApplicationSets automatically target the correct clusters:
     environment: development
     branch: develop
 
-# Staging deployments → dv-stg cluster  
+# Staging deployments → dv-stg cluster
 - cluster: dv-stg
   values:
     environment: staging
@@ -316,7 +312,7 @@ kubectl config current-context
 **DNS records not resolving**
 ```bash
 # Check Cloudflare tunnel status
-dig dev.ui.diocesan-vitality.org
+dig dev.ui.diocesanvitality.org
 ```
 
 **ArgoCD applications not syncing**

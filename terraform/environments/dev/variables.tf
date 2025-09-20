@@ -11,7 +11,7 @@ variable "cloudflare_account_id" {
 }
 
 variable "cloudflare_zone_id" {
-  description = "Cloudflare zone ID for diocesan-vitality.org"
+  description = "Cloudflare zone ID for diocesanvitality.org"
   type        = string
   default     = null
 }

@@ -21,7 +21,7 @@ The real-time monitoring dashboard provides **live operational visibility** into
 **Multi-Worker Support**: The dashboard supports monitoring multiple distributed workers with both aggregate and individual views, enabling scalable monitoring for distributed pipeline deployments.
 
 ### Dashboard Access
-**Production Dashboard:** https://diocesan-vitality.diocesanvitality.org/dashboard
+**Production Dashboard:** https://diocesanvitality.org/dashboard
 
 **Local Dashboard:** http://localhost:5173/dashboard (when running locally)
 
@@ -522,7 +522,7 @@ kubectl logs deployment/pipeline-deployment -n diocesan-vitality | grep -i "chro
 kubectl logs deployment/pipeline-deployment -n diocesan-vitality | grep "Circuit breaker"
 
 # Check dashboard for circuit breaker states
-# Visit: https://diocesan-vitality.diocesanvitality.org/dashboard
+# Visit: https://diocesanvitality.org/dashboard
 
 # Reset by restarting pipeline
 kubectl rollout restart deployment pipeline-deployment -n diocesan-vitality

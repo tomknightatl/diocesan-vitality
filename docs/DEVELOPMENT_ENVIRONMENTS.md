@@ -331,12 +331,12 @@ cloudflared tunnel login
 - ✅ kubectl contexts configured
 
 **Resulting infrastructure:**
-- **Dev UI**: `https://dev.ui.diocesan-vitality.org`
-- **Dev API**: `https://dev.api.diocesan-vitality.org`
-- **Dev ArgoCD**: `https://dev.argocd.diocesan-vitality.org`
-- **Staging UI**: `https://stg.ui.diocesan-vitality.org`
-- **Staging API**: `https://stg.api.diocesan-vitality.org`
-- **Staging ArgoCD**: `https://stg.argocd.diocesan-vitality.org`
+- **Dev UI**: `https://dev.ui.diocesanvitality.org`
+- **Dev API**: `https://dev.api.diocesanvitality.org`
+- **Dev ArgoCD**: `https://dev.argocd.diocesanvitality.org`
+- **Staging UI**: `https://stg.ui.diocesanvitality.org`
+- **Staging API**: `https://stg.api.diocesanvitality.org`
+- **Staging ArgoCD**: `https://stg.argocd.diocesanvitality.org`
 
 **Destroy clusters:**
 ```bash

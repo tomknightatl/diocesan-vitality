@@ -82,19 +82,19 @@ cd k8s/cluster-management
 
 ### DNS & Access
 - **Development**: 
-  - UI: `https://dev.ui.diocesan-vitality.org`
-  - API: `https://dev.api.diocesan-vitality.org`
-  - ArgoCD: `https://dev.argocd.diocesan-vitality.org`
+  - UI: `https://dev.ui.diocesanvitality.org`
+  - API: `https://dev.api.diocesanvitality.org`
+  - ArgoCD: `https://dev.argocd.diocesanvitality.org`
 
 - **Staging**:
-  - UI: `https://stg.ui.diocesan-vitality.org`
-  - API: `https://stg.api.diocesan-vitality.org`
-  - ArgoCD: `https://stg.argocd.diocesan-vitality.org`
+  - UI: `https://stg.ui.diocesanvitality.org`
+  - API: `https://stg.api.diocesanvitality.org`
+  - ArgoCD: `https://stg.argocd.diocesanvitality.org`
 
 - **Production**:
-  - UI: `https://ui.diocesan-vitality.org`
-  - API: `https://api.diocesan-vitality.org`
-  - ArgoCD: `https://argocd.diocesan-vitality.org`
+  - UI: `https://ui.diocesanvitality.org`
+  - API: `https://api.diocesanvitality.org`
+  - ArgoCD: `https://argocd.diocesanvitality.org`
 
 ## 📋 Individual Script Usage
 
@@ -190,9 +190,9 @@ kubectl config get-contexts
 **Via Cloudflare Tunnel (Recommended):**
 ```bash
 # Access ArgoCD directly through secure tunnel
-# Dev: https://dev.argocd.diocesan-vitality.org
-# Staging: https://stg.argocd.diocesan-vitality.org
-# Production: https://argocd.diocesan-vitality.org
+# Dev: https://dev.argocd.diocesanvitality.org
+# Staging: https://stg.argocd.diocesanvitality.org
+# Production: https://argocd.diocesanvitality.org
 
 # Get admin password for any environment
 kubectl config use-context dv-dev  # or dv-stg, dv-prd
