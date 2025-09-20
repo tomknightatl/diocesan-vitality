@@ -123,44 +123,76 @@ monitor-check: ## Test monitoring integration
 # Infrastructure Commands
 # =======================
 
-infra-setup: ## Set up complete infrastructure (all 4 steps)
-	@echo "🚀 Setting up complete infrastructure..."
-	@$(MAKE) cluster-create
-	@$(MAKE) tunnel-create
-	@$(MAKE) argocd-install
-	@$(MAKE) argocd-apps
-	@echo "🎉 Infrastructure setup complete!"
+infra-setup: ## Set up complete infrastructure (all 4 steps, usage: make infra-setup CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🚀 Setting up complete infrastructure for '$$CLUSTER_LABEL'..." && \
+	$(MAKE) cluster-create CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	$(MAKE) tunnel-create CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	$(MAKE) argocd-install CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	$(MAKE) argocd-apps CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	echo "🎉 Infrastructure setup complete for $$CLUSTER_LABEL!"
 
-cluster-create: ## Step 1: Create cluster and kubectl context
-	@echo "🚀 Step 1: Creating cluster and kubectl context..."
-	@cd terraform/environments/dev && \
+cluster-create: ## Step 1: Create cluster and kubectl context (usage: make cluster-create CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🚀 Step 1: Creating cluster and kubectl context for '$$CLUSTER_LABEL'..." && \
+	cd terraform/environments/dev && \
 		export DIGITALOCEAN_TOKEN=$$(grep DIGITALOCEAN_TOKEN ../../../.env | cut -d'=' -f2) && \
 		terraform init && \
 		terraform apply -target=module.k8s_cluster -auto-approve && \
-		doctl kubernetes cluster kubeconfig save dv-dev && \
-		kubectl config use-context do-nyc2-dv-dev && \
-		kubectl get nodes
-	@echo "✅ Step 1 Complete: Cluster created"
+		doctl kubernetes cluster kubeconfig save dv-$$CLUSTER_LABEL && \
+		kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
+		kubectl get nodes && \
+		echo "🏷️  Labeling cluster with environment label..." && \
+		kubectl create secret generic cluster-info \
+			--from-literal=environment=$$CLUSTER_LABEL \
+			--from-literal=cluster-name=dv-$$CLUSTER_LABEL \
+			-n default --dry-run=client -o yaml | kubectl apply -f -
+	@echo "✅ Step 1 Complete: Cluster created and labeled"
 
-tunnel-create: ## Step 2: Create Cloudflare tunnel and DNS records
-	@echo "🚀 Step 2: Creating Cloudflare tunnel..."
-	@echo "🧹 Cleaning up any stale tunnel state..."
-	@cd terraform/environments/dev && \
+tunnel-create: ## Step 2: Create Cloudflare tunnel and DNS records (usage: make tunnel-create CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🚀 Step 2: Creating Cloudflare tunnel for '$$CLUSTER_LABEL'..." && \
+	echo "🧹 Cleaning up any stale tunnel state..." && \
+	cd terraform/environments/dev && \
 		export CLOUDFLARE_API_TOKEN=$$(grep CLOUDFLARE_API_TOKEN ../../../.env | cut -d'=' -f2) && \
 		terraform state list | grep "module.cloudflare_tunnel" | xargs -r terraform state rm || true && \
 		terraform apply -target=module.cloudflare_tunnel -auto-approve
-	@echo "✅ Step 2 Complete: Cloudflare tunnel created"
+	@echo "✅ Step 2 Complete: Cloudflare tunnel created for $$CLUSTER_LABEL"
 
-argocd-install: ## Step 3: Install ArgoCD and configure repository
-	@echo "🚀 Step 3: Installing ArgoCD..."
-	@kubectl config use-context do-nyc2-dv-dev && \
+argocd-install: ## Step 3: Install ArgoCD and configure repository (usage: make argocd-install CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🚀 Step 3: Installing ArgoCD for '$$CLUSTER_LABEL'..." && \
+	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
 		kubectl create namespace argocd && \
 		kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml && \
 		kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=argocd-server -n argocd --timeout=300s && \
 		kubectl patch configmap argocd-cm -n argocd --patch '{"data":{"repositories":"- url: https://github.com/t-k-/diocesan-vitality.git"}}'
 	@echo "🔧 Setting up custom ArgoCD password..."
-	@$(MAKE) _setup-argocd-password
-	@echo "✅ Step 3 Complete: ArgoCD installed with custom password"
+	@$(MAKE) _setup-argocd-password CLUSTER_LABEL=$$CLUSTER_LABEL
+	@echo "🏷️  Registering cluster with ArgoCD..."
+	@$(MAKE) _register-cluster-with-argocd CLUSTER_LABEL=$$CLUSTER_LABEL
+	@echo "✅ Step 3 Complete: ArgoCD installed with custom password for $$CLUSTER_LABEL"
+
+_register-cluster-with-argocd: ## Register current cluster with ArgoCD with proper labels
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🔗 Registering cluster 'dv-$$CLUSTER_LABEL' with ArgoCD..." && \
+	if ! kubectl get secret cluster-info -n default >/dev/null 2>&1; then \
+		echo "🏷️  Creating missing cluster-info secret..."; \
+		kubectl create secret generic cluster-info \
+			--from-literal=environment=$$CLUSTER_LABEL \
+			--from-literal=cluster-name=dv-$$CLUSTER_LABEL \
+			-n default; \
+	fi && \
+	kubectl create secret generic argocd-cluster-local -n argocd \
+		--from-literal=name=in-cluster \
+		--from-literal=server=https://kubernetes.default.svc \
+		--from-literal=config='{"tlsClientConfig":{"insecure":true}}' \
+		--dry-run=client -o yaml | kubectl apply -f - && \
+	kubectl label secret argocd-cluster-local -n argocd \
+		argocd.argoproj.io/secret-type=cluster \
+		environment=$$CLUSTER_LABEL \
+		--overwrite && \
+	echo "✅ Cluster registration completed"
 
 _setup-argocd-password: ## Setup custom ArgoCD password from .env using kubectl
 	@echo "🔑 Configuring custom ArgoCD password..."
@@ -183,13 +215,14 @@ _setup-argocd-password: ## Setup custom ArgoCD password from .env using kubectl
 		echo "✅ Custom password configured and saved to: .argocd-admin-password"; \
 	fi
 
-argocd-apps: ## Step 4: Install ArgoCD ApplicationSets
-	@echo "🚀 Step 4: Installing ArgoCD ApplicationSets..."
-	@kubectl config use-context do-nyc2-dv-dev && \
-		kubectl apply -f k8s/argocd/sealed-secrets-multi-env-applicationset.yaml && \
-		kubectl apply -f k8s/argocd/cloudflare-tunnel-multi-env-applicationset.yaml && \
-		kubectl apply -f k8s/argocd/diocesan-vitality-environments-applicationset.yaml
-	@echo "✅ Step 4 Complete: ApplicationSets installed"
+argocd-apps: ## Step 4: Install ArgoCD ApplicationSets (usage: make argocd-apps CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🚀 Step 4: Installing ArgoCD ApplicationSets for '$$CLUSTER_LABEL'..." && \
+	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
+		kubectl apply -f k8s/argocd/sealed-secrets-$$CLUSTER_LABEL-applicationset.yaml && \
+		kubectl apply -f k8s/argocd/cloudflare-tunnel-$$CLUSTER_LABEL-applicationset.yaml && \
+		kubectl apply -f k8s/argocd/diocesan-vitality-$$CLUSTER_LABEL-applicationset.yaml
+	@echo "✅ Step 4 Complete: ApplicationSets installed for $$CLUSTER_LABEL"
 
 argocd-password: ## Get ArgoCD admin password
 	@echo "🔑 ArgoCD Admin Password:"
@@ -214,29 +247,34 @@ infra-status: ## Check infrastructure status
 	@echo "Tunnel status:"
 	@cd terraform/environments/dev && terraform output tunnel_info 2>/dev/null || echo "  No tunnel found"
 
-infra-destroy: ## Destroy complete infrastructure
-	@echo "🧹 Destroying infrastructure..."
-	@$(MAKE) tunnel-destroy
-	@$(MAKE) argocd-destroy
-	@$(MAKE) cluster-destroy
-	@echo "✅ Infrastructure destroyed"
+infra-destroy: ## Destroy complete infrastructure (usage: make infra-destroy CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🧹 Destroying infrastructure for '$$CLUSTER_LABEL'..." && \
+	$(MAKE) tunnel-destroy CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	$(MAKE) argocd-destroy CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	$(MAKE) cluster-destroy CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	echo "✅ Infrastructure destroyed for $$CLUSTER_LABEL"
 
-tunnel-destroy: ## Destroy Cloudflare tunnel
-	@echo "🧹 Destroying Cloudflare tunnel..."
-	@cd terraform/environments/dev && \
+tunnel-destroy: ## Destroy Cloudflare tunnel (usage: make tunnel-destroy CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🧹 Destroying Cloudflare tunnel for '$$CLUSTER_LABEL'..." && \
+	cd terraform/environments/dev && \
 		export CLOUDFLARE_API_TOKEN=$$(grep CLOUDFLARE_API_TOKEN ../../../.env | cut -d'=' -f2) && \
 		terraform destroy -target=module.cloudflare_tunnel -auto-approve || true && \
 		terraform state list | grep "module.cloudflare_tunnel" | xargs -r terraform state rm || true
 
-argocd-destroy: ## Destroy ArgoCD
-	@echo "🧹 Destroying ArgoCD..."
-	@echo "🔧 Removing finalizers from ArgoCD applications..."
-	@kubectl get applications -n argocd -o name 2>/dev/null | xargs -r -I {} kubectl patch {} -n argocd --type='merge' -p='{"metadata":{"finalizers":null}}' || true
-	@echo "🗑️  Deleting ArgoCD namespace..."
-	@kubectl delete namespace argocd --ignore-not-found=true
+argocd-destroy: ## Destroy ArgoCD (usage: make argocd-destroy CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🧹 Destroying ArgoCD for '$$CLUSTER_LABEL'..." && \
+	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
+	echo "🔧 Removing finalizers from ArgoCD applications..." && \
+	kubectl get applications -n argocd -o name 2>/dev/null | xargs -r -I {} kubectl patch {} -n argocd --type='merge' -p='{"metadata":{"finalizers":null}}' || true && \
+	echo "🗑️  Deleting ArgoCD namespace..." && \
+	kubectl delete namespace argocd --ignore-not-found=true
 
-cluster-destroy: ## Destroy cluster
-	@echo "🧹 Destroying cluster..."
-	@cd terraform/environments/dev && \
+cluster-destroy: ## Destroy cluster (usage: make cluster-destroy CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🧹 Destroying cluster for '$$CLUSTER_LABEL'..." && \
+	cd terraform/environments/dev && \
 		export DIGITALOCEAN_TOKEN=$$(grep DIGITALOCEAN_TOKEN ../../../.env | cut -d'=' -f2) && \
 		terraform destroy -target=module.k8s_cluster -auto-approve || true

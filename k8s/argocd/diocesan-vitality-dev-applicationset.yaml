@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: diocesan-vitality-dev
+  namespace: argocd
+spec:
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            environment: dev
+  template:
+    metadata:
+      name: "diocesan-vitality-dev"
+      namespace: argocd
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/tomknightatl/diocesan-vitality
+        targetRevision: "develop"
+        path: k8s/environments/development
+      destination:
+        server: "{{server}}"
+        namespace: "diocesan-vitality-dev"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ApplyOutOfSyncOnly=true
+      ignoreDifferences:
+        - group: apps
+          kind: Deployment
+          jsonPointers:
+            - /spec/replicas
+      revisionHistoryLimit: 3
