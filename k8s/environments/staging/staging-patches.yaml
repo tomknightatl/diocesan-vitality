@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+spec:
+  template:
+    spec:
+      containers:
+      - name: backend
+        env:
+        - name: ENVIRONMENT
+          value: "staging"
+        - name: DATABASE_URL
+          value: "${STAGING_DATABASE_URL}"
+        - name: SUPABASE_URL
+          value: "${STAGING_SUPABASE_URL}"
+        - name: SUPABASE_KEY
+          value: "${STAGING_SUPABASE_KEY}"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+spec:
+  template:
+    spec:
+      containers:
+      - name: frontend
+        env:
+        - name: REACT_APP_ENVIRONMENT
+          value: "staging"
+        - name: REACT_APP_API_URL
+          value: "https://staging-api.diocesan-vitality.com"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pipeline-deployment
+spec:
+  template:
+    spec:
+      containers:
+      - name: pipeline
+        env:
+        - name: ENVIRONMENT
+          value: "staging"
+        - name: DATABASE_URL
+          value: "${STAGING_DATABASE_URL}"
+        - name: SUPABASE_URL
+          value: "${STAGING_SUPABASE_URL}"
+        - name: SUPABASE_KEY
+          value: "${STAGING_SUPABASE_KEY}"
+        - name: GENAI_API_KEY
+          value: "${STAGING_GENAI_API_KEY}"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "300m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"

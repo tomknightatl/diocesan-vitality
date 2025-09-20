@@ -39,6 +39,42 @@ The system runs in the cloud using a **two-tier architecture** designed for cost
 4. **Auto-shutdown**: Pipeline node scales to 0 after completion
 5. **Fresh data**: Updated information available immediately via web interface
 
+## 🚀 CI/CD Pipeline
+
+This project uses a comprehensive CI/CD pipeline with automated testing and deployment:
+
+```
+📝 Code → 🔍 Quality → 🧪 Tests → 🏗️ Build → 🎭 Staging → ✅ Smoke Tests → 🚀 Production
+```
+
+### Quick Development Workflow
+```bash
+# Feature development
+git checkout -b feature/my-feature
+git push origin feature/my-feature  # Triggers quality checks + tests
+
+# Deploy to staging  
+git checkout develop
+git merge feature/my-feature
+git push origin develop  # Auto-deploys to staging
+
+# Deploy to production
+git checkout main  
+git merge develop
+git push origin main  # Requires manual approval
+```
+
+### 🛡️ Safety Gates
+- ✅ All tests must pass before deployment
+- ✅ Staging deployment must succeed before production
+- ✅ Manual approval required for production
+- ✅ Zero-downtime deployments with rollback capability
+
+### 📚 CI/CD Documentation
+- **[📋 Complete CI/CD Guide](docs/CI_CD_PIPELINE.md)** - Full pipeline documentation
+- **[🔧 GitHub Actions Setup](docs/GITHUB_ACTIONS_SETUP.md)** - Initial setup instructions
+- **[🚀 Deployment Guide](docs/DEPLOYMENT_GUIDE.md)** - Manual deployment options
+
 ## How It Works
 
 The Data Extraction Pipeline is a multi-step process that systematically collects and organizes Catholic diocese and parish information from across the United States.
