@@ -35,7 +35,9 @@ echo "🏗️ Building multi-arch frontend image..."
 docker buildx build --platform linux/amd64,linux/arm64 \
   -f frontend/Dockerfile \
   -t tomatl/diocesan-vitality:frontend-$TIMESTAMP \
-  --push frontend/
+  --push frontend/ \
+  --progress=plain \
+  --debug
 
 echo "🏗️ Building multi-arch pipeline image..."
 docker buildx build --platform linux/amd64,linux/arm64 \
