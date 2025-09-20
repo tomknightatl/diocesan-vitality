@@ -18,7 +18,7 @@ resource "random_password" "tunnel_secret" {
 }
 
 # Create the Cloudflare tunnel
-resource "cloudflare_tunnel" "diocesan_vitality" {
+resource "cloudflare_zero_trust_tunnel_cloudflared" "diocesan_vitality" {
   account_id = var.cloudflare_account_id
   name       = "${var.environment}-${var.cluster_name}"
   secret     = base64encode(random_password.tunnel_secret.result)
@@ -29,7 +29,7 @@ resource "cloudflare_record" "ui" {
   count   = var.create_ui_record ? 1 : 0
   zone_id = var.cloudflare_zone_id
   name    = var.ui_subdomain
-  value   = "${cloudflare_tunnel.diocesan_vitality.id}.cfargotunnel.com"
+  value   = "${cloudflare_zero_trust_tunnel_cloudflared.diocesan_vitality.id}.cfargotunnel.com"
   type    = "CNAME"
   proxied = true
 
@@ -40,7 +40,7 @@ resource "cloudflare_record" "api" {
   count   = var.create_api_record ? 1 : 0
   zone_id = var.cloudflare_zone_id
   name    = var.api_subdomain
-  value   = "${cloudflare_tunnel.diocesan_vitality.id}.cfargotunnel.com"
+  value   = "${cloudflare_zero_trust_tunnel_cloudflared.diocesan_vitality.id}.cfargotunnel.com"
   type    = "CNAME"
   proxied = true
 
@@ -51,7 +51,7 @@ resource "cloudflare_record" "argocd" {
   count   = var.create_argocd_record ? 1 : 0
   zone_id = var.cloudflare_zone_id
   name    = var.argocd_subdomain
-  value   = "${cloudflare_tunnel.diocesan_vitality.id}.cfargotunnel.com"
+  value   = "${cloudflare_zero_trust_tunnel_cloudflared.diocesan_vitality.id}.cfargotunnel.com"
   type    = "CNAME"
   proxied = true
 
@@ -61,7 +61,7 @@ resource "cloudflare_record" "argocd" {
 # Tunnel configuration
 resource "cloudflare_tunnel_config" "diocesan_vitality" {
   account_id = var.cloudflare_account_id
-  tunnel_id  = cloudflare_tunnel.diocesan_vitality.id
+  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.diocesan_vitality.id
 
   config {
     dynamic "ingress_rule" {
@@ -110,7 +110,7 @@ locals {
   tunnel_credentials = jsonencode({
     "AccountTag"   = var.cloudflare_account_id
     "TunnelSecret" = random_password.tunnel_secret.result
-    "TunnelID"     = cloudflare_tunnel.diocesan_vitality.id
+    "TunnelID"     = cloudflare_zero_trust_tunnel_cloudflared.diocesan_vitality.id
   })
 
   k8s_secret_manifest = yamlencode({
@@ -133,5 +133,5 @@ resource "local_file" "tunnel_secret" {
   content  = local.k8s_secret_manifest
   filename = "${path.root}/k8s-secrets/cloudflare-tunnel-${var.environment}.yaml"
 
-  depends_on = [cloudflare_tunnel.diocesan_vitality]
+  depends_on = [cloudflare_zero_trust_tunnel_cloudflared.diocesan_vitality]
 }

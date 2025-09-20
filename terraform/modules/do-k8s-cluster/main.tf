@@ -27,8 +27,6 @@ resource "digitalocean_kubernetes_cluster" "cluster" {
   # Ensure cluster is fully provisioned before proceeding
   timeouts {
     create = "30m"
-    update = "20m"
-    delete = "20m"
   }
 }
 
@@ -43,6 +41,6 @@ resource "local_file" "kubeconfig" {
 
 # Output cluster endpoint for ArgoCD configuration
 data "digitalocean_kubernetes_cluster" "cluster_data" {
-  name = digitalocean_kubernetes_cluster.cluster.name
+  name       = digitalocean_kubernetes_cluster.cluster.name
   depends_on = [digitalocean_kubernetes_cluster.cluster]
 }
