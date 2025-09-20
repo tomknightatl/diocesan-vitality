@@ -19,8 +19,45 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.common.exceptions import WebDriverException, TimeoutException
 from core.logger import get_logger
 from core.circuit_breaker import circuit_breaker, CircuitBreakerConfig, CircuitBreakerOpenError
+import subprocess
+import shutil
 
 logger = get_logger(__name__)
+
+
+def _find_chrome_binary():
+    """Find the Chrome binary path dynamically based on what's available."""
+    # List of possible Chrome binary locations in order of preference
+    chrome_binaries = [
+        '/usr/bin/google-chrome',       # Standard Google Chrome on Linux
+        '/usr/bin/chromium-browser',    # Chromium on Raspberry Pi/ARM64
+        '/usr/bin/chromium',            # Alternative Chromium path
+        '/opt/google/chrome/chrome',    # Alternative Google Chrome path
+        'google-chrome',                # System PATH fallback
+        'chromium-browser',             # System PATH fallback
+        'chromium'                      # System PATH fallback
+    ]
+
+    for binary_path in chrome_binaries:
+        try:
+            if binary_path.startswith('/'):
+                # Absolute path - check if file exists
+                if shutil.which(binary_path) or subprocess.run(['test', '-f', binary_path],
+                                                             capture_output=True).returncode == 0:
+                    logger.info(f"🔍 Found Chrome binary at: {binary_path}")
+                    return binary_path
+            else:
+                # Check in system PATH
+                found_path = shutil.which(binary_path)
+                if found_path:
+                    logger.info(f"🔍 Found Chrome binary in PATH: {found_path}")
+                    return found_path
+        except Exception as e:
+            logger.debug(f"Could not check {binary_path}: {e}")
+            continue
+
+    logger.warning("⚠️ No Chrome binary found, WebDriver will use default")
+    return None
 
 
 @dataclass
@@ -184,8 +221,10 @@ class AsyncWebDriverPool:
         # Try system ChromeDriver first (for ARM64 compatibility)
         try:
             chrome_service = Service('/usr/bin/chromedriver')
-            # Set Chromium binary path for Raspberry Pi
-            chrome_options.binary_location = '/usr/bin/chromium-browser'
+            # Set Chrome binary path dynamically
+            chrome_binary = _find_chrome_binary()
+            if chrome_binary:
+                chrome_options.binary_location = chrome_binary
             return webdriver.Chrome(service=chrome_service, options=chrome_options)
         except Exception as e:
             logger.warning(f"System ChromeDriver failed: {e}, falling back to ChromeDriverManager")
