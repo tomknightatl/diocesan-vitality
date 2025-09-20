@@ -242,9 +242,44 @@ main() {
     doctl kubernetes cluster list --format Name,Region,Version,Status,NodePools
     echo
     echo "kubectl contexts:"
-    kubectl config get-contexts | grep "do-nyc2-dv" || echo "No matching contexts found"
+    kubectl config get-contexts | grep -E "(dv-dev|dv-stg|dv-prd)" || echo "No matching contexts found"
     echo
-    echo "? Cluster management complete"
+    echo "✅ Cluster management complete"
+    echo
+
+    # Offer to setup ArgoCD if any clusters exist
+    local clusters_exist=false
+    if check_cluster_exists "$STAGING_CLUSTER" || check_cluster_exists "$DEV_CLUSTER"; then
+        clusters_exist=true
+    fi
+
+    if [[ "$clusters_exist" == "true" ]]; then
+        echo "🚀 ArgoCD Setup"
+        echo "Would you like to install and configure ArgoCD for GitOps deployment?"
+        read -p "Setup ArgoCD in new clusters? (y/N): " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            echo "Starting ArgoCD setup..."
+            ./setup-argocd.sh
+
+            # Offer to setup Cloudflare tunnels
+            echo ""
+            echo "🌐 Cloudflare Tunnel Setup"
+            echo "Would you like to create Cloudflare tunnels for secure ingress?"
+            read -p "Setup Cloudflare tunnels? (y/N): " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                echo "Starting Cloudflare tunnel setup..."
+                ./setup-cloudflare-tunnels.sh
+            else
+                echo "ℹ️  Skipping Cloudflare tunnel setup"
+                echo "   To setup later, run: ./setup-cloudflare-tunnels.sh"
+            fi
+        else
+            echo "ℹ️  Skipping ArgoCD setup"
+            echo "   To setup later, run: ./setup-argocd.sh"
+        fi
+    fi
 }
 
 main "$@"

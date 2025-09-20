@@ -1,0 +1,39 @@
+# Sealed Secrets configuration for development environment
+fullnameOverride: sealed-secrets-controller
+
+# Development-specific settings
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Enable metrics for monitoring
+metrics:
+  serviceMonitor:
+    enabled: false  # Disable for dev environment
+
+# Development logging
+logLevel: info
+
+# Security context
+securityContext:
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 65534
+
+# Pod security context
+podSecurityContext:
+  fsGroup: 65534
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8080
+
+# Additional labels
+commonLabels:
+  environment: development
+  component: sealed-secrets
