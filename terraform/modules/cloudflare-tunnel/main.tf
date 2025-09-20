@@ -20,16 +20,16 @@ resource "random_password" "tunnel_secret" {
 # Create the Cloudflare tunnel
 resource "cloudflare_zero_trust_tunnel_cloudflared" "diocesan_vitality" {
   account_id = var.cloudflare_account_id
-  name       = "${var.environment}-${var.cluster_name}"
+  name       = "do-nyc2-${var.cluster_name}"
   secret     = base64encode(random_password.tunnel_secret.result)
 }
 
-# DNS records for the tunnel
+# DNS records for the tunnel - these will appear as Public Hostnames in Cloudflare dashboard
 resource "cloudflare_record" "ui" {
   count   = var.create_ui_record ? 1 : 0
   zone_id = var.cloudflare_zone_id
   name    = var.ui_subdomain
-  value   = "${cloudflare_zero_trust_tunnel_cloudflared.diocesan_vitality.id}.cfargotunnel.com"
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.diocesan_vitality.id}.cfargotunnel.com"
   type    = "CNAME"
   proxied = true
 
@@ -40,7 +40,7 @@ resource "cloudflare_record" "api" {
   count   = var.create_api_record ? 1 : 0
   zone_id = var.cloudflare_zone_id
   name    = var.api_subdomain
-  value   = "${cloudflare_zero_trust_tunnel_cloudflared.diocesan_vitality.id}.cfargotunnel.com"
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.diocesan_vitality.id}.cfargotunnel.com"
   type    = "CNAME"
   proxied = true
 
@@ -51,7 +51,7 @@ resource "cloudflare_record" "argocd" {
   count   = var.create_argocd_record ? 1 : 0
   zone_id = var.cloudflare_zone_id
   name    = var.argocd_subdomain
-  value   = "${cloudflare_zero_trust_tunnel_cloudflared.diocesan_vitality.id}.cfargotunnel.com"
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.diocesan_vitality.id}.cfargotunnel.com"
   type    = "CNAME"
   proxied = true
 

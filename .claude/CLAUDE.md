@@ -54,14 +54,22 @@ make env-check     # Check environment configuration
 make db-check      # Test database connection
 make ai-check      # Test AI API connection
 make webdriver-check  # Test Chrome WebDriver
+
+# Python testing
+pytest                    # Run all tests
+pytest tests/unit/       # Run unit tests only
+pytest tests/integration/ # Run integration tests
+pytest -v --tb=short     # Verbose output with short traceback
 ```
 
 ### Frontend Commands
 ```bash
 cd frontend
-npm run dev        # Start development server
+npm install        # Install frontend dependencies
+npm run dev        # Start development server (default: http://localhost:3000)
 npm run build      # Build for production
-npm run lint       # Lint frontend code
+npm run lint       # Lint frontend code with ESLint
+npm run preview    # Preview production build locally
 ```
 
 ### Backend Commands
@@ -106,11 +114,17 @@ The system operates in two modes:
 - **Docker + Kubernetes**: Production deployment
 
 ### Environment Configuration
-Required environment variables in `.env`:
+Required environment variables in `.env` (copy from `.env.example`):
 - `SUPABASE_URL`, `SUPABASE_KEY`: Database connection
 - `GENAI_API_KEY`: Google Gemini AI for content analysis
 - `SEARCH_API_KEY`, `SEARCH_CX`: Google Custom Search
 - `MONITORING_URL`: Backend monitoring endpoint (default: http://localhost:8000)
+
+**Setup**: Copy `.env.example` to `.env` and fill in your API keys
+```bash
+cp .env.example .env
+# Edit .env with your API keys
+```
 
 ### Development Workflow
 1. Start backend: `cd backend && uvicorn main:app --reload --port 8000`
@@ -136,6 +150,26 @@ See `docs/DATABASE.md` for complete schema documentation.
 - **Adaptive Timeouts**: Dynamic optimization based on site complexity
 - **Quality-Weighted ML Training**: Success-based URL discovery optimization
 
+### Code Quality Standards
+```bash
+# Code formatting (Black)
+make format            # Format all Python code
+black . --line-length=127
+
+# Linting (Flake8)
+make lint             # Run Python linting
+flake8 . --max-line-length=88
+
+# Frontend linting
+cd frontend && npm run lint
+```
+
+### Important Documentation References
+- **[docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md)**: Complete local setup guide
+- **[docs/COMMANDS.md](docs/COMMANDS.md)**: Comprehensive command reference
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**: Detailed system architecture
+- **[docs/DATABASE.md](docs/DATABASE.md)**: Database schema and operations
+
 ## Git Workflow Rules
 
 ### IMPORTANT: Repository Changes
@@ -144,3 +178,15 @@ See `docs/DATABASE.md` for complete schema documentation.
 - **Exception: Only push when the user explicitly requests "commit and push" or similar**
 - When changes are ready, inform the user and ask for permission to commit/push
 - Provide a summary of changes before requesting permission
+
+## GitOps and ArgoCD Rules
+
+### CRITICAL: ArgoCD-Managed Resources
+- **NEVER directly patch, edit, or modify Kubernetes objects that are deployed by ArgoCD Applications**
+- **ALWAYS use GitOps principles**: modify the source manifests in the repository, then let ArgoCD sync the changes
+- **To change ArgoCD-managed resources**: 
+  1. Update the corresponding YAML manifests in the `k8s/` directory
+  2. Commit changes to git (with user permission)
+  3. Let ArgoCD automatically sync the changes, or manually trigger a sync
+- **ArgoCD Applications create and manage**: namespaces, deployments, services, configmaps, secrets, and other Kubernetes resources
+- **Exception**: Only manually modify Kubernetes objects in emergency situations and immediately update the source manifests to match
