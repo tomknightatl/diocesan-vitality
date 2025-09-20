@@ -50,3 +50,13 @@ output "cluster_token" {
   value       = digitalocean_kubernetes_cluster.cluster.kube_config[0].token
   sensitive   = true
 }
+
+output "kubectl_context_name" {
+  description = "Name of the kubectl context"
+  value       = var.add_kubectl_context ? (var.kubectl_context_name != "" ? var.kubectl_context_name : var.cluster_name) : null
+}
+
+output "kubectl_context_added" {
+  description = "Whether kubectl context was added to local machine"
+  value       = var.add_kubectl_context
+}

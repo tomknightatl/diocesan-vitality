@@ -10,6 +10,10 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "~> 4.20"
     }
+    null = {
+      source  = "hashicorp/null"
+      version = "~> 3.2"
+    }
   }
 
   backend "local" {
@@ -26,14 +30,18 @@ provider "cloudflare" {
   # api_token is set via CLOUDFLARE_API_TOKEN environment variable
 }
 
+provider "null" {
+  # No configuration required
+}
+
 # Local values for the development environment
 locals {
   environment  = "dev"
   cluster_name = "dv-dev"
-  region       = "nyc3"
+  region       = "nyc2"
 
   # Domain configuration
-  domain_name      = "diocesan-vitality.org"
+  domain_name      = "diocesanvitality.org"
   ui_subdomain     = "dev.ui"
   api_subdomain    = "dev.api"
   argocd_subdomain = "dev.argocd"
@@ -66,9 +74,11 @@ module "k8s_cluster" {
   min_nodes  = local.min_nodes
   max_nodes  = local.max_nodes
 
-  cluster_tags     = local.common_tags
-  node_tags        = concat(local.common_tags, ["worker-node"])
-  write_kubeconfig = true
+  cluster_tags         = local.common_tags
+  node_tags            = concat(local.common_tags, ["worker-node"])
+  write_kubeconfig     = true
+  add_kubectl_context  = true
+  kubectl_context_name = "diocesan-vitality-dev"
 }
 
 # Create Cloudflare tunnel and DNS records

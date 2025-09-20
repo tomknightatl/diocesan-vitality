@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-DOMAIN="diocesan-vitality.org"
+DOMAIN="diocesanvitality.org"
 TUNNEL_PREFIX="do-nyc2-dv"
 
 echo "=== Cloudflare Tunnel Setup for Development/Staging ==="

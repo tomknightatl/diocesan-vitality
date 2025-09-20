@@ -38,3 +38,24 @@ output "k8s_secret_file" {
   description = "Path to the generated Kubernetes secret file"
   value       = var.write_k8s_secret ? local_file.tunnel_secret[0].filename : null
 }
+
+output "dns_records" {
+  description = "Information about created DNS records (which appear as Public Hostnames)"
+  value = {
+    ui = var.create_ui_record ? {
+      hostname = cloudflare_record.ui[0].hostname
+      content  = cloudflare_record.ui[0].content
+      comment  = cloudflare_record.ui[0].comment
+    } : null
+    api = var.create_api_record ? {
+      hostname = cloudflare_record.api[0].hostname
+      content  = cloudflare_record.api[0].content
+      comment  = cloudflare_record.api[0].comment
+    } : null
+    argocd = var.create_argocd_record ? {
+      hostname = cloudflare_record.argocd[0].hostname
+      content  = cloudflare_record.argocd[0].content
+      comment  = cloudflare_record.argocd[0].comment
+    } : null
+  }
+}

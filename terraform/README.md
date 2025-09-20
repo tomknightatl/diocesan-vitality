@@ -32,6 +32,7 @@ terraform/
 ### Infrastructure Layer (Terraform)
 - ✅ DigitalOcean Kubernetes clusters
 - ✅ Cloudflare tunnels and DNS records
+- ✅ **Automatic kubectl context management**
 - ✅ Network configuration
 - ✅ Security settings
 
@@ -87,8 +88,11 @@ terraform output
 
 ### Access Services
 ```bash
-# Get kubeconfig
-export KUBECONFIG=$(terraform output -raw kubeconfig_path)
+# Switch to development cluster
+kubectl config use-context diocesan-vitality-dev
+
+# Or use the context management script
+./scripts/manage-contexts.sh dev
 
 # Access ArgoCD
 kubectl port-forward svc/argocd-server -n argocd 8080:443
@@ -98,13 +102,32 @@ kubectl port-forward svc/argocd-server -n argocd 8080:443
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
 ```
 
+### Kubectl Context Management
+The Terraform setup automatically adds kubectl contexts to your local machine:
+
+```bash
+# List available contexts
+./scripts/manage-contexts.sh list
+
+# Switch between environments
+./scripts/manage-contexts.sh dev      # Development
+./scripts/manage-contexts.sh staging  # Staging
+
+# Check status of all environments
+./scripts/manage-contexts.sh status
+```
+
+**Context Names:**
+- Development: `diocesan-vitality-dev`
+- Staging: `diocesan-vitality-staging`
+
 ## Environment Details
 
-| Environment | Cluster | Nodes | URLs |
-|-------------|---------|--------|------|
-| **Development** | `dv-dev` | 2 nodes (s-2vcpu-2gb) | `dev.*.diocesan-vitality.org` |
-| **Staging** | `dv-stg` | 2 nodes (s-2vcpu-4gb) | `stg.*.diocesan-vitality.org` |
-| **Production** | `dv-prd` | Manual management | `*.diocesan-vitality.org` |
+| Environment | Cluster | Region | Nodes | URLs |
+|-------------|---------|--------|-------|------|
+| **Development** | `dv-dev` | `nyc2` | 2 nodes (s-2vcpu-2gb) | `dev.*.diocesanvitality.org` |
+| **Staging** | `dv-stg` | `nyc2` | 2 nodes (s-2vcpu-4gb) | `stg.*.diocesanvitality.org` |
+| **Production** | `dv-prd` | TBD | Manual management | `*.diocesanvitality.org` |
 
 ## CI/CD Integration
 
@@ -133,7 +156,7 @@ kubectl get nodes
 
 **DNS not resolving**:
 ```bash
-dig dev.ui.diocesan-vitality.org
+dig dev.ui.diocesanvitality.org
 ```
 
 **ArgoCD not accessible**:
@@ -156,5 +179,6 @@ This Terraform approach replaces the previous script-based infrastructure:
 
 For complete documentation, see:
 - **[Terraform Infrastructure Guide](../docs/TERRAFORM_INFRASTRUCTURE.md)** - Comprehensive documentation
+- **[Kubectl Context Management](KUBECTL_CONTEXT_MANAGEMENT.md)** - Automatic context setup and management
 - **[Development Environments](../docs/DEVELOPMENT_ENVIRONMENTS.md)** - GitOps workflow
 - **[ArgoCD Setup](../k8s/argocd/README.md)** - Application management

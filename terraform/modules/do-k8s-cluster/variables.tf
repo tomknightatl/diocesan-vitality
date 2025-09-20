@@ -6,7 +6,7 @@ variable "cluster_name" {
 variable "region" {
   description = "DigitalOcean region for the cluster"
   type        = string
-  default     = "nyc3"
+  default     = "nyc2"
 }
 
 variable "kubernetes_version" {
@@ -61,4 +61,16 @@ variable "write_kubeconfig" {
   description = "Whether to write kubeconfig file locally"
   type        = bool
   default     = true
+}
+
+variable "add_kubectl_context" {
+  description = "Whether to add kubectl context to local machine"
+  type        = bool
+  default     = true
+}
+
+variable "kubectl_context_name" {
+  description = "Name for the kubectl context (defaults to cluster_name if empty)"
+  type        = string
+  default     = ""
 }

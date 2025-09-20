@@ -17,9 +17,9 @@ output "kubeconfig_path" {
 output "tunnel_info" {
   description = "Cloudflare tunnel information"
   value = {
-    id       = module.cloudflare_tunnel.tunnel_id
-    name     = module.cloudflare_tunnel.tunnel_name
-    cname    = module.cloudflare_tunnel.tunnel_cname
+    id    = module.cloudflare_tunnel.tunnel_id
+    name  = module.cloudflare_tunnel.tunnel_name
+    cname = module.cloudflare_tunnel.tunnel_cname
   }
 }
 
@@ -32,10 +32,19 @@ output "hostnames" {
   }
 }
 
+output "kubectl_context" {
+  description = "Kubectl context information"
+  value = {
+    name       = module.k8s_cluster.kubectl_context_name
+    added      = module.k8s_cluster.kubectl_context_added
+    switch_cmd = "kubectl config use-context ${module.k8s_cluster.kubectl_context_name}"
+  }
+}
+
 output "next_steps" {
   description = "Next steps after infrastructure creation"
   value = [
-    "1. Configure kubectl: export KUBECONFIG=${module.k8s_cluster.kubeconfig_file_path}",
+    "1. Switch kubectl context: kubectl config use-context ${module.k8s_cluster.kubectl_context_name}",
     "2. Apply tunnel secret: kubectl apply -f ${module.cloudflare_tunnel.k8s_secret_file}",
     "3. Install ArgoCD: kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml",
     "4. Apply ArgoCD ApplicationSets from k8s/argocd/",
