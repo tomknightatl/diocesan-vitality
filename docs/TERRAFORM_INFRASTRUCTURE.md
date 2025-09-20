@@ -73,20 +73,67 @@ Set up environment variables using the `.env` file pattern:
    ```
 
 2. **Configure API credentials in `.env`**:
+
+   **DigitalOcean API Token:**
    ```bash
-   # DigitalOcean API Token - Get from: https://cloud.digitalocean.com/account/api/tokens
    DIGITALOCEAN_TOKEN=your-do-token-here
-   
-   # Cloudflare API Token - Create at: https://dash.cloudflare.com/profile/api-tokens
-   # Required permissions: Zone:Read, DNS:Edit, Cloudflare Tunnel:Edit
+   ```
+   - Visit: https://cloud.digitalocean.com/account/api/tokens
+   - Click "Generate New Token"
+   - Name: "Terraform Infrastructure"
+   - Scopes: Read and Write access
+   - Copy the generated token
+
+   **Cloudflare API Token:**
+   ```bash
    CLOUDFLARE_API_TOKEN=your-cf-token-here
+   ```
+   - Visit: https://dash.cloudflare.com/profile/api-tokens
+   - Click "Create Token"
+   - Use "Custom token" template
+   - Token name: "Terraform Infrastructure"
+   - **Required Permissions (add these 3 permission rows):**
+     
+     **Permission 1:**
+     - Resource: `Zone` 
+     - Permission: `Zone`
+     - Zone Resources: All zones
+     
+     **Permission 2:** 
+     - Resource: `Zone`
+     - Permission: `DNS`
+     - Zone Resources: Include specific zones → select "diocesan-vitality.org"
+     
+     **Permission 3:**
+     - Resource: `Account`
+     - Permission: `Cloudflare Tunnel`  
+     - Account Resources: Include your account
    
-   # Cloudflare Account ID - Get from dashboard sidebar
+   - Click "Continue to summary"
+   - **Verify the summary shows:**
+     ```
+     All accounts - Cloudflare Tunnel:Edit
+     All zones - Zone:Read, DNS:Edit
+     ```
+   - Click "Create Token"
+   - Copy the generated token (starts with "CF-")
+
+   **Cloudflare Account ID:**
+   ```bash
    CLOUDFLARE_ACCOUNT_ID=your-account-id-here
-   
-   # Cloudflare Zone ID - Get from diocesan-vitality.org domain overview
+   ```
+   - Visit: https://dash.cloudflare.com
+   - Look in the right sidebar under "Account ID"
+   - Copy the 32-character hex string
+
+   **Cloudflare Zone ID:**
+   ```bash
    CLOUDFLARE_ZONE_ID=your-zone-id-here
    ```
+   - Visit: https://dash.cloudflare.com
+   - Click on your "diocesan-vitality.org" domain
+   - Scroll down to "API" section in the right sidebar
+   - Copy the "Zone ID" value
 
 3. **Load environment variables**:
    ```bash
