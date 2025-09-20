@@ -119,3 +119,88 @@ webdriver-check: ## Test Chrome WebDriver
 
 monitor-check: ## Test monitoring integration
 	@python scripts/dev_test.py --monitoring
+
+# Infrastructure Commands
+# =======================
+
+infra-setup: ## Set up complete infrastructure (all 4 steps)
+	@echo "🚀 Setting up complete infrastructure..."
+	@$(MAKE) cluster-create
+	@$(MAKE) argocd-install
+	@$(MAKE) argocd-apps
+	@$(MAKE) tunnel-create
+	@echo "🎉 Infrastructure setup complete!"
+
+cluster-create: ## Step 1: Create cluster and kubectl context
+	@echo "🚀 Step 1: Creating cluster and kubectl context..."
+	@cd terraform/environments/dev && \
+		export DIGITALOCEAN_TOKEN=$$(grep DIGITALOCEAN_TOKEN ../../../.env | cut -d'=' -f2) && \
+		terraform init && \
+		terraform apply -target=module.k8s_cluster -auto-approve && \
+		doctl kubernetes cluster kubeconfig save dv-dev && \
+		kubectl config use-context do-nyc2-dv-dev && \
+		kubectl get nodes
+	@echo "✅ Step 1 Complete: Cluster created"
+
+argocd-install: ## Step 2: Install ArgoCD and configure repository
+	@echo "🚀 Step 2: Installing ArgoCD..."
+	@kubectl config use-context do-nyc2-dv-dev && \
+		kubectl create namespace argocd && \
+		kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml && \
+		kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=argocd-server -n argocd --timeout=300s && \
+		kubectl patch configmap argocd-cm -n argocd --patch '{"data":{"repositories":"- url: https://github.com/t-k-/diocesan-vitality.git"}}'
+	@echo "✅ Step 2 Complete: ArgoCD installed"
+	@echo "   Admin password: $$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d)"
+
+argocd-apps: ## Step 3: Install ArgoCD ApplicationSets
+	@echo "🚀 Step 3: Installing ArgoCD ApplicationSets..."
+	@kubectl config use-context do-nyc2-dv-dev && \
+		kubectl apply -f k8s/argocd/sealed-secrets-multi-env-applicationset.yaml && \
+		kubectl apply -f k8s/argocd/cloudflare-tunnel-multi-env-applicationset.yaml && \
+		kubectl apply -f k8s/argocd/diocesan-vitality-environments-applicationset.yaml
+	@echo "✅ Step 3 Complete: ApplicationSets installed"
+
+tunnel-create: ## Step 4: Create Cloudflare tunnel and DNS records
+	@echo "🚀 Step 4: Creating Cloudflare tunnel..."
+	@cd terraform/environments/dev && \
+		export CLOUDFLARE_API_TOKEN=$$(grep CLOUDFLARE_API_TOKEN ../../../.env | cut -d'=' -f2) && \
+		terraform apply -target=module.cloudflare_tunnel -auto-approve
+	@echo "✅ Step 4 Complete: Cloudflare tunnel created"
+
+infra-status: ## Check infrastructure status
+	@echo "🔍 Infrastructure Status:"
+	@echo "========================"
+	@echo "Kubectl contexts:"
+	@kubectl config get-contexts | grep -E "(CURRENT|do-nyc2)" || echo "  No dev contexts found"
+	@echo ""
+	@echo "ArgoCD status:"
+	@kubectl get pods -n argocd 2>/dev/null | grep -E "(NAME|argocd-server)" || echo "  ArgoCD not installed"
+	@echo ""
+	@echo "Applications:"
+	@kubectl get applications -n argocd 2>/dev/null || echo "  No applications found"
+	@echo ""
+	@echo "Tunnel status:"
+	@cd terraform/environments/dev && terraform output tunnel_info 2>/dev/null || echo "  No tunnel found"
+
+infra-destroy: ## Destroy complete infrastructure
+	@echo "🧹 Destroying infrastructure..."
+	@$(MAKE) tunnel-destroy
+	@$(MAKE) argocd-destroy
+	@$(MAKE) cluster-destroy
+	@echo "✅ Infrastructure destroyed"
+
+tunnel-destroy: ## Destroy Cloudflare tunnel
+	@echo "🧹 Destroying Cloudflare tunnel..."
+	@cd terraform/environments/dev && \
+		export CLOUDFLARE_API_TOKEN=$$(grep CLOUDFLARE_API_TOKEN ../../../.env | cut -d'=' -f2) && \
+		terraform destroy -target=module.cloudflare_tunnel -auto-approve || true
+
+argocd-destroy: ## Destroy ArgoCD
+	@echo "🧹 Destroying ArgoCD..."
+	@kubectl delete namespace argocd --ignore-not-found=true
+
+cluster-destroy: ## Destroy cluster
+	@echo "🧹 Destroying cluster..."
+	@cd terraform/environments/dev && \
+		export DIGITALOCEAN_TOKEN=$$(grep DIGITALOCEAN_TOKEN ../../../.env | cut -d'=' -f2) && \
+		terraform destroy -target=module.k8s_cluster -auto-approve || true
