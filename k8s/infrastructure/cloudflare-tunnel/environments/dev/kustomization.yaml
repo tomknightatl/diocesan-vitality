@@ -5,6 +5,7 @@ namespace: cloudflare-tunnel-dev
 
 resources:
   - ../../base
+  - sealedsecret.yaml
 
 patches:
   - target:
@@ -46,6 +47,3 @@ patches:
 
 commonLabels:
   environment: development
-
-resources:
-  - sealedsecret.yaml
