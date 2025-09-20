@@ -393,6 +393,7 @@ The web application uses **Docker Hub** for container image storage. Docker Hub 
 - **[docs/COMMANDS.md](docs/COMMANDS.md)**: Complete command reference for all scripts
 
 ### 🏗️ Deployment & Operations
+- **[docs/TERRAFORM_INFRASTRUCTURE.md](docs/TERRAFORM_INFRASTRUCTURE.md)**: Terraform infrastructure management (hybrid Terraform + GitOps approach)
 - **[docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md)**: Docker and Kubernetes deployment instructions
 - **[docs/CI_CD_PIPELINE.md](docs/CI_CD_PIPELINE.md)**: Complete CI/CD pipeline documentation and workflows
 - **[docs/GITHUB_ACTIONS_SETUP.md](docs/GITHUB_ACTIONS_SETUP.md)**: GitHub Actions setup and configuration
