@@ -1,6 +1,6 @@
-# Infrastructure Setup Commands
+ # Infrastructure Setup Commands
 
-Simple commands to set up the infrastructure in 4 steps.
+Simple commands to set up the infrastructure in 5 steps.
 
 ## Prerequisites
 
@@ -44,6 +44,9 @@ make argocd-install CLUSTER_LABEL=dev
 
 # Step 4: Install ArgoCD ApplicationSets
 make argocd-apps CLUSTER_LABEL=dev
+
+# Step 5: Convert tunnel credentials to sealed secrets
+make sealed-secrets-create CLUSTER_LABEL=dev
 ```
 
 ## Environment-Specific Deployment
@@ -59,6 +62,29 @@ Each environment:
 - Deploys only applications targeting that environment
 - Uses environment-specific ArgoCD passwords
 - Applies correct ApplicationSets for the cluster type
+
+## Step 5: Sealed Secrets (Security)
+
+Step 5 converts the Terraform-generated Cloudflare tunnel credentials into secure sealed secrets:
+
+**What it does:**
+1. Waits for sealed-secrets controller to be ready (deployed in Step 4)
+2. Extracts tunnel credentials from Terraform output files
+3. Creates a sealed secret using `kubeseal` CLI
+4. Updates kustomization to use the sealed secret instead of plain text
+5. Commits and pushes the sealed secret to the repository
+6. Waits for the tunnel application to sync and become healthy
+
+**Security Benefits:**
+- Credentials are encrypted and safe to store in Git
+- Only the target cluster can decrypt the sealed secret
+- Follows GitOps principles - all configuration in repository
+- Eliminates need for manual secret management
+
+**Requirements:**
+- `kubeseal` CLI must be installed
+- Sealed-secrets controller must be running (automatic after Step 4)
+- Git repository access for committing sealed secrets
 
 ## Cleanup
 
