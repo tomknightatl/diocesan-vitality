@@ -20,7 +20,7 @@ patches:
           - --metrics
           - 0.0.0.0:2000
           - run
-          - dev-diocesan-vitality-tunnel
+          - 52a38d40-b4ea-4c13-a32a-5b98507c1015
 
   - target:
       kind: ConfigMap
@@ -29,15 +29,15 @@ patches:
       - op: replace
         path: /data/config.yaml
         value: |
-          tunnel: dev-diocesan-vitality-tunnel
+          tunnel: 52a38d40-b4ea-4c13-a32a-5b98507c1015
           credentials-file: /etc/cloudflared/creds/credentials.json
           metrics: 0.0.0.0:2000
 
           ingress:
           - hostname: dev.ui.diocesan-vitality.org
-            service: http://frontend.diocesan-vitality-dev.svc.cluster.local:80
+            service: http://diocesan-vitality-ui.default.svc.cluster.local:80
           - hostname: dev.api.diocesan-vitality.org
-            service: http://backend.diocesan-vitality-dev.svc.cluster.local:8000
+            service: http://diocesan-vitality-api.default.svc.cluster.local:8000
           - hostname: dev.argocd.diocesan-vitality.org
             service: https://argocd-server.argocd.svc.cluster.local:443
             originRequest:
