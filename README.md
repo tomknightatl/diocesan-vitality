@@ -1,12 +1,12 @@
-# Diocese Data Project
-
-**🌐 LIVE SYSTEM**: The production system is running at [https://diocesanvitality.org](https://diocesanvitality.org) with real-time data collection and monitoring.
-
-**For local development**: Follow the "Getting Started" and "Environment Setup" sections below to configure your development environment.
+# Diocesan Vitality Data Collection Project
 
 ## Overview
 
 This project is a comprehensive data collection and analysis system for U.S. Catholic dioceses and parishes. It employs advanced web scraping techniques, AI-powered content analysis, and automated data processing to build and maintain a detailed database of Catholic institutions across the United States. The system collects information from the official conference website and individual diocese websites, including diocese details, parish directories, and detailed parish information.
+
+**🌐 LIVE SYSTEM**: The production system is running at [https://diocesanvitality.org](https://diocesanvitality.org) with real-time data collection and monitoring.
+
+**For local development**: Follow the "Getting Started" and "Environment Setup" sections below to configure your development environment.
 
 ## Cloud Architecture
 
@@ -53,13 +53,13 @@ This project uses a comprehensive CI/CD pipeline with automated testing and depl
 git checkout -b feature/my-feature
 git push origin feature/my-feature  # Triggers quality checks + tests
 
-# Deploy to staging  
+# Deploy to staging
 git checkout develop
 git merge feature/my-feature
 git push origin develop  # Auto-deploys to staging
 
 # Deploy to production
-git checkout main  
+git checkout main
 git merge develop
 git push origin main  # Requires manual approval
 ```
