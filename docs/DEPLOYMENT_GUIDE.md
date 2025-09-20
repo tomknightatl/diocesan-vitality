@@ -2,6 +2,8 @@
 
 This guide explains how to deploy new code changes to production using GitOps principles with ArgoCD.
 
+Run the commands in this document on a x86_64 machine. (Because Docker has known issues building images on Raspberry Pi ARM64.)
+
 ## 📋 Overview
 
 The deployment process follows GitOps best practices:
@@ -10,7 +12,67 @@ The deployment process follows GitOps best practices:
 3. **Commit** changes to Git
 4. **ArgoCD** automatically syncs and deploys
 
-## 🐳 Building and Deploying New Images
+## 🚀 Automated Docker Builds with GitHub Actions
+
+### 🚀 Automated Deployment (Recommended)
+
+The project now uses **GitHub Actions** for automated multi-architecture Docker builds. Simply push code changes to trigger automatic builds:
+
+```bash
+# Quick deployment script
+./scripts/deploy.sh
+```
+
+Or manually:
+
+```bash
+# Commit your changes
+git add .
+git commit -m "Your changes description"
+
+# Push to main branch (triggers GitHub Actions)
+git push origin main
+```
+
+**What happens automatically:**
+1. 🔍 **Change Detection**: GitHub Actions detects changes in `backend/`, `frontend/`, or pipeline files
+2. 🏗️ **Multi-Arch Build**: Builds images for both ARM64 and AMD64 architectures  
+3. 📤 **Push to Registry**: Automatically pushes images to Docker Hub
+4. 📝 **Update Manifests**: Updates Kubernetes deployment files with new image tags
+5. 🔄 **GitOps Trigger**: Commits updated manifests back to repository for ArgoCD sync
+
+### 📋 GitHub Actions Workflow Features
+
+- **🎯 Smart Change Detection**: Only builds images that have changed
+- **⚡ Multi-Architecture Support**: Builds for both ARM64 (development) and AMD64 (production)
+- **🚀 Caching**: Uses GitHub Actions cache for faster builds
+- **🔐 Secure**: Uses repository secrets for Docker Hub credentials
+- **📊 Monitoring**: Full build logs and status in GitHub Actions tab
+
+### 🛠️ Manual Build Trigger
+
+Force build all images regardless of changes:
+
+```bash
+# Using GitHub CLI
+gh workflow run docker-build-push.yml -f force_build=true
+
+# Or use the deployment script
+./scripts/deploy.sh
+# Choose option 2: "Force build all images"
+```
+
+### 📋 Setup Requirements
+
+**Repository Secrets (required):**
+- `DOCKER_USERNAME`: Your Docker Hub username  
+- `DOCKER_PASSWORD`: Your Docker Hub password or access token
+
+**Add secrets at:** `https://github.com/your-username/diocesan-vitality/settings/secrets/actions`
+
+---
+
+## 🐳 Manual Docker Builds (Alternative)
 
 ### Step 1: Build Images with Timestamp
 
@@ -109,10 +171,36 @@ git commit -m "Deploy timestamped images ($TIMESTAMP)
 - frontend: tomatl/diocesan-vitality:frontend-$TIMESTAMP
 - pipeline: tomatl/diocesan-vitality:pipeline-$TIMESTAMP
 
+# Get current production timestamp
+CURRENT_PROD_TIMESTAMP=$(kubectl get application diocesan-vitality-app -n argocd -o jsonpath='{.status.sync.revision}' | xargs git log --format='%B' -n 1 | grep -oP 'timestamped images \(\K[^)]+' | head -n 1)
+
+if [ -n "$CURRENT_PROD_TIMESTAMP" ]; then
+    echo "📊 Current production timestamp: $CURRENT_PROD_TIMESTAMP"
+
+    # Get commit messages since the current production timestamp
+    CHANGES_SINCE=$(git log --oneline --grep="Deploy timestamped images ($CURRENT_PROD_TIMESTAMP)" --since="$(git log --grep="Deploy timestamped images ($CURRENT_PROD_TIMESTAMP)" --format='%ci' -n 1)" --format='- %s' | grep -v "Deploy timestamped images" | head -10)
+
+    if [ -n "$CHANGES_SINCE" ]; then
+        DEPLOYMENT_NOTES="
+📝 Changes since production ($CURRENT_PROD_TIMESTAMP):
+$CHANGES_SINCE"
+    else
+        DEPLOYMENT_NOTES="
 📝 Changes in this deployment:
 - [Add description of what changed]
 - [List any new features or fixes]
 - [Note any breaking changes]"
+    fi
+else
+    echo "⚠️ Could not determine current production timestamp, using default format"
+    DEPLOYMENT_NOTES="
+📝 Changes in this deployment:
+- [Add description of what changed]
+- [List any new features or fixes]
+- [Note any breaking changes]"
+fi
+
+echo "$DEPLOYMENT_NOTES""
 
 # Push to trigger ArgoCD deployment
 echo "🚀 Pushing to Git to trigger ArgoCD deployment..."
