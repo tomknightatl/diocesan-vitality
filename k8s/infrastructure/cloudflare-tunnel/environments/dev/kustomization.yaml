@@ -46,3 +46,6 @@ patches:
 
 commonLabels:
   environment: development
+
+resources:
+  - sealedsecret.yaml
