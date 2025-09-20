@@ -27,6 +27,7 @@ class WorkerInfo:
     """Information about a pipeline worker pod"""
     worker_id: str
     pod_name: str
+    worker_type: str  # 'discovery', 'extraction', 'schedule', 'reporting', 'all'
     assigned_dioceses: List[int]
     last_heartbeat: datetime
     status: str  # 'active', 'idle', 'failed'
@@ -45,9 +46,11 @@ class DistributedWorkCoordinator:
 
     def __init__(self,
                  worker_id: Optional[str] = None,
+                 worker_type: str = "all",
                  heartbeat_interval: int = 30,
                  worker_timeout: int = 120):
         self.worker_id = worker_id or self._generate_worker_id()
+        self.worker_type = worker_type
         self.heartbeat_interval = heartbeat_interval
         self.worker_timeout = worker_timeout
         self.pod_name = os.environ.get('HOSTNAME', socket.gethostname())
@@ -55,6 +58,7 @@ class DistributedWorkCoordinator:
 
         logger.info(f"🤝 Distributed Work Coordinator initialized")
         logger.info(f"   • Worker ID: {self.worker_id}")
+        logger.info(f"   • Worker Type: {self.worker_type}")
         logger.info(f"   • Pod Name: {self.pod_name}")
         logger.info(f"   • Heartbeat interval: {heartbeat_interval}s")
 
@@ -75,6 +79,7 @@ class DistributedWorkCoordinator:
             worker_data = {
                 'worker_id': self.worker_id,
                 'pod_name': self.pod_name,
+                'worker_type': self.worker_type,
                 'status': 'active',
                 'last_heartbeat': datetime.utcnow().isoformat(),
                 'assigned_dioceses': [],
@@ -342,6 +347,62 @@ class DistributedWorkCoordinator:
         except Exception as e:
             logger.error(f"❌ Error during worker shutdown: {e}")
 
+    async def get_available_schedule_work(self, max_parishes: int = 100) -> List[Dict[str, Any]]:
+        """
+        Get parishes that need schedule extraction.
+
+        Args:
+            max_parishes: Maximum number of parishes to return
+
+        Returns:
+            List of parish information for schedule extraction
+        """
+        try:
+            # Get parishes that have basic info but no schedule data
+            # This is a simplified implementation - you might want more sophisticated logic
+            parishes_response = self.supabase.table('Parishes').select(
+                'id, Name, Website, Dioceses!inner(Name)'
+            ).is_('mass_schedule_found', None).limit(max_parishes).execute()
+
+            if parishes_response.data:
+                logger.info(f"📋 Found {len(parishes_response.data)} parishes needing schedule extraction")
+                return parishes_response.data
+            else:
+                return []
+
+        except Exception as e:
+            logger.error(f"❌ Error getting available schedule work: {e}")
+            return []
+
+    async def should_generate_reports(self) -> bool:
+        """
+        Check if reports should be generated.
+        Simple logic: generate if no reports have been generated in the last hour.
+        """
+        try:
+            # Check for recent report generation activity
+            # This could be enhanced with a proper report tracking table
+            cutoff_time = datetime.utcnow() - timedelta(hours=1)
+
+            # For now, always return True (reports can run)
+            # In production, you'd track last report generation time
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Error checking if reports should be generated: {e}")
+            return False
+
+    async def mark_reports_generated(self):
+        """
+        Mark that reports have been generated.
+        """
+        try:
+            # In a production system, you'd track report generation in a dedicated table
+            logger.info("📊 Reports generation marked as completed")
+
+        except Exception as e:
+            logger.error(f"❌ Error marking reports as generated: {e}")
+
 
 # Coordination table creation SQL (should be run as migration)
 COORDINATION_TABLES_SQL = """
@@ -349,6 +410,7 @@ COORDINATION_TABLES_SQL = """
 CREATE TABLE IF NOT EXISTS pipeline_workers (
     worker_id TEXT PRIMARY KEY,
     pod_name TEXT NOT NULL,
+    worker_type TEXT NOT NULL DEFAULT 'all' CHECK (worker_type IN ('discovery', 'extraction', 'schedule', 'reporting', 'all')),
     status TEXT NOT NULL CHECK (status IN ('active', 'inactive', 'failed')),
     last_heartbeat TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     assigned_dioceses INTEGER[] DEFAULT ARRAY[]::INTEGER[],

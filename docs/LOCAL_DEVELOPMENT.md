@@ -308,6 +308,15 @@ make pipeline-single DIOCESE_ID=123
 # Full pipeline with monitoring
 python run_pipeline.py --max_parishes_per_diocese 10 --monitoring_url http://localhost:8000
 
+# Distributed pipeline (production-like)
+python distributed_pipeline_runner.py --max_parishes_per_diocese 10
+
+# Specialized workers (single image deployment)
+python distributed_pipeline_runner.py --worker_type discovery    # Steps 1-2
+python distributed_pipeline_runner.py --worker_type extraction   # Step 3
+python distributed_pipeline_runner.py --worker_type schedule     # Step 4
+python distributed_pipeline_runner.py --worker_type reporting    # Step 5
+
 # Debug single parish
 python async_extract_parishes.py --diocese_id 123 --pool_size 1 --batch_size 1
 ```
@@ -473,9 +482,9 @@ python run_pipeline.py --diocese_id 123 --max_parishes_per_diocese 5
 
 ### Key Files
 - `run_pipeline.py` - Main pipeline with monitoring
-- `distributed_pipeline_runner.py` - Distributed scaling version
+- `distributed_pipeline_runner.py` - Distributed scaling version with worker specialization
 - `core/db.py` - Database utilities
-- `core/distributed_work_coordinator.py` - Multi-pod coordination
+- `core/distributed_work_coordinator.py` - Multi-pod coordination with worker types
 - `backend/main.py` - FastAPI backend
 - `frontend/src/` - React frontend
 

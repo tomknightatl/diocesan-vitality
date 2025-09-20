@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """
-Distributed Pipeline Runner for Horizontal Scaling.
+Distributed Pipeline Runner for Horizontal Scaling with Worker Specialization.
 
 This is an enhanced version of run_pipeline.py that coordinates with other
-pipeline pods to ensure respectful, non-conflicting data extraction.
+pipeline pods to ensure respectful, non-conflicting data extraction with
+specialized worker types.
 
 Key Features:
 - Diocese-based work partitioning
+- Worker type specialization (discovery, extraction, schedule, reporting)
 - Automatic failover and load balancing
 - Respectful rate limiting across the cluster
 - Real-time coordination via database
+- Single image deployment with runtime specialization
 """
 
 import argparse
@@ -17,7 +20,9 @@ import asyncio
 import time
 import signal
 import sys
+import os
 from typing import Optional
+from enum import Enum
 
 from core.logger import get_logger
 from core.monitoring_client import get_monitoring_client, ExtractionMonitoring
@@ -34,25 +39,39 @@ from report_statistics import main as report_statistics_main
 logger = get_logger(__name__)
 
 
+class WorkerType(Enum):
+    """Specialized worker types for different pipeline stages"""
+    DISCOVERY = "discovery"        # Steps 1-2: Diocese + Parish directory discovery
+    EXTRACTION = "extraction"      # Step 3: Parish detail extraction
+    SCHEDULE = "schedule"          # Step 4: Schedule extraction
+    REPORTING = "reporting"        # Step 5: Report generation
+    ALL = "all"                   # Backwards compatible - runs all steps
+
+
 class DistributedPipelineRunner:
     """
     Distributed pipeline runner that coordinates with other pods.
     """
 
     def __init__(self,
+                 worker_type: WorkerType = WorkerType.ALL,
                  max_parishes_per_diocese: int = 50,
                  num_parishes_for_schedule: int = 101,
                  monitoring_url: str = "http://backend-service:8000",
                  disable_monitoring: bool = False,
                  worker_id: Optional[str] = None):
 
+        self.worker_type = worker_type
         self.max_parishes_per_diocese = max_parishes_per_diocese
         self.num_parishes_for_schedule = num_parishes_for_schedule
         self.monitoring_url = monitoring_url
         self.disable_monitoring = disable_monitoring
 
-        # Initialize coordinator
-        self.coordinator = DistributedWorkCoordinator(worker_id=worker_id)
+        # Initialize coordinator with worker type information
+        self.coordinator = DistributedWorkCoordinator(
+            worker_id=worker_id,
+            worker_type=worker_type.value
+        )
 
         # Initialize monitoring with the actual worker_id from coordinator
         self.monitoring_client = get_monitoring_client(monitoring_url, self.coordinator.worker_id)
@@ -67,7 +86,7 @@ class DistributedPipelineRunner:
         signal.signal(signal.SIGTERM, self._signal_handler)
         signal.signal(signal.SIGINT, self._signal_handler)
 
-        logger.info("🚀 Distributed Pipeline Runner initialized")
+        logger.info(f"🚀 Distributed Pipeline Runner initialized (Worker Type: {worker_type.value})")
 
     def _signal_handler(self, signum, frame):
         """Handle shutdown signals gracefully"""
@@ -85,7 +104,7 @@ class DistributedPipelineRunner:
                 return
 
             self.monitoring_client.send_log(
-                f"Pipeline │ Starting distributed pipeline (Worker: {self.coordinator.worker_id})",
+                f"Pipeline │ Starting distributed pipeline (Worker: {self.coordinator.worker_id}, Type: {self.worker_type.value})",
                 "INFO"
             )
 
@@ -99,11 +118,12 @@ class DistributedPipelineRunner:
                 logger.error("Exiting due to missing configuration.")
                 return
 
-            # Run coordinated pipeline steps
-            await self._run_coordinated_extraction()
+            # Run specialized worker logic based on worker type
+            await self._run_specialized_worker()
 
-            # Generate reports (can be done by any worker)
-            await self._run_reporting_if_needed()
+            # Generate reports if this worker type handles reporting
+            if self.worker_type in [WorkerType.REPORTING, WorkerType.ALL]:
+                await self._run_reporting_if_needed()
 
             total_time = time.time() - start_time
             self.monitoring_client.send_log(
@@ -119,6 +139,144 @@ class DistributedPipelineRunner:
             )
         finally:
             await self.coordinator.shutdown()
+
+    async def _run_specialized_worker(self):
+        """
+        Run worker logic based on the specialized worker type.
+        """
+        logger.info(f"🎯 Running specialized worker: {self.worker_type.value}")
+
+        if self.worker_type == WorkerType.DISCOVERY:
+            await self._run_discovery_worker()
+        elif self.worker_type == WorkerType.EXTRACTION:
+            await self._run_extraction_worker()
+        elif self.worker_type == WorkerType.SCHEDULE:
+            await self._run_schedule_worker()
+        elif self.worker_type == WorkerType.REPORTING:
+            await self._run_reporting_worker()
+        elif self.worker_type == WorkerType.ALL:
+            # Backwards compatible - run coordinated extraction
+            await self._run_coordinated_extraction()
+        else:
+            logger.error(f"❌ Unknown worker type: {self.worker_type}")
+
+    async def _run_discovery_worker(self):
+        """
+        Run diocese and parish directory discovery (Steps 1-2).
+        Lightweight worker that runs periodically.
+        """
+        logger.info("🔍 Running discovery worker (Steps 1-2)")
+
+        try:
+            # Step 1: Extract Dioceses
+            self.monitoring_client.send_log("Step 1 │ Extract Dioceses: Discovering new dioceses", "INFO")
+            extract_dioceses_main(max_dioceses=0)  # No limit for discovery
+            self.monitoring_client.send_log("Step 1 │ ✅ Diocese extraction completed", "INFO")
+
+            # Step 2: Find Parish Directories
+            self.monitoring_client.send_log("Step 2 │ Find Parish Directories: AI-powered directory discovery", "INFO")
+            find_parish_directories(diocese_id=None, max_dioceses_to_process=0)  # Process all
+            self.monitoring_client.send_log("Step 2 │ ✅ Parish directory discovery completed", "INFO")
+
+            # Discovery workers can sleep longer between cycles
+            logger.info("⏸️ Discovery worker completed - sleeping for next cycle")
+            await asyncio.sleep(300)  # 5 minute sleep for discovery workers
+
+        except Exception as e:
+            logger.error(f"❌ Error in discovery worker: {e}")
+            self.monitoring_client.report_error(
+                error_type="DiscoveryWorkerError",
+                message=f"Discovery worker failed: {str(e)}"
+            )
+
+    async def _run_extraction_worker(self):
+        """
+        Run parish detail extraction (Step 3).
+        High-performance worker for concurrent parish processing.
+        """
+        logger.info("⚡ Running extraction worker (Step 3)")
+        await self._run_coordinated_extraction()
+
+    async def _run_schedule_worker(self):
+        """
+        Run schedule extraction (Step 4).
+        WebDriver-intensive worker for schedule parsing.
+        """
+        logger.info("📅 Running schedule worker (Step 4)")
+
+        # Heartbeat task to keep worker alive
+        heartbeat_task = asyncio.create_task(self._heartbeat_loop())
+
+        try:
+            while not self.shutdown_requested:
+                # Get parishes that need schedule extraction
+                available_work = await self.coordinator.get_available_schedule_work(
+                    max_parishes=self.num_parishes_for_schedule
+                )
+
+                if not available_work:
+                    logger.info("⏸️ No schedule work available, waiting...")
+                    await asyncio.sleep(60)
+                    continue
+
+                # Process schedule extraction
+                self.monitoring_client.send_log(
+                    f"Step 4 │ Extract Schedules: Processing {len(available_work)} parishes",
+                    "INFO"
+                )
+
+                extract_schedule_main(
+                    num_parishes=len(available_work),
+                    parish_id=None,
+                    max_pages_per_parish=10,
+                    diocese_id=None
+                )
+
+                self.monitoring_client.send_log("Step 4 │ ✅ Schedule extraction batch completed", "INFO")
+
+                # Respectful delay between batches
+                await asyncio.sleep(30)
+
+        except Exception as e:
+            logger.error(f"❌ Error in schedule worker: {e}")
+            self.monitoring_client.report_error(
+                error_type="ScheduleWorkerError",
+                message=f"Schedule worker failed: {str(e)}"
+            )
+        finally:
+            heartbeat_task.cancel()
+            try:
+                await heartbeat_task
+            except asyncio.CancelledError:
+                pass
+
+    async def _run_reporting_worker(self):
+        """
+        Run reporting and analytics (Step 5).
+        Lightweight worker for data analysis and report generation.
+        """
+        logger.info("📊 Running reporting worker (Step 5)")
+
+        try:
+            while not self.shutdown_requested:
+                # Check if reports need to be generated
+                if await self.coordinator.should_generate_reports():
+                    self.monitoring_client.send_log("Step 5 │ Generating reports and analytics", "INFO")
+
+                    report_statistics_main()
+
+                    self.monitoring_client.send_log("Step 5 │ ✅ Report generation completed", "INFO")
+                    await self.coordinator.mark_reports_generated()
+
+                # Reports don't need to run frequently
+                await asyncio.sleep(600)  # 10 minute sleep for reporting
+
+        except Exception as e:
+            logger.error(f"❌ Error in reporting worker: {e}")
+            self.monitoring_client.report_error(
+                error_type="ReportingWorkerError",
+                message=f"Reporting worker failed: {str(e)}"
+            )
 
     async def _run_coordinated_extraction(self):
         """
@@ -262,8 +420,12 @@ class DistributedPipelineRunner:
 
 async def main_async():
     """Main async function for distributed pipeline"""
-    parser = argparse.ArgumentParser(description="Run distributed data extraction pipeline.")
+    parser = argparse.ArgumentParser(description="Run distributed data extraction pipeline with worker specialization.")
 
+    parser.add_argument("--worker_type", type=str,
+                       choices=[wt.value for wt in WorkerType],
+                       default=None,
+                       help="Worker type specialization (discovery, extraction, schedule, reporting, all)")
     parser.add_argument("--max_parishes_per_diocese", type=int, default=50,
                        help="Max parishes to extract per diocese.")
     parser.add_argument("--num_parishes_for_schedule", type=int, default=101,
@@ -277,8 +439,13 @@ async def main_async():
 
     args = parser.parse_args()
 
+    # Determine worker type from args or environment variable
+    worker_type_str = args.worker_type or os.environ.get('WORKER_TYPE', 'all')
+    worker_type = WorkerType(worker_type_str.lower())
+
     # Initialize and run distributed pipeline
     runner = DistributedPipelineRunner(
+        worker_type=worker_type,
         max_parishes_per_diocese=args.max_parishes_per_diocese,
         num_parishes_for_schedule=args.num_parishes_for_schedule,
         monitoring_url=args.monitoring_url,

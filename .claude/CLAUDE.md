@@ -46,6 +46,12 @@ python async_extract_parishes.py --diocese_id <id> --pool_size 6 --batch_size 12
 
 # Distributed pipeline (for production)
 python distributed_pipeline_runner.py
+
+# Specialized worker types (single image deployment)
+python distributed_pipeline_runner.py --worker_type discovery    # Steps 1-2: Diocese + Parish directory discovery
+python distributed_pipeline_runner.py --worker_type extraction   # Step 3: Parish detail extraction
+python distributed_pipeline_runner.py --worker_type schedule     # Step 4: Mass schedule extraction
+python distributed_pipeline_runner.py --worker_type reporting    # Step 5: Analytics and reporting
 ```
 
 ### Testing & Environment
@@ -88,7 +94,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000  # Start FastAPI backend
 - **Distributed Pipeline**: Kubernetes-based distributed processing (`distributed_pipeline_runner.py`)
 
 ### Pipeline Architecture
-The system operates in two modes:
+The system operates in three modes:
 
 1. **Traditional Pipeline**: Sequential execution for initial setup/development
    - `extract_dioceses.py` → `find_parishes.py` → `async_extract_parishes.py` → `extract_schedule.py`
@@ -97,6 +103,13 @@ The system operates in two modes:
    - Workers coordinate via database tables (`pipeline_workers`, `diocese_work_assignments`)
    - Automatic workload distribution and failover
    - Real-time monitoring dashboard
+
+3. **Specialized Workers**: Production deployment with worker type specialization
+   - **Discovery Workers**: Steps 1-2 (Diocese + Parish directory discovery) - 512Mi/200m CPU
+   - **Extraction Workers**: Step 3 (Parish detail extraction) - 2.2Gi/800m CPU, scales 2-5 pods
+   - **Schedule Workers**: Step 4 (Mass schedule extraction) - 1.5Gi/600m CPU, scales 1-3 pods
+   - **Reporting Workers**: Step 5 (Analytics and reporting) - 512Mi/200m CPU
+   - Single container image with runtime specialization via `WORKER_TYPE` environment variable
 
 ### Key Directories
 - **`core/`**: Essential utilities (database, WebDriver, circuit breakers, AI analysis, ML URL prediction)
@@ -139,6 +152,7 @@ cp .env.example .env
 - **ML URL Prediction**: Machine learning system reducing 404 errors by 50%
 - **Real-time Monitoring**: WebSocket-based dashboard with live extraction progress
 - **Distributed Processing**: Kubernetes-based horizontal scaling with auto-failover
+- **Worker Specialization**: Specialized worker types with optimized resource allocation and independent scaling
 
 ### Database Schema
 Primary tables: `dioceses`, `parishes`, `mass_schedules`, `pipeline_workers`, `diocese_work_assignments`

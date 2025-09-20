@@ -151,8 +151,14 @@ sed -i "s|image: tomatl/diocesan-vitality:backend-.*|image: tomatl/diocesan-vita
 # Frontend deployment
 sed -i "s|image: tomatl/diocesan-vitality:frontend-.*|image: tomatl/diocesan-vitality:frontend-$TIMESTAMP|g" k8s/frontend-deployment.yaml
 
-# Pipeline deployment
+# Pipeline deployment (legacy - single worker)
 sed -i "s|image: tomatl/diocesan-vitality:pipeline-.*|image: tomatl/diocesan-vitality:pipeline-$TIMESTAMP|g" k8s/pipeline-deployment.yaml
+
+# Specialized worker deployments (recommended)
+sed -i "s|image: tomatl/diocesan-vitality:pipeline-.*|image: tomatl/diocesan-vitality:pipeline-$TIMESTAMP|g" k8s/discovery-deployment.yaml
+sed -i "s|image: tomatl/diocesan-vitality:pipeline-.*|image: tomatl/diocesan-vitality:pipeline-$TIMESTAMP|g" k8s/extraction-deployment.yaml
+sed -i "s|image: tomatl/diocesan-vitality:pipeline-.*|image: tomatl/diocesan-vitality:pipeline-$TIMESTAMP|g" k8s/schedule-deployment.yaml
+sed -i "s|image: tomatl/diocesan-vitality:pipeline-.*|image: tomatl/diocesan-vitality:pipeline-$TIMESTAMP|g" k8s/reporting-deployment.yaml
 
 echo "✅ Kubernetes manifests updated with new image tags"
 ```
@@ -160,8 +166,14 @@ echo "✅ Kubernetes manifests updated with new image tags"
 ### Step 4: Deploy via GitOps
 
 ```bash
-# Stage the updated manifests
+# Stage the updated manifests (choose deployment strategy)
+# Option 1: Legacy single worker deployment
 git add k8s/backend-deployment.yaml k8s/frontend-deployment.yaml k8s/pipeline-deployment.yaml
+
+# Option 2: Specialized worker deployments (recommended)
+git add k8s/backend-deployment.yaml k8s/frontend-deployment.yaml \
+       k8s/discovery-deployment.yaml k8s/extraction-deployment.yaml \
+       k8s/schedule-deployment.yaml k8s/reporting-deployment.yaml
 
 # Commit with descriptive message
 git commit -m "Deploy timestamped images ($TIMESTAMP)
@@ -208,6 +220,52 @@ git push origin main
 
 echo "✅ Deployment initiated! ArgoCD will sync automatically."
 ```
+
+## 🎯 Worker Specialization Deployment
+
+The system supports two deployment strategies:
+
+### Legacy Deployment (Single Worker Type)
+Uses `k8s/pipeline-deployment.yaml` with all pipeline steps in one worker type.
+
+### Specialized Workers (Recommended)
+Uses separate deployments for optimized resource allocation:
+
+| Worker Type | File | Resources | Replicas | Purpose |
+|-------------|------|-----------|----------|---------|
+| Discovery | `discovery-deployment.yaml` | 512Mi/200m CPU | 1 | Steps 1-2: Diocese + Parish directory discovery |
+| Extraction | `extraction-deployment.yaml` | 2.2Gi/800m CPU | 2-5 (HPA) | Step 3: Parish detail extraction |
+| Schedule | `schedule-deployment.yaml` | 1.5Gi/600m CPU | 1-3 (HPA) | Step 4: Mass schedule extraction |
+| Reporting | `reporting-deployment.yaml` | 512Mi/200m CPU | 1 | Step 5: Analytics and reporting |
+
+### Migration to Specialized Workers
+
+**Step 1: Scale down legacy deployment**
+```bash
+kubectl scale deployment pipeline-deployment --replicas=0 -n diocesan-vitality
+```
+
+**Step 2: Deploy specialized workers**
+```bash
+kubectl apply -f k8s/discovery-deployment.yaml
+kubectl apply -f k8s/extraction-deployment.yaml
+kubectl apply -f k8s/extraction-hpa.yaml
+kubectl apply -f k8s/schedule-deployment.yaml
+kubectl apply -f k8s/schedule-hpa.yaml
+kubectl apply -f k8s/reporting-deployment.yaml
+```
+
+**Step 3: Verify deployment**
+```bash
+kubectl get pods -n diocesan-vitality -l worker-type
+kubectl get hpa -n diocesan-vitality
+```
+
+### Benefits of Specialized Workers
+- **Resource Efficiency**: Right-sized resources per task type
+- **Independent Scaling**: Scale extraction workers without affecting discovery
+- **Better Fault Isolation**: WebDriver issues don't affect parish discovery
+- **Cost Optimization**: Run expensive workers only when needed
 
 ## 🏗️ Multi-Architecture Support
 
@@ -256,8 +314,14 @@ kubectl describe deployment backend-deployment -n diocesan-vitality | grep Image
 # Check frontend deployment
 kubectl describe deployment frontend-deployment -n diocesan-vitality | grep Image:
 
-# Check pipeline deployment
+# Check pipeline deployment (legacy)
 kubectl describe deployment pipeline-deployment -n diocesan-vitality | grep Image:
+
+# Check specialized worker deployments
+kubectl describe deployment discovery-deployment -n diocesan-vitality | grep Image:
+kubectl describe deployment extraction-deployment -n diocesan-vitality | grep Image:
+kubectl describe deployment schedule-deployment -n diocesan-vitality | grep Image:
+kubectl describe deployment reporting-deployment -n diocesan-vitality | grep Image:
 ```
 
 ## 🔄 Rollback Process
