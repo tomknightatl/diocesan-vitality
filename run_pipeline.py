@@ -37,6 +37,19 @@ def main():
     
     args = parser.parse_args()
 
+    # Check for .env file first
+    if not os.path.exists('.env'):
+        print("\n❌ ERROR: .env file not found!")
+        print("\nThe pipeline requires environment variables to be configured.")
+        print("Please follow these steps:")
+        print("1. Copy the template: cp .env.example .env")
+        print("2. Edit .env with your API keys:")
+        print("   - SUPABASE_URL and SUPABASE_KEY (database)")
+        print("   - GENAI_API_KEY (Google Gemini AI)")
+        print("   - SEARCH_API_KEY and SEARCH_CX (Google Custom Search)")
+        print("\nSee README.md or docs/LOCAL_DEVELOPMENT.md for detailed setup instructions.")
+        return 1
+
     # Initialize monitoring client with worker ID support
     worker_id = os.environ.get('WORKER_ID', os.environ.get('HOSTNAME'))
     monitoring_client = get_monitoring_client(args.monitoring_url, worker_id)
