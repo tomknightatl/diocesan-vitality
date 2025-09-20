@@ -20,7 +20,7 @@ patches:
           - --metrics
           - 0.0.0.0:2000
           - run
-          - stg-diocesan-vitality-tunnel
+          - c14dee2e-7e4a-4b2c-9a2e-08cec66c3671
 
   - target:
       kind: ConfigMap
@@ -29,7 +29,7 @@ patches:
       - op: replace
         path: /data/config.yaml
         value: |
-          tunnel: stg-diocesan-vitality-tunnel
+          tunnel: c14dee2e-7e4a-4b2c-9a2e-08cec66c3671
           credentials-file: /etc/cloudflared/creds/credentials.json
           metrics: 0.0.0.0:2000
 
