@@ -13,6 +13,9 @@ patches:
       name: cloudflared
     patch: |-
       - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: cloudflare/cloudflared:2024.6.1
+      - op: replace
         path: /spec/template/spec/containers/0/args
         value:
           - tunnel
