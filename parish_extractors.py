@@ -806,9 +806,13 @@ class TableExtractor(BaseExtractor):
                     for row in rows:
                         cells = row.find_all(['td', 'th'])
                         if len(cells) >= 1:
-                            parish_data = self._extract_parish_from_table_row(cells, url)
-                            if parish_data:
-                                parishes.append(parish_data)
+                            try:
+                                parish_data = self._extract_parish_from_table_row(cells, url)
+                                if parish_data:
+                                    parishes.append(parish_data)
+                            except Exception as e:
+                                logger.debug(f"    ⚠️ Error extracting row: {str(e)[:50]}...")
+                                continue
 
         except Exception as e:
             logger.error(f"    ⚠️ Table extraction error: {str(e)[:100]}...")
@@ -1624,7 +1628,7 @@ def process_diocese_with_detailed_extraction(diocese_info: Dict, driver, max_par
                     print(f"    ✅ {extractor_name} found {len(current_parishes)} parishes")
 
                     # If we found parishes with a specialized extractor, prefer those results
-                    if extractor_name in ['ParishFinderExtractor', 'EnhancedDiocesesCardExtractor'] and len(current_parishes) > 3:
+                    if extractor_name in ['ParishFinderExtractor', 'EnhancedDiocesesCardExtractor', 'TableExtractor'] and len(current_parishes) > 3:
                         print(f"    🎯 Using {extractor_name} - stopping extraction")
                         break
 
@@ -1950,7 +1954,7 @@ class IframeExtractor(BaseExtractor):
             print("    🖱️ Trying drag selection over visible area...")
 
             # Find the main content area to drag across
-            body = driver.find_element("tag name", "body")
+            body = driver.find_element(By.TAG_NAME, "body")
 
             # Perform drag selection from top-left to bottom-right of viewport
             actions = ActionChains(driver)
@@ -3045,21 +3049,9 @@ import PyPDF2
 import pdfplumber
 from core.logger import get_logger
 from core.db import get_supabase_client
-from dataclasses import dataclass
+from parish_extraction_core import ParishData
 
 logger = get_logger(__name__)
-
-@dataclass
-class ParishData:
-    """Data class for parish information"""
-    name: str
-    city: str = ""
-    state: str = ""
-    address: str = ""
-    phone: str = ""
-    website: str = ""
-    pastor: str = ""
-    confidence: float = 0.8  # Default confidence for PDF extraction
 
 class PDFParishExtractor:
     """

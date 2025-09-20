@@ -23,6 +23,7 @@ import subprocess
 import shutil
 
 logger = get_logger(__name__)
+_system_chromedriver_warning_logged = False
 
 
 def _find_chrome_binary():
@@ -44,13 +45,13 @@ def _find_chrome_binary():
                 # Absolute path - check if file exists
                 if shutil.which(binary_path) or subprocess.run(['test', '-f', binary_path],
                                                              capture_output=True).returncode == 0:
-                    logger.info(f"🔍 Found Chrome binary at: {binary_path}")
+                    logger.debug(f"🔍 Found Chrome binary at: {binary_path}")
                     return binary_path
             else:
                 # Check in system PATH
                 found_path = shutil.which(binary_path)
                 if found_path:
-                    logger.info(f"🔍 Found Chrome binary in PATH: {found_path}")
+                    logger.debug(f"🔍 Found Chrome binary in PATH: {found_path}")
                     return found_path
         except Exception as e:
             logger.debug(f"Could not check {binary_path}: {e}")
@@ -227,7 +228,10 @@ class AsyncWebDriverPool:
                 chrome_options.binary_location = chrome_binary
             return webdriver.Chrome(service=chrome_service, options=chrome_options)
         except Exception as e:
-            logger.warning(f"System ChromeDriver failed: {e}, falling back to ChromeDriverManager")
+            global _system_chromedriver_warning_logged
+            if not _system_chromedriver_warning_logged:
+                logger.warning(f"System ChromeDriver failed: {e}, falling back to ChromeDriverManager")
+                _system_chromedriver_warning_logged = True
             return webdriver.Chrome(
                 service=Service(ChromeDriverManager().install()),
                 options=chrome_options
