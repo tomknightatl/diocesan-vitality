@@ -123,13 +123,14 @@ monitor-check: ## Test monitoring integration
 # Infrastructure Commands
 # =======================
 
-infra-setup: ## Set up complete infrastructure (all 4 steps, usage: make infra-setup CLUSTER_LABEL=dev)
+infra-setup: ## Set up complete infrastructure (all 5 steps, usage: make infra-setup CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	echo "🚀 Setting up complete infrastructure for '$$CLUSTER_LABEL'..." && \
 	$(MAKE) cluster-create CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	$(MAKE) tunnel-create CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	$(MAKE) argocd-install CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	$(MAKE) argocd-apps CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	$(MAKE) sealed-secrets-create CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	echo "🎉 Infrastructure setup complete for $$CLUSTER_LABEL!"
 
 cluster-create: ## Step 1: Create cluster and kubectl context (usage: make cluster-create CLUSTER_LABEL=dev)
@@ -223,6 +224,43 @@ argocd-apps: ## Step 4: Install ArgoCD ApplicationSets (usage: make argocd-apps 
 		kubectl apply -f k8s/argocd/cloudflare-tunnel-$$CLUSTER_LABEL-applicationset.yaml && \
 		kubectl apply -f k8s/argocd/diocesan-vitality-$$CLUSTER_LABEL-applicationset.yaml
 	@echo "✅ Step 4 Complete: ApplicationSets installed for $$CLUSTER_LABEL"
+
+sealed-secrets-create: ## Step 5: Convert tunnel credentials to sealed secrets (usage: make sealed-secrets-create CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🚀 Step 5: Converting tunnel credentials to sealed secrets for '$$CLUSTER_LABEL'..." && \
+	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
+	echo "⏳ Waiting for sealed-secrets controller to be ready..." && \
+	kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=sealed-secrets -n kube-system --timeout=300s && \
+	echo "📋 Reading tunnel credentials from terraform..." && \
+	TUNNEL_CREDS_B64=$$(grep -A 1 'credentials.json' terraform/environments/dev/k8s-secrets/cloudflare-tunnel-dev.yaml | tail -1 | cut -d'"' -f2) && \
+	if [ -z "$$TUNNEL_CREDS_B64" ]; then echo "❌ No tunnel credentials found in terraform output"; exit 1; fi && \
+	echo "🔐 Creating sealed secret..." && \
+	kubectl create secret generic cloudflare-tunnel-credentials \
+		--from-literal=credentials.json="$$(echo $$TUNNEL_CREDS_B64 | base64 -d)" \
+		--namespace=cloudflare-tunnel-$$CLUSTER_LABEL \
+		--dry-run=client -o yaml | \
+	kubeseal -o yaml > k8s/infrastructure/cloudflare-tunnel/environments/$$CLUSTER_LABEL/sealedsecret.yaml && \
+	echo "📝 Updating kustomization to use sealed secret..." && \
+	$(MAKE) _update-kustomization-for-sealed-secret CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	echo "💾 Committing sealed secret to repository..." && \
+	git add k8s/infrastructure/cloudflare-tunnel/environments/$$CLUSTER_LABEL/ && \
+	git commit -m "Add sealed secret for cloudflare-tunnel-$$CLUSTER_LABEL credentials" && \
+	git push && \
+	echo "⏳ Waiting for tunnel application to sync and become healthy..." && \
+	sleep 30 && \
+	echo "✅ Step 5 Complete: Sealed secret created and tunnel should be syncing for $$CLUSTER_LABEL"
+
+_update-kustomization-for-sealed-secret: ## Update kustomization to use sealed secret instead of plain secret
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	KUSTOMIZATION_FILE="k8s/infrastructure/cloudflare-tunnel/environments/$$CLUSTER_LABEL/kustomization.yaml" && \
+	if ! grep -q "sealedsecret.yaml" $$KUSTOMIZATION_FILE; then \
+		echo "📝 Adding sealed secret to $$CLUSTER_LABEL kustomization..." && \
+		echo "" >> $$KUSTOMIZATION_FILE && \
+		echo "resources:" >> $$KUSTOMIZATION_FILE && \
+		echo "  - sealedsecret.yaml" >> $$KUSTOMIZATION_FILE; \
+	fi && \
+	echo "🔧 Removing plain secret from base kustomization..." && \
+	sed -i '/secret.yaml/d' k8s/infrastructure/cloudflare-tunnel/base/kustomization.yaml || true
 
 argocd-password: ## Get ArgoCD admin password
 	@echo "🔑 ArgoCD Admin Password:"

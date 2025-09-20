@@ -5,6 +5,7 @@ resources:
   - deployment.yaml
   - configmap.yaml
   - service.yaml
+  - secret.yaml
 
 commonLabels:
   app: cloudflared
