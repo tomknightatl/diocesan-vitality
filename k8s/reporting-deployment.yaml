@@ -1,0 +1,121 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reporting-deployment
+  namespace: diocesan-vitality
+spec:
+  replicas: 1  # Only need one reporting worker
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: reporting-worker
+  template:
+    metadata:
+      labels:
+        app: reporting-worker
+        worker-type: reporting
+      annotations:
+        # Force pod restart when config changes
+        configmap/checksum: "{{ include (print $.Template.BasePath \"/pipeline-configmap.yaml\") . | sha256sum }}"
+    spec:
+      serviceAccountName: default
+      nodeSelector:
+        doks.digitalocean.com/node-pool: fast-pool
+      containers:
+      - name: reporting-worker
+        image: tomatl/diocesan-vitality:pipeline-2025-09-15-22-58-39
+        imagePullPolicy: Always
+        resources:
+          requests:
+            memory: "512Mi"  # Lightweight reporting worker
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        env:
+        # Worker type specialization
+        - name: WORKER_TYPE
+          value: "reporting"
+        # Database configuration
+        - name: SUPABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: diocesan-vitality-secrets
+              key: supabase-url
+        - name: SUPABASE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: diocesan-vitality-secrets
+              key: supabase-key
+        # AI and search API keys (needed for some reports)
+        - name: GENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: diocesan-vitality-secrets
+              key: genai-api-key
+        # Environment configuration
+        - name: MPLCONFIGDIR
+          value: "/tmp/matplotlib"
+        - name: HOME
+          value: "/tmp"
+        # Worker identification
+        - name: WORKER_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: HOSTNAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        # Monitoring configuration
+        - name: MONITORING_URL
+          value: "http://backend-service:8000"
+        # Use distributed pipeline runner
+        command: ["python", "distributed_pipeline_runner.py"]
+        args:
+        - "--monitoring_url"
+        - "$(MONITORING_URL)"
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        # Health checks
+        livenessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - |
+              import sys
+              import os
+              sys.path.append(os.getcwd())
+              from core.distributed_work_coordinator import DistributedWorkCoordinator
+              coordinator = DistributedWorkCoordinator(worker_type="reporting")
+              print("healthy")
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - |
+              import sys
+              import os
+              sys.path.append(os.getcwd())
+              from core.db import get_supabase_client
+              supabase = get_supabase_client()
+              if supabase:
+                  print("ready")
+              else:
+                  exit(1)
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 2
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 120

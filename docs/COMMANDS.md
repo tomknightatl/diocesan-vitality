@@ -86,6 +86,38 @@ Tests the real-time monitoring dashboard with simulated extraction activity.
         *   `extraction`: Simulates complete extraction activity for dashboard testing
         *   `continuous`: Runs continuous monitoring demo with periodic updates
 
+### `distributed_pipeline_runner.py` 🚀
+Production-ready distributed pipeline with worker specialization and horizontal scaling.
+*   **Command:** `python distributed_pipeline_runner.py [OPTIONS]`
+*   **Parameters:**
+    *   `--worker_type` (choices: `["discovery", "extraction", "schedule", "reporting", "all"]`, default: `None`): Worker type specialization
+    *   `--max_parishes_per_diocese` (type: `int`, default: `50`): Max parishes to extract per diocese
+    *   `--num_parishes_for_schedule` (type: `int`, default: `101`): Number of parishes to extract schedules for
+    *   `--monitoring_url` (type: `str`, default: `"http://backend-service:8000"`): Monitoring backend URL
+    *   `--disable_monitoring` (action: `store_true`): Disable monitoring integration
+    *   `--worker_id` (type: `str`, default: `None`): Custom worker ID (auto-generated if not provided)
+*   **Worker Types:**
+    *   `discovery`: Steps 1-2 (Diocese + Parish directory discovery) - Lightweight, runs periodically
+    *   `extraction`: Step 3 (Parish detail extraction) - High-performance, scales 2-5 pods
+    *   `schedule`: Step 4 (Mass schedule extraction) - WebDriver intensive, scales 1-3 pods
+    *   `reporting`: Step 5 (Analytics and reporting) - Lightweight, single instance
+    *   `all`: All steps (backwards compatible with legacy pipeline)
+*   **Features:**
+    *   Worker specialization with optimized resource allocation
+    *   Database-backed coordination and work distribution
+    *   Automatic failover and load balancing
+    *   Real-time monitoring and health checks
+    *   Single container image with runtime specialization via `WORKER_TYPE` env var
+
+### `test_worker_specialization.py` 🧪
+Tests the specialized worker type system functionality.
+*   **Command:** `python test_worker_specialization.py`
+*   **Features:**
+    *   Worker type enum validation
+    *   Environment variable detection testing
+    *   Deployment configuration validation
+    *   Coordinator initialization testing
+
 ### `report_statistics.py`
 Generates statistics and visualizations of collected data from the database.
 *   **Command:** `python report_statistics.py`
@@ -300,13 +332,24 @@ docker push tomatl/diocesan-vitality:pipeline-$TIMESTAMP
 
 ### GitOps Deployment Process
 ```bash
-# Update Kubernetes manifests with new image tags
+# Update Kubernetes manifests with new image tags (choose strategy)
+
+# Option 1: Legacy single worker deployment
 sed -i "s|image: tomatl/diocesan-vitality:backend-.*|image: tomatl/diocesan-vitality:backend-$TIMESTAMP|g" k8s/backend-deployment.yaml
 sed -i "s|image: tomatl/diocesan-vitality:frontend-.*|image: tomatl/diocesan-vitality:frontend-$TIMESTAMP|g" k8s/frontend-deployment.yaml
 sed -i "s|image: tomatl/diocesan-vitality:pipeline-.*|image: tomatl/diocesan-vitality:pipeline-$TIMESTAMP|g" k8s/pipeline-deployment.yaml
+git add k8s/backend-deployment.yaml k8s/frontend-deployment.yaml k8s/pipeline-deployment.yaml
+
+# Option 2: Specialized worker deployments (recommended)
+sed -i "s|image: tomatl/diocesan-vitality:backend-.*|image: tomatl/diocesan-vitality:backend-$TIMESTAMP|g" k8s/backend-deployment.yaml
+sed -i "s|image: tomatl/diocesan-vitality:frontend-.*|image: tomatl/diocesan-vitality:frontend-$TIMESTAMP|g" k8s/frontend-deployment.yaml
+sed -i "s|image: tomatl/diocesan-vitality:pipeline-.*|image: tomatl/diocesan-vitality:pipeline-$TIMESTAMP|g" k8s/discovery-deployment.yaml
+sed -i "s|image: tomatl/diocesan-vitality:pipeline-.*|image: tomatl/diocesan-vitality:pipeline-$TIMESTAMP|g" k8s/extraction-deployment.yaml
+sed -i "s|image: tomatl/diocesan-vitality:pipeline-.*|image: tomatl/diocesan-vitality:pipeline-$TIMESTAMP|g" k8s/schedule-deployment.yaml
+sed -i "s|image: tomatl/diocesan-vitality:pipeline-.*|image: tomatl/diocesan-vitality:pipeline-$TIMESTAMP|g" k8s/reporting-deployment.yaml
+git add k8s/backend-deployment.yaml k8s/frontend-deployment.yaml k8s/*-deployment.yaml
 
 # Commit and push to trigger ArgoCD deployment
-git add k8s/backend-deployment.yaml k8s/frontend-deployment.yaml k8s/pipeline-deployment.yaml
 git commit -m "Deploy timestamped images ($TIMESTAMP)"
 git push origin main
 ```
@@ -345,20 +388,80 @@ git push origin main
 
 ### Pipeline Management
 ```bash
-# View live pipeline logs
+# View live pipeline logs (legacy)
 kubectl logs -f deployment/pipeline-deployment -n diocesan-vitality
 
+# View specialized worker logs
+kubectl logs -f deployment/discovery-deployment -n diocesan-vitality
+kubectl logs -f deployment/extraction-deployment -n diocesan-vitality
+kubectl logs -f deployment/schedule-deployment -n diocesan-vitality
+kubectl logs -f deployment/reporting-deployment -n diocesan-vitality
+
+# View logs by worker type label
+kubectl logs -f -l worker-type=discovery -n diocesan-vitality
+kubectl logs -f -l worker-type=extraction -n diocesan-vitality
+kubectl logs -f -l worker-type=schedule -n diocesan-vitality
+kubectl logs -f -l worker-type=reporting -n diocesan-vitality
+
 # View last 50 lines of logs
-kubectl logs deployment/pipeline-deployment -n diocesan-vitality --tail=50
+kubectl logs deployment/extraction-deployment -n diocesan-vitality --tail=50
 
 # View logs with timestamps
-kubectl logs deployment/pipeline-deployment -n diocesan-vitality --timestamps=true
+kubectl logs deployment/extraction-deployment -n diocesan-vitality --timestamps=true
 
-# Check pipeline pod status
-kubectl get pods -n diocesan-vitality -l app=pipeline
+# Check specialized worker pod status
+kubectl get pods -n diocesan-vitality -l worker-type
+kubectl get pods -n diocesan-vitality -l worker-type=extraction
+kubectl get pods -n diocesan-vitality -l worker-type=schedule
 
-# Restart pipeline (triggers fresh execution)
-kubectl rollout restart deployment pipeline-deployment -n diocesan-vitality
+# Check HPA status
+kubectl get hpa -n diocesan-vitality
+kubectl describe hpa extraction-hpa -n diocesan-vitality
+kubectl describe hpa schedule-hpa -n diocesan-vitality
+
+# Restart workers (triggers fresh execution)
+kubectl rollout restart deployment discovery-deployment -n diocesan-vitality
+kubectl rollout restart deployment extraction-deployment -n diocesan-vitality
+kubectl rollout restart deployment schedule-deployment -n diocesan-vitality
+kubectl rollout restart deployment reporting-deployment -n diocesan-vitality
+```
+
+### Worker Specialization Commands
+```bash
+# Deploy specialized workers (migration from legacy)
+kubectl scale deployment pipeline-deployment --replicas=0 -n diocesan-vitality  # Scale down legacy
+kubectl apply -f k8s/discovery-deployment.yaml
+kubectl apply -f k8s/extraction-deployment.yaml
+kubectl apply -f k8s/extraction-hpa.yaml
+kubectl apply -f k8s/schedule-deployment.yaml
+kubectl apply -f k8s/schedule-hpa.yaml
+kubectl apply -f k8s/reporting-deployment.yaml
+
+# Scale individual worker types
+kubectl scale deployment extraction-deployment --replicas=3 -n diocesan-vitality
+kubectl scale deployment schedule-deployment --replicas=2 -n diocesan-vitality
+
+# Monitor worker coordination
+kubectl exec -it deployment/extraction-deployment -n diocesan-vitality -- python -c "
+from core.distributed_work_coordinator import DistributedWorkCoordinator
+import asyncio
+async def check_cluster():
+    coordinator = DistributedWorkCoordinator(worker_type='extraction')
+    status = await coordinator.get_cluster_status()
+    print(f'Active workers: {status[\"active_workers\"]}')
+    print(f'Active assignments: {status[\"total_active_assignments\"]}')
+asyncio.run(check_cluster())
+"
+
+# Test worker specialization
+python test_worker_specialization.py
+
+# Check worker type environment variables
+kubectl get pods -n diocesan-vitality -o jsonpath='{range .items[*]}{.metadata.name}{": "}{.spec.containers[0].env[?(@.name=="WORKER_TYPE")].value}{"\n"}{end}'
+
+# View worker resource usage by type
+kubectl top pods -n diocesan-vitality -l worker-type=extraction
+kubectl top pods -n diocesan-vitality -l worker-type=schedule
 ```
 
 ### Log Analysis and Filtering
