@@ -21,7 +21,7 @@ patches:
           - --metrics
           - 0.0.0.0:2000
           - run
-          - 22440329-d3f3-4b0c-8e59-3328a9bb1209
+          - da4b9224-567a-4ba1-b1b3-9c4eceddfa1e
 
   - target:
       kind: ConfigMap
@@ -30,7 +30,7 @@ patches:
       - op: replace
         path: /data/config.yaml
         value: |
-          tunnel: 22440329-d3f3-4b0c-8e59-3328a9bb1209
+          tunnel: da4b9224-567a-4ba1-b1b3-9c4eceddfa1e
           credentials-file: /etc/cloudflared/creds/credentials.json
           metrics: 0.0.0.0:2000
 
