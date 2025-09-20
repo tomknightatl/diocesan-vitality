@@ -65,18 +65,28 @@ terraform/
 
 ### Required Credentials
 
-1. **DigitalOcean API Token**
-   ```bash
-   export DIGITALOCEAN_TOKEN="your-do-token-here"
-   ```
-   Get from: https://cloud.digitalocean.com/account/api/tokens
+Set up environment variables using the `.env` file pattern:
 
-2. **Cloudflare API Token**
+1. **Copy environment template**:
    ```bash
-   export CLOUDFLARE_API_TOKEN="your-cf-token-here"
+   cp .env.example .env
    ```
-   Create at: https://dash.cloudflare.com/profile/api-tokens
-   Required permissions: Zone:Read, DNS:Edit, Cloudflare Tunnel:Edit
+
+2. **Configure API credentials in `.env`**:
+   ```bash
+   # DigitalOcean API Token - Get from: https://cloud.digitalocean.com/account/api/tokens
+   DIGITALOCEAN_TOKEN=your-do-token-here
+   
+   # Cloudflare API Token - Create at: https://dash.cloudflare.com/profile/api-tokens
+   # Required permissions: Zone:Read, DNS:Edit, Cloudflare Tunnel:Edit
+   CLOUDFLARE_API_TOKEN=your-cf-token-here
+   ```
+
+3. **Load environment variables**:
+   ```bash
+   source .env
+   # or use: export $(cat .env | xargs)
+   ```
 
 ### Configuration Files
 

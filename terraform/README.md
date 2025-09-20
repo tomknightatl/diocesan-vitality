@@ -50,8 +50,9 @@ terraform/
 
 2. **Set Environment Variables**:
    ```bash
-   export DIGITALOCEAN_TOKEN="your-do-token"
-   export CLOUDFLARE_API_TOKEN="your-cf-token"
+   cp .env.example .env
+   # Edit .env with your API tokens
+   source .env
    ```
 
 3. **Configure Variables**:
