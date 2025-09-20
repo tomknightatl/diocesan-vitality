@@ -135,3 +135,12 @@ See `docs/DATABASE.md` for complete schema documentation.
 - **Intelligent Caching**: Content-aware TTL management
 - **Adaptive Timeouts**: Dynamic optimization based on site complexity
 - **Quality-Weighted ML Training**: Success-based URL discovery optimization
+
+## Git Workflow Rules
+
+### IMPORTANT: Repository Changes
+- **NEVER commit or push changes without explicit user permission**
+- **ALWAYS ask before running git commit or git push commands**
+- **Exception: Only push when the user explicitly requests "commit and push" or similar**
+- When changes are ready, inform the user and ask for permission to commit/push
+- Provide a summary of changes before requesting permission
