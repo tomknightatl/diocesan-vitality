@@ -229,6 +229,8 @@ sealed-secrets-create: ## Step 5: Convert tunnel credentials to sealed secrets (
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	echo "🚀 Step 5: Converting tunnel credentials to sealed secrets for '$$CLUSTER_LABEL'..." && \
 	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
+	echo "🔧 Installing kubeseal CLI if needed..." && \
+	$(MAKE) _install-kubeseal && \
 	echo "⏳ Waiting for sealed-secrets controller to be ready..." && \
 	kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=sealed-secrets -n kube-system --timeout=300s && \
 	echo "📋 Reading tunnel credentials from terraform..." && \
@@ -249,6 +251,26 @@ sealed-secrets-create: ## Step 5: Convert tunnel credentials to sealed secrets (
 	echo "⏳ Waiting for tunnel application to sync and become healthy..." && \
 	sleep 30 && \
 	echo "✅ Step 5 Complete: Sealed secret created and tunnel should be syncing for $$CLUSTER_LABEL"
+
+_install-kubeseal: ## Install kubeseal CLI if not present
+	@if ! command -v kubeseal >/dev/null 2>&1; then \
+		echo "📦 Installing kubeseal CLI..."; \
+		KUBESEAL_VERSION=$$(curl -s "https://api.github.com/repos/bitnami-labs/sealed-secrets/releases/latest" | grep -Po '"tag_name": "v\K[^"]*'); \
+		ARCH=$$(uname -m); \
+		case $$ARCH in \
+			x86_64) ARCH="amd64" ;; \
+			aarch64) ARCH="arm64" ;; \
+			armv7l) ARCH="arm" ;; \
+		esac && \
+		wget -q "https://github.com/bitnami-labs/sealed-secrets/releases/latest/download/kubeseal-$${KUBESEAL_VERSION}-linux-$${ARCH}.tar.gz" -O /tmp/kubeseal.tar.gz && \
+		tar -xzf /tmp/kubeseal.tar.gz -C /tmp && \
+		sudo mv /tmp/kubeseal /usr/local/bin/ && \
+		sudo chmod +x /usr/local/bin/kubeseal && \
+		rm -f /tmp/kubeseal.tar.gz && \
+		echo "✅ kubeseal CLI installed successfully"; \
+	else \
+		echo "✅ kubeseal CLI already installed"; \
+	fi
 
 _update-kustomization-for-sealed-secret: ## Update kustomization to use sealed secret instead of plain secret
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
