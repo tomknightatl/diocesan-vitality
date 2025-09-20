@@ -1,4 +1,4 @@
-# Backend API
+# Backend API.
 
 FastAPI backend for the Diocesan Vitality system.
 
