@@ -1,0 +1,42 @@
+# Sealed Secrets configuration for staging environment
+fullnameOverride: sealed-secrets-controller
+
+# Staging-specific settings (production-like)
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+# Enable metrics for monitoring
+metrics:
+  serviceMonitor:
+    enabled: true
+
+# Staging logging
+logLevel: info
+
+# Security context
+securityContext:
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 65534
+
+# Pod security context
+podSecurityContext:
+  fsGroup: 65534
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8080
+
+# High availability for staging
+replicaCount: 2
+
+# Additional labels
+commonLabels:
+  environment: staging
+  component: sealed-secrets

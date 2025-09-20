@@ -1,7 +1,33 @@
 #!/bin/bash
 
-# 🚀 Multi-Cluster Deployment Script
-# Deploys to development, staging, or production clusters
+# ⚠️  DEPRECATED: Multi-Cluster Deployment Script
+#
+# This script is deprecated in favor of GitOps with ArgoCD.
+#
+# RECOMMENDED APPROACH:
+# - Use ArgoCD ApplicationSets for automated deployments
+# - Push to 'develop' branch for dv-dev cluster
+# - Push to 'main' branch for dv-stg cluster
+# - Manual ArgoCD sync for production
+#
+# See: docs/DEVELOPMENT_ENVIRONMENTS.md for GitOps workflow
+# See: k8s/argocd/README.md for ArgoCD setup
+#
+# This script remains for emergency manual deployments only.
+
+echo "⚠️  WARNING: This script is deprecated!"
+echo "   Recommended: Use GitOps with ArgoCD instead"
+echo "   See: docs/DEVELOPMENT_ENVIRONMENTS.md"
+echo ""
+read -p "Continue with manual deployment? (y/N): " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "❌ Deployment cancelled"
+    echo "💡 Use GitOps: git push origin develop  # for dv-dev"
+    echo "💡 Use GitOps: git push origin main     # for dv-stg"
+    exit 0
+fi
+echo ""
 
 set -e
 

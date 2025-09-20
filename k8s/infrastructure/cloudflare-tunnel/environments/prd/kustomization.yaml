@@ -1,0 +1,70 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: cloudflare-tunnel
+
+resources:
+  - ../../base
+
+patches:
+  - target:
+      kind: Deployment
+      name: cloudflared
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/args
+        value:
+          - tunnel
+          - --config
+          - /etc/cloudflared/config/config.yaml
+          - --metrics
+          - 0.0.0.0:2000
+          - run
+          - diocesan-vitality-tunnel
+
+  - target:
+      kind: ConfigMap
+      name: cloudflared-config
+    patch: |-
+      - op: replace
+        path: /data/config.yaml
+        value: |
+          tunnel: diocesan-vitality-tunnel
+          credentials-file: /etc/cloudflared/creds/credentials.json
+          metrics: 0.0.0.0:2000
+
+          ingress:
+          - hostname: ui.diocesan-vitality.org
+            service: http://frontend.diocesan-vitality.svc.cluster.local:80
+          - hostname: api.diocesan-vitality.org
+            service: http://backend.diocesan-vitality.svc.cluster.local:8000
+          - hostname: argocd.diocesan-vitality.org
+            service: https://argocd-server.argocd.svc.cluster.local:443
+            originRequest:
+              noTLSVerify: true
+          - service: http_status:404
+
+  - target:
+      kind: Deployment
+      name: cloudflared
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3
+
+  - target:
+      kind: Deployment
+      name: cloudflared
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 200m
+            memory: 256Mi
+
+commonLabels:
+  environment: production

@@ -1,0 +1,51 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: cloudflare-tunnel-multi-env
+  namespace: argocd
+spec:
+  generators:
+  - list:
+      elements:
+      - cluster: dv-dev
+        environment: dev
+        server: https://kubernetes.default.svc
+        namespace: cloudflare-tunnel-dev
+        subdomain: dev-diocesan-vitality
+      - cluster: dv-stg
+        environment: stg
+        server: https://kubernetes.default.svc
+        namespace: cloudflare-tunnel-stg
+        subdomain: stg-diocesan-vitality
+      - cluster: dv-prd
+        environment: prd
+        server: https://kubernetes.default.svc
+        namespace: cloudflare-tunnel
+        subdomain: diocesan-vitality
+  template:
+    metadata:
+      name: 'cloudflare-tunnel-{{cluster}}'
+      namespace: argocd
+      annotations:
+        argocd.argoproj.io/sync-wave: "1"
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/tomknightatl/diocesan-vitality
+        targetRevision: HEAD
+        path: k8s/infrastructure/cloudflare-tunnel/environments/{{environment}}
+      destination:
+        server: '{{server}}'
+        namespace: '{{namespace}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+        - CreateNamespace=true
+        - ServerSideApply=true
+      ignoreDifferences:
+      - group: ""
+        kind: Secret
+        jsonPointers:
+        - /data
