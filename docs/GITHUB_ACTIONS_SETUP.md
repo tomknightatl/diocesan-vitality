@@ -1,6 +1,8 @@
 # 🚀 GitHub Actions Setup Guide
 
-This guide explains how to set up automated Docker builds and deployments using GitHub Actions.
+This guide explains how to set up the automated CI/CD pipeline with GitHub Actions.
+
+> **Note**: This project now uses a comprehensive CI/CD pipeline. For complete workflow documentation, see **[CI/CD Pipeline Guide](CI_CD_PIPELINE.md)**.
 
 ## 📋 Overview
 

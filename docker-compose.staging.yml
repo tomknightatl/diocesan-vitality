@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  backend:
+    image: ${BACKEND_IMAGE:-tomatl/diocesan-vitality:staging-backend-latest}
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=staging
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/staging_db
+      - SUPABASE_URL=${STAGING_SUPABASE_URL:-placeholder}
+      - SUPABASE_KEY=${STAGING_SUPABASE_KEY:-placeholder}
+      - GENAI_API_KEY=${STAGING_GENAI_API_KEY:-placeholder}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-tomatl/diocesan-vitality:staging-frontend-latest}
+    ports:
+      - "3000:80"
+    environment:
+      - REACT_APP_API_URL=http://backend:8000
+      - REACT_APP_ENVIRONMENT=staging
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  pipeline:
+    image: ${PIPELINE_IMAGE:-tomatl/diocesan-vitality:staging-pipeline-latest}
+    environment:
+      - ENVIRONMENT=staging
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/staging_db
+      - SUPABASE_URL=${STAGING_SUPABASE_URL:-placeholder}
+      - SUPABASE_KEY=${STAGING_SUPABASE_KEY:-placeholder}
+      - GENAI_API_KEY=${STAGING_GENAI_API_KEY:-placeholder}
+      - TESTING=true
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - pipeline  # Only start when explicitly requested
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: staging_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - staging_db_data:/var/lib/postgresql/data
+      - ./scripts/init-staging-db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d staging_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  staging_db_data:

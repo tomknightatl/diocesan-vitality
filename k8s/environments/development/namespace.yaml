@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: diocesan-vitality-dev
+  labels:
+    environment: development
+    cluster: do-nyc2-dv-dev
