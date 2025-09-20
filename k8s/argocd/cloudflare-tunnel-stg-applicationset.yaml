@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: cloudflare-tunnel-stg
+  namespace: argocd
+spec:
+  generators:
+  - clusters:
+      selector:
+        matchLabels:
+          environment: stg
+  template:
+    metadata:
+      name: 'cloudflare-tunnel-stg'
+      namespace: argocd
+      annotations:
+        argocd.argoproj.io/sync-wave: "1"
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/tomknightatl/diocesan-vitality
+        targetRevision: HEAD
+        path: k8s/infrastructure/cloudflare-tunnel/environments/stg
+      destination:
+        server: "{{server}}"
+        namespace: "cloudflare-tunnel-stg"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+        - CreateNamespace=true
+        - ServerSideApply=true
+      ignoreDifferences:
+      - group: ""
+        kind: Secret
+        jsonPointers:
+        - /data
