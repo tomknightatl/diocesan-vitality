@@ -1,7 +1,7 @@
 variable "kubernetes_version" {
   description = "Kubernetes version for the development cluster"
   type        = string
-  default     = "1.28.2-do.0"
+  default     = "1.31.9-do.3"
 }
 
 variable "cloudflare_account_id" {

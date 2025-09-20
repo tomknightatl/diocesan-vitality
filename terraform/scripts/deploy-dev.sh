@@ -80,7 +80,7 @@ generate_tfvars() {
 
     cat > terraform.tfvars << EOF
 # Auto-generated from environment variables
-kubernetes_version = "${KUBERNETES_VERSION:-1.28.2-do.0}"
+kubernetes_version = "${KUBERNETES_VERSION:-1.31.9-do.3}"
 cloudflare_account_id = "${CLOUDFLARE_ACCOUNT_ID}"
 cloudflare_zone_id = "${CLOUDFLARE_ZONE_ID}"
 EOF
