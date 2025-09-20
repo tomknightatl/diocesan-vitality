@@ -55,12 +55,8 @@ terraform/
    source .env
    ```
 
-3. **Configure Variables**:
-   ```bash
-   # Copy and edit configuration files
-   cp environments/dev/terraform.tfvars.example environments/dev/terraform.tfvars
-   cp environments/staging/terraform.tfvars.example environments/staging/terraform.tfvars
-   ```
+3. **Configuration**: 
+   All configuration is handled via `.env` - no additional setup needed!
 
 ## Usage Examples
 

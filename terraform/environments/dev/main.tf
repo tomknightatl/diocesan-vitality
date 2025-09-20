@@ -28,9 +28,9 @@ provider "cloudflare" {
 
 # Local values for the development environment
 locals {
-  environment    = "dev"
-  cluster_name   = "dv-dev"
-  region        = "nyc3"
+  environment  = "dev"
+  cluster_name = "dv-dev"
+  region       = "nyc3"
 
   # Domain configuration
   domain_name      = "diocesan-vitality.org"
@@ -39,10 +39,10 @@ locals {
   argocd_subdomain = "dev.argocd"
 
   # Cluster configuration
-  node_size    = "s-2vcpu-2gb"
-  node_count   = 2
-  min_nodes    = 1
-  max_nodes    = 3
+  node_size  = "s-2vcpu-2gb"
+  node_count = 2
+  min_nodes  = 1
+  max_nodes  = 3
 
   # Tags
   common_tags = [
@@ -57,16 +57,16 @@ module "k8s_cluster" {
   source = "../../modules/do-k8s-cluster"
 
   cluster_name       = local.cluster_name
-  region            = local.region
+  region             = local.region
   kubernetes_version = var.kubernetes_version
 
-  node_size    = local.node_size
-  node_count   = local.node_count
-  auto_scale   = true
-  min_nodes    = local.min_nodes
-  max_nodes    = local.max_nodes
+  node_size  = local.node_size
+  node_count = local.node_count
+  auto_scale = true
+  min_nodes  = local.min_nodes
+  max_nodes  = local.max_nodes
 
-  cluster_tags      = local.common_tags
+  cluster_tags     = local.common_tags
   node_tags        = concat(local.common_tags, ["worker-node"])
   write_kubeconfig = true
 }
@@ -78,9 +78,9 @@ module "cloudflare_tunnel" {
   cloudflare_account_id = var.cloudflare_account_id
   cloudflare_zone_id    = var.cloudflare_zone_id
 
-  environment    = local.environment
-  cluster_name   = local.cluster_name
-  domain_name    = local.domain_name
+  environment  = local.environment
+  cluster_name = local.cluster_name
+  domain_name  = local.domain_name
 
   ui_subdomain     = local.ui_subdomain
   api_subdomain    = local.api_subdomain

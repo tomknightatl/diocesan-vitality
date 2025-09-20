@@ -7,9 +7,11 @@ variable "kubernetes_version" {
 variable "cloudflare_account_id" {
   description = "Cloudflare account ID"
   type        = string
+  default     = null
 }
 
 variable "cloudflare_zone_id" {
   description = "Cloudflare zone ID for diocesan-vitality.org"
   type        = string
+  default     = null
 }
