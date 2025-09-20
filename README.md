@@ -386,34 +386,38 @@ The web application uses **Docker Hub** for container image storage. Docker Hub 
 
 ## Documentation
 
-### 📖 Core Documentation
+### 🚀 Getting Started & Development
 - **[README.md](README.md)**: Main project documentation
 - **[docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md)**: Complete local development setup and workflow
+- **[docs/DEVELOPMENT_ENVIRONMENTS.md](docs/DEVELOPMENT_ENVIRONMENTS.md)**: Development environment setup (local and cloud)
 - **[docs/COMMANDS.md](docs/COMMANDS.md)**: Complete command reference for all scripts
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**: System architecture and design patterns
-- **[docs/MONITORING.md](docs/MONITORING.md)**: Real-time monitoring and operational visibility
 
-### ⚡ Performance & Optimization
-- **[docs/ASYNC_PERFORMANCE_GUIDE.md](docs/ASYNC_PERFORMANCE_GUIDE.md)**: High-performance concurrent extraction optimization
-- **[docs/ml-model-training.md](docs/ml-model-training.md)**: ML-based URL prediction system training
-
-### 🚀 Deployment & Infrastructure
+### 🏗️ Deployment & Operations
 - **[docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md)**: Docker and Kubernetes deployment instructions
+- **[docs/CI_CD_PIPELINE.md](docs/CI_CD_PIPELINE.md)**: Complete CI/CD pipeline documentation and workflows
+- **[docs/GITHUB_ACTIONS_SETUP.md](docs/GITHUB_ACTIONS_SETUP.md)**: GitHub Actions setup and configuration
+- **[k8s/README.md](k8s/README.md)**: Kubernetes deployment and pipeline management
+- **[k8s/SCALING_README.md](k8s/SCALING_README.md)**: Horizontal scaling documentation
+- **[k8s/cluster-management/README.md](k8s/cluster-management/README.md)**: Cluster management scripts and infrastructure setup
+- **[k8s/argocd/README.md](k8s/argocd/README.md)**: ArgoCD GitOps configuration
+- **[k8s/argocd/bitnami-sealed-secrets-application-set-README.md](k8s/argocd/bitnami-sealed-secrets-application-set-README.md)**: Sealed secrets management
+- **[k8s/argocd/cloudflare-tunnel-applicationsetREADME.md](k8s/argocd/cloudflare-tunnel-applicationsetREADME.md)**: Cloudflare tunnel configuration
+
+### 🔧 System Architecture & Configuration
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**: System architecture and design patterns
 - **[docs/DATABASE.md](docs/DATABASE.md)**: Database schema and data management
-- **[docs/supabase-setup.md](docs/supabase-setup.md)**: Database setup instructions
 - **[docs/AUTHENTICATION.md](docs/AUTHENTICATION.md)**: Authentication and security configuration
 - **[docs/CLOUDFLARE.md](docs/CLOUDFLARE.md)**: Cloudflare tunnel and DNS configuration
+- **[docs/supabase-setup.md](docs/supabase-setup.md)**: Database setup instructions
+- **[docs/MONITORING.md](docs/MONITORING.md)**: Real-time monitoring and operational visibility
 
 ### 🖥️ Application Components
 - **[backend/README.md](backend/README.md)**: FastAPI backend server documentation
 - **[frontend/README.md](frontend/README.md)**: React frontend application setup
 
-### ☁️ Kubernetes & GitOps
-- **[k8s/README.md](k8s/README.md)**: Kubernetes deployment and pipeline management
-- **[k8s/SCALING_README.md](k8s/SCALING_README.md)**: Horizontal scaling documentation
-- **[k8s/argocd/README.md](k8s/argocd/README.md)**: ArgoCD GitOps configuration
-- **[k8s/argocd/bitnami-sealed-secrets-application-set-README.md](k8s/argocd/bitnami-sealed-secrets-application-set-README.md)**: Sealed secrets management
-- **[k8s/argocd/cloudflare-tunnel-applicationsetREADME.md](k8s/argocd/cloudflare-tunnel-applicationsetREADME.md)**: Cloudflare tunnel configuration
+### ⚡ Performance & Optimization
+- **[docs/ASYNC_PERFORMANCE_GUIDE.md](docs/ASYNC_PERFORMANCE_GUIDE.md)**: High-performance concurrent extraction optimization
+- **[docs/ml-model-training.md](docs/ml-model-training.md)**: ML-based URL prediction system training
 
 ### 🧪 Testing & Quality Assurance
 - **[tests/TESTING.md](tests/TESTING.md)**: Testing framework and test procedures
@@ -423,3 +427,6 @@ The web application uses **Docker Hub** for container image storage. Docker Hub 
 
 ### 📊 Advanced Features
 - **[docs/DIOCESE_PARISH_DIRECTORY_OVERRIDE.md](docs/DIOCESE_PARISH_DIRECTORY_OVERRIDE.md)**: Directory URL override system
+
+### ⚙️ Project Configuration
+- **[.claude/CLAUDE.md](.claude/CLAUDE.md)**: Claude Code assistant project instructions and commands
