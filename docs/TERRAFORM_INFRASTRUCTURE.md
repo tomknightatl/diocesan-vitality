@@ -80,6 +80,12 @@ Set up environment variables using the `.env` file pattern:
    # Cloudflare API Token - Create at: https://dash.cloudflare.com/profile/api-tokens
    # Required permissions: Zone:Read, DNS:Edit, Cloudflare Tunnel:Edit
    CLOUDFLARE_API_TOKEN=your-cf-token-here
+   
+   # Cloudflare Account ID - Get from dashboard sidebar
+   CLOUDFLARE_ACCOUNT_ID=your-account-id-here
+   
+   # Cloudflare Zone ID - Get from diocesan-vitality.org domain overview
+   CLOUDFLARE_ZONE_ID=your-zone-id-here
    ```
 
 3. **Load environment variables**:
@@ -88,21 +94,11 @@ Set up environment variables using the `.env` file pattern:
    # or use: export $(cat .env | xargs)
    ```
 
-### Configuration Files
+### Configuration
 
-Copy and configure the environment-specific variables:
+All configuration is handled through the `.env` file. The deployment scripts automatically generate the necessary `terraform.tfvars` files from your environment variables.
 
-```bash
-# Development
-cp terraform/environments/dev/terraform.tfvars.example \
-   terraform/environments/dev/terraform.tfvars
-
-# Staging  
-cp terraform/environments/staging/terraform.tfvars.example \
-   terraform/environments/staging/terraform.tfvars
-```
-
-Edit the `.tfvars` files with your Cloudflare account and zone IDs.
+No additional configuration files need to be created manually.
 
 ## Quick Start
 

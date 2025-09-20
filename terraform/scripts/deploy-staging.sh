@@ -55,15 +55,36 @@ check_prerequisites() {
     fi
     echo "✅ Cloudflare API token is configured"
 
-    # Check terraform.tfvars
-    if [[ ! -f "$STAGING_DIR/terraform.tfvars" ]]; then
-        echo "❌ terraform.tfvars file is missing"
-        echo "   Copy and configure: cp $STAGING_DIR/terraform.tfvars.example $STAGING_DIR/terraform.tfvars"
+    # Check Cloudflare configuration
+    if [[ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]]; then
+        echo "❌ CLOUDFLARE_ACCOUNT_ID environment variable is required"
+        echo "   1. Edit .env with your Cloudflare account ID from dashboard sidebar"
+        echo "   2. Load variables: source .env"
         exit 1
     fi
-    echo "✅ terraform.tfvars is configured"
+
+    if [[ -z "${CLOUDFLARE_ZONE_ID:-}" ]]; then
+        echo "❌ CLOUDFLARE_ZONE_ID environment variable is required"
+        echo "   1. Edit .env with your zone ID from diocesan-vitality.org domain overview"
+        echo "   2. Load variables: source .env"
+        exit 1
+    fi
+    echo "✅ Cloudflare configuration is set"
 
     echo
+}
+
+generate_tfvars() {
+    echo "Generating terraform.tfvars from environment variables..."
+    cd "$STAGING_DIR"
+
+    cat > terraform.tfvars << EOF
+# Auto-generated from environment variables
+kubernetes_version = "${KUBERNETES_VERSION:-1.28.2-do.0}"
+cloudflare_account_id = "${CLOUDFLARE_ACCOUNT_ID}"
+cloudflare_zone_id = "${CLOUDFLARE_ZONE_ID}"
+EOF
+    echo "✅ terraform.tfvars generated"
 }
 
 deploy_infrastructure() {
@@ -200,6 +221,7 @@ show_access_info() {
 
 main() {
     check_prerequisites
+    generate_tfvars
     deploy_infrastructure
     setup_kubernetes
     apply_tunnel_secrets

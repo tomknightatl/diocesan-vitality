@@ -61,6 +61,20 @@ install_argocd() {
     echo "✅ ArgoCD installed successfully in $cluster_name"
 }
 
+store_password_securely() {
+    local cluster_name=$1
+    local password=$2
+    local password_file="/tmp/argocd-${cluster_name}-password.txt"
+
+    # Store password in a temporary file with restricted permissions
+    echo "$password" > "$password_file"
+    chmod 600 "$password_file"
+
+    echo "🔐 Password stored securely at: $password_file (readable only by you)"
+    echo "   File will be automatically cleaned up on next reboot"
+    echo
+}
+
 get_argocd_password() {
     local cluster_name=$1
     echo "Getting ArgoCD admin password for $cluster_name..."
@@ -70,8 +84,11 @@ get_argocd_password() {
 
     echo "ArgoCD Admin Credentials for $cluster_name:"
     echo "  Username: admin"
-    echo "  Password: $password"
+    echo "  Password: [REDACTED - use one of the methods below to retrieve]"
     echo
+
+    # Store password securely for retrieval
+    store_password_securely "$cluster_name" "$password"
 }
 
 add_repository() {
@@ -129,10 +146,15 @@ setup_port_forward() {
     kubectl config use-context "$cluster_name"
 
     echo "To access ArgoCD UI for $cluster_name:"
-    echo "  1. Run: kubectl port-forward svc/argocd-server -n argocd 8080:443"
-    echo "  2. Visit: https://localhost:8080"
-    echo "  3. Login with admin credentials shown above"
-    echo "  4. Accept self-signed certificate warning"
+    echo "  1. Get password using one of these secure methods:"
+    echo "     • From temp file: cat /tmp/argocd-${cluster_name}-password.txt"
+    echo "     • From kubectl: kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath=\"{.data.password}\" | base64 -d"
+    echo "     • From ArgoCD CLI: argocd admin initial-password -n argocd"
+    echo "  2. Run: kubectl port-forward svc/argocd-server -n argocd 8080:443"
+    echo "  3. Visit: https://localhost:8080"
+    echo "  4. Login with username 'admin' and the password from step 1"
+    echo "  5. Accept self-signed certificate warning"
+    echo "  6. IMPORTANT: Change the admin password immediately after first login"
     echo
 }
 
