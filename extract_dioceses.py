@@ -2,9 +2,9 @@
 # coding: utf-8
 
 import argparse
+import re  # Added this line
 import time
 from datetime import datetime, timezone
-import re # Added this line
 
 import pandas as pd
 import requests
@@ -12,10 +12,11 @@ from bs4 import BeautifulSoup
 
 import config
 from core.db import get_supabase_client
-from core.logger import get_logger
 from core.http_client import get_http_client
+from core.logger import get_logger
 
 logger = get_logger(__name__)
+
 
 def get_soup(url, retries=3, backoff_factor=1.0):
     """
@@ -23,13 +24,13 @@ def get_soup(url, retries=3, backoff_factor=1.0):
     Uses connection pooling for improved performance and implements retries with exponential backoff.
     """
     http_client = get_http_client()
-    
+
     for attempt in range(1, retries + 1):
         try:
             logger.info(f"Attempt {attempt}: Fetching URL: {url}")
             response = http_client.get(url)
             logger.info(f"Received status code: {response.status_code}")
-            return BeautifulSoup(response.text, 'html.parser')
+            return BeautifulSoup(response.text, "html.parser")
         except requests.RequestException as e:
             logger.warning(f"Attempt {attempt} failed with error: {e}")
             if attempt == retries:
@@ -39,13 +40,14 @@ def get_soup(url, retries=3, backoff_factor=1.0):
             logger.info(f"Retrying in {sleep_time} seconds...")
             time.sleep(sleep_time)
 
+
 def extract_dioceses_data(soup, max_dioceses=None):
     """
     Extracts dioceses information from the parsed HTML.
     Returns a list of dictionaries with diocese details.
     """
     dioceses = []
-    diocese_containers = soup.find_all('div', class_='views-row')
+    diocese_containers = soup.find_all("div", class_="views-row")
 
     logger.info(f"Found {len(diocese_containers)} potential diocese containers")
 
@@ -56,42 +58,45 @@ def extract_dioceses_data(soup, max_dioceses=None):
     for i, container in enumerate(diocese_containers):
         logger.info(f"Processing container {i+1}")
 
-        da_wrap = container.find('div', class_='da-wrap')
+        da_wrap = container.find("div", class_="da-wrap")
         if not da_wrap:
             logger.warning(f"No da-wrap found in container {i+1}")
             continue
 
-        name_div = da_wrap.find('div', class_='da-title')
+        name_div = da_wrap.find("div", class_="da-title")
         diocese_name = name_div.get_text(strip=True) if name_div else "N/A"
         logger.info(f"Diocese name: {diocese_name}")
 
-        website_div = da_wrap.find('div', class_='site')
-        website_url = website_div.find('a')['href'] if website_div and website_div.find('a') else "N/A"
+        website_div = da_wrap.find("div", class_="site")
+        website_url = website_div.find("a")["href"] if website_div and website_div.find("a") else "N/A"
         logger.info(f"Website: {website_url}")
 
-        address_div = da_wrap.find('div', class_='da-address')
+        address_div = da_wrap.find("div", class_="da-address")
         address = ""
         if address_div:
             full_address_text = address_div.get_text(separator=" ", strip=True)
             # Remove website URL from the address text if it's present
             if website_url != "N/A" and website_url in full_address_text:
                 full_address_text = full_address_text.replace(website_url, "").strip()
-            
+
             # Clean up multiple spaces and newlines
-            address = re.sub(r'\s+', ' ', full_address_text).strip()
-            address = re.sub(r' ,', ',', address).strip() # Add this line
+            address = re.sub(r"\s+", " ", full_address_text).strip()
+            address = re.sub(r" ,", ",", address).strip()  # Add this line
             # Further refinement: remove common address separators if they appear at start/end
-            address = address.strip(',').strip()
+            address = address.strip(",").strip()
         logger.info(f"Address: {address}")
 
-        dioceses.append({
-            'Name': diocese_name,
-            'Address': address,
-            'Website': website_url,
-            'extracted_at': datetime.now(timezone.utc).isoformat()
-        })
+        dioceses.append(
+            {
+                "Name": diocese_name,
+                "Address": address,
+                "Website": website_url,
+                "extracted_at": datetime.now(timezone.utc).isoformat(),
+            }
+        )
 
     return dioceses
+
 
 def main(max_dioceses=config.DEFAULT_MAX_DIOCESES):
     """Main function to extract and store dioceses information."""
@@ -120,10 +125,10 @@ def main(max_dioceses=config.DEFAULT_MAX_DIOCESES):
         return
 
     try:
-        data_to_insert = dioceses_df.to_dict('records')
+        data_to_insert = dioceses_df.to_dict("records")
         logger.info(f"\nAttempting to upsert {len(data_to_insert)} rows...")
-        
-        result = supabase.table('Dioceses').upsert(data_to_insert, on_conflict='Name').execute()
+
+        result = supabase.table("Dioceses").upsert(data_to_insert, on_conflict="Name").execute()
 
         if result.data:
             logger.info(f"✅ Successfully upserted {len(result.data)} rows!")
@@ -133,15 +138,13 @@ def main(max_dioceses=config.DEFAULT_MAX_DIOCESES):
     except Exception as e:
         logger.error(f"❌ Bulk upsert failed: {e}")
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Extract dioceses information from the USCCB website.")
     parser.add_argument(
-        "--max_dioceses",
-        type=int,
-        default=5,
-        help="Maximum number of dioceses to extract. Set to 0 or None for no limit."
+        "--max_dioceses", type=int, default=5, help="Maximum number of dioceses to extract. Set to 0 or None for no limit."
     )
     args = parser.parse_args()
-    
+
     config.validate_config()
     main(args.max_dioceses)

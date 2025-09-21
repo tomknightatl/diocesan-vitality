@@ -7,7 +7,7 @@ Version is automatically updated by semantic-release during CI/CD.
 
 import os
 from datetime import datetime
-from typing import Dict, Any, Tuple, Optional
+from typing import Any, Dict, Optional, Tuple
 
 # Version information - updated automatically by semantic-release
 __version__ = "1.0.0"
@@ -22,10 +22,7 @@ BUILD_INFO = {
     "build_date": os.getenv("BUILD_DATE", datetime.utcnow().isoformat()),
     "build_number": os.getenv("GITHUB_RUN_NUMBER", "unknown"),
     "docker_tags": {
-        "backend": "tomatl/diocesan-vitality:backend-1.0.0",
-        "frontend": "tomatl/diocesan-vitality:frontend-1.0.0",
-        "pipeline": "tomatl/diocesan-vitality:pipeline-1.0.0",
-    }",
+        "backend": f"tomatl/diocesan-vitality:backend-{__version__}",
         "frontend": f"tomatl/diocesan-vitality:frontend-{__version__}",
         "pipeline": f"tomatl/diocesan-vitality:pipeline-{__version__}",
     },
@@ -163,7 +160,7 @@ def print_version_info(verbose: bool = False) -> None:
         print(f"Git Branch: {info['git_branch']}")
         print(f"Build Number: {info['build_number']}")
         print("\nDocker Images:")
-        for component, tag in info['docker_tags'].items():
+        for component, tag in info["docker_tags"].items():
             print(f"  {component.capitalize()}: {tag}")
         print(f"\nRelease Notes: {info['release_notes_url']}")
 

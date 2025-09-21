@@ -1,43 +1,48 @@
+import shutil
+import subprocess
+import time
+
 from selenium import webdriver
+from selenium.common.exceptions import SessionNotCreatedException, TimeoutException, WebDriverException
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from selenium.webdriver.firefox.service import Service as FirefoxService
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.firefox import GeckoDriverManager
-from core.logger import get_logger
-from core.circuit_breaker import circuit_breaker, CircuitBreakerConfig, circuit_manager
-from core.optimized_circuit_breaker_configs import OptimizedCircuitBreakerConfigs
+
+from core.circuit_breaker import CircuitBreakerConfig, circuit_breaker, circuit_manager
 from core.enhanced_element_wait import ElementWaitStrategy
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-from selenium.common.exceptions import WebDriverException, SessionNotCreatedException, TimeoutException
-import time
-import subprocess
-import shutil
+from core.logger import get_logger
+from core.optimized_circuit_breaker_configs import OptimizedCircuitBreakerConfigs
 
 logger = get_logger(__name__)
 driver = None
 _system_chromedriver_warning_logged = False
 
+
 def _find_chrome_binary():
     """Find the Chrome binary path dynamically based on what's available."""
     # List of possible Chrome binary locations in order of preference
     chrome_binaries = [
-        '/usr/bin/google-chrome',       # Standard Google Chrome on Linux
-        '/usr/bin/chromium-browser',    # Chromium on Raspberry Pi/ARM64
-        '/usr/bin/chromium',            # Alternative Chromium path
-        '/opt/google/chrome/chrome',    # Alternative Google Chrome path
-        'google-chrome',                # System PATH fallback
-        'chromium-browser',             # System PATH fallback
-        'chromium'                      # System PATH fallback
+        "/usr/bin/google-chrome",  # Standard Google Chrome on Linux
+        "/usr/bin/chromium-browser",  # Chromium on Raspberry Pi/ARM64
+        "/usr/bin/chromium",  # Alternative Chromium path
+        "/opt/google/chrome/chrome",  # Alternative Google Chrome path
+        "google-chrome",  # System PATH fallback
+        "chromium-browser",  # System PATH fallback
+        "chromium",  # System PATH fallback
     ]
 
     for binary_path in chrome_binaries:
         try:
-            if binary_path.startswith('/'):
+            if binary_path.startswith("/"):
                 # Absolute path - check if file exists
-                if shutil.which(binary_path) or subprocess.run(['test', '-f', binary_path],
-                                                             capture_output=True).returncode == 0:
+                if (
+                    shutil.which(binary_path)
+                    or subprocess.run(["test", "-f", binary_path], capture_output=True).returncode == 0
+                ):
                     logger.debug(f"🔍 Found Chrome binary at: {binary_path}")
                     return binary_path
             else:
@@ -53,8 +58,10 @@ def _find_chrome_binary():
     logger.warning("⚠️ No Chrome binary found, WebDriver will use default")
     return None
 
+
 # Define retryable exceptions for WebDriver setup
 RETRYABLE_WEBDRIVER_EXCEPTIONS = (WebDriverException, SessionNotCreatedException)
+
 
 def _setup_chrome_driver():
     """Set up Chrome WebDriver with enhanced compatibility."""
@@ -88,9 +95,9 @@ def _setup_chrome_driver():
 
     # Create unique temp directories for this session
     temp_base = tempfile.gettempdir()
-    user_data_dir = os.path.join(temp_base, f'chrome-user-data-{session_id}')
-    cache_dir = os.path.join(temp_base, f'chrome-cache-{session_id}')
-    webdriver_cache = os.path.join(temp_base, f'webdriver-cache-{session_id}')
+    user_data_dir = os.path.join(temp_base, f"chrome-user-data-{session_id}")
+    cache_dir = os.path.join(temp_base, f"chrome-cache-{session_id}")
+    webdriver_cache = os.path.join(temp_base, f"webdriver-cache-{session_id}")
 
     # Create directories
     for tmp_dir in [user_data_dir, cache_dir, webdriver_cache]:
@@ -102,13 +109,13 @@ def _setup_chrome_driver():
     chrome_options.add_argument("--disable-background-networking")
 
     # Use cache directory that webdriver-manager can access
-    os.environ['WDM_LOCAL_CACHE'] = webdriver_cache
+    os.environ["WDM_LOCAL_CACHE"] = webdriver_cache
 
     logger.info(f"🔧 Creating Chrome session with ID: {session_id}")
 
     # Try system ChromeDriver first (for ARM64 compatibility)
     try:
-        chrome_service = ChromeService('/usr/bin/chromedriver')
+        chrome_service = ChromeService("/usr/bin/chromedriver")
         # Set Chrome binary path dynamically
         chrome_binary = _find_chrome_binary()
         if chrome_binary:
@@ -119,9 +126,8 @@ def _setup_chrome_driver():
         if not _system_chromedriver_warning_logged:
             logger.warning(f"System ChromeDriver failed: {e}, falling back to ChromeDriverManager")
             _system_chromedriver_warning_logged = True
-        return webdriver.Chrome(
-            service=ChromeService(ChromeDriverManager().install()), options=chrome_options
-        )
+        return webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
+
 
 def _setup_firefox_driver():
     """Set up Firefox WebDriver as fallback."""
@@ -133,22 +139,24 @@ def _setup_firefox_driver():
     # Set Firefox preferences for better compatibility
     firefox_options.set_preference("dom.webdriver.enabled", False)
     firefox_options.set_preference("useAutomationExtension", False)
-    firefox_options.set_preference("general.useragent.override",
-                                  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+    firefox_options.set_preference(
+        "general.useragent.override",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    )
 
     # Use cache directory that webdriver-manager can access
     import os
-    os.environ['WDM_LOCAL_CACHE'] = '/tmp/webdriver-cache'
 
-    return webdriver.Firefox(
-        service=FirefoxService(GeckoDriverManager().install()), options=firefox_options
-    )
+    os.environ["WDM_LOCAL_CACHE"] = "/tmp/webdriver-cache"
+
+    return webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()), options=firefox_options)
+
 
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
     retry=retry_if_exception_type(RETRYABLE_WEBDRIVER_EXCEPTIONS),
-    reraise=False, # Do not re-raise after retries, let the function return None
+    reraise=False,  # Do not re-raise after retries, let the function return None
 )
 def _setup_driver_with_retry():
     """Internal helper to set up WebDriver with retry logic and fallback support."""
@@ -165,7 +173,8 @@ def _setup_driver_with_retry():
         try:
             # Check if Firefox is available
             import shutil
-            if shutil.which('firefox') or shutil.which('firefox-esr'):
+
+            if shutil.which("firefox") or shutil.which("firefox-esr"):
                 logger.info("🔧 Falling back to Firefox WebDriver...")
                 driver = _setup_firefox_driver()
                 logger.info("✅ Firefox WebDriver setup successful")
@@ -178,6 +187,7 @@ def _setup_driver_with_retry():
             logger.error("❌ All WebDriver options exhausted")
             return None
 
+
 def setup_driver():
     """Initializes and returns the Selenium WebDriver instance."""
     global driver
@@ -189,10 +199,11 @@ def setup_driver():
                 logger.info("WebDriver setup successfully.")
             else:
                 logger.info("Failed to setup WebDriver after multiple retries.")
-        except Exception as e: # Catch any remaining exceptions not covered by retry
+        except Exception as e:  # Catch any remaining exceptions not covered by retry
             logger.info(f"Error setting up WebDriver: {e}")
             driver = None
     return driver
+
 
 def close_driver():
     """Closes the Selenium WebDriver instance if it's active."""
@@ -284,7 +295,7 @@ class ProtectedWebDriver:
         timeout = timeout or self.default_timeout
         logger.debug(f"🌐 Loading page: {url} (timeout: {timeout}s)")
 
-        cb = circuit_manager.get_circuit_breaker('webdriver_page_load', self.page_load_cb_config)
+        cb = circuit_manager.get_circuit_breaker("webdriver_page_load", self.page_load_cb_config)
 
         def _load_page():
             # Set page load timeout
@@ -309,12 +320,12 @@ class ProtectedWebDriver:
 
     def find_element(self, *args, **kwargs):
         """Find element with circuit breaker protection"""
-        cb = circuit_manager.get_circuit_breaker('webdriver_element_interaction', self.element_cb_config)
+        cb = circuit_manager.get_circuit_breaker("webdriver_element_interaction", self.element_cb_config)
         return cb.call(self.driver.find_element, *args, **kwargs)
 
     def find_elements(self, *args, **kwargs):
         """Find elements with circuit breaker protection"""
-        cb = circuit_manager.get_circuit_breaker('webdriver_element_interaction', self.element_cb_config)
+        cb = circuit_manager.get_circuit_breaker("webdriver_element_interaction", self.element_cb_config)
         return cb.call(self.driver.find_elements, *args, **kwargs)
 
     def execute_script(self, script, *args, timeout=None):
@@ -322,7 +333,7 @@ class ProtectedWebDriver:
         timeout = timeout or 15
         logger.debug(f"⚡ Executing JavaScript (timeout: {timeout}s)")
 
-        cb = circuit_manager.get_circuit_breaker('webdriver_javascript', self.javascript_cb_config)
+        cb = circuit_manager.get_circuit_breaker("webdriver_javascript", self.javascript_cb_config)
 
         def _execute_js():
             # Set script timeout
@@ -345,18 +356,14 @@ class ProtectedWebDriver:
         """Find element using enhanced waiting strategy with multiple selectors"""
         timeout = timeout or self.default_timeout
         return self.element_wait_strategy.smart_element_wait(
-            selectors if isinstance(selectors, list) else [selectors],
-            timeout=timeout,
-            condition=condition
+            selectors if isinstance(selectors, list) else [selectors], timeout=timeout, condition=condition
         )
 
     def smart_find_elements(self, selectors, timeout=None, min_count=1):
         """Find multiple elements using enhanced waiting strategy"""
         timeout = timeout or self.default_timeout
         return self.element_wait_strategy.smart_elements_wait(
-            selectors if isinstance(selectors, list) else [selectors],
-            timeout=timeout,
-            min_count=min_count
+            selectors if isinstance(selectors, list) else [selectors], timeout=timeout, min_count=min_count
         )
 
     def wait_for_page_stable(self, stability_timeout=2.0, max_wait=10.0):
@@ -367,8 +374,7 @@ class ProtectedWebDriver:
         """Find form using intelligent form detection"""
         timeout = timeout or self.default_timeout
         return self.element_wait_strategy.smart_form_wait(
-            form_selectors if isinstance(form_selectors, list) else [form_selectors],
-            timeout=timeout
+            form_selectors if isinstance(form_selectors, list) else [form_selectors], timeout=timeout
         )
 
     def close(self):

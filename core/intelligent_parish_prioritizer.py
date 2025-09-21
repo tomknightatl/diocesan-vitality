@@ -12,11 +12,11 @@ based on simple, clear prioritization rules:
 """
 
 from datetime import datetime, timezone
-from typing import List, Dict, Optional, Tuple
-from supabase import Client
+from typing import Dict, List, Optional, Tuple
 
-from core.logger import get_logger
 from core.db import get_supabase_client
+from core.logger import get_logger
+from supabase import Client
 
 logger = get_logger(__name__)
 
@@ -32,7 +32,9 @@ class IntelligentParishPrioritizer:
         self.logger = logger
         logger.info("🎯 Intelligent Parish Prioritizer initialized")
 
-    def get_prioritized_parishes(self, num_parishes: int, parish_id: int = None, diocese_id: int = None) -> List[Tuple[str, int]]:
+    def get_prioritized_parishes(
+        self, num_parishes: int, parish_id: int = None, diocese_id: int = None
+    ) -> List[Tuple[str, int]]:
         """
         Get prioritized parishes for schedule extraction using simplified logic.
 
@@ -56,16 +58,16 @@ class IntelligentParishPrioritizer:
         logger.info(f"🎯 Selected {len(prioritized_parishes)} parishes with simplified prioritization")
         self._log_prioritization_summary(prioritized_parishes)
 
-        return [(p['Web'], p['id']) for p in prioritized_parishes]
+        return [(p["Web"], p["id"]) for p in prioritized_parishes]
 
     def _get_specific_parish(self, parish_id: int) -> List[Tuple[str, int]]:
         """Handle specific parish ID request."""
         try:
-            response = self.supabase.table('Parishes').select('id, Web').eq('id', parish_id).execute()
-            if response.data and response.data[0].get('Web'):
+            response = self.supabase.table("Parishes").select("id, Web").eq("id", parish_id).execute()
+            if response.data and response.data[0].get("Web"):
                 parish = response.data[0]
                 logger.info(f"🎯 Specific parish requested: {parish_id}")
-                return [(parish['Web'], parish['id'])]
+                return [(parish["Web"], parish["id"])]
             return []
         except Exception as e:
             logger.error(f"🎯 Error fetching specific parish {parish_id}: {e}")
@@ -79,12 +81,14 @@ class IntelligentParishPrioritizer:
         """
         try:
             # Get all parishes with websites (with optional diocese filtering)
-            query = self.supabase.table('Parishes').select(
-                'id, Name, Web, respectful_automation_used, extracted_at'
-            ).not_.is_('Web', 'null')
+            query = (
+                self.supabase.table("Parishes")
+                .select("id, Name, Web, respectful_automation_used, extracted_at")
+                .not_.is_("Web", "null")
+            )
 
             if diocese_id:
-                query = query.eq('diocese_id', diocese_id)
+                query = query.eq("diocese_id", diocese_id)
                 logger.info(f"🎯 Filtering parishes to diocese ID: {diocese_id}")
 
             parishes_response = query.execute()
@@ -100,11 +104,11 @@ class IntelligentParishPrioritizer:
             previously_tested = []
 
             for parish in parishes:
-                if not parish.get('Web'):  # Skip parishes without websites
+                if not parish.get("Web"):  # Skip parishes without websites
                     continue
 
                 # Check if parish has been tested for blocking
-                is_tested = parish.get('respectful_automation_used') is True
+                is_tested = parish.get("respectful_automation_used") is True
 
                 if is_tested:
                     previously_tested.append(parish)
@@ -112,15 +116,17 @@ class IntelligentParishPrioritizer:
                     never_tested.append(parish)
 
             # Sort never-tested parishes: Newer parishes first (higher ID = more recently created)
-            never_tested.sort(key=lambda p: p['id'], reverse=True)
+            never_tested.sort(key=lambda p: p["id"], reverse=True)
 
             # Sort previously-tested parishes: Older tests first (earlier extracted_at = test longer ago)
-            previously_tested.sort(key=lambda p: p.get('extracted_at') or '1900-01-01T00:00:00', reverse=False)
+            previously_tested.sort(key=lambda p: p.get("extracted_at") or "1900-01-01T00:00:00", reverse=False)
 
             # Combine: never-tested first, then previously-tested
             all_prioritized = never_tested + previously_tested
 
-            logger.info(f"🎯 Found {len(never_tested)} never-tested parishes, {len(previously_tested)} previously-tested parishes")
+            logger.info(
+                f"🎯 Found {len(never_tested)} never-tested parishes, {len(previously_tested)} previously-tested parishes"
+            )
             logger.info(f"🎯 Total candidate pool: {len(all_prioritized)} parishes")
 
             # Return requested number
@@ -140,7 +146,7 @@ class IntelligentParishPrioritizer:
             return
 
         # Count never-tested vs previously-tested
-        never_tested_count = sum(1 for p in selected_parishes if not p.get('respectful_automation_used'))
+        never_tested_count = sum(1 for p in selected_parishes if not p.get("respectful_automation_used"))
         previously_tested_count = len(selected_parishes) - never_tested_count
 
         logger.info("🎯 Prioritization Summary:")
@@ -151,15 +157,17 @@ class IntelligentParishPrioritizer:
         # Log top parish details
         if selected_parishes:
             top_parish = selected_parishes[0]
-            is_tested = "Previously-tested" if top_parish.get('respectful_automation_used') else "Never-tested"
+            is_tested = "Previously-tested" if top_parish.get("respectful_automation_used") else "Never-tested"
             logger.info(f"    🥇 Top parish: {top_parish.get('Name', 'Unknown')} (ID: {top_parish['id']}) - {is_tested}")
 
         # Log first few parishes for debugging
         for i, parish in enumerate(selected_parishes[:3], 1):
-            status = "Previously-tested" if parish.get('respectful_automation_used') else "Never-tested"
-            extracted_at = parish.get('extracted_at', 'Never')
-            logger.info(f"    {i}. {parish.get('Name', 'Unknown')} | ID: {parish['id']} | "
-                       f"Status: {status} | Last Test: {extracted_at}")
+            status = "Previously-tested" if parish.get("respectful_automation_used") else "Never-tested"
+            extracted_at = parish.get("extracted_at", "Never")
+            logger.info(
+                f"    {i}. {parish.get('Name', 'Unknown')} | ID: {parish['id']} | "
+                f"Status: {status} | Last Test: {extracted_at}"
+            )
 
     def update_extraction_result(self, parish_id: int, success: bool):
         """Update tracking for a completed extraction."""

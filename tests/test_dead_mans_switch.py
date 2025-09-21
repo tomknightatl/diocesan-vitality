@@ -4,9 +4,11 @@ Test script for the dead man's switch functionality.
 This script simulates an extraction that starts but never finishes to test the staleness detection.
 """
 
-import requests
-import time
 import json
+import time
+
+import requests
+
 
 def test_dead_mans_switch():
     backend_url = "http://localhost:8000"
@@ -23,7 +25,7 @@ def test_dead_mans_switch():
         "total_parishes": 20,
         "success_rate": 75.0,
         "progress_percentage": 25.0,
-        "estimated_completion": None
+        "estimated_completion": None,
     }
 
     response = requests.post(f"{backend_url}/api/monitoring/extraction_status", json=running_status)
@@ -43,7 +45,7 @@ def test_dead_mans_switch():
             "total_successes": 95,
             "total_failures": 5,
             "total_blocked": 0,
-            "success_rate": 95.0
+            "success_rate": 95.0,
         }
     }
 
@@ -74,16 +76,16 @@ def test_dead_mans_switch():
         response = requests.get(f"{backend_url}/api/monitoring/status")
         if response.status_code == 200:
             status = response.json()
-            extraction_status = status['extraction_status']['status']
-            circuit_breaker_count = len(status['circuit_breakers'])
+            extraction_status = status["extraction_status"]["status"]
+            circuit_breaker_count = len(status["circuit_breakers"])
 
             print(f"   Check {i+1}/15: Extraction={extraction_status}, CircuitBreakers={circuit_breaker_count}")
 
             # Check if extraction status became stale (should happen around 5 minutes)
-            if extraction_status == 'stale' and i >= 8:  # After 4+ minutes
+            if extraction_status == "stale" and i >= 8:  # After 4+ minutes
                 print("✅ Dead man's switch triggered for extraction status!")
 
-                if 'stale_reason' in status['extraction_status']:
+                if "stale_reason" in status["extraction_status"]:
                     print(f"   Reason: {status['extraction_status']['stale_reason']}")
 
                 break
@@ -94,6 +96,7 @@ def test_dead_mans_switch():
     print(f"   Visit http://localhost:5173/dashboard to see the 'STALE' status")
 
     return True
+
 
 if __name__ == "__main__":
     try:

@@ -6,23 +6,24 @@ This module provides comprehensive tracking of URL visits during schedule extrac
 recording detailed results for optimization, ML training, and debugging purposes.
 """
 
-import time
 import re
+import time
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass, field, asdict
-from urllib.parse import urlparse
 from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import urlparse
 
-from supabase import Client
-from core.logger import get_logger
 from core.db import get_supabase_client
+from core.logger import get_logger
+from supabase import Client
 
 logger = get_logger(__name__)
 
 
 class VisitStatus(Enum):
     """Visit status types."""
+
     SUCCESS = "success"
     FAILED = "failed"
     TIMEOUT = "timeout"
@@ -34,17 +35,19 @@ class VisitStatus(Enum):
 
 class ContentQuality(Enum):
     """Content quality assessment."""
-    EXCELLENT = 1.0    # Schedule data found with high confidence
-    GOOD = 0.8         # Schedule keywords found, likely relevant
-    FAIR = 0.6         # Some religious content, possibly relevant
-    POOR = 0.4         # Generic content, low relevance
-    IRRELEVANT = 0.2   # No relevant content found
-    ERROR = 0.0        # Could not assess content
+
+    EXCELLENT = 1.0  # Schedule data found with high confidence
+    GOOD = 0.8  # Schedule keywords found, likely relevant
+    FAIR = 0.6  # Some religious content, possibly relevant
+    POOR = 0.4  # Generic content, low relevance
+    IRRELEVANT = 0.2  # No relevant content found
+    ERROR = 0.0  # Could not assess content
 
 
 @dataclass
 class VisitResult:
     """Comprehensive URL visit result data."""
+
     url: str
     parish_id: int
     visited_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
@@ -87,20 +90,47 @@ class URLVisitTracker:
 
         # Schedule-related keywords for content assessment
         self.schedule_keywords = {
-            'high_value': [
-                'reconciliation', 'confession', 'confessions', 'penance',
-                'adoration', 'eucharistic adoration', 'blessed sacrament',
-                'mass times', 'mass schedule', 'service times', 'worship times'
+            "high_value": [
+                "reconciliation",
+                "confession",
+                "confessions",
+                "penance",
+                "adoration",
+                "eucharistic adoration",
+                "blessed sacrament",
+                "mass times",
+                "mass schedule",
+                "service times",
+                "worship times",
             ],
-            'medium_value': [
-                'schedule', 'schedules', 'times', 'hours', 'calendar',
-                'liturgy', 'worship', 'service', 'services', 'sacraments',
-                'daily mass', 'weekend mass', 'holy day', 'holy days'
+            "medium_value": [
+                "schedule",
+                "schedules",
+                "times",
+                "hours",
+                "calendar",
+                "liturgy",
+                "worship",
+                "service",
+                "services",
+                "sacraments",
+                "daily mass",
+                "weekend mass",
+                "holy day",
+                "holy days",
             ],
-            'low_value': [
-                'mass', 'parish', 'church', 'catholic', 'faith', 'community',
-                'ministry', 'ministries', 'prayer', 'spiritual'
-            ]
+            "low_value": [
+                "mass",
+                "parish",
+                "church",
+                "catholic",
+                "faith",
+                "community",
+                "ministry",
+                "ministries",
+                "prayer",
+                "spiritual",
+            ],
         }
 
         # Schema detection - check what columns are available
@@ -112,15 +142,15 @@ class URLVisitTracker:
         """Detect available columns in DiscoveredUrls table."""
         try:
             # Try to query with new columns to see what's available
-            test_result = self.supabase.table('DiscoveredUrls').select('*').limit(1).execute()
+            test_result = self.supabase.table("DiscoveredUrls").select("*").limit(1).execute()
             if test_result.data:
                 self.available_columns = set(test_result.data[0].keys())
             else:
                 # No data, try to insert a test record to see schema
-                self.available_columns = {'id', 'parish_id', 'url', 'score', 'source_url', 'visited', 'created_at'}
+                self.available_columns = {"id", "parish_id", "url", "score", "source_url", "visited", "created_at"}
 
             # Check for enhanced columns
-            self.has_enhanced_schema = 'visited_at' in self.available_columns
+            self.has_enhanced_schema = "visited_at" in self.available_columns
 
             if self.has_enhanced_schema:
                 logger.info("🔍 Enhanced schema detected - full visit tracking available")
@@ -129,7 +159,7 @@ class URLVisitTracker:
 
         except Exception as e:
             logger.warning(f"🔍 Schema detection failed: {e}, assuming basic schema")
-            self.available_columns = {'id', 'parish_id', 'url', 'score', 'source_url', 'visited', 'created_at'}
+            self.available_columns = {"id", "parish_id", "url", "score", "source_url", "visited", "created_at"}
             self.has_enhanced_schema = False
 
     def record_visit(self, visit_result: VisitResult) -> bool:
@@ -150,41 +180,37 @@ class URLVisitTracker:
             if self.has_enhanced_schema:
                 # Full enhanced tracking
                 update_data = {
-                    'visited': True,
-                    'score': priority_score,  # Required field
-                    'visited_at': visit_result.visited_at.isoformat(),
-                    'http_status': visit_result.http_status,
-                    'response_time_ms': visit_result.response_time_ms,
-                    'content_type': visit_result.content_type,
-                    'content_size_bytes': visit_result.content_size_bytes,
-                    'extraction_success': visit_result.extraction_success,
-                    'schedule_data_found': visit_result.schedule_data_found,
-                    'schedule_keywords_count': visit_result.schedule_keywords_count,
-                    'error_type': visit_result.error_type,
-                    'error_message': visit_result.error_message,
-                    'quality_score': visit_result.quality_score,
-                    'visit_count': 1  # Will be incremented if record exists
+                    "visited": True,
+                    "score": priority_score,  # Required field
+                    "visited_at": visit_result.visited_at.isoformat(),
+                    "http_status": visit_result.http_status,
+                    "response_time_ms": visit_result.response_time_ms,
+                    "content_type": visit_result.content_type,
+                    "content_size_bytes": visit_result.content_size_bytes,
+                    "extraction_success": visit_result.extraction_success,
+                    "schedule_data_found": visit_result.schedule_data_found,
+                    "schedule_keywords_count": visit_result.schedule_keywords_count,
+                    "error_type": visit_result.error_type,
+                    "error_message": visit_result.error_message,
+                    "quality_score": visit_result.quality_score,
+                    "visit_count": 1,  # Will be incremented if record exists
                 }
 
                 if visit_result.extraction_success:
-                    update_data['last_successful_visit'] = visit_result.visited_at.isoformat()
+                    update_data["last_successful_visit"] = visit_result.visited_at.isoformat()
 
             else:
                 # Basic schema tracking
-                update_data = {
-                    'visited': True,
-                    'score': priority_score  # Required field
-                }
+                update_data = {"visited": True, "score": priority_score}  # Required field
 
             # Update existing record or create if not exists
-            result = self.supabase.table('DiscoveredUrls').upsert(
-                {
-                    'url': visit_result.url,
-                    'parish_id': visit_result.parish_id,
-                    **update_data
-                },
-                on_conflict='url,parish_id'
-            ).execute()
+            result = (
+                self.supabase.table("DiscoveredUrls")
+                .upsert(
+                    {"url": visit_result.url, "parish_id": visit_result.parish_id, **update_data}, on_conflict="url,parish_id"
+                )
+                .execute()
+            )
 
             logger.debug(f"🔍 Recorded visit for {visit_result.url}: {visit_result.visit_status.value}")
             return True
@@ -206,10 +232,15 @@ class URLVisitTracker:
         """
         return VisitResult(url=url, parish_id=parish_id)
 
-    def record_http_response(self, visit_result: VisitResult,
-                           status_code: int, response_time: float,
-                           content_type: str = None, content_size: int = None,
-                           final_url: str = None):
+    def record_http_response(
+        self,
+        visit_result: VisitResult,
+        status_code: int,
+        response_time: float,
+        content_type: str = None,
+        content_size: int = None,
+        final_url: str = None,
+    ):
         """Record HTTP response details."""
         visit_result.http_status = status_code
         visit_result.response_time_ms = int(response_time * 1000)
@@ -217,8 +248,7 @@ class URLVisitTracker:
         visit_result.content_size_bytes = content_size
         visit_result.final_url = final_url
 
-    def record_extraction_attempt(self, visit_result: VisitResult,
-                                success: bool, error: Exception = None):
+    def record_extraction_attempt(self, visit_result: VisitResult, success: bool, error: Exception = None):
         """Record extraction attempt results."""
         visit_result.extraction_success = success
         visit_result.visit_status = VisitStatus.SUCCESS if success else VisitStatus.FAILED
@@ -227,8 +257,7 @@ class URLVisitTracker:
             visit_result.error_type = type(error).__name__
             visit_result.error_message = str(error)[:500]  # Limit message length
 
-    def assess_content_quality(self, visit_result: VisitResult,
-                             content: str, schedule_data_found: bool = False) -> float:
+    def assess_content_quality(self, visit_result: VisitResult, content: str, schedule_data_found: bool = False) -> float:
         """
         Assess the quality and relevance of extracted content.
 
@@ -250,7 +279,7 @@ class URLVisitTracker:
         found_indicators = []
 
         # High-value keywords (significant impact)
-        for keyword in self.schedule_keywords['high_value']:
+        for keyword in self.schedule_keywords["high_value"]:
             if keyword in content_lower:
                 count = content_lower.count(keyword)
                 total_score += count * 3.0
@@ -258,7 +287,7 @@ class URLVisitTracker:
                 found_indicators.append(f"high:{keyword}({count})")
 
         # Medium-value keywords (moderate impact)
-        for keyword in self.schedule_keywords['medium_value']:
+        for keyword in self.schedule_keywords["medium_value"]:
             if keyword in content_lower:
                 count = content_lower.count(keyword)
                 total_score += count * 2.0
@@ -266,7 +295,7 @@ class URLVisitTracker:
                 found_indicators.append(f"med:{keyword}({count})")
 
         # Low-value keywords (minor impact)
-        for keyword in self.schedule_keywords['low_value']:
+        for keyword in self.schedule_keywords["low_value"]:
             if keyword in content_lower:
                 count = content_lower.count(keyword)
                 total_score += count * 1.0
@@ -306,30 +335,37 @@ class URLVisitTracker:
             Dict containing visit statistics
         """
         try:
-            query = self.supabase.table('DiscoveredUrls').select('*')
+            query = self.supabase.table("DiscoveredUrls").select("*")
             if parish_id:
-                query = query.eq('parish_id', parish_id)
+                query = query.eq("parish_id", parish_id)
 
             result = query.execute()
             urls = result.data
 
             stats = {
-                'total_urls': len(urls),
-                'visited_urls': sum(1 for u in urls if u.get('visited', False)),
-                'unvisited_urls': sum(1 for u in urls if not u.get('visited', False)),
+                "total_urls": len(urls),
+                "visited_urls": sum(1 for u in urls if u.get("visited", False)),
+                "unvisited_urls": sum(1 for u in urls if not u.get("visited", False)),
             }
 
             if self.has_enhanced_schema:
-                successful_visits = [u for u in urls if u.get('extraction_success', False)]
-                failed_visits = [u for u in urls if u.get('visited') and not u.get('extraction_success', False)]
+                successful_visits = [u for u in urls if u.get("extraction_success", False)]
+                failed_visits = [u for u in urls if u.get("visited") and not u.get("extraction_success", False)]
 
-                stats.update({
-                    'successful_extractions': len(successful_visits),
-                    'failed_extractions': len(failed_visits),
-                    'schedule_data_found': sum(1 for u in urls if u.get('schedule_data_found', False)),
-                    'avg_quality_score': sum(u.get('quality_score', 0) for u in urls) / len(urls) if urls else 0,
-                    'avg_response_time': sum(u.get('response_time_ms', 0) for u in urls if u.get('response_time_ms')) / len([u for u in urls if u.get('response_time_ms')]) if any(u.get('response_time_ms') for u in urls) else 0
-                })
+                stats.update(
+                    {
+                        "successful_extractions": len(successful_visits),
+                        "failed_extractions": len(failed_visits),
+                        "schedule_data_found": sum(1 for u in urls if u.get("schedule_data_found", False)),
+                        "avg_quality_score": sum(u.get("quality_score", 0) for u in urls) / len(urls) if urls else 0,
+                        "avg_response_time": (
+                            sum(u.get("response_time_ms", 0) for u in urls if u.get("response_time_ms"))
+                            / len([u for u in urls if u.get("response_time_ms")])
+                            if any(u.get("response_time_ms") for u in urls)
+                            else 0
+                        ),
+                    }
+                )
 
             return stats
 
@@ -349,20 +385,22 @@ class URLVisitTracker:
         """
         try:
             if self.has_enhanced_schema:
-                result = self.supabase.table('DiscoveredUrls').select('*').eq(
-                    'parish_id', parish_id
-                ).eq('schedule_data_found', True).execute()
+                result = (
+                    self.supabase.table("DiscoveredUrls")
+                    .select("*")
+                    .eq("parish_id", parish_id)
+                    .eq("schedule_data_found", True)
+                    .execute()
+                )
             else:
                 # Fallback: use ParishData to identify successful URLs
-                result = self.supabase.table('ParishData').select(
-                    'fact_source_url'
-                ).eq('parish_id', parish_id).execute()
+                result = self.supabase.table("ParishData").select("fact_source_url").eq("parish_id", parish_id).execute()
 
                 successful_urls = []
                 for record in result.data:
-                    url = record.get('fact_source_url')
+                    url = record.get("fact_source_url")
                     if url:
-                        successful_urls.append({'url': url, 'parish_id': parish_id})
+                        successful_urls.append({"url": url, "parish_id": parish_id})
                 return successful_urls
 
             return result.data
@@ -384,11 +422,7 @@ class URLVisitTracker:
             visited_at = datetime.now(timezone.utc)
 
         visit_result = VisitResult(
-            url=url,
-            parish_id=parish_id,
-            visited_at=visited_at,
-            visit_status=VisitStatus.SUCCESS,
-            extraction_success=True
+            url=url, parish_id=parish_id, visited_at=visited_at, visit_status=VisitStatus.SUCCESS, extraction_success=True
         )
 
         self.record_visit(visit_result)

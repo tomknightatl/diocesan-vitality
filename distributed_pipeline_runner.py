@@ -17,23 +17,23 @@ Key Features:
 
 import argparse
 import asyncio
-import time
+import os
 import signal
 import sys
-import os
-from typing import Optional
+import time
 from enum import Enum
+from typing import Optional
 
-from core.logger import get_logger
-from core.monitoring_client import get_monitoring_client, ExtractionMonitoring
-from core.distributed_work_coordinator import DistributedWorkCoordinator
 import config
+from async_extract_parishes import main_async as extract_parishes_main_async
+from core.distributed_work_coordinator import DistributedWorkCoordinator
+from core.logger import get_logger
+from core.monitoring_client import ExtractionMonitoring, get_monitoring_client
 
 # Import the existing pipeline components
 from extract_dioceses import main as extract_dioceses_main
-from find_parishes import find_parish_directories
-from async_extract_parishes import main_async as extract_parishes_main_async
 from extract_schedule_respectful import main as extract_schedule_main
+from find_parishes import find_parish_directories
 from report_statistics import main as report_statistics_main
 
 logger = get_logger(__name__)
@@ -41,11 +41,12 @@ logger = get_logger(__name__)
 
 class WorkerType(Enum):
     """Specialized worker types for different pipeline stages"""
-    DISCOVERY = "discovery"        # Steps 1-2: Diocese + Parish directory discovery
-    EXTRACTION = "extraction"      # Step 3: Parish detail extraction
-    SCHEDULE = "schedule"          # Step 4: Schedule extraction
-    REPORTING = "reporting"        # Step 5: Report generation
-    ALL = "all"                   # Backwards compatible - runs all steps
+
+    DISCOVERY = "discovery"  # Steps 1-2: Diocese + Parish directory discovery
+    EXTRACTION = "extraction"  # Step 3: Parish detail extraction
+    SCHEDULE = "schedule"  # Step 4: Schedule extraction
+    REPORTING = "reporting"  # Step 5: Report generation
+    ALL = "all"  # Backwards compatible - runs all steps
 
 
 class DistributedPipelineRunner:
@@ -53,13 +54,15 @@ class DistributedPipelineRunner:
     Distributed pipeline runner that coordinates with other pods.
     """
 
-    def __init__(self,
-                 worker_type: WorkerType = WorkerType.ALL,
-                 max_parishes_per_diocese: int = 50,
-                 num_parishes_for_schedule: int = 101,
-                 monitoring_url: str = "http://backend-service:8000",
-                 disable_monitoring: bool = False,
-                 worker_id: Optional[str] = None):
+    def __init__(
+        self,
+        worker_type: WorkerType = WorkerType.ALL,
+        max_parishes_per_diocese: int = 50,
+        num_parishes_for_schedule: int = 101,
+        monitoring_url: str = "http://backend-service:8000",
+        disable_monitoring: bool = False,
+        worker_id: Optional[str] = None,
+    ):
 
         self.worker_type = worker_type
         self.max_parishes_per_diocese = max_parishes_per_diocese
@@ -68,10 +71,7 @@ class DistributedPipelineRunner:
         self.disable_monitoring = disable_monitoring
 
         # Initialize coordinator with worker type information
-        self.coordinator = DistributedWorkCoordinator(
-            worker_id=worker_id,
-            worker_type=worker_type.value
-        )
+        self.coordinator = DistributedWorkCoordinator(worker_id=worker_id, worker_type=worker_type.value)
 
         # Initialize monitoring with the actual worker_id from coordinator
         self.monitoring_client = get_monitoring_client(monitoring_url, self.coordinator.worker_id)
@@ -105,15 +105,14 @@ class DistributedPipelineRunner:
 
             self.monitoring_client.send_log(
                 f"Pipeline │ Starting distributed pipeline (Worker: {self.coordinator.worker_id}, Type: {self.worker_type.value})",
-                "INFO"
+                "INFO",
             )
 
             start_time = time.time()
 
             if not config.validate_config():
                 self.monitoring_client.report_error(
-                    error_type="ConfigurationError",
-                    message="Missing configuration - pipeline cannot start"
+                    error_type="ConfigurationError", message="Missing configuration - pipeline cannot start"
                 )
                 logger.error("Exiting due to missing configuration.")
                 return
@@ -127,15 +126,13 @@ class DistributedPipelineRunner:
 
             total_time = time.time() - start_time
             self.monitoring_client.send_log(
-                f"Pipeline │ 🎉 Distributed pipeline completed in {total_time:.1f} seconds",
-                "INFO"
+                f"Pipeline │ 🎉 Distributed pipeline completed in {total_time:.1f} seconds", "INFO"
             )
 
         except Exception as e:
             logger.error(f"❌ Error in distributed pipeline: {e}", exc_info=True)
             self.monitoring_client.report_error(
-                error_type="DistributedPipelineError",
-                message=f"Distributed pipeline failed: {str(e)}"
+                error_type="DistributedPipelineError", message=f"Distributed pipeline failed: {str(e)}"
             )
         finally:
             await self.coordinator.shutdown()
@@ -185,8 +182,7 @@ class DistributedPipelineRunner:
         except Exception as e:
             logger.error(f"❌ Error in discovery worker: {e}")
             self.monitoring_client.report_error(
-                error_type="DiscoveryWorkerError",
-                message=f"Discovery worker failed: {str(e)}"
+                error_type="DiscoveryWorkerError", message=f"Discovery worker failed: {str(e)}"
             )
 
     async def _run_extraction_worker(self):
@@ -221,15 +217,11 @@ class DistributedPipelineRunner:
 
                 # Process schedule extraction
                 self.monitoring_client.send_log(
-                    f"Step 4 │ Extract Schedules: Processing {len(available_work)} parishes",
-                    "INFO"
+                    f"Step 4 │ Extract Schedules: Processing {len(available_work)} parishes", "INFO"
                 )
 
                 extract_schedule_main(
-                    num_parishes=len(available_work),
-                    parish_id=None,
-                    max_pages_per_parish=10,
-                    diocese_id=None
+                    num_parishes=len(available_work), parish_id=None, max_pages_per_parish=10, diocese_id=None
                 )
 
                 self.monitoring_client.send_log("Step 4 │ ✅ Schedule extraction batch completed", "INFO")
@@ -239,10 +231,7 @@ class DistributedPipelineRunner:
 
         except Exception as e:
             logger.error(f"❌ Error in schedule worker: {e}")
-            self.monitoring_client.report_error(
-                error_type="ScheduleWorkerError",
-                message=f"Schedule worker failed: {str(e)}"
-            )
+            self.monitoring_client.report_error(error_type="ScheduleWorkerError", message=f"Schedule worker failed: {str(e)}")
         finally:
             heartbeat_task.cancel()
             try:
@@ -274,8 +263,7 @@ class DistributedPipelineRunner:
         except Exception as e:
             logger.error(f"❌ Error in reporting worker: {e}")
             self.monitoring_client.report_error(
-                error_type="ReportingWorkerError",
-                message=f"Reporting worker failed: {str(e)}"
+                error_type="ReportingWorkerError", message=f"Reporting worker failed: {str(e)}"
             )
 
     async def _run_coordinated_extraction(self):
@@ -303,8 +291,10 @@ class DistributedPipelineRunner:
 
                 # Check cluster status
                 cluster_status = await self.coordinator.get_cluster_status()
-                logger.info(f"🏗️ Cluster status: {cluster_status['active_workers']} workers, "
-                          f"{cluster_status['total_active_assignments']} active assignments")
+                logger.info(
+                    f"🏗️ Cluster status: {cluster_status['active_workers']} workers, "
+                    f"{cluster_status['total_active_assignments']} active assignments"
+                )
 
         except Exception as e:
             logger.error(f"❌ Error in coordinated extraction: {e}")
@@ -326,55 +316,46 @@ class DistributedPipelineRunner:
 
                 # Update monitoring
                 self.monitoring_client.update_extraction_status(
-                    status="running",
-                    current_diocese=diocese['name'],
-                    parishes_processed=0
+                    status="running", current_diocese=diocese["name"], parishes_processed=0
                 )
 
                 # Extract parishes for this diocese
-                with ExtractionMonitoring(diocese['name'], self.max_parishes_per_diocese) as monitor:
-                    self.monitoring_client.send_log(
-                        f"Diocese │ {diocese['name']}: Starting parish extraction",
-                        "INFO"
-                    )
+                with ExtractionMonitoring(diocese["name"], self.max_parishes_per_diocese) as monitor:
+                    self.monitoring_client.send_log(f"Diocese │ {diocese['name']}: Starting parish extraction", "INFO")
 
                     # Run async parish extraction for this specific diocese
                     results = await extract_parishes_main_async(
-                        diocese_id=diocese['id'],
+                        diocese_id=diocese["id"],
                         num_parishes_per_diocese=self.max_parishes_per_diocese,
                         pool_size=4,
                         batch_size=8,
-                        max_concurrent_dioceses=1  # Only process one diocese at a time per worker
+                        max_concurrent_dioceses=1,  # Only process one diocese at a time per worker
                     )
 
-                    if results and results.get('successful_dioceses'):
-                        parishes_extracted = results['total_parishes_extracted']
+                    if results and results.get("successful_dioceses"):
+                        parishes_extracted = results["total_parishes_extracted"]
                         monitor.update_progress(self.max_parishes_per_diocese, parishes_extracted)
 
                         self.monitoring_client.send_log(
-                            f"Diocese │ {diocese['name']}: ✅ Extracted {parishes_extracted} parishes",
-                            "INFO"
+                            f"Diocese │ {diocese['name']}: ✅ Extracted {parishes_extracted} parishes", "INFO"
                         )
                     else:
-                        self.monitoring_client.send_log(
-                            f"Diocese │ {diocese['name']}: ⚠️ No parishes extracted",
-                            "WARNING"
-                        )
+                        self.monitoring_client.send_log(f"Diocese │ {diocese['name']}: ⚠️ No parishes extracted", "WARNING")
 
                 # Mark diocese as completed
-                await self.coordinator.mark_diocese_completed(diocese['id'], 'completed')
+                await self.coordinator.mark_diocese_completed(diocese["id"], "completed")
 
                 # Respectful delay between dioceses
                 await asyncio.sleep(5)
 
             except Exception as e:
                 logger.error(f"❌ Error processing diocese {diocese['name']}: {e}")
-                await self.coordinator.mark_diocese_completed(diocese['id'], 'failed')
+                await self.coordinator.mark_diocese_completed(diocese["id"], "failed")
 
                 self.monitoring_client.report_error(
                     error_type="DioceseProcessingError",
                     message=f"Failed to process diocese {diocese['name']}: {str(e)}",
-                    diocese=diocese['name']
+                    diocese=diocese["name"],
                 )
 
     async def _run_reporting_if_needed(self):
@@ -385,8 +366,9 @@ class DistributedPipelineRunner:
             cluster_status = await self.coordinator.get_cluster_status()
 
             # If we're the only worker or the first worker alphabetically, run reports
-            if (not cluster_status['workers'] or
-                self.coordinator.worker_id == min(w['worker_id'] for w in cluster_status['workers'])):
+            if not cluster_status["workers"] or self.coordinator.worker_id == min(
+                w["worker_id"] for w in cluster_status["workers"]
+            ):
 
                 logger.info("📊 Running report generation as lead worker")
 
@@ -398,8 +380,7 @@ class DistributedPipelineRunner:
                 except Exception as e:
                     logger.error(f"❌ Report generation failed: {e}")
                     self.monitoring_client.report_error(
-                        error_type="ReportingError",
-                        message=f"Report generation failed: {str(e)}"
+                        error_type="ReportingError", message=f"Report generation failed: {str(e)}"
                     )
 
         except Exception as e:
@@ -422,25 +403,25 @@ async def main_async():
     """Main async function for distributed pipeline"""
     parser = argparse.ArgumentParser(description="Run distributed data extraction pipeline with worker specialization.")
 
-    parser.add_argument("--worker_type", type=str,
-                       choices=[wt.value for wt in WorkerType],
-                       default=None,
-                       help="Worker type specialization (discovery, extraction, schedule, reporting, all)")
-    parser.add_argument("--max_parishes_per_diocese", type=int, default=50,
-                       help="Max parishes to extract per diocese.")
-    parser.add_argument("--num_parishes_for_schedule", type=int, default=101,
-                       help="Number of parishes to extract schedules for.")
-    parser.add_argument("--monitoring_url", type=str, default="http://backend-service:8000",
-                       help="Monitoring backend URL.")
-    parser.add_argument("--disable_monitoring", action="store_true",
-                       help="Disable monitoring integration.")
-    parser.add_argument("--worker_id", type=str, default=None,
-                       help="Custom worker ID (auto-generated if not provided).")
+    parser.add_argument(
+        "--worker_type",
+        type=str,
+        choices=[wt.value for wt in WorkerType],
+        default=None,
+        help="Worker type specialization (discovery, extraction, schedule, reporting, all)",
+    )
+    parser.add_argument("--max_parishes_per_diocese", type=int, default=50, help="Max parishes to extract per diocese.")
+    parser.add_argument(
+        "--num_parishes_for_schedule", type=int, default=101, help="Number of parishes to extract schedules for."
+    )
+    parser.add_argument("--monitoring_url", type=str, default="http://backend-service:8000", help="Monitoring backend URL.")
+    parser.add_argument("--disable_monitoring", action="store_true", help="Disable monitoring integration.")
+    parser.add_argument("--worker_id", type=str, default=None, help="Custom worker ID (auto-generated if not provided).")
 
     args = parser.parse_args()
 
     # Determine worker type from args or environment variable
-    worker_type_str = args.worker_type or os.environ.get('WORKER_TYPE', 'all')
+    worker_type_str = args.worker_type or os.environ.get("WORKER_TYPE", "all")
     worker_type = WorkerType(worker_type_str.lower())
 
     # Initialize and run distributed pipeline
@@ -450,7 +431,7 @@ async def main_async():
         num_parishes_for_schedule=args.num_parishes_for_schedule,
         monitoring_url=args.monitoring_url,
         disable_monitoring=args.disable_monitoring,
-        worker_id=args.worker_id
+        worker_id=args.worker_id,
     )
 
     await runner.run_distributed_pipeline()

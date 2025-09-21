@@ -5,8 +5,9 @@ Tests the ability to distinguish between actual parishes and diocesan department
 """
 
 import sys
+
 from core.logger import get_logger
-from core.parish_validation import parish_validator, validate_parish_entity, filter_valid_parishes
+from core.parish_validation import filter_valid_parishes, parish_validator, validate_parish_entity
 
 logger = get_logger(__name__)
 
@@ -26,7 +27,6 @@ def test_parish_validation_examples():
         {"name": "Assumption of the Blessed Virgin Mary", "expected": True},
         {"name": "Christ the King Catholic Church", "expected": True},
         {"name": "St. Patrick's Parish", "expected": True},
-
         # Diocesan departments (should FAIL validation)
         {"name": "Office of the Chancellor", "expected": False},
         {"name": "Department of Religious Education", "expected": False},
@@ -40,7 +40,6 @@ def test_parish_validation_examples():
         {"name": "Bishop's Office", "expected": False},
         {"name": "Diocesan Schools Office", "expected": False},
         {"name": "Development Office", "expected": False},
-
         # Edge cases
         {"name": "Catholic School", "expected": False},  # School, not parish
         {"name": "St. Mary's Meeting Rooms", "expected": False},  # Facilities, not parish
@@ -99,11 +98,13 @@ def test_batch_filtering():
     # Show results
     logger.info("✅ Validated Parishes:")
     for parish in valid_parishes:
-        validation_info = parish.get('validation', {})
-        confidence = validation_info.get('confidence', 0.0)
+        validation_info = parish.get("validation", {})
+        confidence = validation_info.get("confidence", 0.0)
         logger.info(f"  • {parish['name']} (confidence: {confidence:.2f})")
 
-    logger.info(f"\n📈 Filtering efficiency: {len(valid_parishes)}/{len(sample_entities)} = {len(valid_parishes)/len(sample_entities)*100:.1f}% parishes retained")
+    logger.info(
+        f"\n📈 Filtering efficiency: {len(valid_parishes)}/{len(sample_entities)} = {len(valid_parishes)/len(sample_entities)*100:.1f}% parishes retained"
+    )
 
     return len(valid_parishes) == 5  # Should retain 5 actual parishes
 
@@ -134,17 +135,17 @@ def test_validation_statistics():
     logger.info(f"  High confidence: {stats['high_confidence']}")
     logger.info(f"  Low confidence: {stats['low_confidence']}")
 
-    if stats['parish_indicators']:
+    if stats["parish_indicators"]:
         logger.info(f"  Top parish indicators:")
-        for indicator, count in list(stats['parish_indicators'].items())[:3]:
+        for indicator, count in list(stats["parish_indicators"].items())[:3]:
             logger.info(f"    • {indicator}: {count}")
 
-    if stats['exclusion_reasons']:
+    if stats["exclusion_reasons"]:
         logger.info(f"  Top exclusion reasons:")
-        for reason, count in list(stats['exclusion_reasons'].items())[:3]:
+        for reason, count in list(stats["exclusion_reasons"].items())[:3]:
             logger.info(f"    • {reason}: {count}")
 
-    return stats['valid_parishes'] == 5 and stats['excluded_admin'] == 5
+    return stats["valid_parishes"] == 5 and stats["excluded_admin"] == 5
 
 
 def main():
