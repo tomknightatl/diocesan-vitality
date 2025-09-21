@@ -21,12 +21,22 @@ sys.path.insert(0, str(project_root))
 
 def pytest_configure(config):
     """Configure pytest with custom markers."""
-    config.addinivalue_line("markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')")
-    config.addinivalue_line("markers", "database: marks tests that require database connection")
+    config.addinivalue_line(
+        "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
+    )
+    config.addinivalue_line(
+        "markers", "database: marks tests that require database connection"
+    )
     config.addinivalue_line("markers", "api: marks tests that test API endpoints")
-    config.addinivalue_line("markers", "integration: marks tests that test component integration")
-    config.addinivalue_line("markers", "performance: marks tests that measure performance")
-    config.addinivalue_line("markers", "external: marks tests that require external services")
+    config.addinivalue_line(
+        "markers", "integration: marks tests that test component integration"
+    )
+    config.addinivalue_line(
+        "markers", "performance: marks tests that measure performance"
+    )
+    config.addinivalue_line(
+        "markers", "external: marks tests that require external services"
+    )
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -81,7 +91,7 @@ def sample_parish_data():
         "city": "Test City",
         "state": "TS",
         "zip_code": "12345",
-        "phone": "(555) 123-4567",
+        "phone": "(555) 123 - 4567",
         "email": "test@testparish.org",
         "website_url": "https://testparish.org",
         "diocese_id": 1,
@@ -144,7 +154,11 @@ def mock_ai_service():
     mock_response = {
         "content": "Test AI response",
         "confidence": 0.95,
-        "extracted_data": {"parish_name": "AI Extracted Parish", "address": "AI Extracted Address", "phone": "(555) 987-6543"},
+        "extracted_data": {
+            "parish_name": "AI Extracted Parish",
+            "address": "AI Extracted Address",
+            "phone": "(555) 987 - 6543",
+        },
     }
 
     with patch("core.ai_content_analyzer.analyze_content", return_value=mock_response):
@@ -156,7 +170,7 @@ def mock_http_response():
     """Provide a mock HTTP response for tests."""
     mock_response = Mock()
     mock_response.status_code = 200
-    mock_response.headers = {"Content-Type": "text/html"}
+    mock_response.headers = {"Content - Type": "text/html"}
     mock_response.content = b"<html><body>Test Content</body></html>"
     mock_response.text = "<html><body>Test Content</body></html>"
     mock_response.url = "https://test.example.com"
@@ -167,7 +181,12 @@ def mock_http_response():
 @pytest.fixture
 def circuit_breaker_config():
     """Provide circuit breaker configuration for tests."""
-    return {"failure_threshold": 3, "success_threshold": 2, "timeout": 10, "expected_exception": Exception}
+    return {
+        "failure_threshold": 3,
+        "success_threshold": 2,
+        "timeout": 10,
+        "expected_exception": Exception,
+    }
 
 
 @pytest.fixture
@@ -209,7 +228,11 @@ def sample_extraction_result():
     """Provide sample extraction result data."""
     return {
         "success": True,
-        "parish_data": {"name": "Extracted Parish", "address": "456 Extracted Ave", "phone": "(555) 456-7890"},
+        "parish_data": {
+            "name": "Extracted Parish",
+            "address": "456 Extracted Ave",
+            "phone": "(555) 456 - 7890",
+        },
         "extraction_time": 2.5,
         "source_url": "https://extractedparish.org",
         "extraction_method": "ai_analysis",

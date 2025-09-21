@@ -1,9 +1,8 @@
 #!/usr/bin/env python
-# coding: utf-8
+# coding: utf - 8
 
 import argparse
 import heapq
-import os
 import random
 import re
 import time
@@ -24,11 +23,14 @@ from core.enhanced_url_manager import get_enhanced_url_manager
 from core.intelligent_parish_prioritizer import get_intelligent_parish_prioritizer
 from core.logger import get_logger
 from core.schedule_ai_extractor import ScheduleAIExtractor, save_ai_schedule_results
-from core.schedule_keywords import get_all_keywords_for_priority_calculation, load_keywords_from_database
+from core.schedule_keywords import (
+    get_all_keywords_for_priority_calculation,
+    load_keywords_from_database,
+)
 from core.stealth_browser import get_stealth_browser
 from core.url_visit_tracker import VisitTracker, get_url_visit_tracker
 from core.utils import normalize_url  # Import normalize_url
-from supabase import Client, create_client
+from supabase import Client
 
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
@@ -65,40 +67,44 @@ def get_resilient_session() -> requests.Session:
     # Set a random user agent
     session.headers.update(
         {
-            "User-Agent": random.choice(USER_AGENTS),
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Connection": "keep-alive",
-            "Upgrade-Insecure-Requests": "1",
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "none",
-            "Cache-Control": "max-age=0",
+            "User - Agent": random.choice(USER_AGENTS),
+            "Accept": "text/html,application/xhtml + xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept - Language": "en - US,en;q=0.9",
+            "Accept - Encoding": "gzip, deflate, br",
+            "Connection": "keep - alive",
+            "Upgrade - Insecure - Requests": "1",
+            "Sec - Fetch - Dest": "document",
+            "Sec - Fetch - Mode": "navigate",
+            "Sec - Fetch - Site": "none",
+            "Cache - Control": "max - age=0",
         }
     )
 
     return session
 
 
-def make_request_with_delay(session: requests.Session, url: str, **kwargs) -> requests.Response:
+def make_request_with_delay(
+    session: requests.Session, url: str, **kwargs
+) -> requests.Response:
     """Make a request with random delay and stealth browser fallback for blocked requests."""
     # Add random delay between requests (0.5 to 2 seconds)
     delay = random.uniform(0.5, 2.0)
     time.sleep(delay)
 
     # Rotate user agent for this request
-    session.headers.update({"User-Agent": random.choice(USER_AGENTS)})
+    session.headers.update({"User - Agent": random.choice(USER_AGENTS)})
 
     try:
         response = session.get(url, **kwargs)
 
         # Check for severe bot detection (persistent 403s despite retries)
         if response.status_code == 403:
-            # Check if this might be a site-wide bot block
+            # Check if this might be a site - wide bot block
             domain = urlparse(url).netloc
             if "too many 403 error responses" in str(kwargs.get("_last_error", "")):
-                logger.warning(f"Detected severe bot blocking for {domain}, attempting stealth browser fallback")
+                logger.warning(
+                    f"Detected severe bot blocking for {domain}, attempting stealth browser fallback"
+                )
 
                 # Try stealth browser as fallback
                 stealth_browser = get_stealth_browser()
@@ -113,12 +119,14 @@ def make_request_with_delay(session: requests.Session, url: str, **kwargs) -> re
                                 "status_code": 200,
                                 "content": content.encode(),
                                 "text": content,
-                                "headers": {"content-type": "text/html"},
+                                "headers": {"content - type": "text/html"},
                                 "raise_for_status": lambda self: None,
                                 "url": url,
                             },
                         )()
-                        logger.info(f"Successfully retrieved {url} using stealth browser")
+                        logger.info(
+                            f"Successfully retrieved {url} using stealth browser"
+                        )
                         return mock_response
 
         return response
@@ -126,7 +134,9 @@ def make_request_with_delay(session: requests.Session, url: str, **kwargs) -> re
     except requests.exceptions.RequestException as e:
         # Check if this is a persistent bot detection issue
         if "403" in str(e) and "too many" in str(e).lower():
-            logger.warning(f"Persistent 403 errors for {url}, attempting stealth browser fallback")
+            logger.warning(
+                f"Persistent 403 errors for {url}, attempting stealth browser fallback"
+            )
 
             # Try stealth browser as fallback
             stealth_browser = get_stealth_browser()
@@ -141,7 +151,7 @@ def make_request_with_delay(session: requests.Session, url: str, **kwargs) -> re
                             "status_code": 200,
                             "content": content.encode(),
                             "text": content,
-                            "headers": {"content-type": "text/html"},
+                            "headers": {"content - type": "text/html"},
                             "raise_for_status": lambda self: None,
                             "url": url,
                         },
@@ -149,7 +159,7 @@ def make_request_with_delay(session: requests.Session, url: str, **kwargs) -> re
                     logger.info(f"Successfully retrieved {url} using stealth browser")
                     return mock_response
 
-        # Re-raise the original exception if stealth browser can't help
+        # Re - raise the original exception if stealth browser can't help
         raise
 
 
@@ -189,21 +199,21 @@ def get_common_schedule_paths(base_url: str) -> list[str]:
         "/confessions",
         "/reconciliation",
         "/adoration",
-        "/eucharistic-adoration",
+        "/eucharistic - adoration",
         "/sacraments",
-        "/mass-times",
+        "/mass - times",
         "/worship",
         "/hours",
-        "/spiritual-life",
+        "/spiritual - life",
         "/prayer",
         "/devotions",
-        "/holy-hour",
-        "/blessed-sacrament",
+        "/holy - hour",
+        "/blessed - sacrament",
         "/penance",
         "/services",
         "/liturgy",
-        "/parish-life",
-        "/faith-formation",
+        "/parish - life",
+        "/faith - formation",
         "/ministries",
     ]
 
@@ -223,79 +233,112 @@ def get_navigation_links(url: str) -> list[str]:
         response.raise_for_status()
         soup = BeautifulSoup(response.content, "html.parser")
 
-        # Look for navigation elements
-        nav_links = []
-
-        # Find navigation menus
-        nav_selectors = [
-            "nav a",
-            "header nav a",
-            ".nav a",
-            ".navigation a",
-            ".menu a",
-            ".main-menu a",
-            "#menu a",
-            "#nav a",
-            "ul.menu a",
-            "ul.nav a",
-            ".navbar a",
-            ".site-nav a",
-            "footer a",  # Footer links often contain schedule pages
-        ]
-
-        for selector in nav_selectors:
-            links = soup.select(selector)
-            for link in links:
-                href = link.get("href")
-                if href:
-                    # Convert relative URLs to absolute
-                    if href.startswith("/"):
-                        full_url = urljoin(url, href)
-                    elif href.startswith(("http://", "https://")):
-                        full_url = href
-                    else:
-                        continue  # Skip non-URL links like mailto:, tel:, etc.
-
-                    # Filter for potentially relevant links
-                    link_text = link.get_text().lower()
-                    href_lower = href.lower()
-
-                    relevant_terms = [
-                        "schedule",
-                        "confession",
-                        "reconciliation",
-                        "adoration",
-                        "sacrament",
-                        "mass",
-                        "worship",
-                        "prayer",
-                        "spiritual",
-                        "devotion",
-                        "penance",
-                        "blessed",
-                        "eucharistic",
-                        "holy",
-                        "service",
-                        "liturgy",
-                        "ministry",
-                    ]
-
-                    if any(term in link_text or term in href_lower for term in relevant_terms):
-                        nav_links.append(full_url)
-
-        # Remove duplicates while preserving order
-        unique_links = []
-        seen = set()
-        for link in nav_links:
-            if link not in seen:
-                unique_links.append(link)
-                seen.add(link)
-
+        nav_links = _extract_navigation_links_from_soup(soup, url)
+        unique_links = _remove_duplicate_links(nav_links)
         return unique_links[:20]  # Limit to prevent excessive requests
 
     except Exception as e:
         logger.warning(f"Could not extract navigation links from {url}: {e}")
         return []
+
+
+def _extract_navigation_links_from_soup(soup, base_url: str) -> list[str]:
+    """Extract relevant navigation links from BeautifulSoup object."""
+    nav_links = []
+    nav_selectors = _get_navigation_selectors()
+    relevant_terms = _get_relevant_schedule_terms()
+
+    for selector in nav_selectors:
+        links = soup.select(selector)
+        for link in links:
+            full_url = _process_link(link, base_url, relevant_terms)
+            if full_url:
+                nav_links.append(full_url)
+
+    return nav_links
+
+
+def _get_navigation_selectors() -> list[str]:
+    """Get list of CSS selectors for navigation elements."""
+    return [
+        "nav a",
+        "header nav a",
+        ".nav a",
+        ".navigation a",
+        ".menu a",
+        ".main - menu a",
+        "#menu a",
+        "#nav a",
+        "ul.menu a",
+        "ul.nav a",
+        ".navbar a",
+        ".site - nav a",
+        "footer a",  # Footer links often contain schedule pages
+    ]
+
+
+def _get_relevant_schedule_terms() -> list[str]:
+    """Get list of terms relevant to schedule content."""
+    return [
+        "schedule",
+        "confession",
+        "reconciliation",
+        "adoration",
+        "sacrament",
+        "mass",
+        "worship",
+        "prayer",
+        "spiritual",
+        "devotion",
+        "penance",
+        "blessed",
+        "eucharistic",
+        "holy",
+        "service",
+        "liturgy",
+        "ministry",
+    ]
+
+
+def _process_link(link, base_url: str, relevant_terms: list[str]) -> str:
+    """Process a single link element and return full URL if relevant."""
+    href = link.get("href")
+    if not href:
+        return None
+
+    full_url = _convert_to_absolute_url(href, base_url)
+    if not full_url:
+        return None
+
+    return full_url if _is_relevant_link(link, href, relevant_terms) else None
+
+
+def _convert_to_absolute_url(href: str, base_url: str) -> str:
+    """Convert relative URL to absolute URL."""
+    if href.startswith("/"):
+        return urljoin(base_url, href)
+    elif href.startswith(("http://", "https://")):
+        return href
+    else:
+        return None  # Skip non-URL links like mailto:, tel:, etc.
+
+
+def _is_relevant_link(link, href: str, relevant_terms: list[str]) -> bool:
+    """Check if link is relevant based on text and href content."""
+    link_text = link.get_text().lower()
+    href_lower = href.lower()
+    return any(term in link_text or term in href_lower for term in relevant_terms)
+
+
+def _remove_duplicate_links(nav_links: list[str]) -> list[str]:
+    """Remove duplicates while preserving order."""
+    unique_links = []
+    seen = set()
+    for link in nav_links:
+        if link not in seen:
+            unique_links.append(link)
+            seen.add(link)
+    return unique_links
 
 
 def get_robots_txt_hints(url: str) -> list[str]:
@@ -318,7 +361,10 @@ def get_robots_txt_hints(url: str) -> list[str]:
             elif line.startswith("Disallow:"):
                 # Sometimes robots.txt blocks schedule pages - might give us hints
                 disallow_path = line.split(":", 1)[1].strip()
-                if any(term in disallow_path.lower() for term in ["schedule", "confession", "adoration", "mass"]):
+                if any(
+                    term in disallow_path.lower()
+                    for term in ["schedule", "confession", "adoration", "mass"]
+                ):
                     full_url = urljoin(url, disallow_path)
                     robots_urls.append(full_url)
 
@@ -340,10 +386,10 @@ def is_relevant_url(discovered_url: str, base_url: str) -> bool:
 
         url_lower = discovered_url.lower()
 
-        # Skip non-content URLs
+        # Skip non - content URLs
         exclude_patterns = [
-            "/wp-content/",
-            "/wp-admin/",
+            "/wp - content/",
+            "/wp - admin/",
             "/admin/",
             "/login/",
             "/logout/",
@@ -400,7 +446,7 @@ def is_relevant_url(discovered_url: str, base_url: str) -> bool:
             "service",
             "liturgy",
             "ministry",
-            "parish-life",
+            "parish - life",
             "about",
         ]
 
@@ -419,87 +465,162 @@ def is_relevant_url(discovered_url: str, base_url: str) -> bool:
         return False
 
 
-def get_sitemap_urls(url: str) -> list[str]:
-    """Fetches sitemap.xml and extracts URLs. Falls back to navigation parsing if sitemap fails."""
-    normalized_url = normalize_url(url)  # Normalize URL for consistent caching key
-    if normalized_url in _sitemap_cache:
-        logger.debug(f"Returning sitemap from cache for {url}")
-        return _sitemap_cache[normalized_url]
-
-    sitemap_urls = []
-
-    # Try multiple sitemap locations and formats
-    sitemap_locations = [
+def _get_sitemap_locations():
+    """Get list of common sitemap locations to try"""
+    return [
         "/sitemap.xml",
         "/sitemap_index.xml",
         "/sitemaps.xml",
         "/sitemap/sitemap.xml",
-        "/wp-sitemap.xml",  # WordPress default
-        "/site-map.xml",
+        "/wp - sitemap.xml",  # WordPress default
+        "/site - map.xml",
         "/sitemap1.xml",
     ]
+
+
+def _parse_sitemap_content(response):
+    """Parse sitemap content and extract URLs"""
+    urls_found = []
+
+    # Try XML parsing first
+    soup = BeautifulSoup(response.content, "xml")
+    urls_found = [
+        loc.text
+        for loc in soup.find_all("loc")
+        if loc.text and loc.text.startswith(("http://", "https://"))
+    ]
+
+    # If XML parsing didn't work, try HTML parsing
+    if not urls_found:
+        soup = BeautifulSoup(response.content, "html.parser")
+        urls_found = [
+            loc.text
+            for loc in soup.find_all("loc")
+            if loc.text and loc.text.startswith(("http://", "https://"))
+        ]
+
+    return urls_found, soup
+
+
+def _find_sitemap_index_links(soup):
+    """Find links to other sitemaps in sitemap index files"""
+    return [
+        loc.text
+        for loc in soup.find_all("loc")
+        if loc.text
+        and "sitemap" in loc.text.lower()
+        and loc.text.startswith(("http://", "https://"))
+    ]
+
+
+def _fetch_sub_sitemaps(sitemap_links):
+    """Fetch URLs from sub - sitemaps"""
+    all_sub_urls = []
+    for sitemap_link in sitemap_links[:5]:  # Limit to prevent infinite recursion
+        try:
+            sub_response = make_request_with_delay(
+                requests_session, sitemap_link, timeout=10
+            )
+            sub_response.raise_for_status()
+            sub_soup = BeautifulSoup(sub_response.content, "xml")
+            sub_urls = [
+                loc.text
+                for loc in sub_soup.find_all("loc")
+                if loc.text and loc.text.startswith(("http://", "https://"))
+            ]
+            all_sub_urls.extend(sub_urls)
+        except Exception as sub_e:
+            logger.debug(f"Failed to fetch sub - sitemap {sitemap_link}: {sub_e}")
+            continue
+    return all_sub_urls
+
+
+def _filter_sitemap_urls(urls_found):
+    """Filter out unwanted URLs from sitemap"""
+    excluded_terms = ["default", "template", "admin", "wp - content", "attachment"]
+    return [
+        u
+        for u in urls_found
+        if not any(exclude in u.lower() for exclude in excluded_terms)
+    ]
+
+
+def _try_sitemap_discovery(url):
+    """Try to discover URLs from sitemap files"""
+    sitemap_locations = _get_sitemap_locations()
 
     for sitemap_path in sitemap_locations:
         try:
             sitemap_url = urljoin(url, sitemap_path)
-            response = make_request_with_delay(requests_session, sitemap_url, timeout=10)
+            response = make_request_with_delay(
+                requests_session, sitemap_url, timeout=10
+            )
             response.raise_for_status()
 
-            # Try XML parsing first
-            soup = BeautifulSoup(response.content, "xml")
-            urls_found = [
-                loc.text for loc in soup.find_all("loc") if loc.text and loc.text.startswith(("http://", "https://"))
-            ]
-
-            # If XML parsing didn't work, try HTML parsing
-            if not urls_found:
-                soup = BeautifulSoup(response.content, "html.parser")
-                urls_found = [
-                    loc.text for loc in soup.find_all("loc") if loc.text and loc.text.startswith(("http://", "https://"))
-                ]
+            urls_found, soup = _parse_sitemap_content(response)
 
             # Check for sitemap index files (contain links to other sitemaps)
-            sitemap_links = [
-                loc.text
-                for loc in soup.find_all("loc")
-                if loc.text and "sitemap" in loc.text.lower() and loc.text.startswith(("http://", "https://"))
-            ]
+            sitemap_links = _find_sitemap_index_links(soup)
 
             # If we found sitemap links, fetch those too
-            for sitemap_link in sitemap_links[:5]:  # Limit to prevent infinite recursion
-                try:
-                    sub_response = make_request_with_delay(requests_session, sitemap_link, timeout=10)
-                    sub_response.raise_for_status()
-                    sub_soup = BeautifulSoup(sub_response.content, "xml")
-                    sub_urls = [
-                        loc.text
-                        for loc in sub_soup.find_all("loc")
-                        if loc.text and loc.text.startswith(("http://", "https://"))
-                    ]
-                    urls_found.extend(sub_urls)
-                except Exception as sub_e:
-                    logger.debug(f"Failed to fetch sub-sitemap {sitemap_link}: {sub_e}")
-                    continue
+            if sitemap_links:
+                sub_urls = _fetch_sub_sitemaps(sitemap_links)
+                urls_found.extend(sub_urls)
 
             if urls_found:
-                # Filter out unwanted URLs
-                filtered_urls = [
-                    u
-                    for u in urls_found
-                    if not any(
-                        exclude in u.lower() for exclude in ["default", "template", "admin", "wp-content", "attachment"]
-                    )
-                ]
-                logger.debug(f"Found {len(filtered_urls)} URLs in sitemap {sitemap_path} for {url}")
-                _sitemap_cache[normalized_url] = filtered_urls
+                filtered_urls = _filter_sitemap_urls(urls_found)
+                logger.debug(
+                    f"Found {len(filtered_urls)} URLs in sitemap {sitemap_path} for {url}"
+                )
                 return filtered_urls
 
         except requests.exceptions.RequestException as e:
             logger.debug(f"Could not fetch sitemap {sitemap_path} for {url}: {e}")
             continue
 
-    # All sitemap attempts failed, try fallback methods
-    logger.info(f"All sitemap attempts failed for {url}, trying fallback URL discovery methods")
+    return None
+
+
+def _try_stealth_browser_discovery(nav_links, url):
+    """Try stealth browser discovery if few navigation links found"""
+    stealth_nav_links = []
+    if len(nav_links) < 5:  # If we didn't find many links, try stealth browser
+        logger.debug(
+            "Few navigation links found, trying stealth browser for enhanced discovery"
+        )
+        try:
+            from core.stealth_browser import get_stealth_browser
+
+            stealth_browser = get_stealth_browser()
+            if stealth_browser.is_available:
+                stealth_nav_links = stealth_browser.get_navigation_links(url)
+                logger.debug(
+                    f"Stealth browser found {len(stealth_nav_links)} additional navigation links"
+                )
+        except Exception as e:
+            logger.debug(f"Stealth browser navigation failed: {e}")
+    return stealth_nav_links
+
+
+def _combine_and_deduplicate_urls(all_discovered, url):
+    """Remove duplicates and filter discovered URLs"""
+    unique_urls = []
+    seen = set()
+    for discovered_url in all_discovered:
+        normalized_discovered = normalize_url(discovered_url)
+        if normalized_discovered not in seen:
+            # Additional filtering for quality
+            if is_relevant_url(discovered_url, url):
+                unique_urls.append(discovered_url)
+                seen.add(normalized_discovered)
+    return unique_urls
+
+
+def _try_fallback_discovery_methods(url):
+    """Try fallback URL discovery methods when sitemap fails"""
+    logger.info(
+        f"All sitemap attempts failed for {url}, trying fallback URL discovery methods"
+    )
 
     # Method 1: Common schedule paths
     common_paths = get_common_schedule_paths(url)
@@ -510,18 +631,7 @@ def get_sitemap_urls(url: str) -> list[str]:
     logger.debug(f"Found {len(nav_links)} navigation links")
 
     # Method 3: Stealth browser fallback for navigation discovery
-    stealth_nav_links = []
-    if len(nav_links) < 5:  # If we didn't find many links, try stealth browser
-        logger.debug("Few navigation links found, trying stealth browser for enhanced discovery")
-        try:
-            from core.stealth_browser import get_stealth_browser
-
-            stealth_browser = get_stealth_browser()
-            if stealth_browser.is_available:
-                stealth_nav_links = stealth_browser.get_navigation_links(url)
-                logger.debug(f"Stealth browser found {len(stealth_nav_links)} additional navigation links")
-        except Exception as e:
-            logger.debug(f"Stealth browser navigation failed: {e}")
+    stealth_nav_links = _try_stealth_browser_discovery(nav_links, url)
 
     # Method 4: Robots.txt parsing for additional discovery hints
     robots_urls = get_robots_txt_hints(url)
@@ -531,22 +641,34 @@ def get_sitemap_urls(url: str) -> list[str]:
     all_discovered = common_paths + nav_links + stealth_nav_links + robots_urls
 
     # Remove duplicates and filter
-    unique_urls = []
-    seen = set()
-    for discovered_url in all_discovered:
-        normalized_discovered = normalize_url(discovered_url)
-        if normalized_discovered not in seen:
-            # Additional filtering for quality
-            if is_relevant_url(discovered_url, url):
-                unique_urls.append(discovered_url)
-                seen.add(normalized_discovered)
+    unique_urls = _combine_and_deduplicate_urls(all_discovered, url)
 
     logger.info(f"Discovered {len(unique_urls)} URLs using fallback methods for {url}")
-    _sitemap_cache[normalized_url] = unique_urls
     return unique_urls
 
 
-def extract_time_info_from_soup(soup: BeautifulSoup, keyword: str) -> tuple[str, str | None]:
+def get_sitemap_urls(url: str) -> list[str]:
+    """Fetches sitemap.xml and extracts URLs. Falls back to navigation parsing if sitemap fails."""
+    normalized_url = normalize_url(url)  # Normalize URL for consistent caching key
+    if normalized_url in _sitemap_cache:
+        logger.debug(f"Returning sitemap from cache for {url}")
+        return _sitemap_cache[normalized_url]
+
+    # Try sitemap discovery first
+    sitemap_urls = _try_sitemap_discovery(url)
+    if sitemap_urls:
+        _sitemap_cache[normalized_url] = sitemap_urls
+        return sitemap_urls
+
+    # Fall back to other discovery methods
+    fallback_urls = _try_fallback_discovery_methods(url)
+    _sitemap_cache[normalized_url] = fallback_urls
+    return fallback_urls
+
+
+def extract_time_info_from_soup(
+    soup: BeautifulSoup, keyword: str
+) -> tuple[str, str | None]:
     """Extracts schedule information from a BeautifulSoup object."""
 
     # Find all elements that contain the keyword
@@ -558,7 +680,9 @@ def extract_time_info_from_soup(soup: BeautifulSoup, keyword: str) -> tuple[str,
     for element in elements_with_keyword:
         # Get the parent element that is likely to contain the relevant text
         # This is a heuristic, might need tuning
-        parent = element.find_parent(["p", "li", "div", "span", "td", "h1", "h2", "h3", "h4", "h5", "h6"])
+        parent = element.find_parent(
+            ["p", "li", "div", "span", "td", "h1", "h2", "h3", "h4", "h5", "h6"]
+        )
 
         if parent:
             current_snippet_parts = [parent.get_text(separator="\n", strip=True)]
@@ -567,13 +691,17 @@ def extract_time_info_from_soup(soup: BeautifulSoup, keyword: str) -> tuple[str,
             for sibling in parent.next_siblings:
                 if isinstance(sibling, Tag):  # Only process Tag objects
                     # Limit the number of siblings to check to avoid grabbing too much
-                    if len(current_snippet_parts) > 5:  # Heuristic: check up to 5 siblings
+                    if (
+                        len(current_snippet_parts) > 5
+                    ):  # Heuristic: check up to 5 siblings
                         break
-                    current_snippet_parts.append(sibling.get_text(separator="\n", strip=True))
+                    current_snippet_parts.append(
+                        sibling.get_text(separator="\n", strip=True)
+                    )
 
             snippet = "\n".join(current_snippet_parts).strip()
 
-            # Score the snippet based on length and presence of schedule-like words
+            # Score the snippet based on length and presence of schedule - like words
             score = len(snippet)
             if (
                 "schedule" in snippet.lower()
@@ -583,7 +711,7 @@ def extract_time_info_from_soup(soup: BeautifulSoup, keyword: str) -> tuple[str,
                 or "confessionals" in snippet.lower()
                 or "by appointment" in snippet.lower()
             ):
-                score += 100  # Boost score for schedule-like words
+                score += 100  # Boost score for schedule - like words
 
             if score > best_snippet_score:
                 best_snippet_score = score
@@ -591,27 +719,36 @@ def extract_time_info_from_soup(soup: BeautifulSoup, keyword: str) -> tuple[str,
 
     if best_snippet:
         # Now, try to extract the time pattern from the best snippet
-        time_pattern = re.compile(r"(\d+)\s*hours?\s*per\s*(week|month)", re.IGNORECASE)
+        time_pattern = re.compile(
+            r"(\d+)\s*hours?\s*per\s*(week|month)", re.IGNORECASE
+        )
         match = time_pattern.search(best_snippet)
         if match:
             hours = int(match.group(1))
             period = match.group(2).lower()
             return f"{hours} hours per {period}", match.group(0)
         else:
-            return best_snippet, best_snippet  # If no specific time pattern, return the snippet as is
+            return (
+                best_snippet,
+                best_snippet,
+            )  # If no specific time pattern, return the snippet as is
 
     return "Information not found", None
 
 
-def extract_schedule_ai_first(url: str, schedule_type: str, suppression_urls: set[str], parish_id: int) -> tuple[dict, bool]:
+def extract_schedule_ai_first(
+    url: str, schedule_type: str, suppression_urls: set[str], parish_id: int
+) -> tuple[dict, bool]:
     """
-    AI-first schedule extraction with keyword fallback.
+    AI - first schedule extraction with keyword fallback.
 
     Returns:
         (result_dict, used_ai): Tuple of extraction result and whether AI was used
     """
     if url in suppression_urls:
-        logger.info(f"Skipping AI extraction for {url} as it is in the suppression list.")
+        logger.info(
+            f"Skipping AI extraction for {url} as it is in the suppression list."
+        )
         return {"info": "Information not found", "method": "suppressed"}, False
 
     try:
@@ -625,17 +762,28 @@ def extract_schedule_ai_first(url: str, schedule_type: str, suppression_urls: se
         if ai_extractor.model:  # Check if AI is available
             logger.info(f"🤖 Attempting AI extraction for {schedule_type} at {url}")
 
-            ai_result = ai_extractor.extract_schedule_from_content(content, url, schedule_type)
+            ai_result = ai_extractor.extract_schedule_from_content(
+                content, url, schedule_type
+            )
 
             # Calculate adaptive confidence threshold
-            adaptive_threshold = ai_extractor.get_adaptive_confidence_threshold(url, content)
+            adaptive_threshold = ai_extractor.get_adaptive_confidence_threshold(
+                url, content
+            )
             confidence_score = ai_result.get("confidence_score", 0)
 
-            logger.info(f"🤖 AI confidence: {confidence_score}, threshold: {adaptive_threshold}")
+            logger.info(
+                f"🤖 AI confidence: {confidence_score}, threshold: {adaptive_threshold}"
+            )
 
             # Use AI result if confidence meets adaptive threshold
-            if ai_result.get("schedule_found") and confidence_score >= adaptive_threshold:
-                logger.info(f"🤖 AI extraction successful for {schedule_type} at {url}")
+            if (
+                ai_result.get("schedule_found")
+                and confidence_score >= adaptive_threshold
+            ):
+                logger.info(
+                    f"🤖 AI extraction successful for {schedule_type} at {url}"
+                )
 
                 # Format for compatibility with existing code
                 schedule_details = ai_result.get("schedule_details", "")
@@ -662,14 +810,20 @@ def extract_schedule_ai_first(url: str, schedule_type: str, suppression_urls: se
 
                 return result, True
             else:
-                logger.info(f"🤖 AI confidence too low ({confidence_score} < {adaptive_threshold}), falling back to keywords")
+                logger.info(
+                    f"🤖 AI confidence too low ({confidence_score} < {adaptive_threshold}), falling back to keywords"
+                )
         else:
             logger.warning("🤖 AI extractor not available, falling back to keywords")
 
         # Fallback to keyword extraction
         logger.info(f"🔍 Using keyword fallback for {schedule_type} at {url}")
         soup = BeautifulSoup(content, "html.parser")
-        keyword_map = {"reconciliation": "Reconciliation", "adoration": "Adoration", "mass": "Mass"}
+        keyword_map = {
+            "reconciliation": "Reconciliation",
+            "adoration": "Adoration",
+            "mass": "Mass",
+        }
         keyword = keyword_map.get(schedule_type, schedule_type.title())
 
         info, fact_string = extract_time_info_from_soup(soup, keyword)
@@ -685,13 +839,23 @@ def extract_schedule_ai_first(url: str, schedule_type: str, suppression_urls: se
 
     except requests.exceptions.RequestException as e:
         logger.warning(f"Could not fetch {url} for {schedule_type} extraction: {e}")
-        return {"info": "Information not found", "method": "network_error", "error": str(e)}, False
+        return {
+            "info": "Information not found",
+            "method": "network_error",
+            "error": str(e),
+        }, False
     except Exception as e:
-        logger.error(f"Unexpected error in AI-first extraction for {url}: {e}")
-        return {"info": "Information not found", "method": "extraction_error", "error": str(e)}, False
+        logger.error(f"Unexpected error in AI - first extraction for {url}: {e}")
+        return {
+            "info": "Information not found",
+            "method": "extraction_error",
+            "error": str(e),
+        }, False
 
 
-def extract_time_info(url: str, keyword: str, suppression_urls: set[str]) -> tuple[str, str | None]:
+def extract_time_info(
+    url: str, keyword: str, suppression_urls: set[str]
+) -> tuple[str, str | None]:
     """Legacy function - kept for backward compatibility."""
     if url in suppression_urls:
         logger.info(f"Skipping extraction for {url} as it is in the suppression list.")
@@ -706,7 +870,9 @@ def extract_time_info(url: str, keyword: str, suppression_urls: set[str]) -> tup
         return "Information not found", None
 
 
-def choose_best_url(urls: list[str], keywords: dict, negative_keywords: list[str], base_domain: str) -> str:
+def choose_best_url(
+    urls: list[str], keywords: dict, negative_keywords: list[str], base_domain: str
+) -> str:
     """Chooses the best URL from a list based on a scoring system."""
     if not urls:
         return ""
@@ -726,11 +892,15 @@ def choose_best_url(urls: list[str], keywords: dict, negative_keywords: list[str
     if not best_url:
         best_url = urls[0]
 
-    logger.info(f"Selected best URL from {len(urls)} candidates: {best_url} with score {max_score}")
+    logger.info(
+        f"Selected best URL from {len(urls)} candidates: {best_url} with score {max_score}"
+    )
     return best_url
 
 
-def calculate_priority(url: str, keywords: dict, negative_keywords: list[str], base_domain: str = None) -> int:
+def calculate_priority(
+    url: str, keywords: dict, negative_keywords: list[str], base_domain: str = None
+) -> int:
     """Calculates the priority of a URL based on keywords in its path and domain relevance."""
     score = 0
     url_path = urlparse(url).path.lower()
@@ -754,22 +924,10 @@ def calculate_priority(url: str, keywords: dict, negative_keywords: list[str], b
     return score
 
 
-def scrape_parish_data(
-    url: str,
-    parish_id: int,
-    supabase: Client,
-    suppression_urls: set[str],
-    max_pages_to_scan: int = config.DEFAULT_MAX_PAGES_TO_SCAN,
-) -> dict:
-    """
-    Enhanced parish website scraping with intelligent URL discovery and optimization.
-
-    Uses Enhanced URL Manager for:
-    - Success-based URL memory (golden URLs)
-    - Smart protocol detection and DNS resolution
-    - Dynamic page limits based on success history
-    - Improved timeout strategies
-    """
+def _initialize_scraping_context(
+    url: str, parish_id: int, supabase: Client, suppression_urls: set[str]
+):
+    """Initialize scraping context and check for early exits."""
     # Initial check for the starting URL
     if normalize_url(url) in suppression_urls:
         logger.info(f"Skipping initial URL {url} as it is in the suppression list.")
@@ -778,7 +936,7 @@ def scrape_parish_data(
             "scraped_at": datetime.now(timezone.utc).isoformat(),
             "offers_reconciliation": False,
             "offers_adoration": False,
-        }
+        }, True  # True indicates early exit
 
     # Temporary workaround for saintbrigid.org network issues
     if url == "http://www.saintbrigid.org/":
@@ -788,7 +946,7 @@ def scrape_parish_data(
             "scraped_at": datetime.now(timezone.utc).isoformat(),
             "offers_reconciliation": False,
             "offers_adoration": False,
-        }
+        }, True  # True indicates early exit
 
     # Initialize Enhanced URL Manager and Visit Tracker
     url_manager = get_enhanced_url_manager(supabase)
@@ -796,15 +954,6 @@ def scrape_parish_data(
 
     # Create optimized extraction context
     extraction_context = url_manager.get_extraction_context(parish_id, url)
-
-    # Use dynamic page limit from context
-    optimized_max_pages = extraction_context.page_scan_limit
-    logger.info(f"🔗 Using optimized page scan limit: {optimized_max_pages}")
-
-    urls_to_visit = []
-    visited_urls = set()
-    candidate_pages = {"reconciliation": [], "adoration": []}
-    discovered_urls = {}
 
     # Load keywords from database
     (
@@ -817,7 +966,28 @@ def scrape_parish_data(
     ) = load_keywords_from_database(supabase)
     all_keywords = get_all_keywords_for_priority_calculation(supabase)
 
+    return {
+        "url_manager": url_manager,
+        "visit_tracker": visit_tracker,
+        "extraction_context": extraction_context,
+        "keywords": {
+            "recon_keywords": recon_keywords,
+            "recon_negative_keywords": recon_negative_keywords,
+            "adoration_keywords": adoration_keywords,
+            "adoration_negative_keywords": adoration_negative_keywords,
+            "mass_keywords": mass_keywords,
+            "mass_negative_keywords": mass_negative_keywords,
+            "all_keywords": all_keywords,
+        },
+    }, False  # False indicates no early exit
+
+
+def _setup_url_priority_queue(
+    url: str, suppression_urls: set[str], url_manager, extraction_context, all_keywords
+):
+    """Setup and populate the URL priority queue for crawling."""
     base_domain = urlparse(url).netloc.lower().replace("www.", "")
+    urls_to_visit = []
 
     # Collect initial URLs (base + sitemap)
     initial_urls = [url]
@@ -826,16 +996,22 @@ def scrape_parish_data(
         initial_urls.extend(sitemap_urls)
 
     # Get optimized URL candidates using Enhanced URL Manager
-    logger.info(f"🔗 Getting optimized URL candidates for {len(initial_urls)} initial URLs")
-    optimized_candidates = url_manager.get_optimized_url_candidates(extraction_context, initial_urls)
+    logger.info(
+        f"🔗 Getting optimized URL candidates for {len(initial_urls)} initial URLs"
+    )
+    optimized_candidates = url_manager.get_optimized_url_candidates(
+        extraction_context, initial_urls
+    )
 
     # Build priority queue from optimized candidates
     for candidate in optimized_candidates:
         if normalize_url(candidate.url) in suppression_urls:
-            logger.info(f"Skipping optimized URL {candidate.url} as it is in suppression list.")
+            logger.info(
+                f"Skipping optimized URL {candidate.url} as it is in suppression list."
+            )
             continue
 
-        # Use Enhanced URL Manager priority score (negative for max-heap)
+        # Use Enhanced URL Manager priority score (negative for max - heap)
         priority = -candidate.priority_score
         heapq.heappush(urls_to_visit, (priority, candidate.url))
 
@@ -843,184 +1019,301 @@ def scrape_parish_data(
     for initial_url in initial_urls:
         if not any(candidate.url == initial_url for candidate in optimized_candidates):
             if normalize_url(initial_url) not in suppression_urls:
-                priority = calculate_priority(initial_url, all_keywords, [], base_domain)
+                priority = calculate_priority(
+                    initial_url, all_keywords, [], base_domain
+                )
                 heapq.heappush(urls_to_visit, (-priority, initial_url))
 
-    logger.info(f"🔗 Starting enhanced scan with {len(urls_to_visit)} optimized URLs in priority queue.")
+    logger.info(
+        f"🔗 Starting enhanced scan with {len(urls_to_visit)} optimized URLs in priority queue."
+    )
+    return urls_to_visit, base_domain
 
-    while urls_to_visit and len(visited_urls) < optimized_max_pages:
-        priority, current_url = heapq.heappop(urls_to_visit)
-        priority = -priority
 
-        if current_url in visited_urls:
-            continue
+def _process_single_url(
+    current_url,
+    parish_id,
+    suppression_urls,
+    visit_tracker,
+    requests_session,
+    discovered_urls,
+    all_keywords,
+    base_domain,
+    visited_urls,
+):
+    """Process a single URL for schedule content and link discovery."""
+    candidate_pages = {"reconciliation": [], "adoration": []}
 
-        if normalize_url(current_url) in suppression_urls:
-            logger.info(f"Skipping {current_url} as it is in the suppression list.")
-            visited_urls.add(current_url)  # Mark as visited to avoid re-processing
-            continue
-
-        if re.search(r"\.(pdf|jpg|jpeg|png|gif|svg|zip|docx|xlsx|pptx|mp3|mp4|avi|mov)$", current_url, re.IGNORECASE):
-            visited_urls.add(current_url)
-            continue
-
-        logger.debug(f"Checking {current_url} (Priority: {priority}, Visited: {len(visited_urls) + 1}/{max_pages_to_scan})")
-        visited_urls.add(current_url)
-
-        key = (current_url, parish_id)
-        if key in discovered_urls:
-            discovered_urls[key]["visited"] = True
-        else:
-            discovered_urls[key] = {
-                "parish_id": parish_id,
-                "url": current_url,
-                "score": int(priority),
-                "visited": True,
-                "created_at": datetime.now(timezone.utc).isoformat(),
-            }
-
-        # Use VisitTracker context manager for comprehensive visit tracking
-        with VisitTracker(current_url, parish_id, visit_tracker) as visit_result:
-            try:
-                start_time = time.time()
-                response = make_request_with_delay(requests_session, current_url, timeout=10)
-                response_time = time.time() - start_time
-
-                # Record HTTP response details
-                visit_tracker.record_http_response(
-                    visit_result,
-                    response.status_code,
-                    response_time,
-                    response.headers.get("content-type"),
-                    len(response.content) if response.content else 0,
-                    response.url,
-                )
-
-                response.raise_for_status()
-                soup = BeautifulSoup(response.content, "html.parser")
-
-                page_text = soup.get_text()
-                page_text_lower = page_text.lower()
-
-                # Track schedule data discovery
-                schedule_found = False
-
-                # AI-first approach: Try extracting schedules immediately
-                ai_extraction_attempted = False
-
-                # Check if page likely contains schedule information
-                schedule_indicators = [
-                    "reconciliation",
-                    "confession",
-                    "adoration",
-                    "mass",
-                    "schedule",
-                    "hours",
-                    "times",
-                    "sacrament",
-                    "worship",
-                    "liturgy",
-                ]
-
-                if any(indicator in page_text_lower for indicator in schedule_indicators):
-                    logger.info(f"🤖 Schedule indicators found on {current_url}, attempting AI extraction")
-                    ai_extraction_attempted = True
-
-                    # Try AI extraction for all schedule types
-                    for schedule_type in ["reconciliation", "adoration", "mass"]:
-                        result, used_ai = extract_schedule_ai_first(current_url, schedule_type, suppression_urls, parish_id)
-
-                        if result.get("confidence", 0) > 0:
-                            logger.info(f"🤖 AI found {schedule_type} schedule: {result.get('info', 'N/A')[:100]}")
-                            candidate_pages[schedule_type].append(current_url)
-                            schedule_found = True
-
-                # Fallback to keyword detection only if AI wasn't attempted or found nothing
-                if not ai_extraction_attempted or not schedule_found:
-                    if any(kw in page_text_lower for kw in ["reconciliation", "confession"]):
-                        logger.info(f"Found 'Reconciliation' keywords on {current_url}")
-                        candidate_pages["reconciliation"].append(current_url)
-                        schedule_found = True
-
-                    if "adoration" in page_text_lower:
-                        logger.info(f"Found 'Adoration' keyword on {current_url}")
-                        candidate_pages["adoration"].append(current_url)
-                        schedule_found = True
-
-                # Record extraction success and assess content quality
-                visit_tracker.record_extraction_attempt(visit_result, True)
-                quality_score = visit_tracker.assess_content_quality(visit_result, page_text, schedule_found)
-
-                logger.debug(
-                    f"🔍 Visit tracked for {current_url}: quality={quality_score:.2f}, schedule_found={schedule_found}"
-                )
-
-                # Continue with link discovery
-                for a in soup.find_all("a", href=True):
-                    link = urljoin(current_url, a["href"]).split("#")[0]
-                    # Check if the link is a valid HTTP/HTTPS URL and does not contain an email pattern
-                    if (
-                        link.startswith(("http://", "https://"))
-                        and link not in visited_urls
-                        and not re.search(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", link)
-                    ):
-                        if normalize_url(link) in suppression_urls:
-                            logger.debug(f"Skipping discovered link {link} as it is in the suppression list.")
-                            continue
-                        link_priority = calculate_priority(link, all_keywords, [], base_domain)
-                        heapq.heappush(urls_to_visit, (-link_priority, link))
-                        key = (link, parish_id)
-                        if key not in discovered_urls:
-                            discovered_urls[key] = {
-                                "parish_id": parish_id,
-                                "url": link,
-                                "score": int(link_priority),
-                                "source_url": current_url,
-                                "visited": False,
-                                "created_at": datetime.now(timezone.utc).isoformat(),
-                            }
-
-            except requests.exceptions.RequestException as e:
-                logger.warning(f"Could not fetch or process {current_url}: {e}")
-                # Record extraction failure
-                visit_tracker.record_extraction_attempt(visit_result, False, e)
-
-    if len(visited_urls) >= optimized_max_pages:
-        logger.warning(f"🔗 Reached optimized scan limit of {optimized_max_pages} pages for {url}.")
-
-    if discovered_urls:
-        urls_to_insert = list(discovered_urls.values())
+    with VisitTracker(current_url, parish_id, visit_tracker) as visit_result:
         try:
-            supabase.table("DiscoveredUrls").upsert(urls_to_insert, on_conflict="url,parish_id").execute()
-            logger.info(f"Saved {len(urls_to_insert)} discovered URLs to Supabase.")
-        except Exception as e:
-            logger.error(f"Error saving discovered URLs to Supabase: {e}")
+            soup, page_text = _fetch_and_parse_page(
+                current_url, requests_session, visit_tracker, visit_result
+            )
+            schedule_found = _extract_schedule_content(
+                current_url,
+                soup,
+                page_text,
+                candidate_pages,
+                suppression_urls,
+                parish_id,
+            )
+            _record_extraction_results(
+                visit_tracker, visit_result, page_text, schedule_found, current_url
+            )
+            new_urls = _discover_new_links(
+                soup,
+                current_url,
+                visited_urls,
+                suppression_urls,
+                all_keywords,
+                base_domain,
+                parish_id,
+                discovered_urls,
+            )
 
+            return candidate_pages, new_urls
+
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"Could not fetch or process {current_url}: {e}")
+            visit_tracker.record_extraction_attempt(visit_result, False, e)
+            return {"reconciliation": [], "adoration": []}, []
+
+
+def _fetch_and_parse_page(
+    current_url: str, requests_session, visit_tracker, visit_result
+):
+    """Fetch and parse a web page, recording response details"""
+    start_time = time.time()
+    response = make_request_with_delay(requests_session, current_url, timeout=10)
+    response_time = time.time() - start_time
+
+    # Record HTTP response details
+    visit_tracker.record_http_response(
+        visit_result,
+        response.status_code,
+        response_time,
+        response.headers.get("content - type"),
+        len(response.content) if response.content else 0,
+        response.url,
+    )
+
+    response.raise_for_status()
+    soup = BeautifulSoup(response.content, "html.parser")
+    page_text = soup.get_text()
+
+    return soup, page_text
+
+
+def _extract_schedule_content(
+    current_url: str,
+    soup,
+    page_text: str,
+    candidate_pages: dict,
+    suppression_urls: set,
+    parish_id: int,
+) -> bool:
+    """Extract schedule content using AI-first approach with keyword fallback"""
+    page_text_lower = page_text.lower()
+    schedule_found = False
+
+    # Check if page likely contains schedule information
+    if _has_schedule_indicators(page_text_lower):
+        schedule_found = _try_ai_extraction(
+            current_url, candidate_pages, suppression_urls, parish_id
+        )
+
+    # Fallback to keyword detection if AI didn't find anything
+    if not schedule_found:
+        schedule_found = _try_keyword_detection(
+            current_url, page_text_lower, candidate_pages
+        )
+
+    return schedule_found
+
+
+def _has_schedule_indicators(page_text_lower: str) -> bool:
+    """Check if page contains schedule indicator keywords"""
+    schedule_indicators = [
+        "reconciliation",
+        "confession",
+        "adoration",
+        "mass",
+        "schedule",
+        "hours",
+        "times",
+        "sacrament",
+        "worship",
+        "liturgy",
+    ]
+    return any(indicator in page_text_lower for indicator in schedule_indicators)
+
+
+def _try_ai_extraction(
+    current_url: str, candidate_pages: dict, suppression_urls: set, parish_id: int
+) -> bool:
+    """Attempt AI extraction for schedule content"""
+    logger.info(
+        f"🤖 Schedule indicators found on {current_url}, attempting AI extraction"
+    )
+    schedule_found = False
+
+    for schedule_type in ["reconciliation", "adoration", "mass"]:
+        result, used_ai = extract_schedule_ai_first(
+            current_url, schedule_type, suppression_urls, parish_id
+        )
+
+        if result.get("confidence", 0) > 0:
+            logger.info(
+                f"🤖 AI found {schedule_type} schedule: {result.get('info', 'N/A')[:100]}"
+            )
+            candidate_pages[schedule_type].append(current_url)
+            schedule_found = True
+
+    return schedule_found
+
+
+def _try_keyword_detection(
+    current_url: str, page_text_lower: str, candidate_pages: dict
+) -> bool:
+    """Try keyword-based detection as fallback"""
+    schedule_found = False
+
+    if any(kw in page_text_lower for kw in ["reconciliation", "confession"]):
+        logger.info(f"Found 'Reconciliation' keywords on {current_url}")
+        candidate_pages["reconciliation"].append(current_url)
+        schedule_found = True
+
+    if "adoration" in page_text_lower:
+        logger.info(f"Found 'Adoration' keyword on {current_url}")
+        candidate_pages["adoration"].append(current_url)
+        schedule_found = True
+
+    return schedule_found
+
+
+def _record_extraction_results(
+    visit_tracker, visit_result, page_text: str, schedule_found: bool, current_url: str
+):
+    """Record extraction results and assess content quality"""
+    visit_tracker.record_extraction_attempt(visit_result, True)
+    quality_score = visit_tracker.assess_content_quality(
+        visit_result, page_text, schedule_found
+    )
+    logger.debug(
+        f"🔍 Visit tracked for {current_url}: quality={quality_score:.2f}, schedule_found={schedule_found}"
+    )
+
+
+def _discover_new_links(
+    soup,
+    current_url: str,
+    visited_urls: set,
+    suppression_urls: set,
+    all_keywords: dict,
+    base_domain: str,
+    parish_id: int,
+    discovered_urls: dict,
+) -> list:
+    """Discover and process new links from the page"""
+    new_urls = []
+
+    for a in soup.find_all("a", href=True):
+        link = urljoin(current_url, a["href"]).split("#")[0]
+
+        if _is_valid_link(link, visited_urls):
+            if normalize_url(link) in suppression_urls:
+                logger.debug(
+                    f"Skipping discovered link {link} as it is in the suppression list."
+                )
+                continue
+
+            link_priority = calculate_priority(link, all_keywords, [], base_domain)
+            new_urls.append((-link_priority, link))
+            _record_discovered_url(
+                link, parish_id, current_url, link_priority, discovered_urls
+            )
+
+    return new_urls
+
+
+def _is_valid_link(link: str, visited_urls: set) -> bool:
+    """Check if a link is valid for processing"""
+    return (
+        link.startswith(("http://", "https://"))
+        and link not in visited_urls
+        and not re.search(
+            r"[a - zA - Z0 - 9._%+-]+@[a - zA - Z0 - 9.-]+\.[a - zA - Z]{2,}", link
+        )
+    )
+
+
+def _record_discovered_url(
+    link: str,
+    parish_id: int,
+    current_url: str,
+    link_priority: float,
+    discovered_urls: dict,
+):
+    """Record a newly discovered URL"""
+    key = (link, parish_id)
+    if key not in discovered_urls:
+        discovered_urls[key] = {
+            "parish_id": parish_id,
+            "url": link,
+            "score": int(link_priority),
+            "source_url": current_url,
+            "visited": False,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+
+def _process_final_results(
+    url: str,
+    all_candidate_pages: dict,
+    keywords: dict,
+    suppression_urls: set[str],
+    parish_id: int,
+):
+    """Process final results and extract schedule information."""
     result = {"url": url, "scraped_at": datetime.now(timezone.utc).isoformat()}
+    base_domain = urlparse(url).netloc.lower().replace("www.", "")
 
-    # Process reconciliation results (AI-first with keyword fallback)
-    if candidate_pages["reconciliation"]:
-        best_page = choose_best_url(candidate_pages["reconciliation"], recon_keywords, recon_negative_keywords, base_domain)
+    # Process reconciliation results (AI - first with keyword fallback)
+    if all_candidate_pages["reconciliation"]:
+        best_page = choose_best_url(
+            all_candidate_pages["reconciliation"],
+            keywords["recon_keywords"],
+            keywords["recon_negative_keywords"],
+            base_domain,
+        )
         result["reconciliation_page"] = best_page
         result["offers_reconciliation"] = True
 
-        # Try AI-first extraction
-        recon_result, used_ai = extract_schedule_ai_first(best_page, "reconciliation", suppression_urls, parish_id)
+        # Try AI - first extraction
+        recon_result, used_ai = extract_schedule_ai_first(
+            best_page, "reconciliation", suppression_urls, parish_id
+        )
 
         if recon_result.get("confidence", 0) > 0:
-            result["reconciliation_info"] = recon_result.get("info", "Information not found")
+            result["reconciliation_info"] = recon_result.get(
+                "info", "Information not found"
+            )
             result["reconciliation_fact_string"] = recon_result.get("fact_string")
             result["reconciliation_method"] = recon_result.get("method", "unknown")
             result["reconciliation_confidence"] = recon_result.get("confidence", 0)
-            logger.info(f"🤖 Reconciliation extraction ({'AI' if used_ai else 'keyword'}): '{result['reconciliation_info']}'")
+            logger.info(
+                f"🤖 Reconciliation extraction ({'AI' if used_ai else 'keyword'}): '{result['reconciliation_info']}'"
+            )
         else:
             # Final fallback to legacy extraction
-            result["reconciliation_info"], result["reconciliation_fact_string"] = extract_time_info(
-                best_page, "Reconciliation", suppression_urls
+            result["reconciliation_info"], result["reconciliation_fact_string"] = (
+                extract_time_info(best_page, "Reconciliation", suppression_urls)
             )
             result["reconciliation_method"] = "keyword_legacy"
             result["reconciliation_confidence"] = 25
-            logger.info(f"🔍 Reconciliation legacy extraction: '{result['reconciliation_info']}'")
+            logger.info(
+                f"🔍 Reconciliation legacy extraction: '{result['reconciliation_info']}'"
+            )
     else:
         result["offers_reconciliation"] = False
         result["reconciliation_info"] = "No relevant page found"
@@ -1029,29 +1322,42 @@ def scrape_parish_data(
         result["reconciliation_method"] = "none"
         result["reconciliation_confidence"] = 0
 
-    # Process adoration results (AI-first with keyword fallback)
-    if candidate_pages["adoration"]:
-        best_page = choose_best_url(candidate_pages["adoration"], adoration_keywords, adoration_negative_keywords, base_domain)
+    # Process adoration results (AI - first with keyword fallback)
+    if all_candidate_pages["adoration"]:
+        best_page = choose_best_url(
+            all_candidate_pages["adoration"],
+            keywords["adoration_keywords"],
+            keywords["adoration_negative_keywords"],
+            base_domain,
+        )
         result["adoration_page"] = best_page
         result["offers_adoration"] = True
 
-        # Try AI-first extraction
-        adoration_result, used_ai = extract_schedule_ai_first(best_page, "adoration", suppression_urls, parish_id)
+        # Try AI - first extraction
+        adoration_result, used_ai = extract_schedule_ai_first(
+            best_page, "adoration", suppression_urls, parish_id
+        )
 
         if adoration_result.get("confidence", 0) > 0:
-            result["adoration_info"] = adoration_result.get("info", "Information not found")
+            result["adoration_info"] = adoration_result.get(
+                "info", "Information not found"
+            )
             result["adoration_fact_string"] = adoration_result.get("fact_string")
             result["adoration_method"] = adoration_result.get("method", "unknown")
             result["adoration_confidence"] = adoration_result.get("confidence", 0)
-            logger.info(f"🤖 Adoration extraction ({'AI' if used_ai else 'keyword'}): '{result['adoration_info']}'")
+            logger.info(
+                f"🤖 Adoration extraction ({'AI' if used_ai else 'keyword'}): '{result['adoration_info']}'"
+            )
         else:
             # Final fallback to legacy extraction
-            result["adoration_info"], result["adoration_fact_string"] = extract_time_info(
-                best_page, "Adoration", suppression_urls
+            result["adoration_info"], result["adoration_fact_string"] = (
+                extract_time_info(best_page, "Adoration", suppression_urls)
             )
             result["adoration_method"] = "keyword_legacy"
             result["adoration_confidence"] = 25
-            logger.info(f"🔍 Adoration legacy extraction: '{result['adoration_info']}'")
+            logger.info(
+                f"🔍 Adoration legacy extraction: '{result['adoration_info']}'"
+            )
     else:
         result["offers_adoration"] = False
         result["adoration_info"] = "No relevant page found"
@@ -1063,6 +1369,200 @@ def scrape_parish_data(
     return result
 
 
+def scrape_parish_data(
+    url: str,
+    parish_id: int,
+    supabase: Client,
+    suppression_urls: set[str],
+    max_pages_to_scan: int = config.DEFAULT_MAX_PAGES_TO_SCAN,
+) -> dict:
+    """Enhanced parish website scraping with intelligent URL discovery and optimization."""
+    # Step 1: Initialize scraping context and check for early exits
+    context_result, should_exit = _initialize_scraping_context(
+        url, parish_id, supabase, suppression_urls
+    )
+    if should_exit:
+        return context_result
+
+    # Step 2: Setup crawling environment
+    crawl_state = _setup_crawling_environment(context_result, url, suppression_urls)
+
+    # Step 3: Execute main crawling loop
+    _execute_main_crawling_loop(crawl_state, parish_id, suppression_urls)
+
+    # Step 4: Finalize and save results
+    _save_discovered_urls(crawl_state["discovered_urls"], supabase)
+
+    # Step 5: Process final results
+    return _process_final_results(
+        url,
+        crawl_state["all_candidate_pages"],
+        crawl_state["keywords"],
+        suppression_urls,
+        parish_id,
+    )
+
+
+def _setup_crawling_environment(
+    context_result: dict, url: str, suppression_urls: set
+) -> dict:
+    """Setup the crawling environment with all necessary state"""
+    url_manager = context_result["url_manager"]
+    visit_tracker = context_result["visit_tracker"]
+    extraction_context = context_result["extraction_context"]
+    keywords = context_result["keywords"]
+
+    optimized_max_pages = extraction_context.page_scan_limit
+    logger.info(f"🔗 Using optimized page scan limit: {optimized_max_pages}")
+
+    urls_to_visit, base_domain = _setup_url_priority_queue(
+        url,
+        suppression_urls,
+        url_manager,
+        extraction_context,
+        keywords["all_keywords"],
+    )
+
+    return {
+        "url_manager": url_manager,
+        "visit_tracker": visit_tracker,
+        "extraction_context": extraction_context,
+        "keywords": keywords,
+        "optimized_max_pages": optimized_max_pages,
+        "urls_to_visit": urls_to_visit,
+        "base_domain": base_domain,
+        "visited_urls": set(),
+        "all_candidate_pages": {"reconciliation": [], "adoration": []},
+        "discovered_urls": {},
+    }
+
+
+def _execute_main_crawling_loop(
+    crawl_state: dict, parish_id: int, suppression_urls: set
+):
+    """Execute the main crawling loop"""
+    while (
+        crawl_state["urls_to_visit"]
+        and len(crawl_state["visited_urls"]) < crawl_state["optimized_max_pages"]
+    ):
+        priority, current_url = heapq.heappop(crawl_state["urls_to_visit"])
+        priority = -priority
+
+        if _should_skip_url(
+            current_url, crawl_state["visited_urls"], suppression_urls
+        ):
+            continue
+
+        _process_crawl_url(
+            current_url, priority, parish_id, crawl_state, suppression_urls
+        )
+
+    if len(crawl_state["visited_urls"]) >= crawl_state["optimized_max_pages"]:
+        logger.warning(
+            f"🔗 Reached optimized scan limit of {crawl_state['optimized_max_pages']} pages."
+        )
+
+
+def _should_skip_url(
+    current_url: str, visited_urls: set, suppression_urls: set
+) -> bool:
+    """Determine if a URL should be skipped"""
+    if current_url in visited_urls:
+        return True
+
+    if normalize_url(current_url) in suppression_urls:
+        logger.info(f"Skipping {current_url} as it is in the suppression list.")
+        visited_urls.add(current_url)
+        return True
+
+    if re.search(
+        r"\.(pdf|jpg|jpeg|png|gif|svg|zip|docx|xlsx|pptx|mp3|mp4|avi|mov)$",
+        current_url,
+        re.IGNORECASE,
+    ):
+        visited_urls.add(current_url)
+        return True
+
+    return False
+
+
+def _process_crawl_url(
+    current_url: str,
+    priority: int,
+    parish_id: int,
+    crawl_state: dict,
+    suppression_urls: set,
+):
+    """Process a single URL during crawling"""
+    logger.debug(
+        f"Checking {current_url} (Priority: {priority}, "
+        f"Visited: {len(crawl_state['visited_urls']) + 1}/{crawl_state['optimized_max_pages']})"
+    )
+    crawl_state["visited_urls"].add(current_url)
+
+    _record_visited_url(
+        current_url, parish_id, priority, crawl_state["discovered_urls"]
+    )
+
+    # Process single URL
+    candidate_pages, new_urls = _process_single_url(
+        current_url,
+        parish_id,
+        suppression_urls,
+        crawl_state["visit_tracker"],
+        requests_session,
+        crawl_state["discovered_urls"],
+        crawl_state["keywords"]["all_keywords"],
+        crawl_state["base_domain"],
+        crawl_state["visited_urls"],
+    )
+
+    _merge_candidate_pages(crawl_state["all_candidate_pages"], candidate_pages)
+    _add_new_urls_to_queue(crawl_state["urls_to_visit"], new_urls)
+
+
+def _record_visited_url(
+    current_url: str, parish_id: int, priority: int, discovered_urls: dict
+):
+    """Record a visited URL"""
+    key = (current_url, parish_id)
+    if key in discovered_urls:
+        discovered_urls[key]["visited"] = True
+    else:
+        discovered_urls[key] = {
+            "parish_id": parish_id,
+            "url": current_url,
+            "score": int(priority),
+            "visited": True,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+
+def _merge_candidate_pages(all_candidate_pages: dict, candidate_pages: dict):
+    """Merge new candidate pages into the overall collection"""
+    for schedule_type in ["reconciliation", "adoration"]:
+        all_candidate_pages[schedule_type].extend(candidate_pages[schedule_type])
+
+
+def _add_new_urls_to_queue(urls_to_visit: list, new_urls: list):
+    """Add new URLs to the priority queue"""
+    for url_priority, new_url in new_urls:
+        heapq.heappush(urls_to_visit, (url_priority, new_url))
+
+
+def _save_discovered_urls(discovered_urls: dict, supabase: Client):
+    """Save discovered URLs to the database"""
+    if discovered_urls:
+        urls_to_insert = list(discovered_urls.values())
+        try:
+            supabase.table("DiscoveredUrls").upsert(
+                urls_to_insert, on_conflict="url,parish_id"
+            ).execute()
+            logger.info(f"Saved {len(urls_to_insert)} discovered URLs to Supabase.")
+        except Exception as e:
+            logger.error(f"Error saving discovered URLs to Supabase: {e}")
+
+
 def get_parishes_to_process(
     supabase: Client, num_parishes: int, parish_id: int = None, diocese_id: int = None
 ) -> list[tuple[str, int]]:
@@ -1071,7 +1571,7 @@ def get_parishes_to_process(
 
     Uses advanced algorithms to select parishes based on:
     - Schedule likelihood scoring (website patterns)
-    - Freshness-based selection (recency prioritization)
+    - Freshness - based selection (recency prioritization)
     - Diocese clustering (batch similar patterns)
     - Success rate learning (historical performance)
     - Diocese filtering (when diocese_id is specified)
@@ -1079,20 +1579,30 @@ def get_parishes_to_process(
     try:
         # Use intelligent prioritization system
         prioritizer = get_intelligent_parish_prioritizer(supabase)
-        prioritized_parishes = prioritizer.get_prioritized_parishes(num_parishes, parish_id, diocese_id)
+        prioritized_parishes = prioritizer.get_prioritized_parishes(
+            num_parishes, parish_id, diocese_id
+        )
 
         if prioritized_parishes:
-            logger.info(f"🎯 Intelligent prioritization selected {len(prioritized_parishes)} parishes")
+            logger.info(
+                f"🎯 Intelligent prioritization selected {len(prioritized_parishes)} parishes"
+            )
             return prioritized_parishes
         else:
-            logger.warning("🎯 Intelligent prioritization returned no parishes, falling back to simple method")
+            logger.warning(
+                "🎯 Intelligent prioritization returned no parishes, falling back to simple method"
+            )
             # Fallback to simple method if intelligent prioritization fails
-            return _get_parishes_simple_fallback(supabase, num_parishes, parish_id, diocese_id)
+            return _get_parishes_simple_fallback(
+                supabase, num_parishes, parish_id, diocese_id
+            )
 
     except Exception as e:
         logger.error(f"🎯 Error in intelligent parish prioritization: {e}")
         logger.info("🎯 Falling back to simple parish selection method")
-        return _get_parishes_simple_fallback(supabase, num_parishes, parish_id, diocese_id)
+        return _get_parishes_simple_fallback(
+            supabase, num_parishes, parish_id, diocese_id
+        )
 
 
 def _get_parishes_simple_fallback(
@@ -1101,7 +1611,12 @@ def _get_parishes_simple_fallback(
     """Simple fallback parish selection method (original implementation)."""
     if parish_id:
         try:
-            response = supabase.table("Parishes").select("id, Web").eq("id", parish_id).execute()
+            response = (
+                supabase.table("Parishes")
+                .select("id, Web")
+                .eq("id", parish_id)
+                .execute()
+            )
             if response.data:
                 parish = response.data[0]
                 if parish.get("Web"):
@@ -1136,95 +1651,171 @@ def save_facts_to_supabase(supabase: Client, results: list, monitoring_client=No
         return
 
     logger.info(f"Processing {len(results)} results for database saving")
+    facts_to_save = _extract_facts_from_results(results)
+
+    if not facts_to_save:
+        logger.info("No facts to save to Supabase.")
+        return
+
+    _save_facts_to_database(supabase, facts_to_save, monitoring_client)
+
+
+def _extract_facts_from_results(results: list) -> list:
+    """Extract facts from scraping results"""
     facts_to_save = []
+
     for result in results:
         parish_id = result.get("parish_id")
         if not parish_id:
             logger.warning(f"Skipping result with no parish_id: {result}")
             continue
 
-        logger.info(
-            f"Parish {parish_id}: Reconciliation offers={result.get('offers_reconciliation')}, info='{result.get('reconciliation_info')}'"
-        )
-        logger.info(
-            f"Parish {parish_id}: Adoration offers={result.get('offers_adoration')}, info='{result.get('adoration_info')}'"
-        )
-
-        if result.get("offers_reconciliation") and result.get("reconciliation_info") != "Information not found":
-            facts_to_save.append(
-                {
-                    "parish_id": parish_id,
-                    "fact_type": "ReconciliationSchedule",
-                    "fact_value": result.get("reconciliation_info"),
-                    "fact_source_url": result.get("reconciliation_page"),
-                    "fact_string": result.get("reconciliation_fact_string"),
-                    "extraction_method": "keyword_based",
-                }
-            )
-            logger.info(f"Added reconciliation fact for parish {parish_id}")
-
-        if result.get("offers_adoration") and result.get("adoration_info") != "Information not found":
-            facts_to_save.append(
-                {
-                    "parish_id": parish_id,
-                    "fact_type": "AdorationSchedule",
-                    "fact_value": result.get("adoration_info"),
-                    "fact_source_url": result.get("adoration_page"),
-                    "fact_string": result.get("adoration_fact_string"),
-                    "extraction_method": "keyword_based",
-                }
-            )
-            logger.info(f"Added adoration fact for parish {parish_id}")
+        _log_parish_result(parish_id, result)
+        _extract_reconciliation_fact(result, parish_id, facts_to_save)
+        _extract_adoration_fact(result, parish_id, facts_to_save)
 
     logger.info(f"Prepared {len(facts_to_save)} facts to save to database")
-    if not facts_to_save:
-        logger.info("No facts to save to Supabase.")
-        return
+    return facts_to_save
 
+
+def _log_parish_result(parish_id: int, result: dict):
+    """Log parish extraction results"""
+    logger.info(
+        f"Parish {parish_id}: Reconciliation offers={result.get('offers_reconciliation')}, info='{result.get('reconciliation_info')}'"
+    )
+    logger.info(
+        f"Parish {parish_id}: Adoration offers={result.get('offers_adoration')}, info='{result.get('adoration_info')}'"
+    )
+
+
+def _extract_reconciliation_fact(result: dict, parish_id: int, facts_to_save: list):
+    """Extract reconciliation fact if available"""
+    if (
+        result.get("offers_reconciliation")
+        and result.get("reconciliation_info") != "Information not found"
+    ):
+        facts_to_save.append(
+            {
+                "parish_id": parish_id,
+                "fact_type": "ReconciliationSchedule",
+                "fact_value": result.get("reconciliation_info"),
+                "fact_source_url": result.get("reconciliation_page"),
+                "fact_string": result.get("reconciliation_fact_string"),
+                "extraction_method": "keyword_based",
+            }
+        )
+        logger.info(f"Added reconciliation fact for parish {parish_id}")
+
+
+def _extract_adoration_fact(result: dict, parish_id: int, facts_to_save: list):
+    """Extract adoration fact if available"""
+    if (
+        result.get("offers_adoration")
+        and result.get("adoration_info") != "Information not found"
+    ):
+        facts_to_save.append(
+            {
+                "parish_id": parish_id,
+                "fact_type": "AdorationSchedule",
+                "fact_value": result.get("adoration_info"),
+                "fact_source_url": result.get("adoration_page"),
+                "fact_string": result.get("adoration_fact_string"),
+                "extraction_method": "keyword_based",
+            }
+        )
+        logger.info(f"Added adoration fact for parish {parish_id}")
+
+
+def _save_facts_to_database(supabase: Client, facts_to_save: list, monitoring_client):
+    """Save facts to database and send monitoring logs"""
     try:
-        # Get parish names for monitoring if monitoring client is available
-        parish_names = {}
-        if monitoring_client and facts_to_save:
-            parish_ids = list(set(fact["parish_id"] for fact in facts_to_save))
-            try:
-                parish_response = supabase.table("Parishes").select("id, Name, Web").in_("id", parish_ids).execute()
-                parish_names = {
-                    p["id"]: {"name": p.get("Name", "Unknown Parish"), "website": p.get("Web", "")}
-                    for p in parish_response.data
-                }
-            except Exception as e:
-                logger.warning(f"Could not fetch parish names for monitoring: {e}")
+        parish_names = _get_parish_names_for_monitoring(
+            supabase, facts_to_save, monitoring_client
+        )
 
-        supabase.table("ParishData").upsert(facts_to_save, on_conflict="parish_id,fact_type").execute()
-        logger.info(f"Successfully saved {len(facts_to_save)} facts to Supabase table 'ParishData'.")
+        supabase.table("ParishData").upsert(
+            facts_to_save, on_conflict="parish_id,fact_type"
+        ).execute()
+        logger.info(
+            f"Successfully saved {len(facts_to_save)} facts to Supabase table 'ParishData'."
+        )
 
-        # Send monitoring logs for ParishData insertions
-        if monitoring_client:
-            for fact in facts_to_save:
-                parish_id = fact["parish_id"]
-                parish_info = parish_names.get(parish_id, {"name": "Unknown Parish", "website": ""})
-                parish_name = parish_info["name"]
-                parish_website = parish_info["website"]
-
-                fact_type = fact["fact_type"].replace("Schedule", "")  # Remove 'Schedule' from type
-                fact_value = fact["fact_value"]
-                source_url = fact.get("fact_source_url", "")
-
-                # Create website links
-                parish_link = f" → <a href='{parish_website}' target='_blank'>{parish_website}</a>" if parish_website else ""
-                source_link = f" | <a href='{source_url}' target='_blank'>Source</a>" if source_url else ""
-
-                monitoring_client.send_log(
-                    f"Step 4 │ ✅ {fact_type} data saved for {parish_name}: {fact_value[:100]}{'...' if len(fact_value) > 100 else ''}{parish_link}{source_link}",
-                    "INFO",
-                )
+        _send_monitoring_logs(monitoring_client, facts_to_save, parish_names)
 
     except Exception as e:
-        logger.error(f"An unexpected error occurred during Supabase upsert: {e}", exc_info=True)
+        logger.error(
+            f"An unexpected error occurred during Supabase upsert: {e}", exc_info=True
+        )
+
+
+def _get_parish_names_for_monitoring(
+    supabase: Client, facts_to_save: list, monitoring_client
+) -> dict:
+    """Get parish names for monitoring if monitoring client is available"""
+    parish_names = {}
+    if monitoring_client and facts_to_save:
+        parish_ids = list(set(fact["parish_id"] for fact in facts_to_save))
+        try:
+            parish_response = (
+                supabase.table("Parishes")
+                .select("id, Name, Web")
+                .in_("id", parish_ids)
+                .execute()
+            )
+            parish_names = {
+                p["id"]: {
+                    "name": p.get("Name", "Unknown Parish"),
+                    "website": p.get("Web", ""),
+                }
+                for p in parish_response.data
+            }
+        except Exception as e:
+            logger.warning(f"Could not fetch parish names for monitoring: {e}")
+    return parish_names
+
+
+def _send_monitoring_logs(monitoring_client, facts_to_save: list, parish_names: dict):
+    """Send monitoring logs for saved facts"""
+    if not monitoring_client:
+        return
+
+    for fact in facts_to_save:
+        parish_id = fact["parish_id"]
+        parish_info = parish_names.get(
+            parish_id, {"name": "Unknown Parish", "website": ""}
+        )
+        parish_name = parish_info["name"]
+        parish_website = parish_info["website"]
+
+        fact_type = fact["fact_type"].replace(
+            "Schedule", ""
+        )  # Remove 'Schedule' from type
+        fact_value = fact["fact_value"]
+        source_url = fact.get("fact_source_url", "")
+
+        # Create website links
+        parish_link = (
+            f" → <a href='{parish_website}' target='_blank'>{parish_website}</a>"
+            if parish_website
+            else ""
+        )
+        source_link = (
+            f" | <a href='{source_url}' target='_blank'>Source</a>"
+            if source_url
+            else ""
+        )
+
+        monitoring_client.send_log(
+            f"Step 4 │ ✅ {fact_type} data saved for {parish_name}: {fact_value[:100]}{'...' if len(fact_value) > 100 else ''}{parish_link}{source_link}",
+            "INFO",
+        )
 
 
 def main(
-    num_parishes: int, parish_id: int = None, max_pages_to_scan: int = config.DEFAULT_MAX_PAGES_TO_SCAN, monitoring_client=None
+    num_parishes: int,
+    parish_id: int = None,
+    max_pages_to_scan: int = config.DEFAULT_MAX_PAGES_TO_SCAN,
+    monitoring_client=None,
 ):
     """Main function to run the scraping pipeline."""
     load_dotenv()
@@ -1248,7 +1839,9 @@ def main(
     results = []
     for url, p_id in parishes_to_process:
         logger.info(f"Scraping {url} for parish {p_id}...")
-        result = scrape_parish_data(url, p_id, supabase, suppression_urls, max_pages_to_scan=max_pages_to_scan)
+        result = scrape_parish_data(
+            url, p_id, supabase, suppression_urls, max_pages_to_scan=max_pages_to_scan
+        )
         result["parish_id"] = p_id
         try:
             parish_name = urlparse(url).netloc.replace("www.", "")
@@ -1268,7 +1861,9 @@ def main(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Extract adoration and reconciliation schedules from parish websites.")
+    parser = argparse.ArgumentParser(
+        description="Extract adoration and reconciliation schedules from parish websites."
+    )
     parser.add_argument(
         "--num_parishes",
         type=int,
@@ -1276,7 +1871,10 @@ if __name__ == "__main__":
         help=f"Maximum number of parishes to extract from. Set to 0 for no limit. Defaults to {config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE}.",
     )
     parser.add_argument(
-        "--parish_id", type=int, default=None, help="ID of a specific parish to process. Overrides --num_parishes."
+        "--parish_id",
+        type=int,
+        default=None,
+        help="ID of a specific parish to process. Overrides --num_parishes.",
     )
     parser.add_argument(
         "--max_pages_to_scan",

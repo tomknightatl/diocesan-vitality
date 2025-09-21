@@ -42,7 +42,14 @@ def quick_extract_single_parish():
 def quick_diocese_scan():
     """Quick scan of a single diocese"""
     print("🔍 Quick diocese scan...")
-    cmd = ["python", "find_parishes.py", "--diocese_id", "1", "--max_dioceses_to_process", "1"]
+    cmd = [
+        "python",
+        "find_parishes.py",
+        "--diocese_id",
+        "1",
+        "--max_dioceses_to_process",
+        "1",
+    ]
 
     try:
         result = subprocess.run(cmd, timeout=180)  # 3 minute timeout
@@ -86,15 +93,15 @@ def clear_chrome_cache():
     cache_dirs = [
         "/tmp/chrome-*",
         "/tmp/.chrome*",
-        "/tmp/webdriver-cache",
-        os.path.expanduser("~/.cache/google-chrome"),
-        ".chrome-user-data",
+        "/tmp/webdriver - cache",
+        os.path.expanduser("~/.cache/google - chrome"),
+        ".chrome - user - data",
     ]
 
     for cache_dir in cache_dirs:
         try:
             subprocess.run(["rm", "-rf", cache_dir], check=False)
-        except:
+        except Exception:
             pass
 
     print("✅ Chrome cache cleared")
@@ -124,7 +131,7 @@ def show_db_stats():
         print(f"Data entries: {data_count}")
 
         if dioceses_count > 0:
-            print(f"Avg parishes/diocese: {parishes_count/dioceses_count:.1f}")
+            print(f"Avg parishes/diocese: {parishes_count / dioceses_count:.1f}")
 
         if parishes_count > 0:
             data_coverage = (data_count / parishes_count) * 100
@@ -132,7 +139,11 @@ def show_db_stats():
 
         # Show recent activity
         recent_parishes = (
-            supabase.table("Parishes").select("Name, created_at").order("created_at", desc=True).limit(3).execute()
+            supabase.table("Parishes")
+            .select("Name, created_at")
+            .order("created_at", desc=True)
+            .limit(3)
+            .execute()
         )
         if recent_parishes.data:
             print("\nRecent parishes:")
@@ -150,7 +161,7 @@ def kill_chrome_processes():
         subprocess.run(["pkill", "-f", "chrome"], check=False)
         subprocess.run(["pkill", "-f", "chromedriver"], check=False)
         print("✅ Chrome processes terminated")
-    except:
+    except Exception:
         print("⚠️ Could not kill Chrome processes (maybe none running)")
 
 
@@ -161,13 +172,15 @@ def check_ports():
 
     for port in ports:
         try:
-            result = subprocess.run(["lsof", "-ti", f":{port}"], capture_output=True, text=True)
+            result = subprocess.run(
+                ["lsof", "-ti", f":{port}"], capture_output=True, text=True
+            )
             if result.stdout.strip():
                 pid = result.stdout.strip()
                 print(f"Port {port}: In use (PID {pid})")
             else:
                 print(f"Port {port}: Available")
-        except:
+        except Exception:
             print(f"Port {port}: Could not check")
 
 
@@ -179,23 +192,34 @@ def restart_services():
     ports = [3000, 8000]
     for port in ports:
         try:
-            result = subprocess.run(["lsof", "-ti", f":{port}"], capture_output=True, text=True)
+            result = subprocess.run(
+                ["lsof", "-ti", f":{port}"], capture_output=True, text=True
+            )
             if result.stdout.strip():
                 pids = result.stdout.strip().split("\n")
                 for pid in pids:
                     subprocess.run(["kill", pid], check=False)
                     print(f"Killed process {pid} on port {port}")
-        except:
+        except Exception:
             pass
 
     # Start backend
     print("Starting backend...")
-    subprocess.Popen(["python", "backend/main.py"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.Popen(
+        ["python", "backend/main.py"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
 
     # Start frontend (if exists)
     if Path("frontend").exists():
         print("Starting frontend...")
-        subprocess.Popen(["npm", "start"], cwd="frontend", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.Popen(
+            ["npm", "start"],
+            cwd="frontend",
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
 
     print("✅ Services restarted")
     print("📊 Backend: http://localhost:8000")
@@ -206,7 +230,17 @@ def main():
     parser = argparse.ArgumentParser(description="Quick Development Commands")
     parser.add_argument(
         "command",
-        choices=["extract", "diocese", "schedule", "logs", "clear-cache", "stats", "kill-chrome", "ports", "restart"],
+        choices=[
+            "extract",
+            "diocese",
+            "schedule",
+            "logs",
+            "clear - cache",
+            "stats",
+            "kill - chrome",
+            "ports",
+            "restart",
+        ],
         help="Quick command to run",
     )
 
@@ -218,9 +252,9 @@ def main():
         print("  diocese     - Quick diocese scan")
         print("  schedule    - Quick schedule extraction test")
         print("  logs        - View recent logs")
-        print("  clear-cache - Clear Chrome cache")
+        print("  clear - cache - Clear Chrome cache")
         print("  stats       - Show database statistics")
-        print("  kill-chrome - Kill stuck Chrome processes")
+        print("  kill - chrome - Kill stuck Chrome processes")
         print("  ports       - Check port usage")
         print("  restart     - Restart development services")
         print("\nUsage: python scripts/dev_quick.py <command>")
@@ -233,9 +267,9 @@ def main():
         "diocese": quick_diocese_scan,
         "schedule": quick_schedule_test,
         "logs": view_recent_logs,
-        "clear-cache": clear_chrome_cache,
+        "clear - cache": clear_chrome_cache,
         "stats": show_db_stats,
-        "kill-chrome": kill_chrome_processes,
+        "kill - chrome": kill_chrome_processes,
         "ports": check_ports,
         "restart": restart_services,
     }

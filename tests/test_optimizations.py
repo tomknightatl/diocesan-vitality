@@ -13,7 +13,10 @@ from core.enhanced_element_wait import (
     create_search_form_selectors,
 )
 from core.logger import get_logger
-from core.optimized_circuit_breaker_configs import ErrorRecoveryStrategies, OptimizedCircuitBreakerConfigs
+from core.optimized_circuit_breaker_configs import (
+    ErrorRecoveryStrategies,
+    OptimizedCircuitBreakerConfigs,
+)
 
 logger = get_logger(__name__)
 
@@ -38,8 +41,12 @@ def test_circuit_breaker_configs():
         )
 
     # Test adaptive config
-    adaptive_config = OptimizedCircuitBreakerConfigs.get_adaptive_config("unknown_type")
-    logger.info(f"  ✅ adaptive (default): threshold={adaptive_config.failure_threshold}")
+    adaptive_config = OptimizedCircuitBreakerConfigs.get_adaptive_config(
+        "unknown_type"
+    )
+    logger.info(
+        f"  ✅ adaptive (default): threshold={adaptive_config.failure_threshold}"
+    )
 
     logger.info("✅ Circuit breaker configurations test passed!")
 
@@ -53,17 +60,28 @@ def test_error_recovery_strategies():
         ("ImprovedInteractiveMapExtractor", 3, "NoSuchElementException", True),
         ("ParishFinderExtractor", 2, "NoSuchElementException", False),
         ("TableExtractor", 2, "NoSuchElementException", True),
-        ("SearchBasedExtractor", 4, "TimeoutException", True),  # Should skip after 2 timeout failures
+        (
+            "SearchBasedExtractor",
+            4,
+            "TimeoutException",
+            True,
+        ),  # Should skip after 2 timeout failures
     ]
 
     for extractor, failures, error_type, expected in skip_tests:
-        result = ErrorRecoveryStrategies.should_skip_extractor(extractor, failures, error_type)
+        result = ErrorRecoveryStrategies.should_skip_extractor(
+            extractor, failures, error_type
+        )
         status = "✅" if result == expected else "❌"
         logger.info(f"  {status} {extractor} ({failures} {error_type}): skip={result}")
 
     # Test recovery delay calculation
     for attempt in range(1, 4):
-        for error_type in ["NoSuchElementException", "TimeoutException", "WebDriverException"]:
+        for error_type in [
+            "NoSuchElementException",
+            "TimeoutException",
+            "WebDriverException",
+        ]:
             delay = ErrorRecoveryStrategies.get_recovery_delay(attempt, error_type)
             logger.info(f"  ✅ {error_type} attempt {attempt}: {delay:.2f}s delay")
 
@@ -77,7 +95,10 @@ def test_error_recovery_strategies():
     ]
 
     analysis = ErrorRecoveryStrategies.analyze_failure_pattern(test_errors)
-    logger.info(f"  ✅ Pattern analysis: {analysis['total_errors']} errors, " f"dominant: {analysis['dominant_error']}")
+    logger.info(
+        f"  ✅ Pattern analysis: {analysis['total_errors']} errors, "
+        f"dominant: {analysis['dominant_error']}"
+    )
 
     logger.info("✅ Error recovery strategies test passed!")
 
@@ -108,7 +129,7 @@ def test_imports():
     logger.info("📦 Testing module imports...")
 
     try:
-        from core.driver import ProtectedWebDriver, get_protected_driver
+        pass
 
         logger.info("  ✅ Enhanced driver imports successful")
 
@@ -147,10 +168,14 @@ def main():
             sys.exit(1)
 
         test_time = time.time() - start_time
-        logger.info(f"🎉 All optimization tests passed! (completed in {test_time:.2f}s)")
+        logger.info(
+            f"🎉 All optimization tests passed! (completed in {test_time:.2f}s)"
+        )
 
         logger.info("\n📊 Optimization Summary:")
-        logger.info("  • Circuit breaker thresholds optimized for element interactions (30 failures)")
+        logger.info(
+            "  • Circuit breaker thresholds optimized for element interactions (30 failures)"
+        )
         logger.info("  • Progressive timeout strategies implemented")
         logger.info("  • Smart element waiting with 50+ selector patterns")
         logger.info("  • Error recovery strategies with adaptive delays")

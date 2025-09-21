@@ -1,31 +1,30 @@
 #!/usr/bin/env python3
 """
-AI-powered schedule extraction for accurate parish schedule parsing.
+AI - powered schedule extraction for accurate parish schedule parsing.
 Uses Google Gemini AI to extract structured schedule information.
 """
 
 import json
 import re
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 import google.generativeai as genai
 
 import config
-from core.db import get_supabase_client
 from core.logger import get_logger
 
 logger = get_logger(__name__)
 
 
 class ScheduleAIExtractor:
-    """AI-powered extractor for parish schedules using Google Gemini."""
+    """AI - powered extractor for parish schedules using Google Gemini."""
 
     def __init__(self):
         """Initialize the AI extractor with Gemini API."""
         try:
             genai.configure(api_key=config.GENAI_API_KEY)
-            self.model = genai.GenerativeModel("gemini-1.5-flash")
+            self.model = genai.GenerativeModel("gemini - 1.5 - flash")
             logger.info("AI Schedule Extractor initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize AI Schedule Extractor: {e}")
@@ -45,49 +44,77 @@ class ScheduleAIExtractor:
         base_threshold = 15  # Lowered from 20 to be more permissive
         adjustments = 0
 
-        # URL-based adjustments
+        # URL - based adjustments
         url_lower = url.lower()
 
         # Major parishes/cathedrals should have lower thresholds
-        if any(keyword in url_lower for keyword in ["cathedral", "basilica", "shrine"]):
+        if any(
+            keyword in url_lower for keyword in ["cathedral", "basilica", "shrine"]
+        ):
             adjustments -= 10
-            logger.debug(f"Major parish detected, lowering threshold by 10")
+            logger.debug("Major parish detected, lowering threshold by 10")
 
         # Dedicated schedule pages should have lower thresholds
         if any(
             keyword in url_lower
-            for keyword in ["schedule", "hours", "mass-times", "adoration", "confession", "reconciliation"]
+            for keyword in [
+                "schedule",
+                "hours",
+                "mass - times",
+                "adoration",
+                "confession",
+                "reconciliation",
+            ]
         ):
             adjustments -= 7  # Increased from 5 to be more permissive
-            logger.debug(f"Dedicated schedule page detected, lowering threshold by 7")
+            logger.debug("Dedicated schedule page detected, lowering threshold by 7")
 
         # Parish life/ministry pages often contain schedule info
-        if any(keyword in url_lower for keyword in ["parish-life", "ministry", "ministries", "worship", "sacrament"]):
+        if any(
+            keyword in url_lower
+            for keyword in [
+                "parish - life",
+                "ministry",
+                "ministries",
+                "worship",
+                "sacrament",
+            ]
+        ):
             adjustments -= 5
-            logger.debug(f"Parish life/ministry page detected, lowering threshold by 5")
+            logger.debug("Parish life/ministry page detected, lowering threshold by 5")
 
-        # Content-based adjustments
+        # Content - based adjustments
         content_length = len(content.split()) if content else 0
 
         # Large pages with lots of content should be more permissive
         if content_length > 2000:
             adjustments -= 5
-            logger.debug(f"Large page ({content_length} words), lowering threshold by 5")
+            logger.debug(
+                f"Large page ({content_length} words), lowering threshold by 5"
+            )
         elif content_length < 100:  # Only very small pages get penalty
             adjustments += 3  # Reduced from 5
-            logger.debug(f"Very small page ({content_length} words), raising threshold by 3")
+            logger.debug(
+                f"Very small page ({content_length} words), raising threshold by 3"
+            )
 
         # Sitemap pages should have higher thresholds but not too high
         if "sitemap" in url_lower:
             adjustments += 10  # Reduced from 15
-            logger.debug(f"Sitemap page detected, raising threshold by 10")
+            logger.debug("Sitemap page detected, raising threshold by 10")
 
         # Generic 'about' pages might contain schedules
-        if any(keyword in url_lower for keyword in ["about", "contact", "home", "welcome"]):
+        if any(
+            keyword in url_lower for keyword in ["about", "contact", "home", "welcome"]
+        ):
             adjustments -= 2
-            logger.debug(f"Generic page that might contain schedule info, lowering threshold by 2")
+            logger.debug(
+                "Generic page that might contain schedule info, lowering threshold by 2"
+            )
 
-        final_threshold = max(3, base_threshold + adjustments)  # Minimum threshold lowered to 3
+        final_threshold = max(
+            3, base_threshold + adjustments
+        )  # Minimum threshold lowered to 3
 
         if final_threshold != base_threshold:
             logger.info(
@@ -96,7 +123,9 @@ class ScheduleAIExtractor:
 
         return final_threshold
 
-    def extract_schedule_from_content(self, content: str, url: str, schedule_type: str) -> Dict:
+    def extract_schedule_from_content(
+        self, content: str, url: str, schedule_type: str
+    ) -> Dict:
         """
         Extract structured schedule information from webpage content using AI.
 
@@ -109,7 +138,7 @@ class ScheduleAIExtractor:
             Dict with structured schedule information
         """
         if not self.model:
-            return self._get_empty_result(f"AI model not available")
+            return self._get_empty_result("AI model not available")
 
         try:
             # Create targeted prompt for schedule extraction
@@ -124,7 +153,9 @@ class ScheduleAIExtractor:
             else:
                 timeout_seconds = 60  # 1 minute for normal content
 
-            logger.info(f"Processing {content_size} chars with {timeout_seconds}s timeout for {schedule_type}")
+            logger.info(
+                f"Processing {content_size} chars with {timeout_seconds}s timeout for {schedule_type}"
+            )
 
             # Get AI response with timeout handling using concurrent.futures
             import concurrent.futures
@@ -137,15 +168,21 @@ class ScheduleAIExtractor:
                 try:
                     response = future.result(timeout=timeout_seconds)
                 except concurrent.futures.TimeoutError:
-                    logger.warning(f"AI processing timeout ({timeout_seconds}s) for {schedule_type} at {url}")
-                    return self._get_empty_result(f"AI processing timeout after {timeout_seconds}s")
+                    logger.warning(
+                        f"AI processing timeout ({timeout_seconds}s) for {schedule_type} at {url}"
+                    )
+                    return self._get_empty_result(
+                        f"AI processing timeout after {timeout_seconds}s"
+                    )
 
             # Parse AI response into structured data
             result = self._parse_ai_response(response.text, url, schedule_type)
 
             # Add URL and content for adaptive threshold calculation
             result["url"] = url
-            result["content"] = content[:1000]  # Store first 1000 chars for threshold calculation
+            result["content"] = content[
+                :1000
+            ]  # Store first 1000 chars for threshold calculation
 
             logger.info(f"AI extraction completed for {schedule_type} at {url}")
             return result
@@ -168,7 +205,7 @@ Analyze the following webpage content and extract ONLY Eucharistic Adoration sch
 Look for:
 - Adoration, Exposition, Blessed Sacrament, Holy Hour schedules
 - Perpetual Adoration availability
-- Weekly recurring schedules (e.g., "Wednesdays 6-7 PM")
+- Weekly recurring schedules (e.g., "Wednesdays 6 - 7 PM")
 - Daily schedules if offered
 - Special adoration events
 
@@ -184,7 +221,7 @@ Please respond ONLY in this JSON format:
     "frequency": "weekly" | "daily" | "monthly" | "special_events" | "unknown",
     "schedule_details": "Full text description of the schedule",
     "is_perpetual": true/false,
-    "confidence_score": 0-100,
+    "confidence_score": 0 - 100,
     "notes": "Any additional relevant information"
 }}
 
@@ -199,7 +236,7 @@ Look for:
 - Confession times and schedules
 - Reconciliation service schedules
 - Sacrament of Penance availability
-- Weekly recurring schedules (e.g., "Saturdays 3:30-4:30 PM")
+- Weekly recurring schedules (e.g., "Saturdays 3:30 - 4:30 PM")
 - "By appointment" availability
 - Before/after Mass schedules
 
@@ -215,7 +252,7 @@ Please respond ONLY in this JSON format:
     "frequency": "weekly" | "daily" | "by_appointment" | "before_mass" | "unknown",
     "schedule_details": "Full text description of the schedule",
     "by_appointment": true/false,
-    "confidence_score": 0-100,
+    "confidence_score": 0 - 100,
     "notes": "Any additional relevant information"
 }}
 
@@ -250,7 +287,7 @@ Please respond ONLY in this JSON format:
     "schedule_details": "Full text description of the Mass schedule",
     "has_vigil_mass": true/false,
     "has_daily_mass": true/false,
-    "confidence_score": 0-100,
+    "confidence_score": 0 - 100,
     "notes": "Any additional relevant information"
 }}
 
@@ -269,7 +306,7 @@ If no Mass schedule is found, return has_weekly_schedule: false and schedule_fou
         max_chars = 32000  # Increased from 8000 to handle large sitemaps
 
         if len(content) > max_chars:
-            # For large content, try to find schedule-relevant sections first
+            # For large content, try to find schedule - relevant sections first
             schedule_keywords = [
                 "mass",
                 "schedule",
@@ -296,15 +333,16 @@ If no Mass schedule is found, return has_weekly_schedule: false and schedule_fou
                 "hour",
             ]
 
-            # Split content into chunks and prioritize schedule-relevant sections
+            # Split content into chunks and prioritize schedule - relevant sections
             words = content.split()
-            relevant_chunks = []
             current_chunk = []
             current_size = 0
 
             for word in words:
                 word_lower = word.lower()
-                is_relevant = any(keyword in word_lower for keyword in schedule_keywords)
+                is_relevant = any(
+                    keyword in word_lower for keyword in schedule_keywords
+                )
 
                 # If we find relevant content, prioritize it
                 if is_relevant and current_size < max_chars:
@@ -320,11 +358,15 @@ If no Mass schedule is found, return has_weekly_schedule: false and schedule_fou
             if len(content) > max_chars:
                 content = content[:max_chars] + "..."
 
-            logger.info(f"Large content processed: {len(content)} chars from original {len(' '.join(words))} chars")
+            logger.info(
+                f"Large content processed: {len(content)} chars from original {len(' '.join(words))} chars"
+            )
 
         return content.strip()
 
-    def _parse_ai_response(self, ai_response: str, url: str, schedule_type: str) -> Dict:
+    def _parse_ai_response(
+        self, ai_response: str, url: str, schedule_type: str
+    ) -> Dict:
         """Parse AI response into structured format."""
         try:
             # Try to extract JSON from AI response
@@ -371,7 +413,9 @@ If no Mass schedule is found, return has_weekly_schedule: false and schedule_fou
             "extracted_at": datetime.now(timezone.utc).isoformat(),
         }
 
-    def batch_extract_schedules(self, parish_urls: List[Tuple[str, int, str]], schedule_type: str) -> List[Dict]:
+    def batch_extract_schedules(
+        self, parish_urls: List[Tuple[str, int, str]], schedule_type: str
+    ) -> List[Dict]:
         """
         Extract schedules for multiple parish URLs.
 
@@ -385,7 +429,9 @@ If no Mass schedule is found, return has_weekly_schedule: false and schedule_fou
         results = []
 
         for url, parish_id, content in parish_urls:
-            logger.info(f"Processing {schedule_type} extraction for parish {parish_id}: {url}")
+            logger.info(
+                f"Processing {schedule_type} extraction for parish {parish_id}: {url}"
+            )
 
             result = self.extract_schedule_from_content(content, url, schedule_type)
             result["parish_id"] = parish_id
@@ -420,7 +466,9 @@ def save_ai_schedule_results(supabase, results: List[Dict]):
 
         # Create temporary extractor instance if we need to calculate adaptive threshold
         temp_extractor = ScheduleAIExtractor()
-        adaptive_threshold = temp_extractor.get_adaptive_confidence_threshold(url, content)
+        adaptive_threshold = temp_extractor.get_adaptive_confidence_threshold(
+            url, content
+        )
 
         confidence_score = result.get("confidence_score", 0)
 
@@ -451,12 +499,16 @@ def save_ai_schedule_results(supabase, results: List[Dict]):
 
     if facts_to_save:
         try:
-            supabase.table("ParishData").upsert(facts_to_save, on_conflict="parish_id,fact_type").execute()
-            logger.info(f"Successfully saved {len(facts_to_save)} AI schedule facts to database")
+            supabase.table("ParishData").upsert(
+                facts_to_save, on_conflict="parish_id,fact_type"
+            ).execute()
+            logger.info(
+                f"Successfully saved {len(facts_to_save)} AI schedule facts to database"
+            )
         except Exception as e:
             logger.error(f"Error saving AI schedule facts: {e}")
     else:
-        logger.info("No high-confidence AI schedule results to save")
+        logger.info("No high - confidence AI schedule results to save")
 
 
 # Test function
@@ -468,7 +520,7 @@ def test_ai_extraction():
     <h3>Mass Schedule</h3>
     <p>Sunday Masses: 8:00 AM, 10:30 AM, 12:00 PM</p>
     <p>Saturday Vigil: 5:00 PM</p>
-    <p>Weekday Masses: Monday-Friday 8:00 AM, Wednesday 6:00 PM</p>
+    <p>Weekday Masses: Monday - Friday 8:00 AM, Wednesday 6:00 PM</p>
 
     <h3>Adoration Schedule</h3>
     <p>Eucharistic Adoration is held every Wednesday from 6:00 PM to 7:00 PM in the church.</p>
@@ -478,7 +530,9 @@ def test_ai_extraction():
     <p>Reconciliation: Saturdays 3:30 PM - 4:30 PM, or by appointment</p>
     """
 
-    result = extractor.extract_schedule_from_content(sample_content, "https://example.com", "mass")
+    result = extractor.extract_schedule_from_content(
+        sample_content, "https://example.com", "mass"
+    )
 
     print("AI Extraction Result:")
     print(json.dumps(result, indent=2))

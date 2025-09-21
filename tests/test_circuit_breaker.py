@@ -7,7 +7,12 @@ Validates circuit breaker functionality with different failure scenarios.
 import random
 import time
 
-from core.circuit_breaker import CircuitBreakerConfig, CircuitBreakerOpenError, circuit_breaker, circuit_manager
+from core.circuit_breaker import (
+    CircuitBreakerConfig,
+    CircuitBreakerOpenError,
+    circuit_breaker,
+    circuit_manager,
+)
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -16,7 +21,13 @@ logger = get_logger(__name__)
 # Test functions with different failure patterns
 @circuit_breaker(
     "test_service_unreliable",
-    CircuitBreakerConfig(failure_threshold=3, recovery_timeout=5, request_timeout=2, max_retries=1, retry_delay=0.5),
+    CircuitBreakerConfig(
+        failure_threshold=3,
+        recovery_timeout=5,
+        request_timeout=2,
+        max_retries=1,
+        retry_delay=0.5,
+    ),
 )
 def unreliable_service(fail_probability=0.7):
     """Simulates an unreliable service that fails randomly"""
@@ -26,7 +37,10 @@ def unreliable_service(fail_probability=0.7):
 
 
 @circuit_breaker(
-    "test_service_timeout", CircuitBreakerConfig(failure_threshold=2, recovery_timeout=3, request_timeout=1, max_retries=0)
+    "test_service_timeout",
+    CircuitBreakerConfig(
+        failure_threshold=2, recovery_timeout=3, request_timeout=1, max_retries=0
+    ),
 )
 def timeout_service(delay=2):
     """Simulates a service that times out"""
@@ -35,29 +49,29 @@ def timeout_service(delay=2):
 
 
 @circuit_breaker(
-    "test_service_reliable", CircuitBreakerConfig(failure_threshold=5, recovery_timeout=10, request_timeout=5, max_retries=2)
+    "test_service_reliable",
+    CircuitBreakerConfig(
+        failure_threshold=5, recovery_timeout=10, request_timeout=5, max_retries=2
+    ),
 )
 def reliable_service():
     """Simulates a reliable service"""
     return "Reliable success"
 
 
-def test_circuit_breaker_functionality():
-    """Test various circuit breaker scenarios"""
-
-    logger.info("🧪 Starting Circuit Breaker Tests")
-    logger.info("=" * 50)
-
-    # Test 1: Normal operation
+def _test_normal_operation():
+    """Test 1: Normal operation scenario"""
     logger.info("\n📋 Test 1: Normal Operation")
     try:
         for i in range(3):
             result = reliable_service()
-            logger.info(f"✅ Call {i+1}: {result}")
+            logger.info(f"✅ Call {i + 1}: {result}")
     except Exception as e:
         logger.error(f"❌ Unexpected error: {e}")
 
-    # Test 2: Service with failures (should trigger circuit breaker)
+
+def _test_unreliable_service():
+    """Test 2: Service with failures (should trigger circuit breaker)"""
     logger.info("\n📋 Test 2: Unreliable Service (Circuit Breaker Should Open)")
     failure_count = 0
     success_count = 0
@@ -67,30 +81,36 @@ def test_circuit_breaker_functionality():
         try:
             result = unreliable_service(fail_probability=0.8)
             success_count += 1
-            logger.info(f"✅ Call {i+1}: {result}")
+            logger.info(f"✅ Call {i + 1}: {result}")
         except CircuitBreakerOpenError:
             blocked_count += 1
-            logger.warning(f"🚫 Call {i+1}: Blocked by circuit breaker")
+            logger.warning(f"🚫 Call {i + 1}: Blocked by circuit breaker")
         except Exception as e:
             failure_count += 1
-            logger.warning(f"❌ Call {i+1}: {str(e)}")
+            logger.warning(f"❌ Call {i + 1}: {str(e)}")
 
         time.sleep(0.1)  # Small delay between calls
 
-    logger.info(f"📊 Test 2 Results: {success_count} successes, {failure_count} failures, {blocked_count} blocked")
+    logger.info(
+        f"📊 Test 2 Results: {success_count} successes, {failure_count} failures, {blocked_count} blocked"
+    )
 
-    # Test 3: Timeout scenario
+
+def _test_timeout_service():
+    """Test 3: Timeout scenario"""
     logger.info("\n📋 Test 3: Timeout Service")
     for i in range(3):
         try:
             result = timeout_service(delay=1.5)  # Should timeout
-            logger.info(f"✅ Call {i+1}: {result}")
+            logger.info(f"✅ Call {i + 1}: {result}")
         except CircuitBreakerOpenError:
-            logger.warning(f"🚫 Call {i+1}: Blocked by circuit breaker")
+            logger.warning(f"🚫 Call {i + 1}: Blocked by circuit breaker")
         except Exception as e:
-            logger.warning(f"⏰ Call {i+1}: Timeout - {str(e)}")
+            logger.warning(f"⏰ Call {i + 1}: Timeout - {str(e)}")
 
-    # Test 4: Recovery after circuit opens
+
+def _test_circuit_recovery():
+    """Test 4: Recovery after circuit opens"""
     logger.info("\n📋 Test 4: Circuit Recovery Test")
     logger.info("⏳ Waiting for recovery timeout...")
     time.sleep(6)  # Wait for recovery timeout
@@ -100,17 +120,33 @@ def test_circuit_breaker_functionality():
     for i in range(5):
         try:
             result = unreliable_service(fail_probability=0.2)  # Much more reliable
-            logger.info(f"✅ Recovery call {i+1}: {result}")
+            logger.info(f"✅ Recovery call {i + 1}: {result}")
         except CircuitBreakerOpenError:
-            logger.warning(f"🚫 Recovery call {i+1}: Still blocked")
+            logger.warning(f"🚫 Recovery call {i + 1}: Still blocked")
         except Exception as e:
-            logger.warning(f"❌ Recovery call {i+1}: {str(e)}")
+            logger.warning(f"❌ Recovery call {i + 1}: {str(e)}")
 
         time.sleep(0.2)
 
-    # Final statistics
+
+def _log_final_statistics():
+    """Log final circuit breaker statistics"""
     logger.info("\n📊 Final Circuit Breaker Statistics:")
     circuit_manager.log_summary()
+
+
+def test_circuit_breaker_functionality():
+    """Test various circuit breaker scenarios"""
+
+    logger.info("🧪 Starting Circuit Breaker Tests")
+    logger.info("=" * 50)
+
+    # Execute test scenarios
+    _test_normal_operation()
+    _test_unreliable_service()
+    _test_timeout_service()
+    _test_circuit_recovery()
+    _log_final_statistics()
 
 
 def test_protected_driver():

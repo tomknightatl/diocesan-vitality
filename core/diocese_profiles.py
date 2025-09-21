@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Diocese-Specific Extraction Profiles.
+Diocese - Specific Extraction Profiles.
 
 This module contains specialized extraction strategies for dioceses that require
 custom handling due to unique website architectures, dynamic loading patterns,
@@ -18,7 +18,7 @@ logger = get_logger(__name__)
 
 @dataclass
 class DiocesesExtractionProfile:
-    """Profile for diocese-specific extraction strategies."""
+    """Profile for diocese - specific extraction strategies."""
 
     diocese_domain: str
     strategy_type: str  # 'dynamic_loading', 'api_extraction', 'navigation_based', 'custom_selectors'
@@ -47,7 +47,7 @@ class DiocesesExtractionProfile:
 
 
 class DiocesesProfileManager:
-    """Manages diocese-specific extraction profiles."""
+    """Manages diocese - specific extraction profiles."""
 
     def __init__(self):
         """Initialize the profile manager with known diocese profiles."""
@@ -58,7 +58,7 @@ class DiocesesProfileManager:
         """Initialize known diocese profiles based on analysis results."""
         profiles = {}
 
-        # Diocese of Houma-Thibodaux - Dynamic loading with "Just a moment..."
+        # Diocese of Houma - Thibodaux - Dynamic loading with "Just a moment..."
         profiles["htdiocese.org"] = DiocesesExtractionProfile(
             diocese_domain="htdiocese.org",
             strategy_type="dynamic_loading",
@@ -66,11 +66,11 @@ class DiocesesProfileManager:
             javascript_required=True,
             loading_indicators=["just a moment", "loading", "please wait"],
             custom_selectors=[
-                ".entry-title a",
-                '.entry-content a[href*="parish"]',
-                ".wp-block-column a",
-                "article .entry-title a",
-                ".parish-link a",
+                ".entry - title a",
+                '.entry - content a[href*="parish"]',
+                ".wp - block - column a",
+                "article .entry - title a",
+                ".parish - link a",
             ],
             scroll_trigger=True,
             special_instructions="WordPress site with Cloudflare protection and dynamic loading",
@@ -84,15 +84,15 @@ class DiocesesProfileManager:
             javascript_required=True,
             loading_indicators=["just a moment", "loading"],
             custom_selectors=[
-                ".parish-listing a",
-                ".directory-item a",
-                ".church-list a",
+                ".parish - listing a",
+                ".directory - item a",
+                ".church - list a",
                 "article h2 a",
-                '.entry-title a[href*="parish"]',
+                '.entry - title a[href*="parish"]',
             ],
             interaction_required=True,
-            button_clicks=[".load-more", ".show-all", "#expand-parishes"],
-            special_instructions="CMS-based with navigation-heavy structure",
+            button_clicks=[".load - more", ".show - all", "#expand - parishes"],
+            special_instructions="CMS - based with navigation - heavy structure",
         )
 
         # Diocese of Santa Rosa - From previous analysis
@@ -101,14 +101,14 @@ class DiocesesProfileManager:
             strategy_type="navigation_based",
             wait_time=8,
             custom_selectors=[
-                ".parish-directory a",
-                ".parish-list .parish-item a",
-                ".location-list a",
-                "nav .parish-link",
-                ".directory-entry a",
+                ".parish - directory a",
+                ".parish - list .parish - item a",
+                ".location - list a",
+                "nav .parish - link",
+                ".directory - entry a",
             ],
-            content_selectors=[".parish-content", ".main-content"],
-            special_instructions="Navigation-based extraction with hover menus",
+            content_selectors=[".parish - content", ".main - content"],
+            special_instructions="Navigation - based extraction with hover menus",
         )
 
         # Common WordPress dioceses pattern
@@ -118,11 +118,11 @@ class DiocesesProfileManager:
             wait_time=10,
             javascript_required=True,
             custom_selectors=[
-                '.wp-block-group a[href*="parish"]',
-                ".entry-content a",
-                ".wp-block-column a",
-                "article .entry-title a",
-                '.post-content a[href*="church"]',
+                '.wp - block - group a[href*="parish"]',
+                ".entry - content a",
+                ".wp - block - column a",
+                "article .entry - title a",
+                '.post - content a[href*="church"]',
             ],
             loading_indicators=["loading", "just a moment"],
             scroll_trigger=True,
@@ -135,28 +135,34 @@ class DiocesesProfileManager:
             strategy_type="api_extraction",
             wait_time=5,
             api_endpoints=["/api/parishes", "/data/parishes.json", "/parishes/list"],
-            custom_selectors=[".parish-finder .result a", ".location-result a", ".parish-search-result a"],
+            custom_selectors=[
+                ".parish - finder .result a",
+                ".location - result a",
+                ".parish - search - result a",
+            ],
             special_instructions="eCatholic platform with API endpoints",
         )
 
-        # Drupal-based dioceses
+        # Drupal - based dioceses
         profiles["drupal_pattern"] = DiocesesExtractionProfile(
             diocese_domain="*drupal*",
             strategy_type="custom_selectors",
             wait_time=7,
             custom_selectors=[
-                ".view-parish-directory .field-content a",
-                ".node-parish .field-name-title a",
-                ".region-content .field-item a",
-                ".view-content .views-row a",
+                ".view - parish - directory .field - content a",
+                ".node - parish .field - name - title a",
+                ".region - content .field - item a",
+                ".view - content .views - row a",
             ],
-            content_selectors=[".region-content", ".main-container"],
-            special_instructions="Drupal CMS with field-based structure",
+            content_selectors=[".region - content", ".main - container"],
+            special_instructions="Drupal CMS with field - based structure",
         )
 
         return profiles
 
-    def get_profile(self, url: str, diocese_name: str = None) -> Optional[DiocesesExtractionProfile]:
+    def get_profile(
+        self, url: str, diocese_name: str = None
+    ) -> Optional[DiocesesExtractionProfile]:
         """Get the most appropriate profile for a diocese URL."""
         try:
             domain = urlparse(url).netloc.lower()
@@ -179,7 +185,7 @@ class DiocesesProfileManager:
                 logger.info(f"🎯 Using eCatholic pattern for {domain}")
                 return self.profiles["ecatholic_pattern"]
 
-            # Content-based detection (would require page analysis)
+            # Content - based detection (would require page analysis)
             # This could be enhanced with actual content detection
 
             logger.info(f"🎯 No specific profile found for {domain}")
@@ -190,12 +196,14 @@ class DiocesesProfileManager:
             return None
 
     def _is_wordpress_site(self, url: str) -> bool:
-        """Detect if a site is likely WordPress-based."""
+        """Detect if a site is likely WordPress - based."""
         # This could be enhanced with actual WordPress detection
-        wordpress_indicators = ["wp-content", "wp-includes", "wp-admin"]
+        wordpress_indicators = ["wp - content", "wp - includes", "wp - admin"]
         return any(indicator in url.lower() for indicator in wordpress_indicators)
 
-    def create_custom_profile(self, domain: str, analysis_results: Dict) -> DiocesesExtractionProfile:
+    def create_custom_profile(
+        self, domain: str, analysis_results: Dict
+    ) -> DiocesesExtractionProfile:
         """Create a custom profile based on AI analysis results."""
         try:
             # Extract strategy from AI analysis
@@ -205,7 +213,10 @@ class DiocesesProfileManager:
             insights = analysis_results.get("ai_insights", [])
 
             # Determine if JavaScript is required
-            javascript_required = any("javascript" in insight.lower() or "dynamic" in insight.lower() for insight in insights)
+            javascript_required = any(
+                "javascript" in insight.lower() or "dynamic" in insight.lower()
+                for insight in insights
+            )
 
             # Determine loading indicators
             loading_indicators = []
@@ -220,12 +231,14 @@ class DiocesesProfileManager:
                 javascript_required=javascript_required,
                 loading_indicators=loading_indicators,
                 scroll_trigger=javascript_required,
-                special_instructions=f"Auto-generated from AI analysis (confidence: {confidence:.2f})",
+                special_instructions=f"Auto - generated from AI analysis (confidence: {confidence:.2f})",
             )
 
             # Cache the profile for future use
             self.profiles[domain] = profile
-            logger.info(f"🎯 Created custom profile for {domain} with strategy {strategy}")
+            logger.info(
+                f"🎯 Created custom profile for {domain} with strategy {strategy}"
+            )
 
             return profile
 
@@ -237,14 +250,18 @@ class DiocesesProfileManager:
         """Update profile based on extraction success/failure."""
         try:
             if domain in self.profiles:
-                profile = self.profiles[domain]
+                self.profiles[domain]
 
                 # Track success/failure (could be enhanced with persistent storage)
                 if success:
-                    logger.info(f"🎯 Profile for {domain} succeeded with {method_used}")
+                    logger.info(
+                        f"🎯 Profile for {domain} succeeded with {method_used}"
+                    )
                     # Could reduce wait time or mark strategy as preferred
                 else:
-                    logger.warning(f"🎯 Profile for {domain} failed with {method_used}")
+                    logger.warning(
+                        f"🎯 Profile for {domain} failed with {method_used}"
+                    )
                     # Could increase wait time or try alternative strategy
 
         except Exception as e:
@@ -266,7 +283,9 @@ class DiocesesProfileManager:
 
         for profile in self.profiles.values():
             strategy = profile.strategy_type
-            stats["strategy_distribution"][strategy] = stats["strategy_distribution"].get(strategy, 0) + 1
+            stats["strategy_distribution"][strategy] = (
+                stats["strategy_distribution"].get(strategy, 0) + 1
+            )
 
             if profile.javascript_required:
                 stats["javascript_required"] += 1

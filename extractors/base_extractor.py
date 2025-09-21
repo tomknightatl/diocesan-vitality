@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Base Extractor Interface for AI-powered extractors.
+Base Extractor Interface for AI - powered extractors.
 
 This module provides a simple base class that extractors can inherit from.
 It's separate from the more complex BaseExtractor in parish_extraction_core.py
@@ -32,10 +32,11 @@ class BaseExtractor(ABC):
         Returns:
             True if this extractor can handle the page
         """
-        pass
 
     @abstractmethod
-    def extract(self, driver: WebDriver, diocese_name: str, url: str, max_parishes: int = None) -> List[Dict[str, Any]]:
+    def extract(
+        self, driver: WebDriver, diocese_name: str, url: str, max_parishes: int = None
+    ) -> List[Dict[str, Any]]:
         """
         Extract parish data from the page.
 
@@ -48,7 +49,6 @@ class BaseExtractor(ABC):
         Returns:
             List of parish data dictionaries
         """
-        pass
 
     def get_extraction_stats(self) -> Dict[str, Any]:
         """

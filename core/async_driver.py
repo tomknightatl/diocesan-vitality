@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Async WebDriver Manager with concurrent request handling and intelligent rate limiting.
-Provides high-performance parish extraction with connection pooling and queue management.
+Provides high - performance parish extraction with connection pooling and queue management.
 """
 
 import asyncio
@@ -10,18 +10,21 @@ import shutil
 import subprocess
 import threading
 import time
-from collections import defaultdict, deque
+from collections import deque
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Set
 from urllib.parse import urlparse
 
 from selenium import webdriver
-from selenium.common.exceptions import TimeoutException, WebDriverException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
-from core.circuit_breaker import CircuitBreakerConfig, CircuitBreakerOpenError, circuit_breaker
+from core.circuit_breaker import (
+    CircuitBreakerConfig,
+    CircuitBreakerOpenError,
+    circuit_breaker,
+)
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -32,12 +35,12 @@ def _find_chrome_binary():
     """Find the Chrome binary path dynamically based on what's available."""
     # List of possible Chrome binary locations in order of preference
     chrome_binaries = [
-        "/usr/bin/google-chrome",  # Standard Google Chrome on Linux
-        "/usr/bin/chromium-browser",  # Chromium on Raspberry Pi/ARM64
+        "/usr/bin/google - chrome",  # Standard Google Chrome on Linux
+        "/usr/bin/chromium - browser",  # Chromium on Raspberry Pi/ARM64
         "/usr/bin/chromium",  # Alternative Chromium path
         "/opt/google/chrome/chrome",  # Alternative Google Chrome path
-        "google-chrome",  # System PATH fallback
-        "chromium-browser",  # System PATH fallback
+        "google - chrome",  # System PATH fallback
+        "chromium - browser",  # System PATH fallback
         "chromium",  # System PATH fallback
     ]
 
@@ -47,7 +50,10 @@ def _find_chrome_binary():
                 # Absolute path - check if file exists
                 if (
                     shutil.which(binary_path)
-                    or subprocess.run(["test", "-f", binary_path], capture_output=True).returncode == 0
+                    or subprocess.run(
+                        ["test", "-f", binary_path], capture_output=True
+                    ).returncode
+                    == 0
                 ):
                     logger.debug(f"🔍 Found Chrome binary at: {binary_path}")
                     return binary_path
@@ -110,12 +116,15 @@ class DomainRateLimiter:
         with self._lock:
             current_time = time.time()
 
-            # Remove old request times (outside the 1-second window)
+            # Remove old request times (outside the 1 - second window)
             while self.request_times and current_time - self.request_times[0] > 1.0:
                 self.request_times.popleft()
 
             # Check if we're in cooldown
-            if self.in_cooldown and current_time - self.last_request_time < self.config.cooldown_period:
+            if (
+                self.in_cooldown
+                and current_time - self.last_request_time < self.config.cooldown_period
+            ):
                 return False
 
             # Check concurrent limit
@@ -189,12 +198,14 @@ class AsyncWebDriverPool:
             try:
                 driver = await self._create_driver()
                 await self.driver_pool.put(driver)
-                logger.debug(f"✅ Driver {i+1}/{self.pool_size} created")
+                logger.debug(f"✅ Driver {i + 1}/{self.pool_size} created")
             except Exception as e:
-                logger.error(f"❌ Failed to create driver {i+1}: {e}")
+                logger.error(f"❌ Failed to create driver {i + 1}: {e}")
 
         self._initialized = True
-        logger.info(f"🎯 WebDriver pool initialized with {self.driver_pool.qsize()} drivers")
+        logger.info(
+            f"🎯 WebDriver pool initialized with {self.driver_pool.qsize()} drivers"
+        )
 
         # Start background task processor
         asyncio.create_task(self._process_queue())
@@ -203,19 +214,23 @@ class AsyncWebDriverPool:
         """Create a new WebDriver instance"""
         chrome_options = Options()
         chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--window-size=1920,1080")
-        chrome_options.add_argument("--disable-images")
-        chrome_options.add_argument("--disable-javascript")  # Disable JS for faster loading
-        chrome_options.add_argument("--disable-plugins")
-        chrome_options.add_argument("--disable-extensions")
+        chrome_options.add_argument("--no - sandbox")
+        chrome_options.add_argument("--disable - dev - shm - usage")
+        chrome_options.add_argument("--disable - gpu")
+        chrome_options.add_argument("--window - size=1920,1080")
+        chrome_options.add_argument("--disable - images")
+        chrome_options.add_argument(
+            "--disable - javascript"
+        )  # Disable JS for faster loading
+        chrome_options.add_argument("--disable - plugins")
+        chrome_options.add_argument("--disable - extensions")
 
         # Run driver creation in thread pool to avoid blocking
         loop = asyncio.get_event_loop()
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            driver = await loop.run_in_executor(executor, lambda: self._create_chrome_driver(chrome_options))
+            driver = await loop.run_in_executor(
+                executor, lambda: self._create_chrome_driver(chrome_options)
+            )
 
         driver.set_page_load_timeout(self.default_timeout)
         return driver
@@ -233,9 +248,14 @@ class AsyncWebDriverPool:
         except Exception as e:
             global _system_chromedriver_warning_logged
             if not _system_chromedriver_warning_logged:
-                logger.warning(f"System ChromeDriver failed: {e}, falling back to ChromeDriverManager")
+                logger.warning(
+                    f"System ChromeDriver failed: {e}, falling back to ChromeDriverManager"
+                )
                 _system_chromedriver_warning_logged = True
-            return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+            return webdriver.Chrome(
+                service=Service(ChromeDriverManager().install()),
+                options=chrome_options,
+            )
 
     def get_rate_limiter(self, domain: str) -> DomainRateLimiter:
         """Get or create rate limiter for domain"""
@@ -249,15 +269,30 @@ class AsyncWebDriverPool:
                 config = RateLimitConfig(requests_per_second=3.0, max_concurrent=4)
 
             self.domain_rate_limiters[domain] = DomainRateLimiter(config)
-            logger.debug(f"📊 Created rate limiter for {domain}: {config.requests_per_second} req/s")
+            logger.debug(
+                f"📊 Created rate limiter for {domain}: {config.requests_per_second} req/s"
+            )
 
         return self.domain_rate_limiters[domain]
 
     async def submit_request(
-        self, url: str, callback: Callable, *args, priority: int = 1, max_retries: int = 2, **kwargs
+        self,
+        url: str,
+        callback: Callable,
+        *args,
+        priority: int = 1,
+        max_retries: int = 2,
+        **kwargs,
     ) -> Any:
         """Submit a request to the async queue"""
-        task = RequestTask(url=url, callback=callback, args=args, kwargs=kwargs, priority=priority, max_retries=max_retries)
+        task = RequestTask(
+            url=url,
+            callback=callback,
+            args=args,
+            kwargs=kwargs,
+            priority=priority,
+            max_retries=max_retries,
+        )
 
         # Create future for result
         future = asyncio.get_event_loop().create_future()
@@ -266,7 +301,9 @@ class AsyncWebDriverPool:
         await self.request_queue.put((priority, time.time(), task))
         self.stats["queue_size"] = self.request_queue.qsize()
 
-        logger.debug(f"📝 Queued request: {url} (priority: {priority}, queue size: {self.stats['queue_size']})")
+        logger.debug(
+            f"📝 Queued request: {url} (priority: {priority}, queue size: {self.stats['queue_size']})"
+        )
         # Directly await the result instead of returning a Task
         return await self._wait_for_result(future)
 
@@ -280,7 +317,9 @@ class AsyncWebDriverPool:
             try:
                 # Get next task from queue
                 try:
-                    priority, timestamp, task = await asyncio.wait_for(self.request_queue.get(), timeout=1.0)
+                    priority, timestamp, task = await asyncio.wait_for(
+                        self.request_queue.get(), timeout=1.0
+                    )
                 except asyncio.TimeoutError:
                     continue
 
@@ -300,7 +339,9 @@ class AsyncWebDriverPool:
                 logger.error(f"❌ Error in queue processor: {e}")
                 await asyncio.sleep(1)
 
-    async def _execute_request(self, task: RequestTask, rate_limiter: DomainRateLimiter):
+    async def _execute_request(
+        self, task: RequestTask, rate_limiter: DomainRateLimiter
+    ):
         """Execute a single request with circuit breaker protection"""
         driver = None
         success = False
@@ -334,7 +375,9 @@ class AsyncWebDriverPool:
             # Retry logic
             if task.retry_count < task.max_retries:
                 task.retry_count += 1
-                logger.info(f"🔄 Retrying request {task.retry_count}/{task.max_retries}: {task.url}")
+                logger.info(
+                    f"🔄 Retrying request {task.retry_count}/{task.max_retries}: {task.url}"
+                )
                 await self.request_queue.put((task.priority + 1, time.time(), task))
             else:
                 self.stats["failed_requests"] += 1
@@ -352,11 +395,19 @@ class AsyncWebDriverPool:
 
             # Update pool utilization
             if self.pool_size > 0:
-                self.stats["pool_utilization"] = (self.pool_size - self.driver_pool.qsize()) / self.pool_size * 100
+                self.stats["pool_utilization"] = (
+                    (self.pool_size - self.driver_pool.qsize()) / self.pool_size * 100
+                )
 
     @circuit_breaker(
         "async_webdriver_request",
-        CircuitBreakerConfig(failure_threshold=5, recovery_timeout=30, request_timeout=45, max_retries=1, retry_delay=2.0),
+        CircuitBreakerConfig(
+            failure_threshold=5,
+            recovery_timeout=30,
+            request_timeout=45,
+            max_retries=1,
+            retry_delay=2.0,
+        ),
     )
     async def _protected_execute(self, driver, task: RequestTask):
         """Execute request with circuit breaker protection"""
@@ -364,13 +415,19 @@ class AsyncWebDriverPool:
 
         # Execute callback in thread pool to avoid blocking
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            result = await loop.run_in_executor(executor, lambda: task.callback(driver, *task.args, **task.kwargs))
+            result = await loop.run_in_executor(
+                executor, lambda: task.callback(driver, *task.args, **task.kwargs)
+            )
 
         return result
 
-    async def batch_requests(self, requests: List[Dict[str, Any]], batch_size: int = 10) -> List[Any]:
+    async def batch_requests(
+        self, requests: List[Dict[str, Any]], batch_size: int = 10
+    ) -> List[Any]:
         """Submit multiple requests as a batch"""
-        logger.info(f"📦 Processing batch of {len(requests)} requests (batch size: {batch_size})")
+        logger.info(
+            f"📦 Processing batch of {len(requests)} requests (batch size: {batch_size})"
+        )
 
         tasks = []
         for request in requests:
@@ -415,7 +472,9 @@ class AsyncWebDriverPool:
     def log_stats(self):
         """Log comprehensive statistics"""
         stats = self.get_stats()
-        success_rate = (stats["successful_requests"] / max(stats["total_requests"], 1)) * 100
+        success_rate = (
+            stats["successful_requests"] / max(stats["total_requests"], 1)
+        ) * 100
 
         logger.info("📊 Async WebDriver Pool Statistics:")
         logger.info(f"  • Total Requests: {stats['total_requests']}")
@@ -427,7 +486,10 @@ class AsyncWebDriverPool:
         if stats["rate_limiters"]:
             logger.info("  • Rate Limiters:")
             for domain, rl_stats in stats["rate_limiters"].items():
-                logger.info(f"    - {domain}: {rl_stats['active_requests']} active, " f"cooldown: {rl_stats['in_cooldown']}")
+                logger.info(
+                    f"    - {domain}: {rl_stats['active_requests']} active, "
+                    f"cooldown: {rl_stats['in_cooldown']}"
+                )
 
     async def shutdown(self):
         """Shutdown the driver pool"""

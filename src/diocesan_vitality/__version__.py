@@ -2,14 +2,14 @@
 Version information for Diocesan Vitality.
 
 This module provides centralized version management for the entire project.
-Version is automatically updated by semantic-release during CI/CD.
+Version is automatically updated by semantic - release during CI/CD.
 """
 
 import os
 from datetime import datetime
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Tuple
 
-# Version information - updated automatically by semantic-release
+# Version information - updated automatically by semantic - release
 __version__ = "1.0.0"
 __version_info__ = tuple(int(i) for i in __version__.split("."))
 
@@ -22,12 +22,12 @@ BUILD_INFO = {
     "build_date": os.getenv("BUILD_DATE", datetime.utcnow().isoformat()),
     "build_number": os.getenv("GITHUB_RUN_NUMBER", "unknown"),
     "docker_tags": {
-        "backend": f"tomatl/diocesan-vitality:backend-{__version__}",
-        "frontend": f"tomatl/diocesan-vitality:frontend-{__version__}",
-        "pipeline": f"tomatl/diocesan-vitality:pipeline-{__version__}",
+        "backend": f"tomatl/diocesan - vitality:backend-{__version__}",
+        "frontend": f"tomatl/diocesan - vitality:frontend-{__version__}",
+        "pipeline": f"tomatl/diocesan - vitality:pipeline-{__version__}",
     },
-    "registry_url": "https://hub.docker.com/r/tomatl/diocesan-vitality",
-    "release_notes_url": f"https://github.com/tomknightatl/diocesan-vitality/releases/tag/v{__version__}",
+    "registry_url": "https://hub.docker.com/r/tomatl/diocesan - vitality",
+    "release_notes_url": f"https://github.com/tomknightatl/diocesan - vitality/releases/tag/v{__version__}",
 }
 
 

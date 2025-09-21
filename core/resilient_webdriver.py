@@ -5,12 +5,9 @@ Provides automatic recovery from WebDriver failures and connection issues.
 
 import random
 import time
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
-from selenium import webdriver
 from selenium.common.exceptions import (
-    ElementNotInteractableException,
-    NoSuchElementException,
     StaleElementReferenceException,
     TimeoutException,
     WebDriverException,
@@ -19,7 +16,11 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from core.circuit_breaker import CircuitBreakerConfig, CircuitBreakerOpenError, circuit_breaker
+from core.circuit_breaker import (
+    CircuitBreakerConfig,
+    CircuitBreakerOpenError,
+    circuit_breaker,
+)
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -32,7 +33,11 @@ class ResilientWebDriver:
     """
 
     def __init__(
-        self, driver_factory: Callable = None, max_retries: int = 3, base_delay: float = 1.0, max_delay: float = 30.0
+        self,
+        driver_factory: Callable = None,
+        max_retries: int = 3,
+        base_delay: float = 1.0,
+        max_delay: float = 30.0,
     ):
         """
         Initialize resilient WebDriver wrapper.
@@ -107,7 +112,7 @@ class ResilientWebDriver:
         if self._driver:
             try:
                 self._driver.quit()
-            except:
+            except Exception:
                 pass
             self._driver = None
 
@@ -132,53 +137,85 @@ class ResilientWebDriver:
 
         for attempt in range(self.max_retries + 1):
             try:
-                # Use circuit breaker for the operation
-                @circuit_breaker("webdriver_operation", self.circuit_config)
-                def protected_operation():
-                    return operation(self.driver, *args, **kwargs)
-
-                result = protected_operation()
-
-                # Success - reset any failure counters
-                if attempt > 0:
-                    logger.info(f"✅ Operation succeeded after {attempt} retries")
-
+                result = self._execute_protected_operation(operation, args, kwargs)
+                self._handle_retry_success(attempt)
                 return result
 
             except CircuitBreakerOpenError:
-                # Circuit breaker is open - don't retry immediately
-                logger.warning("🚫 Circuit breaker is open - operation blocked")
+                self._handle_circuit_breaker_error()
                 raise
 
             except Exception as error:
                 last_error = error
-
-                # Check if this is the last attempt
-                if attempt == self.max_retries:
-                    logger.error(f"❌ Operation failed after {self.max_retries + 1} attempts: {error}")
+                should_break = self._handle_operation_error(error, attempt)
+                if should_break:
                     break
-
-                # Check if error is recoverable
-                if not self._is_recoverable_error(error):
-                    logger.error(f"❌ Non-recoverable error: {error}")
-                    break
-
-                logger.warning(f"⚠️ Attempt {attempt + 1} failed: {error}")
-
-                # Attempt driver recovery if needed
-                if "connection" in str(error).lower() or "session" in str(error).lower():
-                    if not self._recover_driver():
-                        logger.error("❌ Driver recovery failed")
-                        break
-
-                # Wait before retry with exponential backoff
-                if attempt < self.max_retries:
-                    delay = self._calculate_delay(attempt)
-                    logger.info(f"⏳ Waiting {delay:.1f}s before retry {attempt + 2}")
-                    time.sleep(delay)
 
         # All attempts failed
         raise last_error
+
+    def _execute_protected_operation(
+        self, operation: Callable, args: tuple, kwargs: dict
+    ) -> Any:
+        """Execute operation with circuit breaker protection."""
+
+        @circuit_breaker("webdriver_operation", self.circuit_config)
+        def protected_operation():
+            return operation(self.driver, *args, **kwargs)
+
+        return protected_operation()
+
+    def _handle_retry_success(self, attempt: int):
+        """Handle successful operation after retries."""
+        if attempt > 0:
+            logger.info(f"✅ Operation succeeded after {attempt} retries")
+
+    def _handle_circuit_breaker_error(self):
+        """Handle circuit breaker open error."""
+        logger.warning("🚫 Circuit breaker is open - operation blocked")
+
+    def _handle_operation_error(self, error: Exception, attempt: int) -> bool:
+        """Handle operation error and determine if retry should continue.
+
+        Returns:
+            bool: True if retry loop should break, False to continue
+        """
+        # Check if this is the last attempt
+        if attempt == self.max_retries:
+            logger.error(
+                f"❌ Operation failed after {self.max_retries + 1} attempts: {error}"
+            )
+            return True
+
+        # Check if error is recoverable
+        if not self._is_recoverable_error(error):
+            logger.error(f"❌ Non - recoverable error: {error}")
+            return True
+
+        logger.warning(f"⚠️ Attempt {attempt + 1} failed: {error}")
+
+        # Attempt driver recovery if needed
+        if self._needs_driver_recovery(error):
+            if not self._recover_driver():
+                logger.error("❌ Driver recovery failed")
+                return True
+
+        # Wait before retry with exponential backoff
+        if attempt < self.max_retries:
+            self._wait_before_retry(attempt)
+
+        return False
+
+    def _needs_driver_recovery(self, error: Exception) -> bool:
+        """Check if error indicates need for driver recovery."""
+        error_str = str(error).lower()
+        return "connection" in error_str or "session" in error_str
+
+    def _wait_before_retry(self, attempt: int):
+        """Wait before retry with exponential backoff."""
+        delay = self._calculate_delay(attempt)
+        logger.info(f"⏳ Waiting {delay:.1f}s before retry {attempt + 2}")
+        time.sleep(delay)
 
     def get(self, url: str, timeout: int = 30) -> bool:
         """Navigate to URL with retry logic."""
@@ -250,7 +287,9 @@ class ResilientWebDriver:
 
         def _wait_for_load_operation(driver, timeout):
             wait = WebDriverWait(driver, timeout)
-            wait.until(lambda d: d.execute_script("return document.readyState") == "complete")
+            wait.until(
+                lambda d: d.execute_script("return document.readyState") == "complete"
+            )
             return True
 
         return self.robust_execute(_wait_for_load_operation, timeout)
@@ -275,7 +314,9 @@ class ResilientWebDriver:
         self.quit()
 
 
-def create_resilient_webdriver(driver_factory: Callable, **kwargs) -> ResilientWebDriver:
+def create_resilient_webdriver(
+    driver_factory: Callable, **kwargs
+) -> ResilientWebDriver:
     """
     Factory function to create a resilient WebDriver wrapper.
 

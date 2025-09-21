@@ -9,12 +9,16 @@ advanced bot detection systems that block traditional HTTP requests.
 import logging
 import random
 import time
-from typing import Any, Dict, Optional
+from typing import Optional
 from urllib.parse import urlparse
 
 try:
     from selenium import webdriver
-    from selenium.common.exceptions import TimeoutException, WebDriverException
+    from selenium.common.exceptions import (
+        NoSuchElementException,
+        TimeoutException,
+        WebDriverException,
+    )
     from selenium.webdriver.chrome.options import Options
     from selenium.webdriver.common.by import By
     from selenium.webdriver.support import expected_conditions as EC
@@ -36,7 +40,9 @@ class StealthBrowser:
         self.is_available = SELENIUM_AVAILABLE
 
         if not SELENIUM_AVAILABLE:
-            logger.warning("Selenium not available. Stealth browser functionality disabled.")
+            logger.warning(
+                "Selenium not available. Stealth browser functionality disabled."
+            )
             return
 
         self._setup_driver()
@@ -49,13 +55,13 @@ class StealthBrowser:
         try:
             options = Options()
             options.add_argument("--headless")
-            options.add_argument("--no-sandbox")
-            options.add_argument("--disable-dev-shm-usage")
-            options.add_argument("--disable-blink-features=AutomationControlled")
-            options.add_argument("--disable-extensions")
-            options.add_argument("--disable-plugins")
-            options.add_argument("--disable-images")  # Faster loading
-            options.add_argument("--disable-javascript")  # Prevent detection scripts
+            options.add_argument("--no - sandbox")
+            options.add_argument("--disable - dev - shm - usage")
+            options.add_argument("--disable - blink - features=AutomationControlled")
+            options.add_argument("--disable - extensions")
+            options.add_argument("--disable - plugins")
+            options.add_argument("--disable - images")  # Faster loading
+            options.add_argument("--disable - javascript")  # Prevent detection scripts
 
             # Random user agent
             user_agents = [
@@ -63,21 +69,23 @@ class StealthBrowser:
                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
                 "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
             ]
-            options.add_argument(f"--user-agent={random.choice(user_agents)}")
+            options.add_argument(f"--user - agent={random.choice(user_agents)}")
 
             # Window size randomization
             window_sizes = [(1920, 1080), (1366, 768), (1440, 900), (1536, 864)]
             width, height = random.choice(window_sizes)
-            options.add_argument(f"--window-size={width},{height}")
+            options.add_argument(f"--window - size={width},{height}")
 
             # Experimental options to avoid detection
-            options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            options.add_experimental_option("excludeSwitches", ["enable - automation"])
             options.add_experimental_option("useAutomationExtension", False)
 
             self.driver = webdriver.Chrome(options=options)
 
             # Execute script to hide webdriver property
-            self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+            self.driver.execute_script(
+                "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+            )
 
             # Set timeouts
             self.driver.set_page_load_timeout(30)
@@ -112,11 +120,15 @@ class StealthBrowser:
             self.driver.get(url)
 
             # Wait for page to load
-            WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+            WebDriverWait(self.driver, timeout).until(
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
+            )
 
             # Random scroll to mimic human behavior
             if random.random() < 0.3:  # 30% chance
-                self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2);")
+                self.driver.execute_script(
+                    "window.scrollTo(0, document.body.scrollHeight/2);"
+                )
                 time.sleep(random.uniform(0.5, 1.5))
 
             return self.driver.page_source
@@ -150,7 +162,9 @@ class StealthBrowser:
 
         try:
             # Find navigation links
-            links = self.driver.find_elements(By.CSS_SELECTOR, "nav a, .nav a, .navigation a, .menu a")
+            links = self.driver.find_elements(
+                By.CSS_SELECTOR, "nav a, .nav a, .navigation a, .menu a"
+            )
 
             discovered_urls = []
             base_domain = urlparse(url).netloc
@@ -160,7 +174,7 @@ class StealthBrowser:
                     href = link.get_attribute("href")
                     if href and base_domain in href:
                         discovered_urls.append(href)
-                except:
+                except (NoSuchElementException, WebDriverException):
                     continue
 
             return list(set(discovered_urls))

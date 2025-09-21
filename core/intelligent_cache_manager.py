@@ -2,8 +2,8 @@
 """
 Intelligent Cache Manager with TTL Management
 
-This module implements a sophisticated caching system with Time-To-Live (TTL)
-management, content-aware expiration, and intelligent invalidation to
+This module implements a sophisticated caching system with Time - To - Live (TTL)
+management, content - aware expiration, and intelligent invalidation to
 dramatically reduce redundant requests and improve extraction performance.
 """
 
@@ -16,9 +16,8 @@ import threading
 import time
 from collections import OrderedDict, defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Optional
 from urllib.parse import urlparse
 
 from core.logger import get_logger
@@ -102,10 +101,16 @@ class CacheStatistics:
 
 class IntelligentCacheManager:
     """
-    Advanced caching system with intelligent TTL management and content-aware strategies.
+    Advanced caching system with intelligent TTL management and content - aware strategies.
     """
 
-    def __init__(self, max_size: int = 1000, max_memory_mb: int = 500, default_ttl: float = 3600.0, cache_dir: str = None):
+    def __init__(
+        self,
+        max_size: int = 1000,
+        max_memory_mb: int = 500,
+        default_ttl: float = 3600.0,
+        cache_dir: str = None,
+    ):
         self.max_size = max_size
         self.max_memory_bytes = max_memory_mb * 1024 * 1024
         self.default_ttl = default_ttl
@@ -142,7 +147,9 @@ class IntelligentCacheManager:
         # Ensure cache directory exists
         os.makedirs(self.cache_dir, exist_ok=True)
 
-        logger.info(f"💾 Intelligent Cache Manager initialized (max_size: {max_size}, max_memory: {max_memory_mb}MB)")
+        logger.info(
+            f"💾 Intelligent Cache Manager initialized (max_size: {max_size}, max_memory: {max_memory_mb}MB)"
+        )
 
     def get(self, key: str, default: Any = None) -> Any:
         """
@@ -172,21 +179,25 @@ class IntelligentCacheManager:
             # Move to end (most recently used)
             self._cache.move_to_end(key)
 
-            # Probabilistic refresh for soon-to-expire items
+            # Probabilistic refresh for soon - to - expire items
             if self._should_probabilistic_refresh(entry):
                 logger.debug(f"💾 Marking {key} for probabilistic refresh")
                 entry.metadata["needs_refresh"] = True
 
             self.stats.cache_hits += 1
-            self.stats.avg_lookup_time = self._update_avg_lookup_time(time.time() - start_time)
+            self.stats.avg_lookup_time = self._update_avg_lookup_time(
+                time.time() - start_time
+            )
 
-            logger.debug(f"💾 Cache hit for {key} (age: {entry.age:.0f}s, TTL: {entry.ttl:.0f}s)")
+            logger.debug(
+                f"💾 Cache hit for {key} (age: {entry.age:.0f}s, TTL: {entry.ttl:.0f}s)"
+            )
 
             # Decompress if needed
             if entry.compression and hasattr(entry.value, "decode"):
                 try:
                     return pickle.loads(gzip.decompress(entry.value))
-                except:
+                except (pickle.PickleError, gzip.BadGzipFile, Exception):
                     return entry.value
             else:
                 return entry.value
@@ -206,7 +217,9 @@ class IntelligentCacheManager:
         try:
             with self._lock:
                 # Determine TTL
-                effective_ttl = ttl or self._calculate_intelligent_ttl(key, content_type, value)
+                effective_ttl = ttl or self._calculate_intelligent_ttl(
+                    key, content_type, value
+                )
 
                 # Determine compression
                 if compress is None:
@@ -259,7 +272,9 @@ class IntelligentCacheManager:
                 # Maintain cache size limits
                 self._enforce_size_limits()
 
-                logger.debug(f"💾 Cached {key} (TTL: {effective_ttl:.0f}s, compressed: {compress})")
+                logger.debug(
+                    f"💾 Cached {key} (TTL: {effective_ttl:.0f}s, compressed: {compress})"
+                )
                 return True
 
         except Exception as e:
@@ -292,7 +307,9 @@ class IntelligentCacheManager:
 
             self.stats.invalidations += count
 
-        logger.info(f"💾 Invalidated {count} cache entries matching pattern: {pattern}")
+        logger.info(
+            f"💾 Invalidated {count} cache entries matching pattern: {pattern}"
+        )
         return count
 
     def invalidate_by_content_type(self, content_type: ContentType) -> int:
@@ -300,7 +317,11 @@ class IntelligentCacheManager:
         count = 0
 
         with self._lock:
-            keys_to_remove = [key for key, entry in self._cache.items() if entry.content_type == content_type]
+            keys_to_remove = [
+                key
+                for key, entry in self._cache.items()
+                if entry.content_type == content_type
+            ]
 
             for key in keys_to_remove:
                 self._remove_entry(key)
@@ -317,7 +338,11 @@ class IntelligentCacheManager:
         current_time = time.time()
 
         with self._lock:
-            keys_to_remove = [key for key, entry in self._cache.items() if current_time > entry.expires_at]
+            keys_to_remove = [
+                key
+                for key, entry in self._cache.items()
+                if current_time > entry.expires_at
+            ]
 
             for key in keys_to_remove:
                 self._remove_entry(key)
@@ -381,59 +406,87 @@ class IntelligentCacheManager:
                 "total_size_mb": self.stats.total_size_bytes / (1024 * 1024),
                 "avg_lookup_time_ms": self.stats.avg_lookup_time * 1000,
                 "hit_rate_by_type": hit_rate_by_type,
-                "memory_usage_percent": (self.stats.total_size_bytes / self.max_memory_bytes) * 100,
+                "memory_usage_percent": (
+                    self.stats.total_size_bytes / self.max_memory_bytes
+                )
+                * 100,
             }
 
-    def _calculate_intelligent_ttl(self, key: str, content_type: ContentType, value: Any) -> float:
+    def _calculate_intelligent_ttl(
+        self, key: str, content_type: ContentType, value: Any
+    ) -> float:
         """Calculate intelligent TTL based on content analysis."""
         base_ttl = self.ttl_configs.get(content_type, self.default_ttl)
+        multiplier = self._calculate_content_multiplier(content_type, key, value)
+        domain_multiplier = self._calculate_domain_multiplier(key)
+        return base_ttl * multiplier * domain_multiplier
 
-        # Adjust TTL based on content characteristics
-        multiplier = 1.0
-
+    def _calculate_content_multiplier(
+        self, content_type: ContentType, key: str, value: Any
+    ) -> float:
+        """Calculate TTL multiplier based on content type and characteristics."""
         if content_type == ContentType.HTML_PAGE:
-            # Analyze page content for schedule indicators
-            if isinstance(value, str):
-                content_lower = value.lower()
-
-                # Pages with schedule data should be cached longer
-                schedule_indicators = ["schedule", "times", "mass", "confession", "adoration"]
-                if any(indicator in content_lower for indicator in schedule_indicators):
-                    multiplier = 2.0
-
-                # Static pages can be cached longer
-                if "last-modified" in content_lower or "static" in key:
-                    multiplier = 3.0
-
-                # Dynamic pages should expire faster
-                elif any(indicator in content_lower for indicator in ["javascript", "ajax", "dynamic"]):
-                    multiplier = 0.5
-
+            return self._calculate_html_page_multiplier(key, value)
         elif content_type == ContentType.SCHEDULE_DATA:
-            # Schedule data from reliable sources can be cached longer
-            if isinstance(value, dict) and value.get("confidence", 0) > 0.8:
-                multiplier = 1.5
-
+            return self._calculate_schedule_data_multiplier(value)
         elif content_type == ContentType.API_RESPONSE:
-            # API responses vary by endpoint
-            if "parishes" in key or "dioceses" in key:
-                multiplier = 2.0  # Parish/diocese data is relatively stable
+            return self._calculate_api_response_multiplier(key)
+        return 1.0
 
-        # Domain-based adjustments
+    def _calculate_html_page_multiplier(self, key: str, value: Any) -> float:
+        """Calculate multiplier for HTML page content."""
+        if not isinstance(value, str):
+            return 1.0
+
+        content_lower = value.lower()
+
+        # Static pages can be cached longer
+        if "last - modified" in content_lower or "static" in key:
+            return 3.0
+
+        # Pages with schedule data should be cached longer
+        schedule_indicators = ["schedule", "times", "mass", "confession", "adoration"]
+        if any(indicator in content_lower for indicator in schedule_indicators):
+            return 2.0
+
+        # Dynamic pages should expire faster
+        dynamic_indicators = ["javascript", "ajax", "dynamic"]
+        if any(indicator in content_lower for indicator in dynamic_indicators):
+            return 0.5
+
+        return 1.0
+
+    def _calculate_schedule_data_multiplier(self, value: Any) -> float:
+        """Calculate multiplier for schedule data based on confidence."""
+        if isinstance(value, dict) and value.get("confidence", 0) > 0.8:
+            return 1.5
+        return 1.0
+
+    def _calculate_api_response_multiplier(self, key: str) -> float:
+        """Calculate multiplier for API responses based on endpoint type."""
+        if "parishes" in key or "dioceses" in key:
+            return 2.0  # Parish/diocese data is relatively stable
+        return 1.0
+
+    def _calculate_domain_multiplier(self, key: str) -> float:
+        """Calculate TTL multiplier based on domain reliability."""
         parsed_key = urlparse(key) if key.startswith("http") else None
-        if parsed_key:
-            domain = parsed_key.netloc.lower()
+        if not parsed_key:
+            return 1.0
 
-            # Reliable domains can have longer TTLs
-            reliable_domains = ["archatl.com", "wordpress.com", "squarespace.com"]
-            if any(reliable in domain for reliable in reliable_domains):
-                multiplier *= 1.3
+        domain = parsed_key.netloc.lower()
 
-            # Dynamic domains should have shorter TTLs
-            elif any(dynamic in domain for dynamic in ["wix.com", "weebly.com"]):
-                multiplier *= 0.7
+        # Reliable domains can have longer TTLs
+        reliable_domains = ["archatl.com", "wordpress.com", "squarespace.com"]
+        if any(reliable in domain for reliable in reliable_domains):
+            return 1.3
 
-        return base_ttl * multiplier
+        # Dynamic domains should have shorter TTLs
+        dynamic_domains = ["wix.com", "weebly.com"]
+        if any(dynamic in domain for dynamic in dynamic_domains):
+            return 0.7
+
+        return 1.0
 
     def _should_compress(self, value: Any, content_type: ContentType) -> bool:
         """Determine if value should be compressed."""
@@ -442,7 +495,7 @@ class IntelligentCacheManager:
         if size < 1024:  # Less than 1KB
             return False
 
-        # Compress text-heavy content
+        # Compress text - heavy content
         if content_type in [ContentType.HTML_PAGE, ContentType.API_RESPONSE]:
             return True
 
@@ -463,7 +516,9 @@ class IntelligentCacheManager:
 
         # Calculate probability based on how close to expiry
         expiry_factor = 1 - (time_until_expiry / entry.ttl)
-        base_probability = self.refresh_probability_configs.get(entry.content_type, 0.1)
+        base_probability = self.refresh_probability_configs.get(
+            entry.content_type, 0.1
+        )
 
         # Increase probability for frequently accessed items
         access_factor = min(entry.access_count / 10.0, 2.0)  # Max 2x multiplier
@@ -478,11 +533,13 @@ class IntelligentCacheManager:
         """Calculate hash for content change detection."""
         try:
             if isinstance(value, str):
-                content = value.encode("utf-8")
+                content = value.encode("utf - 8")
             elif isinstance(value, bytes):
                 content = value
             else:
-                content = json.dumps(value, sort_keys=True, default=str).encode("utf-8")
+                content = json.dumps(value, sort_keys=True, default=str).encode(
+                    "utf - 8"
+                )
 
             return hashlib.md5(content).hexdigest()
         except Exception:
@@ -492,7 +549,7 @@ class IntelligentCacheManager:
         """Calculate approximate size of value in bytes."""
         try:
             if isinstance(value, str):
-                return len(value.encode("utf-8"))
+                return len(value.encode("utf - 8"))
             elif isinstance(value, bytes):
                 return len(value)
             else:
@@ -503,7 +560,10 @@ class IntelligentCacheManager:
     def _enforce_size_limits(self):
         """Enforce cache size and memory limits."""
         # Memory limit check
-        while self.stats.total_size_bytes > self.max_memory_bytes or len(self._cache) > self.max_size:
+        while (
+            self.stats.total_size_bytes > self.max_memory_bytes
+            or len(self._cache) > self.max_size
+        ):
 
             if not self._cache:
                 break
@@ -527,7 +587,13 @@ class IntelligentCacheManager:
         else:
             return alpha * lookup_time + (1 - alpha) * self.stats.avg_lookup_time
 
-    def create_url_cache_key(self, url: str, method: str = "GET", headers: Dict[str, str] = None, params: Dict = None) -> str:
+    def create_url_cache_key(
+        self,
+        url: str,
+        method: str = "GET",
+        headers: Dict[str, str] = None,
+        params: Dict = None,
+    ) -> str:
         """Create consistent cache key for URL requests."""
         key_parts = [method.upper(), url]
 
@@ -536,18 +602,25 @@ class IntelligentCacheManager:
             key_parts.append(json.dumps(sorted_params, sort_keys=True))
 
         if headers:
-            # Only include cache-relevant headers
+            # Only include cache - relevant headers
             cache_headers = {
-                k.lower(): v for k, v in headers.items() if k.lower() in ["accept", "accept-language", "user-agent"]
+                k.lower(): v
+                for k, v in headers.items()
+                if k.lower() in ["accept", "accept - language", "user - agent"]
             }
             if cache_headers:
                 key_parts.append(json.dumps(cache_headers, sort_keys=True))
 
         key = "|".join(key_parts)
-        return hashlib.md5(key.encode("utf-8")).hexdigest()
+        return hashlib.md5(key.encode("utf - 8")).hexdigest()
 
     def cached_request(
-        self, url: str, fetch_func: Callable, ttl: float = None, content_type: ContentType = ContentType.HTML_PAGE, **kwargs
+        self,
+        url: str,
+        fetch_func: Callable,
+        ttl: float = None,
+        content_type: ContentType = ContentType.HTML_PAGE,
+        **kwargs,
     ) -> Any:
         """
         Cached wrapper for HTTP requests.
@@ -595,7 +668,11 @@ class IntelligentCacheManager:
                 filepath = os.path.join(self.cache_dir, "cache_snapshot.pkl")
 
             with self._lock:
-                cache_data = {"entries": dict(self._cache), "statistics": self.stats, "timestamp": time.time()}
+                cache_data = {
+                    "entries": dict(self._cache),
+                    "statistics": self.stats,
+                    "timestamp": time.time(),
+                }
 
                 with open(filepath, "wb") as f:
                     pickle.dump(cache_data, f)
@@ -651,7 +728,9 @@ class IntelligentCacheManager:
 _global_cache_manager = None
 
 
-def get_cache_manager(max_size: int = 1000, max_memory_mb: int = 500) -> IntelligentCacheManager:
+def get_cache_manager(
+    max_size: int = 1000, max_memory_mb: int = 500
+) -> IntelligentCacheManager:
     """Get global cache manager instance."""
     global _global_cache_manager
     if _global_cache_manager is None:
@@ -659,7 +738,11 @@ def get_cache_manager(max_size: int = 1000, max_memory_mb: int = 500) -> Intelli
     return _global_cache_manager
 
 
-def cached(ttl: float = None, content_type: ContentType = ContentType.HTML_PAGE, key_func: Callable = None):
+def cached(
+    ttl: float = None,
+    content_type: ContentType = ContentType.HTML_PAGE,
+    key_func: Callable = None,
+):
     """Decorator for caching function results."""
 
     def decorator(func: Callable) -> Callable:

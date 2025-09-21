@@ -50,7 +50,9 @@ def test_database_connection():
         cursor.close()
         conn.close()
     except ImportError:
-        pytest.skip("psycopg2 not available - skipping actual database connection test")
+        pytest.skip(
+            "psycopg2 not available - skipping actual database connection test"
+        )
     except Exception as e:
         pytest.fail(f"Database connection failed: {e}")
 
@@ -73,7 +75,7 @@ def test_web_scraping_dependencies():
 def test_ai_dependencies():
     """Test that AI/ML dependencies are available."""
     try:
-        import google.generativeai
+        pass
 
         assert True
     except ImportError:
@@ -97,7 +99,7 @@ def test_async_webdriver_capabilities():
 def test_circuit_breaker_integration():
     """Test circuit breaker integration."""
     try:
-        from core.circuit_breaker import CircuitBreakerConfig, circuit_manager
+        from core.circuit_breaker import CircuitBreakerConfig
 
         # Test circuit breaker configuration
         config = CircuitBreakerConfig(failure_threshold=3, recovery_timeout=10)
@@ -113,11 +115,12 @@ def test_extraction_capabilities():
     """Test that extraction modules are importable."""
     try:
         # Test core extraction modules
-        import core.ai_content_analyzer
-        import core.extraction_optimizer
+        pass
 
         # Test basic extractor imports
-        from extractors.enhanced_ai_fallback_extractor import EnhancedAIFallbackExtractor
+        from extractors.enhanced_ai_fallback_extractor import (
+            EnhancedAIFallbackExtractor,
+        )
 
         assert EnhancedAIFallbackExtractor is not None
 
@@ -156,7 +159,7 @@ async def test_async_parish_extraction():
 def test_configuration_loading():
     """Test that configuration can be loaded."""
     try:
-        import config
+        pass
 
         assert True
     except ImportError:

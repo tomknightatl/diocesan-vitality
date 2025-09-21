@@ -4,7 +4,6 @@ HTTP Client with connection pooling for improved performance.
 Provides reusable session management for all web scraping operations.
 """
 
-import time
 from typing import Any, Dict, Optional
 
 import requests
@@ -52,7 +51,11 @@ class HTTPClientPool:
         )
 
         # Configure connection pooling
-        adapter = HTTPAdapter(pool_connections=pool_connections, pool_maxsize=pool_maxsize, max_retries=retry_strategy)
+        adapter = HTTPAdapter(
+            pool_connections=pool_connections,
+            pool_maxsize=pool_maxsize,
+            max_retries=retry_strategy,
+        )
 
         self.session.mount("http://", adapter)
         self.session.mount("https://", adapter)
@@ -60,21 +63,27 @@ class HTTPClientPool:
         # Set default headers for web scraping
         self.session.headers.update(
             {
-                "User-Agent": (
+                "User - Agent": (
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                     "AppleWebKit/537.36 (KHTML, like Gecko) "
                     "Chrome/58.0.3029.110 Safari/537.3"
                 ),
-                "Accept-Language": "en-US,en;q=0.9",
-                "Accept-Encoding": "gzip, deflate",
-                "Connection": "keep-alive",
+                "Accept - Language": "en - US,en;q=0.9",
+                "Accept - Encoding": "gzip, deflate",
+                "Connection": "keep - alive",
             }
         )
 
-        logger.info(f"🔗 HTTP client initialized with pool_size={pool_maxsize}, max_retries={max_retries}")
+        logger.info(
+            f"🔗 HTTP client initialized with pool_size={pool_maxsize}, max_retries={max_retries}"
+        )
 
     def get(
-        self, url: str, headers: Optional[Dict[str, str]] = None, timeout: Optional[int] = None, **kwargs
+        self,
+        url: str,
+        headers: Optional[Dict[str, str]] = None,
+        timeout: Optional[int] = None,
+        **kwargs,
     ) -> requests.Response:
         """
         GET request with connection pooling and retry logic.
@@ -99,7 +108,9 @@ class HTTPClientPool:
 
         try:
             logger.debug(f"🌐 GET request: {url}")
-            response = self.session.get(url, headers=request_headers, timeout=request_timeout, **kwargs)
+            response = self.session.get(
+                url, headers=request_headers, timeout=request_timeout, **kwargs
+            )
             response.raise_for_status()
             logger.debug(f"✅ GET success: {url} (status: {response.status_code})")
             return response
@@ -139,7 +150,14 @@ class HTTPClientPool:
 
         try:
             logger.debug(f"📤 POST request: {url}")
-            response = self.session.post(url, data=data, json=json, headers=request_headers, timeout=request_timeout, **kwargs)
+            response = self.session.post(
+                url,
+                data=data,
+                json=json,
+                headers=request_headers,
+                timeout=request_timeout,
+                **kwargs,
+            )
             response.raise_for_status()
             logger.debug(f"✅ POST success: {url} (status: {response.status_code})")
             return response

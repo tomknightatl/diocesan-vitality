@@ -13,8 +13,9 @@ from difflib import SequenceMatcher
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(project_root)
 
-from core.db import get_supabase_client
-from core.logger import get_logger
+# These imports must come after path manipulation  # noqa: E402
+from core.db import get_supabase_client  # noqa: E402
+from core.logger import get_logger  # noqa: E402
 
 logger = get_logger(__name__)
 
@@ -22,7 +23,7 @@ logger = get_logger(__name__)
 def get_expected_parishes():
     """Hardcoded list of expected parishes for Diocese 2002"""
     return [
-        ("Saint Thomas Syro-Malabar Forane Catholic Church", "Orange"),
+        ("Saint Thomas Syro - Malabar Forane Catholic Church", "Orange"),
         ("Saint John Maron Catholic Church", "Orange"),
         ("Saint John Henry Newman Catholic Church", "Irvine"),
         ("Saint George Chaldean Catholic Church", "Santa Ana"),
@@ -101,7 +102,12 @@ def get_extracted_parishes():
     supabase = get_supabase_client()
 
     try:
-        response = supabase.table("Parishes").select('Name, City, "Street Address"').eq("diocese_id", 2002).execute()
+        response = (
+            supabase.table("Parishes")
+            .select('Name, City, "Street Address"')
+            .eq("diocese_id", 2002)
+            .execute()
+        )
 
         extracted_parishes = []
         for parish in response.data:
@@ -110,7 +116,9 @@ def get_extracted_parishes():
             address = parish["Street Address"] if parish["Street Address"] else ""
             extracted_parishes.append((name, city, address))
 
-        logger.info(f"🔍 Found {len(extracted_parishes)} extracted parishes for Diocese ID 2002")
+        logger.info(
+            f"🔍 Found {len(extracted_parishes)} extracted parishes for Diocese ID 2002"
+        )
         return extracted_parishes
 
     except Exception as e:
@@ -173,7 +181,12 @@ def find_best_match(target_name, target_city, extracted_list):
 
         if combined_score > best_score and combined_score > 0.6:  # Minimum threshold
             best_score = combined_score
-            best_match = (extracted_name, extracted_city, extracted_address, combined_score)
+            best_match = (
+                extracted_name,
+                extracted_city,
+                extracted_address,
+                combined_score,
+            )
 
     return best_match
 
@@ -186,7 +199,9 @@ def calculate_accuracy():
     extracted_parishes = get_extracted_parishes()
 
     if not extracted_parishes:
-        logger.warning("⚠️ No extracted parishes found. The extraction may not have completed yet.")
+        logger.warning(
+            "⚠️ No extracted parishes found. The extraction may not have completed yet."
+        )
         return None
 
     total_expected = len(expected_parishes)
@@ -201,7 +216,11 @@ def calculate_accuracy():
         match = find_best_match(expected_name, expected_city, extracted_parishes)
         if match:
             matches.append(
-                {"expected": (expected_name, expected_city), "found": (match[0], match[1], match[2]), "score": match[3]}
+                {
+                    "expected": (expected_name, expected_city),
+                    "found": (match[0], match[1], match[2]),
+                    "score": match[3],
+                }
             )
             used_extracted.add((match[0], match[1], match[2]))
         else:
@@ -220,7 +239,11 @@ def calculate_accuracy():
 
     precision = true_positives / total_extracted if total_extracted > 0 else 0
     recall = true_positives / total_expected if total_expected > 0 else 0
-    f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+    f1_score = (
+        2 * (precision * recall) / (precision + recall)
+        if (precision + recall) > 0
+        else 0
+    )
     accuracy = true_positives / total_expected if total_expected > 0 else 0
 
     return {
@@ -242,7 +265,9 @@ def calculate_accuracy():
 def generate_report(metrics):
     """Generate accuracy report"""
     if not metrics:
-        return "❌ No accuracy metrics available - extraction may not have completed yet."
+        return (
+            "❌ No accuracy metrics available - extraction may not have completed yet."
+        )
 
     report = []
     report.append("=" * 80)
@@ -262,19 +287,23 @@ def generate_report(metrics):
     report.append(f"🎯 Accuracy: {metrics['accuracy']:.1%}")
     report.append(f"🎯 Precision: {metrics['precision']:.1%}")
     report.append(f"🎯 Recall: {metrics['recall']:.1%}")
-    report.append(f"🎯 F1-Score: {metrics['f1_score']:.1%}")
+    report.append(f"🎯 F1 - Score: {metrics['f1_score']:.1%}")
     report.append("")
 
     if metrics["matches"]:
         report.append("✅ CORRECTLY FOUND PARISHES:")
         report.append("-" * 40)
-        for match in sorted(metrics["matches"], key=lambda x: x["score"], reverse=True):
+        for match in sorted(
+            metrics["matches"], key=lambda x: x["score"], reverse=True
+        ):
             expected_name, expected_city = match["expected"]
             found_name, found_city, found_address = match["found"]
             score = match["score"]
             report.append(f"• {expected_name} ({expected_city})")
             if score < 0.95:  # Show details for imperfect matches
-                report.append(f"  ↳ Found as: {found_name} ({found_city}) [Match: {score:.1%}]")
+                report.append(
+                    f"  ↳ Found as: {found_name} ({found_city}) [Match: {score:.1%}]"
+                )
         report.append("")
 
     if metrics["missing"]:
@@ -315,7 +344,8 @@ def main():
         # Save report
         project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
         report_file = os.path.join(
-            project_root, f"diocese_2002_accuracy_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+            project_root,
+            f"diocese_2002_accuracy_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
         )
         with open(report_file, "w") as f:
             f.write(report)

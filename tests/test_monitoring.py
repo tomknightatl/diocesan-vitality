@@ -2,7 +2,6 @@
 """
 Test script to verify monitoring API integration
 """
-import json
 import time
 from datetime import datetime, timezone
 
@@ -26,7 +25,9 @@ class MonitoringClient:
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "parish_id": parish_id,
             }
-            response = self.session.post(f"{self.base_url}/api/monitoring/log", json=data)
+            response = self.session.post(
+                f"{self.base_url}/api/monitoring/log", json=data
+            )
             print(f"✅ Sent log: {message} (Status: {response.status_code})")
             return True
         except Exception as e:
@@ -54,8 +55,12 @@ class MonitoringClient:
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "started_at": datetime.now(timezone.utc).isoformat(),
             }
-            response = self.session.post(f"{self.base_url}/api/monitoring/extraction_status", json=data)
-            print(f"✅ Updated extraction status: {status} (Status: {response.status_code})")
+            response = self.session.post(
+                f"{self.base_url}/api/monitoring/extraction_status", json=data
+            )
+            print(
+                f"✅ Updated extraction status: {status} (Status: {response.status_code})"
+            )
             return True
         except Exception as e:
             print(f"❌ Failed to update extraction status: {e}")
@@ -86,7 +91,9 @@ def main():
         time.sleep(1)
 
         # Send progress log
-        monitor.send_log(f"🔄 Processing parish {i}/5: test-parish-{i}.org", parish_id=3000 + i)
+        monitor.send_log(
+            f"🔄 Processing parish {i}/5: test - parish-{i}.org", parish_id=3000 + i
+        )
 
         # Update status
         monitor.update_extraction_status(
@@ -99,7 +106,9 @@ def main():
         )
 
         if i == 3:
-            monitor.send_log("✅ Successfully extracted schedule data", "INFO", parish_id=3003)
+            monitor.send_log(
+                "✅ Successfully extracted schedule data", "INFO", parish_id=3003
+            )
 
     # Test 4: Complete the test
     monitor.send_log("✅ Test completed successfully")
@@ -112,7 +121,9 @@ def main():
         progress_percentage=100.0,
     )
 
-    print("🎉 Monitoring test completed! Check the dashboard at http://127.0.0.1:5173/dashboard")
+    print(
+        "🎉 Monitoring test completed! Check the dashboard at http://127.0.0.1:5173/dashboard"
+    )
 
 
 if __name__ == "__main__":

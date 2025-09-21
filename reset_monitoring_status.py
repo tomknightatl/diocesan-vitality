@@ -4,12 +4,11 @@ Utility script to reset the monitoring dashboard status when extraction processe
 get stuck or crash without properly updating their status.
 
 Usage:
-    python reset_monitoring_status.py [--backend-url http://localhost:8000]
+    python reset_monitoring_status.py [--backend - url http://localhost:8000]
 """
 
 import argparse
 import sys
-from datetime import datetime
 
 import requests
 
@@ -51,8 +50,16 @@ def get_current_status(backend_url):
 
 def main():
     parser = argparse.ArgumentParser(description="Reset monitoring dashboard status")
-    parser.add_argument("--backend-url", default="http://localhost:8000", help="Backend URL (default: http://localhost:8000)")
-    parser.add_argument("--check-only", action="store_true", help="Only check current status, don't reset")
+    parser.add_argument(
+        "--backend - url",
+        default="http://localhost:8000",
+        help="Backend URL (default: http://localhost:8000)",
+    )
+    parser.add_argument(
+        "--check - only",
+        action="store_true",
+        help="Only check current status, don't reset",
+    )
 
     args = parser.parse_args()
 
@@ -63,10 +70,12 @@ def main():
         current_status = get_current_status(args.backend_url)
         extraction_status = current_status.get("extraction_status", {})
 
-        print(f"\nCurrent extraction status:")
+        print("\nCurrent extraction status:")
         print(f"  Status: {extraction_status.get('status', 'unknown')}")
         print(f"  Diocese: {extraction_status.get('current_diocese', 'None')}")
-        print(f"  Parishes processed: {extraction_status.get('parishes_processed', 0)}")
+        print(
+            f"  Parishes processed: {extraction_status.get('parishes_processed', 0)}"
+        )
         print(f"  Started at: {extraction_status.get('started_at', 'None')}")
 
         if args.check_only:
@@ -77,7 +86,7 @@ def main():
             return
 
         # Reset status
-        print(f"\n🔄 Resetting extraction status to idle...")
+        print("\n🔄 Resetting extraction status to idle...")
         result = reset_extraction_status(args.backend_url)
 
         if result.get("status") == "success":

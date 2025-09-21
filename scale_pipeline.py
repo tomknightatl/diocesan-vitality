@@ -21,9 +21,9 @@ logger = get_logger(__name__)
 class PipelineScaler:
     """Utility for scaling pipeline deployment"""
 
-    def __init__(self, namespace: str = "diocesan-vitality"):
+    def __init__(self, namespace: str = "diocesan - vitality"):
         self.namespace = namespace
-        self.deployment_name = "pipeline-deployment"
+        self.deployment_name = "pipeline - deployment"
         self.monitor = PipelineMonitor()
 
     def get_current_replicas(self) -> Optional[int]:
@@ -60,7 +60,15 @@ class PipelineScaler:
             logger.info(f"🔧 Scaling {self.deployment_name} to {replicas} replicas...")
 
             result = subprocess.run(
-                ["kubectl", "scale", "deployment", self.deployment_name, f"--replicas={replicas}", "-n", self.namespace],
+                [
+                    "kubectl",
+                    "scale",
+                    "deployment",
+                    self.deployment_name,
+                    f"--replicas={replicas}",
+                    "-n",
+                    self.namespace,
+                ],
                 capture_output=True,
                 text=True,
                 check=True,
@@ -77,7 +85,9 @@ class PipelineScaler:
 
     def wait_for_scaling(self, target_replicas: int, timeout: int = 300):
         """Wait for scaling to complete"""
-        logger.info(f"⏳ Waiting for scaling to complete (target: {target_replicas} replicas)...")
+        logger.info(
+            f"⏳ Waiting for scaling to complete (target: {target_replicas} replicas)..."
+        )
 
         start_time = time.time()
         while time.time() - start_time < timeout:
@@ -99,13 +109,19 @@ class PipelineScaler:
                     check=True,
                 )
 
-                ready_replicas = int(result.stdout.strip()) if result.stdout.strip() else 0
+                ready_replicas = (
+                    int(result.stdout.strip()) if result.stdout.strip() else 0
+                )
 
                 if ready_replicas == target_replicas:
-                    logger.info(f"✅ Scaling completed! {ready_replicas}/{target_replicas} replicas ready")
+                    logger.info(
+                        f"✅ Scaling completed! {ready_replicas}/{target_replicas} replicas ready"
+                    )
                     return True
 
-                logger.info(f"⏳ Scaling in progress: {ready_replicas}/{target_replicas} replicas ready")
+                logger.info(
+                    f"⏳ Scaling in progress: {ready_replicas}/{target_replicas} replicas ready"
+                )
                 time.sleep(10)
 
             except (subprocess.CalledProcessError, ValueError) as e:
@@ -115,7 +131,9 @@ class PipelineScaler:
         logger.error(f"❌ Scaling timed out after {timeout} seconds")
         return False
 
-    async def scale_and_monitor(self, target_replicas: int, monitor_duration: int = 120):
+    async def scale_and_monitor(
+        self, target_replicas: int, monitor_duration: int = 120
+    ):
         """Scale deployment and monitor the effects"""
         current_replicas = self.get_current_replicas()
         if current_replicas is None:
@@ -143,7 +161,9 @@ class PipelineScaler:
             overview = await self.monitor.get_cluster_overview()
 
             print("\n" + "=" * 50)
-            print(f"⏰ Monitoring time: {int(time.time() - start_time)}s / {monitor_duration}s")
+            print(
+                f"⏰ Monitoring time: {int(time.time() - start_time)}s / {monitor_duration}s"
+            )
             self.monitor.print_cluster_status(overview)
 
             if time.time() - start_time < monitor_duration:
@@ -155,21 +175,31 @@ class PipelineScaler:
 
 async def main():
     """Main function"""
-    parser = argparse.ArgumentParser(description="Scale pipeline deployment and monitor effects")
+    parser = argparse.ArgumentParser(
+        description="Scale pipeline deployment and monitor effects"
+    )
 
     parser.add_argument("replicas", type=int, help="Target number of replicas")
     parser.add_argument(
-        "--namespace", "-n", default="diocesan-vitality", help="Kubernetes namespace (default: diocesan-vitality)"
+        "--namespace",
+        "-n",
+        default="diocesan - vitality",
+        help="Kubernetes namespace (default: diocesan - vitality)",
     )
     parser.add_argument(
-        "--monitor-duration", type=int, default=120, help="How long to monitor after scaling (seconds, default: 120)"
+        "--monitor - duration",
+        type=int,
+        default=120,
+        help="How long to monitor after scaling (seconds, default: 120)",
     )
-    parser.add_argument("--no-monitor", action="store_true", help="Don't monitor after scaling")
+    parser.add_argument(
+        "--no - monitor", action="store_true", help="Don't monitor after scaling"
+    )
 
     args = parser.parse_args()
 
     if args.replicas < 0:
-        logger.error("❌ Replica count must be non-negative")
+        logger.error("❌ Replica count must be non - negative")
         return
 
     scaler = PipelineScaler(namespace=args.namespace)

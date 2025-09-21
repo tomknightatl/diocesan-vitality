@@ -7,23 +7,24 @@ Currently serves as a placeholder for future dashboard implementation.
 """
 
 import argparse
-import sys
 
 
 def main():
     """Main dashboard entry point."""
-    parser = argparse.ArgumentParser(description="Diocesan Vitality Monitoring Dashboard")
+    parser = argparse.ArgumentParser(
+        description="Diocesan Vitality Monitoring Dashboard"
+    )
     parser.add_argument("--port", type=int, default=8000, help="Port to run on")
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
 
     args = parser.parse_args()
 
-    print(f"🚀 Starting Diocesan Vitality Monitoring Dashboard")
+    print("🚀 Starting Diocesan Vitality Monitoring Dashboard")
     print(f"📊 Dashboard would run on http://{args.host}:{args.port}")
-    print(f"💡 Currently monitoring is available via:")
-    print(f"   - Frontend dashboard: http://localhost:3000")
-    print(f"   - Backend API: http://localhost:8000")
-    print(f"   - Live system: https://diocesanvitality.org/dashboard")
+    print("💡 Currently monitoring is available via:")
+    print("   - Frontend dashboard: http://localhost:3000")
+    print("   - Backend API: http://localhost:8000")
+    print("   - Live system: https://diocesanvitality.org/dashboard")
     print()
     print("This command is a placeholder for future integrated monitoring.")
 

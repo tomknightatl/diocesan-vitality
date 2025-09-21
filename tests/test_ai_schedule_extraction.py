@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script for AI-enhanced schedule extraction.
+Test script for AI - enhanced schedule extraction.
 """
 
 import json
@@ -29,7 +29,9 @@ def test_adoration_extraction():
     <p>Come and spend time with our Lord in quiet prayer and reflection.</p>
     """
 
-    result = extractor.extract_schedule_from_content(test_content_1, "https://test1.com", "adoration")
+    result = extractor.extract_schedule_from_content(
+        test_content_1, "https://test1.com", "adoration"
+    )
 
     print("Test 1 - Clear Weekly Schedule:")
     print(json.dumps(result, indent=2))
@@ -38,7 +40,7 @@ def test_adoration_extraction():
 
     # Test case 2: Perpetual adoration
     test_content_2 = """
-    <div class="adoration-info">
+    <div class="adoration - info">
         <h3>Perpetual Adoration Chapel</h3>
         <p>Our Perpetual Adoration Chapel is open 24 hours a day, 7 days a week.</p>
         <p>Sign up for your hour at the parish office. We especially need adorers for:</p>
@@ -49,7 +51,9 @@ def test_adoration_extraction():
     </div>
     """
 
-    result = extractor.extract_schedule_from_content(test_content_2, "https://test2.com", "adoration")
+    result = extractor.extract_schedule_from_content(
+        test_content_2, "https://test2.com", "adoration"
+    )
 
     print("Test 2 - Perpetual Adoration:")
     print(json.dumps(result, indent=2))
@@ -75,7 +79,9 @@ def test_reconciliation_extraction():
     </div>
     """
 
-    result = extractor.extract_schedule_from_content(test_content_1, "https://test3.com", "reconciliation")
+    result = extractor.extract_schedule_from_content(
+        test_content_1, "https://test3.com", "reconciliation"
+    )
 
     print("Test 3 - Standard Confession Schedule:")
     print(json.dumps(result, indent=2))
@@ -92,7 +98,9 @@ def test_reconciliation_extraction():
     </div>
     """
 
-    result = extractor.extract_schedule_from_content(test_content_2, "https://test4.com", "reconciliation")
+    result = extractor.extract_schedule_from_content(
+        test_content_2, "https://test4.com", "reconciliation"
+    )
 
     print("Test 4 - Appointment Only:")
     print(json.dumps(result, indent=2))
@@ -120,7 +128,9 @@ def test_no_schedule_content():
     </ul>
     """
 
-    result = extractor.extract_schedule_from_content(test_content, "https://test5.com", "adoration")
+    result = extractor.extract_schedule_from_content(
+        test_content, "https://test5.com", "adoration"
+    )
 
     print("Test 5 - No Schedule Content:")
     print(json.dumps(result, indent=2))

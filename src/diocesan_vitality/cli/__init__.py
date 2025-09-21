@@ -1,5 +1,5 @@
 """
-Command-line interface module for Diocesan Vitality.
+Command - line interface module for Diocesan Vitality.
 
 This module provides CLI commands and utilities for running the system.
 """

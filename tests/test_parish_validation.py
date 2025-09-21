@@ -7,7 +7,11 @@ Tests the ability to distinguish between actual parishes and diocesan department
 import sys
 
 from core.logger import get_logger
-from core.parish_validation import filter_valid_parishes, parish_validator, validate_parish_entity
+from core.parish_validation import (
+    filter_valid_parishes,
+    parish_validator,
+    validate_parish_entity,
+)
 
 logger = get_logger(__name__)
 
@@ -42,7 +46,10 @@ def test_parish_validation_examples():
         {"name": "Development Office", "expected": False},
         # Edge cases
         {"name": "Catholic School", "expected": False},  # School, not parish
-        {"name": "St. Mary's Meeting Rooms", "expected": False},  # Facilities, not parish
+        {
+            "name": "St. Mary's Meeting Rooms",
+            "expected": False,
+        },  # Facilities, not parish
         {"name": "Holy Family Retreat Center", "expected": False},  # Retreat center
         {"name": "St. Joseph Community", "expected": True},  # Community = parish
         {"name": "HOME", "expected": False},  # Navigation link
@@ -80,7 +87,11 @@ def test_batch_filtering():
         {"name": "Office of the Chancellor", "url": "https://diocese.org/chancellor"},
         {"name": "Holy Trinity Parish", "address": "123 Main St, Anytown"},
         {"name": "Department of Religious Education"},
-        {"name": "Sacred Heart Cathedral", "url": "https://sacredheart.org", "address": "456 Oak Ave"},
+        {
+            "name": "Sacred Heart Cathedral",
+            "url": "https://sacredheart.org",
+            "address": "456 Oak Ave",
+        },
         {"name": "Catholic Charities Office", "url": "https://diocese.org/charities"},
         {"name": "St. Joseph Catholic Church"},
         {"name": "Marriage Tribunal"},
@@ -128,7 +139,7 @@ def test_validation_statistics():
 
     stats = parish_validator.get_validation_stats(sample_entities)
 
-    logger.info(f"📋 Validation Statistics:")
+    logger.info("📋 Validation Statistics:")
     logger.info(f"  Total entities: {stats['total']}")
     logger.info(f"  Valid parishes: {stats['valid_parishes']}")
     logger.info(f"  Excluded admin: {stats['excluded_admin']}")
@@ -136,12 +147,12 @@ def test_validation_statistics():
     logger.info(f"  Low confidence: {stats['low_confidence']}")
 
     if stats["parish_indicators"]:
-        logger.info(f"  Top parish indicators:")
+        logger.info("  Top parish indicators:")
         for indicator, count in list(stats["parish_indicators"].items())[:3]:
             logger.info(f"    • {indicator}: {count}")
 
     if stats["exclusion_reasons"]:
-        logger.info(f"  Top exclusion reasons:")
+        logger.info("  Top exclusion reasons:")
         for reason, count in list(stats["exclusion_reasons"].items())[:3]:
             logger.info(f"    • {reason}: {count}")
 
@@ -183,7 +194,9 @@ def main():
 
     if failed == 0:
         logger.info("🎉 All parish validation tests passed!")
-        logger.info("\n✨ Parish validation system is ready to filter diocesan departments!")
+        logger.info(
+            "\n✨ Parish validation system is ready to filter diocesan departments!"
+        )
     else:
         logger.error(f"❌ {failed} test(s) failed!")
         sys.exit(1)
