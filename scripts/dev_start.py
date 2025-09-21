@@ -5,26 +5,24 @@ Helps developers quickly start the local environment.
 """
 
 import argparse
+import os
 import subprocess
 import sys
-import os
 import time
 from pathlib import Path
+
 from dotenv import load_dotenv
+
 
 def check_environment():
     """Check if environment is properly configured"""
-    env_file = Path('.env')
+    env_file = Path(".env")
     if not env_file.exists():
         print("❌ .env file not found. Please copy .env.example to .env and configure it.")
         return False
 
     load_dotenv()
-    required_vars = [
-        'SUPABASE_URL',
-        'SUPABASE_KEY',
-        'GENAI_API_KEY'
-    ]
+    required_vars = ["SUPABASE_URL", "SUPABASE_KEY", "GENAI_API_KEY"]
 
     missing = [var for var in required_vars if not os.getenv(var)]
     if missing:
@@ -34,12 +32,15 @@ def check_environment():
     print("✅ Environment configuration looks good")
     return True
 
+
 def check_dependencies():
     """Check if Python dependencies are installed"""
     try:
-        import supabase
-        import selenium
         import google.generativeai
+        import selenium
+
+        import supabase
+
         print("✅ Core dependencies are available")
         return True
     except ImportError as e:
@@ -47,9 +48,10 @@ def check_dependencies():
         print("Run: pip install -r requirements.txt")
         return False
 
+
 def start_backend(background=True):
     """Start the FastAPI backend server"""
-    backend_path = Path('backend/main.py')
+    backend_path = Path("backend/main.py")
     if not backend_path.exists():
         print("❌ Backend not found at backend/main.py")
         return None
@@ -57,49 +59,46 @@ def start_backend(background=True):
     print("🚀 Starting backend server...")
     if background:
         # Start in background
-        proc = subprocess.Popen(
-            ['python', 'backend/main.py'],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
+        proc = subprocess.Popen(["python", "backend/main.py"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         print("✅ Backend started in background (PID: {})".format(proc.pid))
         return proc
     else:
         # Start in foreground
-        subprocess.run(['python', 'backend/main.py'])
+        subprocess.run(["python", "backend/main.py"])
         return None
+
 
 def start_frontend(background=True):
     """Start the React frontend server"""
-    frontend_path = Path('frontend')
+    frontend_path = Path("frontend")
     if not frontend_path.exists():
         print("❌ Frontend not found at frontend/")
         return None
 
     print("🚀 Starting frontend server...")
     if background:
-        proc = subprocess.Popen(
-            ['npm', 'start'],
-            cwd='frontend',
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
+        proc = subprocess.Popen(["npm", "start"], cwd="frontend", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         print("✅ Frontend started in background (PID: {})".format(proc.pid))
         return proc
     else:
-        subprocess.run(['npm', 'start'], cwd='frontend')
+        subprocess.run(["npm", "start"], cwd="frontend")
         return None
+
 
 def run_pipeline_test():
     """Run a quick pipeline test"""
     print("🧪 Running pipeline test...")
     cmd = [
-        'python', 'run_pipeline_monitored.py',
-        '--diocese_id', '1',
-        '--max_parishes_per_diocese', '1',
-        '--skip_schedules',
-        '--skip_reporting',
-        '--monitoring_url', 'http://localhost:8000'
+        "python",
+        "run_pipeline_monitored.py",
+        "--diocese_id",
+        "1",
+        "--max_parishes_per_diocese",
+        "1",
+        "--skip_schedules",
+        "--skip_reporting",
+        "--monitoring_url",
+        "http://localhost:8000",
     ]
 
     try:
@@ -113,13 +112,14 @@ def run_pipeline_test():
         print("⏰ Pipeline test timed out (5 minutes)")
         return False
 
+
 def main():
     parser = argparse.ArgumentParser(description="Development Environment Starter")
-    parser.add_argument('--check-only', action='store_true', help='Only check environment, don\'t start services')
-    parser.add_argument('--backend-only', action='store_true', help='Start only the backend')
-    parser.add_argument('--frontend-only', action='store_true', help='Start only the frontend')
-    parser.add_argument('--test-pipeline', action='store_true', help='Run a quick pipeline test')
-    parser.add_argument('--foreground', action='store_true', help='Start services in foreground')
+    parser.add_argument("--check-only", action="store_true", help="Only check environment, don't start services")
+    parser.add_argument("--backend-only", action="store_true", help="Start only the backend")
+    parser.add_argument("--frontend-only", action="store_true", help="Start only the frontend")
+    parser.add_argument("--test-pipeline", action="store_true", help="Run a quick pipeline test")
+    parser.add_argument("--foreground", action="store_true", help="Start services in foreground")
 
     args = parser.parse_args()
 
@@ -187,5 +187,6 @@ def main():
             proc.terminate()
         sys.exit(1)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

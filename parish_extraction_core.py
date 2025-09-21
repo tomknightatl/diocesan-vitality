@@ -14,32 +14,34 @@ This module contains:
 # DEPENDENCIES AND IMPORTS
 # =============================================================================
 
-import os
-import time
 import json
+import os
 import re
+import time
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
-from dataclasses import dataclass, asdict
 from enum import Enum
-from typing import List, Dict, Optional, Any
+from typing import Any, Dict, List, Optional
 from urllib.parse import urljoin, urlparse
 
 from core.logger import get_logger
+
 logger = get_logger(__name__)
 
 # Web scraping
 from bs4 import BeautifulSoup
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
 # =============================================================================
 # DATA MODELS AND ENUMS
 # =============================================================================
+
 
 class DiocesePlatform(Enum):
     SQUARESPACE = "squarespace"
@@ -50,6 +52,7 @@ class DiocesePlatform(Enum):
     ECATHOLIC = "ecatholic"
     DIOCESAN_CUSTOM = "diocesan_custom"
     UNKNOWN = "unknown"
+
 
 class ParishListingType(Enum):
     INTERACTIVE_MAP = "interactive_map"
@@ -64,6 +67,7 @@ class ParishListingType(Enum):
     IFRAME_EMBEDDED = "iframe_embedded"
     HOVER_NAVIGATION = "hover_navigation"
     UNKNOWN = "unknown"
+
 
 @dataclass
 class ParishData:
@@ -93,6 +97,7 @@ class ParishData:
     detail_extraction_error: Optional[str] = None
     distance_miles: Optional[float] = None
 
+
 @dataclass
 class DioceseSitePattern:
     platform: DiocesePlatform
@@ -103,6 +108,7 @@ class DioceseSitePattern:
     javascript_required: bool
     pagination_pattern: Optional[str] = None
     notes: str = ""
+
 
 def clean_parish_name_and_extract_address(raw_name: str) -> Dict:
     """
@@ -118,9 +124,9 @@ def clean_parish_name_and_extract_address(raw_name: str) -> Dict:
             "state": None,
             "zip_code": None,
             "full_address": None,
-            "distance_miles": None
+            "distance_miles": None,
         }
-    
+
     cleaned_data = {
         "name": raw_name,
         "street_address": None,
@@ -128,31 +134,33 @@ def clean_parish_name_and_extract_address(raw_name: str) -> Dict:
         "state": None,
         "zip_code": None,
         "full_address": None,
-        "distance_miles": None
+        "distance_miles": None,
     }
 
     # Step 1: Extract distance (e.g., (203.7 Miles))
-    distance_match = re.search(r'\((\d+\.?\d*)\s*Miles\)', raw_name, re.IGNORECASE)
+    distance_match = re.search(r"\((\d+\.?\d*)\s*Miles\)", raw_name, re.IGNORECASE)
     if distance_match:
         try:
             cleaned_data["distance_miles"] = float(distance_match.group(1))
             # Remove distance from raw_name
-            raw_name = raw_name.replace(distance_match.group(0), '').strip()
+            raw_name = raw_name.replace(distance_match.group(0), "").strip()
         except ValueError:
-            pass # Keep distance as None if conversion fails
+            pass  # Keep distance as None if conversion fails
 
     # Step 2: Try enhanced address parsing with usaddress library
     enhanced_result = enhanced_address_parsing(raw_name)
     if enhanced_result["success"]:
         # Use enhanced parsing results
-        cleaned_data.update({
-            "name": enhanced_result["parish_name"],
-            "street_address": enhanced_result["street_address"],
-            "city": enhanced_result["city"],
-            "state": enhanced_result["state"],
-            "zip_code": enhanced_result["zip_code"],
-            "full_address": enhanced_result["full_address"]
-        })
+        cleaned_data.update(
+            {
+                "name": enhanced_result["parish_name"],
+                "street_address": enhanced_result["street_address"],
+                "city": enhanced_result["city"],
+                "state": enhanced_result["state"],
+                "zip_code": enhanced_result["zip_code"],
+                "full_address": enhanced_result["full_address"],
+            }
+        )
         return cleaned_data
 
     # Step 3: Fallback to original regex-based parsing
@@ -165,60 +173,64 @@ def enhanced_address_parsing(raw_name: str) -> Dict:
     """
     try:
         import usaddress
-        
+
         # Look for address patterns in the string
         # Address patterns typically start with a number
-        address_pattern = re.search(r'(\d+\s+[A-Za-z0-9\s\.\-\,]+(?:street|st|avenue|ave|road|rd|drive|dr|way|lane|ln|boulevard|blvd|court|ct|plaza|pl|terrace|ter|circle|cir|parkway|pkwy|highway|hwy|route|rte|blvd).*?)$', raw_name, re.IGNORECASE)
-        
+        address_pattern = re.search(
+            r"(\d+\s+[A-Za-z0-9\s\.\-\,]+(?:street|st|avenue|ave|road|rd|drive|dr|way|lane|ln|boulevard|blvd|court|ct|plaza|pl|terrace|ter|circle|cir|parkway|pkwy|highway|hwy|route|rte|blvd).*?)$",
+            raw_name,
+            re.IGNORECASE,
+        )
+
         if not address_pattern:
             return {"success": False}
-            
+
         potential_address = address_pattern.group(1).strip()
-        parish_name = raw_name.replace(potential_address, '').strip().rstrip(',').strip()
-        
+        parish_name = raw_name.replace(potential_address, "").strip().rstrip(",").strip()
+
         # Parse the address with usaddress
         parsed_components, address_type = usaddress.tag(potential_address)
-        
+
         # Only proceed if we got a valid street address
-        if address_type != 'Street Address':
+        if address_type != "Street Address":
             return {"success": False}
-        
+
         # Extract components using usaddress labels
         street_parts = []
-        
+
         # Build street address from components
-        if parsed_components.get('AddressNumber'):
-            street_parts.append(parsed_components['AddressNumber'])
-            
-        if parsed_components.get('StreetNamePreDirectional'):
-            street_parts.append(parsed_components['StreetNamePreDirectional'])
-            
-        if parsed_components.get('StreetNamePreType'):
-            street_parts.append(parsed_components['StreetNamePreType'])
-            
-        if parsed_components.get('StreetName'):
-            street_parts.append(parsed_components['StreetName'])
-            
-        if parsed_components.get('StreetNamePostType'):
-            street_parts.append(parsed_components['StreetNamePostType'])
-            
-        if parsed_components.get('StreetNamePostDirectional'):
-            street_parts.append(parsed_components['StreetNamePostDirectional'])
-            
+        if parsed_components.get("AddressNumber"):
+            street_parts.append(parsed_components["AddressNumber"])
+
+        if parsed_components.get("StreetNamePreDirectional"):
+            street_parts.append(parsed_components["StreetNamePreDirectional"])
+
+        if parsed_components.get("StreetNamePreType"):
+            street_parts.append(parsed_components["StreetNamePreType"])
+
+        if parsed_components.get("StreetName"):
+            street_parts.append(parsed_components["StreetName"])
+
+        if parsed_components.get("StreetNamePostType"):
+            street_parts.append(parsed_components["StreetNamePostType"])
+
+        if parsed_components.get("StreetNamePostDirectional"):
+            street_parts.append(parsed_components["StreetNamePostDirectional"])
+
         # Handle unit/apartment info
         unit_parts = []
-        for unit_key in ['OccupancyType', 'OccupancyIdentifier']:
+        for unit_key in ["OccupancyType", "OccupancyIdentifier"]:
             if parsed_components.get(unit_key):
                 unit_parts.append(parsed_components[unit_key])
-        
-        street_address = ' '.join(street_parts)
+
+        street_address = " ".join(street_parts)
         if unit_parts:
-            street_address += ' ' + ' '.join(unit_parts)
-            
-        city = parsed_components.get('PlaceName', '')
-        state = parsed_components.get('StateName', '')
-        zip_code = parsed_components.get('ZipCode', '')
-        
+            street_address += " " + " ".join(unit_parts)
+
+        city = parsed_components.get("PlaceName", "")
+        state = parsed_components.get("StateName", "")
+        zip_code = parsed_components.get("ZipCode", "")
+
         # Build full address
         full_address_parts = [street_address]
         if city:
@@ -230,9 +242,9 @@ def enhanced_address_parsing(raw_name: str) -> Dict:
                 full_address_parts.append(state)
         if zip_code:
             full_address_parts.append(zip_code)
-            
-        full_address = ' '.join(full_address_parts)
-        
+
+        full_address = " ".join(full_address_parts)
+
         return {
             "success": True,
             "parish_name": parish_name,
@@ -241,9 +253,9 @@ def enhanced_address_parsing(raw_name: str) -> Dict:
             "state": state,
             "zip_code": zip_code,
             "full_address": full_address,
-            "parsing_method": "usaddress_enhanced"
+            "parsing_method": "usaddress_enhanced",
         }
-        
+
     except Exception as e:
         # If usaddress fails, return failure to trigger fallback
         logger.debug(f"Enhanced address parsing failed: {e}")
@@ -256,8 +268,8 @@ def legacy_address_parsing(raw_name: str, cleaned_data: Dict) -> Dict:
     """
     # Regex to find common address patterns at the end of the string
     address_pattern = re.compile(
-        r'(\d+\s+[\w\s\.\-]+(?:street|st|avenue|ave|road|rd|drive|dr|way|lane|ln|boulevard|blvd|court|ct|plaza|pl|terrace|ter|circle|cir|parkway|pkwy|highway|hwy|route|rte|blvd)\.?,?\s*.*?\s*\w{2}\s*\d{5}(?:-\d{4})?)$',
-        re.IGNORECASE
+        r"(\d+\s+[\w\s\.\-]+(?:street|st|avenue|ave|road|rd|drive|dr|way|lane|ln|boulevard|blvd|court|ct|plaza|pl|terrace|ter|circle|cir|parkway|pkwy|highway|hwy|route|rte|blvd)\.?,?\s*.*?\s*\w{2}\s*\d{5}(?:-\d{4})?)$",
+        re.IGNORECASE,
     )
     address_match = address_pattern.search(raw_name)
 
@@ -266,43 +278,45 @@ def legacy_address_parsing(raw_name: str, cleaned_data: Dict) -> Dict:
         cleaned_data["full_address"] = full_address
 
         # Remove the extracted address from the raw_name to get the clean name
-        cleaned_data["name"] = raw_name.replace(full_address, '').strip()
+        cleaned_data["name"] = raw_name.replace(full_address, "").strip()
 
         # Attempt to parse address components from full_address
         # City, State, Zip Code
-        city_state_zip_match = re.search(r'([A-Za-z\s\.]+),\s*([A-Za-z]{2})\s*(\d{5}(?:-\d{4})?)$', full_address)
+        city_state_zip_match = re.search(r"([A-Za-z\s\.]+),\s*([A-Za-z]{2})\s*(\d{5}(?:-\d{4})?)$", full_address)
         if city_state_zip_match:
             cleaned_data["city"] = city_state_zip_match.group(1).strip()
             cleaned_data["state"] = city_state_zip_match.group(2).strip()
             cleaned_data["zip_code"] = city_state_zip_match.group(3).strip()
             # The street address is everything before the city, state, zip
-            street_address_raw = full_address.replace(city_state_zip_match.group(0), '').strip()
-            cleaned_data["street_address"] = street_address_raw.rstrip(',').strip()
+            street_address_raw = full_address.replace(city_state_zip_match.group(0), "").strip()
+            cleaned_data["street_address"] = street_address_raw.rstrip(",").strip()
         else:
             # Fallback for just street and zip if city/state not clearly parsed
-            zip_match = re.search(r'(\d{5}(?:-\d{4})?)$', full_address)
+            zip_match = re.search(r"(\d{5}(?:-\d{4})?)$", full_address)
             if zip_match:
                 cleaned_data["zip_code"] = zip_match.group(1)
-                cleaned_data["street_address"] = full_address.replace(zip_match.group(0), '').strip().rstrip(',').strip()
+                cleaned_data["street_address"] = full_address.replace(zip_match.group(0), "").strip().rstrip(",").strip()
             else:
-                cleaned_data["street_address"] = full_address # If no clear components, treat as street
+                cleaned_data["street_address"] = full_address  # If no clear components, treat as street
 
     # Final clean up of the name (remove trailing commas, extra spaces)
-    cleaned_data["name"] = re.sub(r',\s*$', '', cleaned_data["name"]).strip()
-    cleaned_data["name"] = re.sub(r'\s+', ' ', cleaned_data["name"]).strip()
+    cleaned_data["name"] = re.sub(r",\s*$", "", cleaned_data["name"]).strip()
+    cleaned_data["name"] = re.sub(r"\s+", " ", cleaned_data["name"]).strip()
 
     return cleaned_data
+
 
 # =============================================================================
 # PATTERN DETECTION SYSTEM
 # =============================================================================
+
 
 class PatternDetector:
     """Detects patterns in diocese websites for targeted extraction"""
 
     def detect_pattern(self, html_content: str, url: str) -> DioceseSitePattern:
         """Analyze website content and detect the best extraction pattern"""
-        soup = BeautifulSoup(html_content, 'html.parser')
+        soup = BeautifulSoup(html_content, "html.parser")
         html_lower = html_content.lower()
 
         # Platform detection
@@ -326,20 +340,20 @@ class PatternDetector:
             extraction_method=extraction_method,
             specific_selectors=selectors,
             javascript_required=js_required,
-            notes=notes
+            notes=notes,
         )
 
     def _detect_platform(self, html_lower: str, url: str) -> DiocesePlatform:
         """Detect CMS/platform"""
-        if 'ecatholic.com' in url or 'ecatholic' in html_lower:
+        if "ecatholic.com" in url or "ecatholic" in html_lower:
             return DiocesePlatform.ECATHOLIC
-        elif 'squarespace' in html_lower:
+        elif "squarespace" in html_lower:
             return DiocesePlatform.SQUARESPACE
-        elif 'wp-content' in html_lower or 'wordpress' in html_lower:
+        elif "wp-content" in html_lower or "wordpress" in html_lower:
             return DiocesePlatform.WORDPRESS
-        elif 'drupal' in html_lower:
+        elif "drupal" in html_lower:
             return DiocesePlatform.DRUPAL
-        elif 'dioslc.org' in url or 'utahcatholicdiocese.org' in url:
+        elif "dioslc.org" in url or "utahcatholicdiocese.org" in url:
             return DiocesePlatform.DIOCESAN_CUSTOM
         else:
             return DiocesePlatform.CUSTOM_CMS
@@ -353,23 +367,22 @@ class PatternDetector:
             return ParishListingType.IFRAME_EMBEDDED
 
         # Check for Salt Lake City style card layout
-        if ('col-lg location' in html_lower and 'card-title' in html_lower and
-            'dioslc.org' in url):
+        if "col-lg location" in html_lower and "card-title" in html_lower and "dioslc.org" in url:
             return ParishListingType.DIOCESE_CARD_LAYOUT
 
         # Enhanced Parish Finder detection for eCatholic sites
         parish_finder_indicators = [
-            'parishfinder' in url.lower(),
-            'parish-finder' in url.lower(),
-            'finderCore' in html_lower,
-            'finder.js' in html_lower,
-            'parish finder' in html_lower,
-            'li.site' in html_lower and 'siteInfo' in html_lower,
-            'finderBar' in html_lower,
-            'categories' in html_lower and 'sites' in html_lower and 'parishes' in html_lower,
-            soup.find('ul', id='categories'),
-            soup.find('div', id='finderCore'),
-            soup.find('li', class_='site')
+            "parishfinder" in url.lower(),
+            "parish-finder" in url.lower(),
+            "finderCore" in html_lower,
+            "finder.js" in html_lower,
+            "parish finder" in html_lower,
+            "li.site" in html_lower and "siteInfo" in html_lower,
+            "finderBar" in html_lower,
+            "categories" in html_lower and "sites" in html_lower and "parishes" in html_lower,
+            soup.find("ul", id="categories"),
+            soup.find("div", id="finderCore"),
+            soup.find("li", class_="site"),
         ]
 
         if any(parish_finder_indicators):
@@ -378,75 +391,72 @@ class PatternDetector:
         # Check for hover-based navigation patterns (Diocese of Wheeling-Charleston style)
         hover_navigation_indicators = [
             # Specific URL patterns for known hover navigation sites
-            'dwc.org' in url.lower(),
+            "dwc.org" in url.lower(),
             # Look for dropdown or hover navigation elements
-            soup.find('li', class_=re.compile(r'dropdown|hover', re.I)),
-            soup.find('ul', class_=re.compile(r'dropdown|nav|menu', re.I)),
-            soup.find('nav', class_=re.compile(r'dropdown|hover', re.I)),
+            soup.find("li", class_=re.compile(r"dropdown|hover", re.I)),
+            soup.find("ul", class_=re.compile(r"dropdown|nav|menu", re.I)),
+            soup.find("nav", class_=re.compile(r"dropdown|hover", re.I)),
             # Navigation menus with hidden elements that appear on hover
-            'dropdown' in html_lower and 'nav' in html_lower,
+            "dropdown" in html_lower and "nav" in html_lower,
             # CSS indicators of hover-based menus
-            ':hover' in html_lower and 'menu' in html_lower,
+            ":hover" in html_lower and "menu" in html_lower,
             # JavaScript navigation systems
-            'hover' in html_lower and ('parish' in html_lower or 'directory' in html_lower)
+            "hover" in html_lower and ("parish" in html_lower or "directory" in html_lower),
         ]
 
         if any(hover_navigation_indicators):
             return ParishListingType.HOVER_NAVIGATION
 
         # Interactive map indicators (but exclude known hover navigation sites)
-        if 'dwc.org' not in url.lower():  # Don't override hover navigation for known sites
-            map_indicators = ['leaflet', 'google.maps', 'mapbox', 'parish-map', 'interactive']
+        if "dwc.org" not in url.lower():  # Don't override hover navigation for known sites
+            map_indicators = ["leaflet", "google.maps", "mapbox", "parish-map", "interactive"]
             if any(indicator in html_lower for indicator in map_indicators):
                 return ParishListingType.INTERACTIVE_MAP
 
         # Table indicators
-        if soup.find('table') and ('parish' in html_lower or 'church' in html_lower):
+        if soup.find("table") and ("parish" in html_lower or "church" in html_lower):
             return ParishListingType.STATIC_TABLE
 
         # Card/grid layout
-        if soup.find_all(class_=re.compile(r'(card|grid|parish-item)', re.I)):
+        if soup.find_all(class_=re.compile(r"(card|grid|parish-item)", re.I)):
             return ParishListingType.CARD_GRID
 
         # Pagination
-        if any(word in html_lower for word in ['pagination', 'page-numbers', 'next-page']):
+        if any(word in html_lower for word in ["pagination", "page-numbers", "next-page"]):
             return ParishListingType.PAGINATED_LIST
 
         return ParishListingType.SIMPLE_LIST
 
     def _check_for_iframe_content(self, soup: BeautifulSoup, html_lower: str, url: str) -> bool:
         """Check if parish directory content is loaded via iframe"""
-        iframes = soup.find_all('iframe')
-        
+        iframes = soup.find_all("iframe")
+
         for iframe in iframes:
-            src = iframe.get('src', '') or ''
+            src = iframe.get("src", "") or ""
             src_lower = src.lower()
-            
+
             # Check for mapping/parish directory services in iframes
-            mapping_services = [
-                'maptive.com', 'google.com/maps', 'mapbox.com', 
-                'arcgis.com', 'leaflet', 'openstreetmap'
-            ]
-            
-            parish_indicators = ['parish', 'church', 'directory', 'locator', 'finder']
-            
+            mapping_services = ["maptive.com", "google.com/maps", "mapbox.com", "arcgis.com", "leaflet", "openstreetmap"]
+
+            parish_indicators = ["parish", "church", "directory", "locator", "finder"]
+
             # Check if iframe source contains mapping services or parish-related content
             if any(service in src_lower for service in mapping_services):
                 return True
-            
+
             # Specific check for Archdiocese of Denver Maptive iframe
-            if 'fortress.maptive.com' in src_lower and 'archden' in src_lower:
+            if "fortress.maptive.com" in src_lower and "archden" in src_lower:
                 return True
-                
+
             # Check for parish-related content in iframe
             if any(indicator in src_lower for indicator in parish_indicators):
                 return True
-        
+
         return False
 
     def _requires_javascript(self, html_lower: str) -> bool:
         """Check if JavaScript is required"""
-        js_indicators = ['react', 'angular', 'vue', 'leaflet', 'google.maps', 'ajax', 'finder.js']
+        js_indicators = ["react", "angular", "vue", "leaflet", "google.maps", "ajax", "finder.js"]
         return any(indicator in html_lower for indicator in js_indicators)
 
     def _determine_extraction_strategy(self, platform, listing_type, soup, html_lower, url):
@@ -460,9 +470,9 @@ class PatternDetector:
                     "iframe_selector": "iframe[src*='maptive'], iframe[src*='parish'], iframe[src*='church']",
                     "maptive_url": "fortress.maptive.com",
                     "wait_selectors": "[data-parish], .parish, .church, .marker",
-                    "data_extractors": ["window.parishData", "window.mapData", "window.locations"]
+                    "data_extractors": ["window.parishData", "window.mapData", "window.locations"],
                 },
-                "Iframe-embedded parish directory detected - will extract from embedded content"
+                "Iframe-embedded parish directory detected - will extract from embedded content",
             )
 
         elif listing_type == ParishListingType.DIOCESE_CARD_LAYOUT:
@@ -473,9 +483,9 @@ class PatternDetector:
                     "parish_cards": ".col-lg.location",
                     "parish_name": ".card-title",
                     "parish_city": ".card-body",
-                    "parish_link": "a.card"
+                    "parish_link": "a.card",
                 },
-                "Diocese card layout detected - specialized extraction for Salt Lake City style with detail page navigation"
+                "Diocese card layout detected - specialized extraction for Salt Lake City style with detail page navigation",
             )
 
         elif listing_type == ParishListingType.HOVER_NAVIGATION:
@@ -486,9 +496,9 @@ class PatternDetector:
                     "nav_selectors": ["nav", ".navbar", ".navigation", ".menu"],
                     "hover_targets": ["a[href*='parish']", ".menu-item", ".nav-item", ".dropdown"],
                     "dropdown_selectors": [".dropdown-menu a", ".submenu a", ".nav-dropdown a"],
-                    "parish_indicators": ["parish", "church", "directory", "find", "locate"]
+                    "parish_indicators": ["parish", "church", "directory", "find", "locate"],
                 },
-                "Hover-based navigation detected - will interact with dropdown menus to find parish directory"
+                "Hover-based navigation detected - will interact with dropdown menus to find parish directory",
             )
 
         elif listing_type == ParishListingType.PARISH_FINDER:
@@ -502,9 +512,9 @@ class PatternDetector:
                     "parish_info": ".siteInfo",
                     "parish_details": ".details",
                     "categories": "#categories",
-                    "sites_list": ".sites"
+                    "sites_list": ".sites",
                 },
-                "Parish finder interface detected - specialized extraction for eCatholic-style interactive directory"
+                "Parish finder interface detected - specialized extraction for eCatholic-style interactive directory",
             )
 
         elif listing_type == ParishListingType.INTERACTIVE_MAP:
@@ -512,7 +522,7 @@ class PatternDetector:
                 "interactive_map_extraction",
                 0.9,
                 {"map_container": "#map, .map-container, .parish-map"},
-                "Interactive map detected - will extract from JS data and markers"
+                "Interactive map detected - will extract from JS data and markers",
             )
 
         elif listing_type == ParishListingType.STATIC_TABLE:
@@ -520,7 +530,7 @@ class PatternDetector:
                 "table_extraction",
                 0.95,
                 {"table": "table", "rows": "tr:not(:first-child)"},
-                "HTML table detected - most reliable extraction method"
+                "HTML table detected - most reliable extraction method",
             )
 
         elif platform == DiocesePlatform.SQUARESPACE:
@@ -528,7 +538,7 @@ class PatternDetector:
                 "squarespace_extraction",
                 0.8,
                 {"items": ".summary-item, .parish-item", "title": ".summary-title"},
-                "SquareSpace platform - using platform-specific selectors"
+                "SquareSpace platform - using platform-specific selectors",
             )
 
         else:
@@ -536,12 +546,14 @@ class PatternDetector:
                 "generic_extraction",
                 0.4,
                 {"containers": "[class*='parish'], [class*='church']"},
-                "Using generic extraction patterns"
+                "Using generic extraction patterns",
             )
+
 
 # =============================================================================
 # BASE EXTRACTOR CLASS
 # =============================================================================
+
 
 class BaseExtractor:
     """Base class for parish extractors"""
@@ -557,7 +569,7 @@ class BaseExtractor:
         """Clean and normalize text"""
         if not text:
             return ""
-        return ' '.join(text.strip().split())
+        return " ".join(text.strip().split())
 
     def extract_phone(self, text: str) -> Optional[str]:
         """Extract phone number from text"""
@@ -565,7 +577,7 @@ class BaseExtractor:
             return None
 
         # Look for phone patterns
-        phone_pattern = r'\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}'
+        phone_pattern = r"\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}"
         match = re.search(phone_pattern, text)
         if match:
             return match.group()
@@ -576,15 +588,17 @@ class BaseExtractor:
         if not text:
             return None
 
-        email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+        email_pattern = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
         match = re.search(email_pattern, text)
         if match:
             return match.group()
         return None
 
+
 # =============================================================================
 # WEBDRIVER SETUP UTILITIES
 # =============================================================================
+
 
 def setup_enhanced_driver():
     """Set up Chrome WebDriver with options optimized for parish extraction"""
@@ -592,21 +606,23 @@ def setup_enhanced_driver():
     logger.info("🔧 Setting up enhanced Chrome WebDriver...")
 
     chrome_options = Options()
-    chrome_options.add_argument('--headless')
-    chrome_options.add_argument('--no-sandbox')
-    chrome_options.add_argument('--disable-dev-shm-usage')
-    chrome_options.add_argument('--disable-gpu')
-    chrome_options.add_argument('--window-size=1920,1080')
-    chrome_options.add_argument('--disable-extensions')
-    chrome_options.add_argument('--disable-plugins')
-    chrome_options.add_argument('--disable-images')
-    chrome_options.add_argument('--disable-javascript-harmony-shipping')
-    chrome_options.add_argument('--disable-background-timer-throttling')
-    chrome_options.add_argument('--disable-backgrounding-occluded-windows')
-    chrome_options.add_argument('--disable-renderer-backgrounding')
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_argument("--disable-extensions")
+    chrome_options.add_argument("--disable-plugins")
+    chrome_options.add_argument("--disable-images")
+    chrome_options.add_argument("--disable-javascript-harmony-shipping")
+    chrome_options.add_argument("--disable-background-timer-throttling")
+    chrome_options.add_argument("--disable-backgrounding-occluded-windows")
+    chrome_options.add_argument("--disable-renderer-backgrounding")
 
     # User agent to avoid blocking
-    chrome_options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
+    chrome_options.add_argument(
+        "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    )
 
     try:
         service = Service(ChromeDriverManager().install())
@@ -621,9 +637,11 @@ def setup_enhanced_driver():
         logger.error(f"❌ Failed to initialize WebDriver: {e}")
         raise
 
+
 # =============================================================================
 # DATABASE INTEGRATION FUNCTIONS
 # =============================================================================
+
 
 def _clean_supabase_data(data: Dict) -> Dict:
     """
@@ -638,46 +656,70 @@ def _clean_supabase_data(data: Dict) -> Dict:
             cleaned_data[k] = v
     return cleaned_data
 
-def prepare_parish_for_supabase(parish_data: ParishData, diocese_id: int, diocese_name: str, diocese_url: str, parish_directory_url: str) -> Dict:
+
+def prepare_parish_for_supabase(
+    parish_data: ParishData, diocese_id: int, diocese_name: str, diocese_url: str, parish_directory_url: str
+) -> Dict:
     """Convert ParishData to format compatible with Supabase schema"""
 
     # Use street address if available, otherwise fall back to full address or address
     street_address = parish_data.street_address or parish_data.full_address or parish_data.address
 
     return {
-        'Name': parish_data.name,
-        'Status': 'Parish',
-        'Deanery': None,
-        'Street Address': street_address,
-        'City': parish_data.city,
-        'State': parish_data.state,
-        'Zip Code': parish_data.zip_code,
-        'Phone Number': parish_data.phone,
-        'Web': parish_data.website,
-        'diocese_url': diocese_url,
-        'parish_directory_url': parish_directory_url,
-        'parish_detail_url': parish_data.parish_detail_url,
-        'extraction_method': parish_data.extraction_method,
-        'confidence_score': parish_data.confidence_score,
-        'detail_extraction_success': parish_data.detail_extraction_success,
-        'detail_extraction_error': parish_data.detail_extraction_error,
-        'clergy_info': parish_data.clergy_info,
-        'service_times': parish_data.service_times,
-        'full_address': parish_data.full_address,
-        'latitude': parish_data.latitude,
-        'longitude': parish_data.longitude,
-        'extracted_at': datetime.now(timezone.utc).isoformat(),
-        'diocese_id': diocese_id
+        "Name": parish_data.name,
+        "Status": "Parish",
+        "Deanery": None,
+        "Street Address": street_address,
+        "City": parish_data.city,
+        "State": parish_data.state,
+        "Zip Code": parish_data.zip_code,
+        "Phone Number": parish_data.phone,
+        "Web": parish_data.website,
+        "diocese_url": diocese_url,
+        "parish_directory_url": parish_directory_url,
+        "parish_detail_url": parish_data.parish_detail_url,
+        "extraction_method": parish_data.extraction_method,
+        "confidence_score": parish_data.confidence_score,
+        "detail_extraction_success": parish_data.detail_extraction_success,
+        "detail_extraction_error": parish_data.detail_extraction_error,
+        "clergy_info": parish_data.clergy_info,
+        "service_times": parish_data.service_times,
+        "full_address": parish_data.full_address,
+        "latitude": parish_data.latitude,
+        "longitude": parish_data.longitude,
+        "extracted_at": datetime.now(timezone.utc).isoformat(),
+        "diocese_id": diocese_id,
     }
 
+
 PARISH_SKIP_TERMS = [
-    'finder', 'contact', 'chancery', 'pastoral center', 'tv mass',
-    'directory', 'search', 'filter', 'map', 'diocese', 'bishop',
-    'office', 'center', 'no parish registration', 'archdiocese'
+    "finder",
+    "contact",
+    "chancery",
+    "pastoral center",
+    "tv mass",
+    "directory",
+    "search",
+    "filter",
+    "map",
+    "diocese",
+    "bishop",
+    "office",
+    "center",
+    "no parish registration",
+    "archdiocese",
 ]
 
-def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_id: int, diocese_name: str, diocese_url: str,
-                                     parish_directory_url: str, supabase, monitoring_client=None):
+
+def enhanced_safe_upsert_to_supabase(
+    parishes: List[ParishData],
+    diocese_id: int,
+    diocese_name: str,
+    diocese_url: str,
+    parish_directory_url: str,
+    supabase,
+    monitoring_client=None,
+):
     """Enhanced version of Supabase upsert function with batch operations and Parish Finder support"""
 
     if not supabase:
@@ -714,15 +756,12 @@ def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_id: int
             clean_data = _clean_supabase_data(supabase_data)
 
             # Must have a name to proceed
-            if not clean_data.get('Name') or len(clean_data.get('Name', '')) < 3:
+            if not clean_data.get("Name") or len(clean_data.get("Name", "")) < 3:
                 logger.debug(f"    ⏭️ Skipped: Invalid name after cleaning")
                 skipped_count += 1
                 continue
 
-            valid_parishes.append({
-                'data': clean_data,
-                'original': parish
-            })
+            valid_parishes.append({"data": clean_data, "original": parish})
 
             if parish.detail_extraction_success:
                 detail_success_count += 1
@@ -752,14 +791,16 @@ def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_id: int
         parish_actions = {}  # Store whether each parish is new or existing
 
         for item in batch:
-            parish = item['original']
-            parish_data = item['data']
+            parish = item["original"]
+            parish_data = item["data"]
             batch_data.append(parish_data)
 
             # Check if parish already exists to determine insert vs update
             if monitoring_client:
                 try:
-                    existing = supabase.table('Parishes').select('id').eq('Name', parish.name).eq('diocese_id', diocese_id).execute()
+                    existing = (
+                        supabase.table("Parishes").select("id").eq("Name", parish.name).eq("diocese_id", diocese_id).execute()
+                    )
                     is_new_parish = not existing.data
                     parish_actions[parish.name] = "Parish added" if is_new_parish else "Parish updated"
                 except Exception as e:
@@ -769,9 +810,9 @@ def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_id: int
         try:
             # Execute batch upsert
             logger.info(f"    📦 Batch {batch_num + 1}/{total_batches}: Upserting {len(batch_data)} parishes...")
-            response = supabase.table('Parishes').upsert(batch_data, on_conflict='Name,diocese_id').execute()
+            response = supabase.table("Parishes").upsert(batch_data, on_conflict="Name,diocese_id").execute()
 
-            if hasattr(response, 'error') and response.error:
+            if hasattr(response, "error") and response.error:
                 logger.error(f"    ❌ Batch {batch_num + 1} database error: {response.error}")
                 # Try individual upserts as fallback for this batch
                 logger.info(f"    🔄 Falling back to individual upserts for batch {batch_num + 1}...")
@@ -785,19 +826,20 @@ def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_id: int
                 # Send monitoring logs for each parish inserted
                 if monitoring_client:
                     for item in batch:
-                        parish = item['original']
+                        parish = item["original"]
                         action = parish_actions.get(parish.name, "Parish saved")
-                        website_link = f" → <a href='{parish.website}' target='_blank'>{parish.website}</a>" if parish.website else ""
+                        website_link = (
+                            f" → <a href='{parish.website}' target='_blank'>{parish.website}</a>" if parish.website else ""
+                        )
                         monitoring_client.send_log(
-                            f"Step 3 │ ✅ {action}: {parish.name}, {diocese_name}{website_link}",
-                            "INFO"
+                            f"Step 3 │ ✅ {action}: {parish.name}, {diocese_name}{website_link}", "INFO"
                         )
 
                 # Log sample of saved parishes for verification (console only)
                 for i, item in enumerate(batch[:3]):  # Show first 3 parishes in batch
-                    parish = item['original']
+                    parish = item["original"]
                     detail_indicator = "📍" if parish.detail_extraction_success else "📌"
-                    method_short = parish.extraction_method.replace('_extraction', '').replace('_', ' ')
+                    method_short = parish.extraction_method.replace("_extraction", "").replace("_", " ")
                     logger.info(f"      {detail_indicator} {parish.name} ({method_short}, {parish.confidence_score:.2f})")
 
                 if len(batch) > 3:
@@ -815,96 +857,108 @@ def enhanced_safe_upsert_to_supabase(parishes: List[ParishData], diocese_id: int
     if success_count > 0:
         success_rate = (success_count / (success_count + skipped_count)) * 100
         logger.info(f"  📈 Success rate: {success_rate:.1f}%")
-        
+
         # Performance improvement calculation
         individual_calls_would_be = success_count + skipped_count
         actual_db_calls = total_batches + (skipped_count if success_count < len(valid_parishes) else 0)
         performance_improvement = ((individual_calls_would_be - actual_db_calls) / individual_calls_would_be) * 100
-        logger.info(f"  ⚡ Performance: {actual_db_calls} DB calls vs {individual_calls_would_be} individual ({performance_improvement:.0f}% reduction)")
+        logger.info(
+            f"  ⚡ Performance: {actual_db_calls} DB calls vs {individual_calls_would_be} individual ({performance_improvement:.0f}% reduction)"
+        )
 
     return success_count > 0
 
 
-def _fallback_individual_upserts(batch: List[Dict], supabase, monitoring_client=None, diocese_name=None, parish_actions=None) -> int:
+def _fallback_individual_upserts(
+    batch: List[Dict], supabase, monitoring_client=None, diocese_name=None, parish_actions=None
+) -> int:
     """Fallback function for individual upserts when batch fails"""
     success_count = 0
-    
+
     for item in batch:
         try:
-            response = supabase.table('Parishes').upsert(item['data']).execute()
-            if not (hasattr(response, 'error') and response.error):
+            response = supabase.table("Parishes").upsert(item["data"]).execute()
+            if not (hasattr(response, "error") and response.error):
                 success_count += 1
-                parish = item['original']
+                parish = item["original"]
                 logger.info(f"      ✅ 📌 Individually saved: {parish.name}")
 
                 # Send to monitoring if available
                 if monitoring_client and diocese_name:
                     action = parish_actions.get(parish.name, "Parish saved") if parish_actions else "Parish saved"
-                    website_link = f" → <a href='{parish.website}' target='_blank'>{parish.website}</a>" if parish.website else ""
-                    monitoring_client.send_log(
-                        f"Step 3 │ ✅ {action}: {parish.name}, {diocese_name}{website_link}",
-                        "INFO"
+                    website_link = (
+                        f" → <a href='{parish.website}' target='_blank'>{parish.website}</a>" if parish.website else ""
                     )
+                    monitoring_client.send_log(f"Step 3 │ ✅ {action}: {parish.name}, {diocese_name}{website_link}", "INFO")
             else:
                 logger.error(f"      ❌ Individual upsert error: {response.error}")
         except Exception as e:
-            parish = item['original']
+            parish = item["original"]
             logger.error(f"      ❌ Individual upsert failed for {parish.name}: {e}")
-    
+
     return success_count
+
 
 def analyze_parish_finder_quality(parishes: List[ParishData]) -> Dict:
     """Analyze the quality of Parish Finder extraction"""
 
     if not parishes:
-        return {'error': 'No parishes to analyze'}
+        return {"error": "No parishes to analyze"}
 
     total_parishes = len(parishes)
 
     # Parish Finder specific analysis
     analysis = {
-        'total_parishes': total_parishes,
-        'extraction_methods': {},
-        'parish_finder_specific': {
-            'has_coordinates': sum(1 for p in parishes if p.latitude and p.longitude),
-            'has_city': sum(1 for p in parishes if p.city),
-            'has_site_info': sum(1 for p in parishes if p.detail_extraction_success),
-            'confidence_distribution': {
-                'high_confidence': sum(1 for p in parishes if p.confidence_score >= 0.8),
-                'medium_confidence': sum(1 for p in parishes if 0.5 <= p.confidence_score < 0.8),
-                'low_confidence': sum(1 for p in parishes if p.confidence_score < 0.5)
-            }
+        "total_parishes": total_parishes,
+        "extraction_methods": {},
+        "parish_finder_specific": {
+            "has_coordinates": sum(1 for p in parishes if p.latitude and p.longitude),
+            "has_city": sum(1 for p in parishes if p.city),
+            "has_site_info": sum(1 for p in parishes if p.detail_extraction_success),
+            "confidence_distribution": {
+                "high_confidence": sum(1 for p in parishes if p.confidence_score >= 0.8),
+                "medium_confidence": sum(1 for p in parishes if 0.5 <= p.confidence_score < 0.8),
+                "low_confidence": sum(1 for p in parishes if p.confidence_score < 0.5),
+            },
         },
-        'data_completeness': {
-            'names_present': sum(1 for p in parishes if p.name and len(p.name) > 2),
-            'cities_present': sum(1 for p in parishes if p.city),
-            'addresses_present': sum(1 for p in parishes if p.street_address or p.full_address or p.address),
-            'phones_present': sum(1 for p in parishes if p.phone),
-            'websites_present': sum(1 for p in parishes if p.website),
-            'coordinates_present': sum(1 for p in parishes if p.latitude and p.longitude),
-            'clergy_info_present': sum(1 for p in parishes if p.clergy_info)
-        }
+        "data_completeness": {
+            "names_present": sum(1 for p in parishes if p.name and len(p.name) > 2),
+            "cities_present": sum(1 for p in parishes if p.city),
+            "addresses_present": sum(1 for p in parishes if p.street_address or p.full_address or p.address),
+            "phones_present": sum(1 for p in parishes if p.phone),
+            "websites_present": sum(1 for p in parishes if p.website),
+            "coordinates_present": sum(1 for p in parishes if p.latitude and p.longitude),
+            "clergy_info_present": sum(1 for p in parishes if p.clergy_info),
+        },
     }
 
     # Track extraction methods used
     for parish in parishes:
         method = parish.extraction_method
-        analysis['extraction_methods'][method] = analysis['extraction_methods'].get(method, 0) + 1
+        analysis["extraction_methods"][method] = analysis["extraction_methods"].get(method, 0) + 1
 
     # Calculate percentages
-    analysis['data_completeness_percentages'] = {
-        f"{key}_percentage": (value / total_parishes * 100)
-        for key, value in analysis['data_completeness'].items()
+    analysis["data_completeness_percentages"] = {
+        f"{key}_percentage": (value / total_parishes * 100) for key, value in analysis["data_completeness"].items()
     }
 
     # Overall quality score
-    basic_score = (analysis['data_completeness']['names_present'] +
-                  analysis['data_completeness']['cities_present']) / (total_parishes * 2) * 100
+    basic_score = (
+        (analysis["data_completeness"]["names_present"] + analysis["data_completeness"]["cities_present"])
+        / (total_parishes * 2)
+        * 100
+    )
 
-    enhanced_score = (analysis['data_completeness']['addresses_present'] +
-                     analysis['data_completeness']['phones_present'] +
-                     analysis['data_completeness']['coordinates_present']) / (total_parishes * 3) * 100
+    enhanced_score = (
+        (
+            analysis["data_completeness"]["addresses_present"]
+            + analysis["data_completeness"]["phones_present"]
+            + analysis["data_completeness"]["coordinates_present"]
+        )
+        / (total_parishes * 3)
+        * 100
+    )
 
-    analysis['parish_finder_quality_score'] = (basic_score + enhanced_score) / 2
+    analysis["parish_finder_quality_score"] = (basic_score + enhanced_score) / 2
 
     return analysis

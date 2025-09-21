@@ -4,22 +4,23 @@ Async Parish Extraction Script with concurrent processing capabilities.
 Dramatically improves extraction performance through intelligent batching and parallel processing.
 """
 
-import asyncio
 import argparse
+import asyncio
 import gc
-import psutil
 import os
 import time
-from typing import List, Dict, Any
 from datetime import datetime
+from typing import Any, Dict, List
+
+import psutil
 
 import config
-from core.db import get_supabase_client
-from core.logger import get_logger
 from core.async_driver import get_async_driver_pool, shutdown_async_driver_pool
 from core.async_parish_extractor import get_async_parish_extractor
+from core.db import get_supabase_client
+from core.logger import get_logger
 from core.monitoring_client import get_monitoring_client
-from parish_extraction_core import enhanced_safe_upsert_to_supabase, PatternDetector
+from parish_extraction_core import PatternDetector, enhanced_safe_upsert_to_supabase
 from parish_extractors import ensure_chrome_installed
 
 logger = get_logger(__name__)
@@ -39,25 +40,30 @@ def get_parish_directory_url_with_override(supabase, diocese_id: int, diocese_ur
     """
     try:
         # First, check for override
-        override_response = supabase.table('DioceseParishDirectoryOverride').select(
-            'parish_directory_url, found_method'
-        ).eq('diocese_id', diocese_id).execute()
+        override_response = (
+            supabase.table("DioceseParishDirectoryOverride")
+            .select("parish_directory_url, found_method")
+            .eq("diocese_id", diocese_id)
+            .execute()
+        )
 
         if override_response.data:
-            override_url = override_response.data[0]['parish_directory_url']
-            found_method = override_response.data[0].get('found_method', 'override')
-            logger.info(f"🔄 Using override parish directory URL for diocese {diocese_id}: {override_url} (method: {found_method})")
-            return override_url, 'override'
+            override_url = override_response.data[0]["parish_directory_url"]
+            found_method = override_response.data[0].get("found_method", "override")
+            logger.info(
+                f"🔄 Using override parish directory URL for diocese {diocese_id}: {override_url} (method: {found_method})"
+            )
+            return override_url, "override"
 
         # Fallback to original table
-        original_response = supabase.table('DiocesesParishDirectory').select(
-            'parish_directory_url'
-        ).eq('diocese_url', diocese_url).execute()
+        original_response = (
+            supabase.table("DiocesesParishDirectory").select("parish_directory_url").eq("diocese_url", diocese_url).execute()
+        )
 
         if original_response.data:
-            original_url = original_response.data[0]['parish_directory_url']
+            original_url = original_response.data[0]["parish_directory_url"]
             logger.debug(f"📋 Using original parish directory URL for diocese {diocese_id}: {original_url}")
-            return original_url, 'original'
+            return original_url, "original"
 
         logger.warning(f"⚠️ No parish directory URL found for diocese {diocese_id} (URL: {diocese_url})")
         return None, None
@@ -105,13 +111,13 @@ class AsyncDioceseProcessor:
         self.driver_pool = None
         self.parish_extractor = None
         self.processing_stats = {
-            'total_dioceses': 0,
-            'successful_dioceses': 0,
-            'failed_dioceses': 0,
-            'total_parishes_found': 0,
-            'total_parishes_enhanced': 0,
-            'total_processing_time': 0,
-            'average_time_per_diocese': 0
+            "total_dioceses": 0,
+            "successful_dioceses": 0,
+            "failed_dioceses": 0,
+            "total_parishes_found": 0,
+            "total_parishes_enhanced": 0,
+            "total_processing_time": 0,
+            "average_time_per_diocese": 0,
         }
 
         logger.info(f"🚀 Async Diocese Processor initialized")
@@ -132,13 +138,13 @@ class AsyncDioceseProcessor:
         logger.info("✅ Async diocese processor ready")
 
         # Report initial circuit breaker status
-        worker_id = os.environ.get('WORKER_ID', os.environ.get('HOSTNAME'))
+        worker_id = os.environ.get("WORKER_ID", os.environ.get("HOSTNAME"))
         monitoring_client = get_monitoring_client(worker_id=worker_id)
         monitoring_client.report_circuit_breaker_status()
 
-    async def process_dioceses_concurrent(self,
-                                        dioceses_to_process: List[Dict],
-                                        num_parishes_per_diocese: int = 5) -> Dict[str, Any]:
+    async def process_dioceses_concurrent(
+        self, dioceses_to_process: List[Dict], num_parishes_per_diocese: int = 5
+    ) -> Dict[str, Any]:
         """
         Process multiple dioceses concurrently with intelligent batching.
 
@@ -150,7 +156,7 @@ class AsyncDioceseProcessor:
             Dictionary with processing results and statistics
         """
         if not dioceses_to_process:
-            return {'success': False, 'error': 'No dioceses to process'}
+            return {"success": False, "error": "No dioceses to process"}
 
         if not self.driver_pool:
             await self.initialize()
@@ -163,29 +169,21 @@ class AsyncDioceseProcessor:
         logger.info(f"   • Max parishes per diocese: {num_parishes_per_diocese}")
         logger.info(f"   • Initial memory: {initial_memory:.1f} MB")
 
-        results = {
-            'successful_dioceses': [],
-            'failed_dioceses': [],
-            'total_parishes_extracted': 0,
-            'processing_summary': {}
-        }
+        results = {"successful_dioceses": [], "failed_dioceses": [], "total_parishes_extracted": 0, "processing_summary": {}}
 
         # Process dioceses in controlled batches
         diocese_batches = [
-            dioceses_to_process[i:i + self.max_concurrent_dioceses]
+            dioceses_to_process[i : i + self.max_concurrent_dioceses]
             for i in range(0, len(dioceses_to_process), self.max_concurrent_dioceses)
         ]
 
         for batch_num, diocese_batch in enumerate(diocese_batches, 1):
-            logger.info(f"📦 Processing diocese batch {batch_num}/{len(diocese_batches)} "
-                       f"({len(diocese_batch)} dioceses)")
+            logger.info(f"📦 Processing diocese batch {batch_num}/{len(diocese_batches)} " f"({len(diocese_batch)} dioceses)")
 
             # Create concurrent tasks for this batch
             batch_tasks = []
             for diocese_info in diocese_batch:
-                task = asyncio.create_task(
-                    self._process_single_diocese_async(diocese_info, num_parishes_per_diocese)
-                )
+                task = asyncio.create_task(self._process_single_diocese_async(diocese_info, num_parishes_per_diocese))
                 batch_tasks.append(task)
 
             # Wait for batch completion
@@ -195,18 +193,16 @@ class AsyncDioceseProcessor:
             for diocese_info, result in zip(diocese_batch, batch_results):
                 if isinstance(result, Exception):
                     logger.error(f"❌ Diocese {diocese_info['name']} failed: {result}")
-                    results['failed_dioceses'].append({
-                        'diocese_info': diocese_info,
-                        'error': str(result)
-                    })
-                    self.processing_stats['failed_dioceses'] += 1
+                    results["failed_dioceses"].append({"diocese_info": diocese_info, "error": str(result)})
+                    self.processing_stats["failed_dioceses"] += 1
                 else:
-                    logger.info(f"✅ Diocese {diocese_info['name']} completed: "
-                               f"{result['parishes_count']} parishes extracted")
-                    results['successful_dioceses'].append(result)
-                    results['total_parishes_extracted'] += result['parishes_count']
-                    self.processing_stats['successful_dioceses'] += 1
-                    self.processing_stats['total_parishes_found'] += result['parishes_count']
+                    logger.info(
+                        f"✅ Diocese {diocese_info['name']} completed: " f"{result['parishes_count']} parishes extracted"
+                    )
+                    results["successful_dioceses"].append(result)
+                    results["total_parishes_extracted"] += result["parishes_count"]
+                    self.processing_stats["successful_dioceses"] += 1
+                    self.processing_stats["total_parishes_found"] += result["parishes_count"]
 
             # Memory management between batches
             if batch_num < len(diocese_batches):
@@ -214,7 +210,7 @@ class AsyncDioceseProcessor:
                 current_memory = force_garbage_collection()
 
                 # Report circuit breaker status between batches
-                worker_id = os.environ.get('WORKER_ID', os.environ.get('HOSTNAME'))
+                worker_id = os.environ.get("WORKER_ID", os.environ.get("HOSTNAME"))
                 monitoring_client = get_monitoring_client(worker_id=worker_id)
                 monitoring_client.report_circuit_breaker_status()
 
@@ -225,26 +221,23 @@ class AsyncDioceseProcessor:
         total_time = time.time() - start_time
         final_memory = get_memory_usage()
 
-        self.processing_stats.update({
-            'total_dioceses': len(dioceses_to_process),
-            'total_processing_time': total_time,
-            'average_time_per_diocese': total_time / max(len(dioceses_to_process), 1)
-        })
-
-        results['processing_summary'] = {
-            'total_time': total_time,
-            'average_time_per_diocese': self.processing_stats['average_time_per_diocese'],
-            'memory_usage': {
-                'initial': initial_memory,
-                'final': final_memory,
-                'peak_growth': final_memory - initial_memory
-            },
-            'performance_metrics': {
-                'dioceses_per_minute': (len(dioceses_to_process) / (total_time / 60)),
-                'parishes_per_minute': (results['total_parishes_extracted'] / (total_time / 60)),
-                'success_rate': (self.processing_stats['successful_dioceses'] /
-                               max(len(dioceses_to_process), 1)) * 100
+        self.processing_stats.update(
+            {
+                "total_dioceses": len(dioceses_to_process),
+                "total_processing_time": total_time,
+                "average_time_per_diocese": total_time / max(len(dioceses_to_process), 1),
             }
+        )
+
+        results["processing_summary"] = {
+            "total_time": total_time,
+            "average_time_per_diocese": self.processing_stats["average_time_per_diocese"],
+            "memory_usage": {"initial": initial_memory, "final": final_memory, "peak_growth": final_memory - initial_memory},
+            "performance_metrics": {
+                "dioceses_per_minute": (len(dioceses_to_process) / (total_time / 60)),
+                "parishes_per_minute": (results["total_parishes_extracted"] / (total_time / 60)),
+                "success_rate": (self.processing_stats["successful_dioceses"] / max(len(dioceses_to_process), 1)) * 100,
+            },
         }
 
         # Log comprehensive results
@@ -254,21 +247,21 @@ class AsyncDioceseProcessor:
 
     async def _process_single_diocese_async(self, diocese_info: Dict, max_parishes: int) -> Dict[str, Any]:
         """Process a single diocese with async parish detail extraction"""
-        diocese_name = diocese_info['name']
-        diocese_id = diocese_info['id']
-        parish_directory_url = diocese_info['parish_directory_url']
+        diocese_name = diocese_info["name"]
+        diocese_id = diocese_info["id"]
+        parish_directory_url = diocese_info["parish_directory_url"]
 
         logger.info(f"🔍 Processing {diocese_name} (async mode)")
 
         result = {
-            'diocese_id': diocese_id,
-            'diocese_name': diocese_name,
-            'diocese_url': diocese_info['url'],
-            'parish_directory_url': parish_directory_url,
-            'parishes_count': 0,
-            'enhanced_parishes': 0,
-            'extraction_time': 0,
-            'success': False
+            "diocese_id": diocese_id,
+            "diocese_name": diocese_name,
+            "diocese_url": diocese_info["url"],
+            "parish_directory_url": parish_directory_url,
+            "parishes_count": 0,
+            "enhanced_parishes": 0,
+            "extraction_time": 0,
+            "success": False,
         }
 
         start_time = time.time()
@@ -281,16 +274,14 @@ class AsyncDioceseProcessor:
                 return driver.page_source
 
             html_content = await self.driver_pool.submit_request(
-                url=parish_directory_url,
-                callback=load_parish_directory,
-                priority=1
+                url=parish_directory_url, callback=load_parish_directory, priority=1
             )
 
             # Step 2: Extract basic parish information (synchronous for now)
             from bs4 import BeautifulSoup
 
             # Handle case where async driver returns Task instead of string
-            if hasattr(html_content, '__await__') or 'Task' in str(type(html_content)):
+            if hasattr(html_content, "__await__") or "Task" in str(type(html_content)):
                 logger.error(f"❌ html_content is Task object: {type(html_content)}")
                 raise ValueError(f"Async driver returned Task object instead of HTML string: {type(html_content)}")
 
@@ -298,7 +289,7 @@ class AsyncDioceseProcessor:
                 logger.error(f"❌ html_content is not a string: {type(html_content)}")
                 raise TypeError(f"Expected string but got {type(html_content)}")
 
-            soup = BeautifulSoup(html_content, 'html.parser')
+            soup = BeautifulSoup(html_content, "html.parser")
 
             # Detect pattern and extract parishes
             detector = PatternDetector()
@@ -306,13 +297,11 @@ class AsyncDioceseProcessor:
 
             # Use existing synchronous extraction logic for basic parish info
             # This could be further optimized in future iterations
-            parishes_found = await self._extract_basic_parish_info_async(
-                soup, pattern, diocese_info, max_parishes
-            )
+            parishes_found = await self._extract_basic_parish_info_async(soup, pattern, diocese_info, max_parishes)
 
             if not parishes_found:
-                result['success'] = False
-                result['error'] = 'No parishes found'
+                result["success"] = False
+                result["error"] = "No parishes found"
                 return result
 
             logger.info(f"   📋 Found {len(parishes_found)} parishes for {diocese_name}")
@@ -323,30 +312,24 @@ class AsyncDioceseProcessor:
                     parishes_found, diocese_name, max_concurrent=self.batch_size
                 )
 
-                result['parishes_count'] = len(enhanced_parishes)
-                result['enhanced_parishes'] = sum(1 for p in enhanced_parishes
-                                                 if getattr(p, 'enhanced_extraction', False))
+                result["parishes_count"] = len(enhanced_parishes)
+                result["enhanced_parishes"] = sum(1 for p in enhanced_parishes if getattr(p, "enhanced_extraction", False))
 
                 # Step 4: Save to database
                 if enhanced_parishes:
                     supabase = get_supabase_client()
                     enhanced_safe_upsert_to_supabase(
-                        enhanced_parishes,
-                        diocese_id,
-                        diocese_name,
-                        diocese_info['url'],
-                        parish_directory_url,
-                        supabase
+                        enhanced_parishes, diocese_id, diocese_name, diocese_info["url"], parish_directory_url, supabase
                     )
 
-            result['success'] = True
+            result["success"] = True
 
         except Exception as e:
             logger.error(f"❌ Error processing {diocese_name}: {e}")
-            result['error'] = str(e)
+            result["error"] = str(e)
 
         finally:
-            result['extraction_time'] = time.time() - start_time
+            result["extraction_time"] = time.time() - start_time
 
         return result
 
@@ -355,8 +338,8 @@ class AsyncDioceseProcessor:
         # For now, use existing synchronous logic
         # This is a good candidate for future async optimization
         try:
-            from parish_extractors import process_diocese_with_detailed_extraction
             from core.driver import get_protected_driver
+            from parish_extractors import process_diocese_with_detailed_extraction
 
             # This is a temporary bridge - ideally we'd make this fully async
             driver = get_protected_driver()
@@ -366,7 +349,7 @@ class AsyncDioceseProcessor:
             result = process_diocese_with_detailed_extraction(diocese_info, driver, max_parishes)
             driver.quit()
 
-            return result.get('parishes_found', [])
+            return result.get("parishes_found", [])
 
         except Exception as e:
             logger.error(f"Error in basic parish extraction: {e}")
@@ -374,8 +357,8 @@ class AsyncDioceseProcessor:
 
     def _log_final_results(self, results: Dict[str, Any]):
         """Log comprehensive final results"""
-        summary = results['processing_summary']
-        metrics = summary['performance_metrics']
+        summary = results["processing_summary"]
+        metrics = summary["performance_metrics"]
 
         logger.info("🎯 Async Diocese Processing Results:")
         logger.info("=" * 50)
@@ -403,13 +386,18 @@ class AsyncDioceseProcessor:
         logger.info("✅ Async diocese processor shutdown complete")
 
 
-async def main_async(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MAX_PARISHES_PER_DIOCESE,
-                    pool_size=4, batch_size=8, max_concurrent_dioceses=2):
+async def main_async(
+    diocese_id=None,
+    num_parishes_per_diocese=config.DEFAULT_MAX_PARISHES_PER_DIOCESE,
+    pool_size=4,
+    batch_size=8,
+    max_concurrent_dioceses=2,
+):
     """
     Main async function for parish extraction with concurrent processing.
     """
     # Initialize monitoring client with worker ID
-    worker_id = os.environ.get('WORKER_ID', os.environ.get('HOSTNAME'))
+    worker_id = os.environ.get("WORKER_ID", os.environ.get("HOSTNAME"))
     monitoring_client = get_monitoring_client(worker_id=worker_id)
 
     if not ensure_chrome_installed():
@@ -425,44 +413,44 @@ async def main_async(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MA
     # Get dioceses to process (same logic as sync version)
     dioceses_to_process = []
     if diocese_id:
-        response = supabase.table('Dioceses').select('id, Name, Website').eq('id', diocese_id).execute()
+        response = supabase.table("Dioceses").select("id, Name, Website").eq("id", diocese_id).execute()
         if response.data:
             d = response.data[0]
-            parish_directory_url, source = get_parish_directory_url_with_override(
-                supabase, d['id'], d['Website']
-            )
+            parish_directory_url, source = get_parish_directory_url_with_override(supabase, d["id"], d["Website"])
             if parish_directory_url:
-                dioceses_to_process.append({
-                    'id': d['id'],
-                    'name': d['Name'],
-                    'url': d['Website'],
-                    'parish_directory_url': parish_directory_url,
-                    'url_source': source  # Track whether this came from override or original
-                })
+                dioceses_to_process.append(
+                    {
+                        "id": d["id"],
+                        "name": d["Name"],
+                        "url": d["Website"],
+                        "parish_directory_url": parish_directory_url,
+                        "url_source": source,  # Track whether this came from override or original
+                    }
+                )
                 logger.info(f"✅ Found parish directory URL for {d['Name']} (source: {source})")
             else:
                 logger.warning(f"No parish directory URL found for diocese {d['Name']}.")
     else:
         # Get all dioceses and check for both override and original URLs
-        all_dioceses_response = supabase.table('Dioceses').select('id, Name, Website').execute()
+        all_dioceses_response = supabase.table("Dioceses").select("id, Name, Website").execute()
         if all_dioceses_response.data:
             for diocese in all_dioceses_response.data:
-                diocese_id = diocese['id']
-                diocese_name = diocese['Name']
-                diocese_url = diocese['Website']
+                diocese_id = diocese["id"]
+                diocese_name = diocese["Name"]
+                diocese_url = diocese["Website"]
 
-                parish_directory_url, source = get_parish_directory_url_with_override(
-                    supabase, diocese_id, diocese_url
-                )
+                parish_directory_url, source = get_parish_directory_url_with_override(supabase, diocese_id, diocese_url)
 
                 if parish_directory_url:
-                    dioceses_to_process.append({
-                        'id': diocese_id,
-                        'name': diocese_name,
-                        'url': diocese_url,
-                        'parish_directory_url': parish_directory_url,
-                        'url_source': source
-                    })
+                    dioceses_to_process.append(
+                        {
+                            "id": diocese_id,
+                            "name": diocese_name,
+                            "url": diocese_url,
+                            "parish_directory_url": parish_directory_url,
+                            "url_source": source,
+                        }
+                    )
                     logger.debug(f"📋 Added {diocese_name} to processing queue (source: {source})")
                 else:
                     logger.debug(f"⏭️ Skipping {diocese_name} - no parish directory URL found")
@@ -477,10 +465,7 @@ async def main_async(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MA
     processor = AsyncDioceseProcessor(pool_size, batch_size, max_concurrent_dioceses)
 
     try:
-        results = await processor.process_dioceses_concurrent(
-            dioceses_to_process,
-            num_parishes_per_diocese
-        )
+        results = await processor.process_dioceses_concurrent(dioceses_to_process, num_parishes_per_diocese)
 
         # Report final circuit breaker status
         monitoring_client.report_circuit_breaker_status()
@@ -495,15 +480,17 @@ async def main_async(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MA
         await processor.shutdown()
 
 
-def main(diocese_id=None, num_parishes_per_diocese=config.DEFAULT_MAX_PARISHES_PER_DIOCESE,
-         pool_size=4, batch_size=8, max_concurrent_dioceses=2):
+def main(
+    diocese_id=None,
+    num_parishes_per_diocese=config.DEFAULT_MAX_PARISHES_PER_DIOCESE,
+    pool_size=4,
+    batch_size=8,
+    max_concurrent_dioceses=2,
+):
     """
     Synchronous wrapper for the async main function.
     """
-    return asyncio.run(main_async(
-        diocese_id, num_parishes_per_diocese,
-        pool_size, batch_size, max_concurrent_dioceses
-    ))
+    return asyncio.run(main_async(diocese_id, num_parishes_per_diocese, pool_size, batch_size, max_concurrent_dioceses))
 
 
 if __name__ == "__main__":
@@ -542,10 +529,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     config.validate_config()
-    main(
-        args.diocese_id,
-        args.num_parishes_per_diocese,
-        args.pool_size,
-        args.batch_size,
-        args.max_concurrent_dioceses
-    )
+    main(args.diocese_id, args.num_parishes_per_diocese, args.pool_size, args.batch_size, args.max_concurrent_dioceses)

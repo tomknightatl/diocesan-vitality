@@ -6,15 +6,15 @@ A utility script to monitor the status of the distributed pipeline,
 showing active workers, work assignments, and cluster health.
 """
 
-import asyncio
 import argparse
+import asyncio
 import time
 from datetime import datetime, timedelta
-from typing import Dict, Any
+from typing import Any, Dict
 
-from core.logger import get_logger
 from core.db import get_supabase_client
 from core.distributed_work_coordinator import DistributedWorkCoordinator
+from core.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -29,21 +29,25 @@ class PipelineMonitor:
         """Get overview of entire cluster"""
         try:
             # Get active workers
-            workers_response = self.supabase.table('pipeline_workers').select(
-                'worker_id, pod_name, status, last_heartbeat, created_at'
-            ).order('last_heartbeat', desc=True).execute()
+            workers_response = (
+                self.supabase.table("pipeline_workers")
+                .select("worker_id, pod_name, status, last_heartbeat, created_at")
+                .order("last_heartbeat", desc=True)
+                .execute()
+            )
 
             # Get work assignments
-            assignments_response = self.supabase.table('diocese_work_assignments').select(
-                'diocese_id, worker_id, status, assigned_at, completed_at'
-            ).order('assigned_at', desc=True).execute()
+            assignments_response = (
+                self.supabase.table("diocese_work_assignments")
+                .select("diocese_id, worker_id, status, assigned_at, completed_at")
+                .order("assigned_at", desc=True)
+                .execute()
+            )
 
             # Get diocese info for assignments
-            diocese_response = self.supabase.table('Dioceses').select(
-                'id, Name'
-            ).execute()
+            diocese_response = self.supabase.table("Dioceses").select("id, Name").execute()
 
-            diocese_names = {d['id']: d['Name'] for d in diocese_response.data} if diocese_response.data else {}
+            diocese_names = {d["id"]: d["Name"] for d in diocese_response.data} if diocese_response.data else {}
 
             # Compile overview
             now = datetime.utcnow()
@@ -52,16 +56,16 @@ class PipelineMonitor:
 
             if workers_response.data:
                 for worker in workers_response.data:
-                    last_heartbeat = datetime.fromisoformat(worker['last_heartbeat'].replace('Z', '+00:00'))
+                    last_heartbeat = datetime.fromisoformat(worker["last_heartbeat"].replace("Z", "+00:00"))
                     time_since_heartbeat = (now - last_heartbeat).total_seconds()
 
                     worker_info = {
                         **worker,
-                        'time_since_heartbeat': time_since_heartbeat,
-                        'is_healthy': time_since_heartbeat < 120  # 2 minutes
+                        "time_since_heartbeat": time_since_heartbeat,
+                        "is_healthy": time_since_heartbeat < 120,  # 2 minutes
                     }
 
-                    if worker['status'] == 'active' and worker_info['is_healthy']:
+                    if worker["status"] == "active" and worker_info["is_healthy"]:
                         active_workers.append(worker_info)
                     else:
                         inactive_workers.append(worker_info)
@@ -70,38 +74,38 @@ class PipelineMonitor:
             assignments_by_status = {}
             if assignments_response.data:
                 for assignment in assignments_response.data:
-                    status = assignment['status']
+                    status = assignment["status"]
                     if status not in assignments_by_status:
                         assignments_by_status[status] = []
 
                     assignment_info = {
                         **assignment,
-                        'diocese_name': diocese_names.get(assignment['diocese_id'], f"Unknown ({assignment['diocese_id']})")
+                        "diocese_name": diocese_names.get(assignment["diocese_id"], f"Unknown ({assignment['diocese_id']})"),
                     }
                     assignments_by_status[status].append(assignment_info)
 
             return {
-                'timestamp': now.isoformat(),
-                'active_workers': active_workers,
-                'inactive_workers': inactive_workers,
-                'total_workers': len(workers_response.data) if workers_response.data else 0,
-                'assignments_by_status': assignments_by_status,
-                'cluster_health': {
-                    'healthy_workers': len(active_workers),
-                    'total_workers': len(workers_response.data) if workers_response.data else 0,
-                    'processing_dioceses': len(assignments_by_status.get('processing', [])),
-                    'completed_dioceses': len(assignments_by_status.get('completed', [])),
-                    'failed_dioceses': len(assignments_by_status.get('failed', []))
-                }
+                "timestamp": now.isoformat(),
+                "active_workers": active_workers,
+                "inactive_workers": inactive_workers,
+                "total_workers": len(workers_response.data) if workers_response.data else 0,
+                "assignments_by_status": assignments_by_status,
+                "cluster_health": {
+                    "healthy_workers": len(active_workers),
+                    "total_workers": len(workers_response.data) if workers_response.data else 0,
+                    "processing_dioceses": len(assignments_by_status.get("processing", [])),
+                    "completed_dioceses": len(assignments_by_status.get("completed", [])),
+                    "failed_dioceses": len(assignments_by_status.get("failed", [])),
+                },
             }
 
         except Exception as e:
             logger.error(f"❌ Error getting cluster overview: {e}")
-            return {'error': str(e)}
+            return {"error": str(e)}
 
     def print_cluster_status(self, overview: Dict[str, Any]):
         """Print formatted cluster status"""
-        if 'error' in overview:
+        if "error" in overview:
             print(f"❌ Error: {overview['error']}")
             return
 
@@ -111,7 +115,7 @@ class PipelineMonitor:
         print()
 
         # Cluster health summary
-        health = overview['cluster_health']
+        health = overview["cluster_health"]
         print("🩺 Cluster Health:")
         print(f"   • Healthy workers: {health['healthy_workers']}/{health['total_workers']}")
         print(f"   • Processing dioceses: {health['processing_dioceses']}")
@@ -121,10 +125,10 @@ class PipelineMonitor:
 
         # Active workers
         print("👥 Active Workers:")
-        if overview['active_workers']:
-            for worker in overview['active_workers']:
-                heartbeat_age = int(worker['time_since_heartbeat'])
-                health_indicator = "💚" if worker['is_healthy'] else "💛"
+        if overview["active_workers"]:
+            for worker in overview["active_workers"]:
+                heartbeat_age = int(worker["time_since_heartbeat"])
+                health_indicator = "💚" if worker["is_healthy"] else "💛"
                 print(f"   {health_indicator} {worker['worker_id']}")
                 print(f"      Pod: {worker['pod_name']}")
                 print(f"      Last heartbeat: {heartbeat_age}s ago")
@@ -134,26 +138,22 @@ class PipelineMonitor:
         print()
 
         # Inactive workers
-        if overview['inactive_workers']:
+        if overview["inactive_workers"]:
             print("💀 Inactive Workers:")
-            for worker in overview['inactive_workers']:
-                heartbeat_age = int(worker['time_since_heartbeat'])
+            for worker in overview["inactive_workers"]:
+                heartbeat_age = int(worker["time_since_heartbeat"])
                 print(f"   ❌ {worker['worker_id']} ({worker['status']})")
                 print(f"      Last heartbeat: {heartbeat_age}s ago")
             print()
 
         # Work assignments
-        assignments = overview['assignments_by_status']
+        assignments = overview["assignments_by_status"]
         if assignments:
             print("📋 Work Assignments:")
 
             for status, assignment_list in assignments.items():
                 if assignment_list:
-                    status_icon = {
-                        'processing': '🔄',
-                        'completed': '✅',
-                        'failed': '❌'
-                    }.get(status, '❓')
+                    status_icon = {"processing": "🔄", "completed": "✅", "failed": "❌"}.get(status, "❓")
 
                     print(f"   {status_icon} {status.upper()} ({len(assignment_list)}):")
                     for assignment in assignment_list[:5]:  # Show first 5
@@ -168,20 +168,23 @@ class PipelineMonitor:
             cutoff_time = datetime.utcnow() - timedelta(hours=2)  # 2 hours
 
             # Find stale assignments
-            stale_response = self.supabase.table('diocese_work_assignments').select(
-                'id, diocese_id, worker_id'
-            ).eq('status', 'processing').lt('assigned_at', cutoff_time.isoformat()).execute()
+            stale_response = (
+                self.supabase.table("diocese_work_assignments")
+                .select("id, diocese_id, worker_id")
+                .eq("status", "processing")
+                .lt("assigned_at", cutoff_time.isoformat())
+                .execute()
+            )
 
             if stale_response.data:
                 print(f"🧹 Found {len(stale_response.data)} stale assignments (older than 2 hours)")
 
                 if not dry_run:
                     # Mark as failed
-                    stale_ids = [a['id'] for a in stale_response.data]
-                    self.supabase.table('diocese_work_assignments').update({
-                        'status': 'failed',
-                        'completed_at': datetime.utcnow().isoformat()
-                    }).in_('id', stale_ids).execute()
+                    stale_ids = [a["id"] for a in stale_response.data]
+                    self.supabase.table("diocese_work_assignments").update(
+                        {"status": "failed", "completed_at": datetime.utcnow().isoformat()}
+                    ).in_("id", stale_ids).execute()
 
                     print(f"✅ Marked {len(stale_ids)} stale assignments as failed")
                 else:

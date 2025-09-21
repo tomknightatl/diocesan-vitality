@@ -2,7 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, staging]
     paths:
       - "backend/**"
       - "frontend/**"
@@ -19,7 +19,7 @@ on:
       - "CHANGELOG.md"
       - ".releaserc.json"
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, staging]
     paths:
       - "backend/**"
       - "frontend/**"
@@ -302,15 +302,16 @@ jobs:
   # ============================================================================
   # STAGE 4: BUILD DOCKER IMAGES (STAGING)
   # ============================================================================
-  build-staging:
-    name: Build Staging Images
+  build-images:
+    name: Build Environment Images
     runs-on: ubuntu-latest
     needs: [integration-tests]
-    if: github.ref == 'refs/heads/develop' || (github.ref == 'refs/heads/main' && github.event_name == 'pull_request')
+    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/staging' || (github.ref == 'refs/heads/main' && github.event_name == 'pull_request')
     outputs:
       backend-tag: ${{ steps.meta.outputs.backend-tag }}
       frontend-tag: ${{ steps.meta.outputs.frontend-tag }}
       pipeline-tag: ${{ steps.meta.outputs.pipeline-tag }}
+      environment: ${{ steps.meta.outputs.environment }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -342,26 +343,44 @@ jobs:
             echo "version-type=timestamp" >> $GITHUB_OUTPUT
           fi
 
-      - name: Generate staging tags
+      - name: Generate environment-specific tags
         id: meta
         run: |
           BRANCH=$(echo ${GITHUB_REF#refs/heads/} | sed 's/[^a-zA-Z0-9]/-/g')
           VERSION=${{ steps.version.outputs.version }}
           VERSION_TYPE=${{ steps.version.outputs.version-type }}
 
+          # Determine environment based on branch
+          case "$BRANCH" in
+            "develop")
+              ENV="dev"
+              ;;
+            "staging")
+              ENV="staging"
+              ;;
+            "main")
+              ENV="prod"
+              ;;
+            *)
+              ENV="dev"
+              ;;
+          esac
+
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+
           if [ "$VERSION_TYPE" = "semantic" ]; then
             # Use semantic version format for release builds
-            echo "backend-tag=${{ env.IMAGE_NAMESPACE }}:backend-${VERSION}-staging" >> $GITHUB_OUTPUT
-            echo "frontend-tag=${{ env.IMAGE_NAMESPACE }}:frontend-${VERSION}-staging" >> $GITHUB_OUTPUT
-            echo "pipeline-tag=${{ env.IMAGE_NAMESPACE }}:pipeline-${VERSION}-staging" >> $GITHUB_OUTPUT
+            echo "backend-tag=${{ env.IMAGE_NAMESPACE }}:backend-${VERSION}-${ENV}" >> $GITHUB_OUTPUT
+            echo "frontend-tag=${{ env.IMAGE_NAMESPACE }}:frontend-${VERSION}-${ENV}" >> $GITHUB_OUTPUT
+            echo "pipeline-tag=${{ env.IMAGE_NAMESPACE }}:pipeline-${VERSION}-${ENV}" >> $GITHUB_OUTPUT
           else
             # Use timestamp format for development builds
-            echo "backend-tag=${{ env.IMAGE_NAMESPACE }}:${BRANCH}-backend-${VERSION}" >> $GITHUB_OUTPUT
-            echo "frontend-tag=${{ env.IMAGE_NAMESPACE }}:${BRANCH}-frontend-${VERSION}" >> $GITHUB_OUTPUT
-            echo "pipeline-tag=${{ env.IMAGE_NAMESPACE }}:${BRANCH}-pipeline-${VERSION}" >> $GITHUB_OUTPUT
+            echo "backend-tag=${{ env.IMAGE_NAMESPACE }}:${ENV}-backend-${VERSION}" >> $GITHUB_OUTPUT
+            echo "frontend-tag=${{ env.IMAGE_NAMESPACE }}:${ENV}-frontend-${VERSION}" >> $GITHUB_OUTPUT
+            echo "pipeline-tag=${{ env.IMAGE_NAMESPACE }}:${ENV}-pipeline-${VERSION}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Build and push staging images
+      - name: Build and push environment images
         run: |
           VERSION=${{ steps.version.outputs.version }}
           BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
@@ -372,7 +391,7 @@ jobs:
             --platform linux/amd64,linux/arm64 \
             --file backend/Dockerfile \
             --tag ${{ steps.meta.outputs.backend-tag }} \
-            --tag ${{ env.IMAGE_NAMESPACE }}:staging-backend-latest \
+            --tag ${{ env.IMAGE_NAMESPACE }}:${{ steps.meta.outputs.environment }}-backend-latest \
             --build-arg VERSION="$VERSION" \
             --build-arg BUILD_DATE="$BUILD_DATE" \
             --build-arg GIT_COMMIT="$GIT_COMMIT" \
@@ -386,7 +405,7 @@ jobs:
             --platform linux/amd64,linux/arm64 \
             --file frontend/Dockerfile \
             --tag ${{ steps.meta.outputs.frontend-tag }} \
-            --tag ${{ env.IMAGE_NAMESPACE }}:staging-frontend-latest \
+            --tag ${{ env.IMAGE_NAMESPACE }}:${{ steps.meta.outputs.environment }}-frontend-latest \
             --build-arg VERSION="$VERSION" \
             --build-arg BUILD_DATE="$BUILD_DATE" \
             --build-arg GIT_COMMIT="$GIT_COMMIT" \
@@ -400,7 +419,7 @@ jobs:
             --platform linux/amd64,linux/arm64 \
             --file Dockerfile.pipeline \
             --tag ${{ steps.meta.outputs.pipeline-tag }} \
-            --tag ${{ env.IMAGE_NAMESPACE }}:staging-pipeline-latest \
+            --tag ${{ env.IMAGE_NAMESPACE }}:${{ steps.meta.outputs.environment }}-pipeline-latest \
             --build-arg VERSION="$VERSION" \
             --build-arg BUILD_DATE="$BUILD_DATE" \
             --build-arg GIT_COMMIT="$GIT_COMMIT" \
@@ -409,44 +428,46 @@ jobs:
             --label org.opencontainers.image.revision="$GIT_COMMIT" \
             --push .
 
-          echo "✅ Staging images built and pushed with version: $VERSION"
+          echo "✅ Environment images built and pushed with version: $VERSION for environment: ${{ steps.meta.outputs.environment }}"
 
   # ============================================================================
   # STAGE 5: DEPLOY TO STAGING (GitHub Actions Runner)
   # ============================================================================
-  deploy-staging:
-    name: Deploy to GitHub Staging
+  deploy-environment:
+    name: Deploy to Environment
     runs-on: ubuntu-latest
-    needs: [build-staging]
-    environment: staging
+    needs: [build-images]
+    environment: ${{ needs.build-images.outputs.environment || 'dev' }}
+    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/staging'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Deploy staging environment
+      - name: Deploy to environment
         env:
-          BACKEND_IMAGE: ${{ needs.build-staging.outputs.backend-tag }}
-          FRONTEND_IMAGE: ${{ needs.build-staging.outputs.frontend-tag }}
-          PIPELINE_IMAGE: ${{ needs.build-staging.outputs.pipeline-tag }}
+          ENVIRONMENT: ${{ needs.build-images.outputs.environment }}
+          BACKEND_IMAGE: ${{ needs.build-images.outputs.backend-tag }}
+          FRONTEND_IMAGE: ${{ needs.build-images.outputs.frontend-tag }}
+          PIPELINE_IMAGE: ${{ needs.build-images.outputs.pipeline-tag }}
         run: |
-          echo "🚀 Starting GitHub-hosted staging deployment..."
+          echo "🚀 Starting GitHub-hosted ${ENVIRONMENT} deployment..."
 
-          # Start staging environment with Docker Compose
-          docker-compose -f docker-compose.staging.yml up -d
+          # Start environment with Docker Compose
+          docker-compose -f docker-compose.${ENVIRONMENT}.yml up -d
 
           # Wait for services to be healthy
           echo "⏳ Waiting for services to start..."
           sleep 30
 
-      - name: Verify staging deployment
+      - name: Verify environment deployment
         run: |
-          echo "🔍 Verifying staging services..."
+          echo "🔍 Verifying ${ENVIRONMENT} services..."
 
           # Show service status
-          docker-compose -f docker-compose.staging.yml ps
+          docker-compose -f docker-compose.${ENVIRONMENT}.yml ps
 
           # Test database connectivity
-          if docker-compose -f docker-compose.staging.yml exec -T db psql -U postgres -d staging_db -c "SELECT 1;" > /dev/null 2>&1; then
+          if docker-compose -f docker-compose.${ENVIRONMENT}.yml exec -T db psql -U postgres -d ${ENVIRONMENT}_db -c "SELECT 1;" > /dev/null 2>&1; then
             echo "✅ Database connectivity check passed"
           else
             echo "❌ Database connectivity check failed"
@@ -467,48 +488,48 @@ jobs:
             echo "⚠️ Frontend accessibility check skipped (service may be starting)"
           fi
 
-      - name: Run staging integration tests
+      - name: Run environment integration tests
         run: |
-          echo "🧪 Running staging-specific integration tests..."
+          echo "🧪 Running ${ENVIRONMENT}-specific integration tests..."
 
           # Test database operations
-          docker-compose -f docker-compose.staging.yml exec -T db psql -U postgres -d staging_db -c "
-            INSERT INTO staging_test_data (test_name, test_value)
-            VALUES ('ci_test', 'staging_deployment_$(date +%s)');
-            SELECT COUNT(*) FROM staging_test_data WHERE test_name = 'ci_test';
+          docker-compose -f docker-compose.${ENVIRONMENT}.yml exec -T db psql -U postgres -d ${ENVIRONMENT}_db -c "
+            INSERT INTO ${ENVIRONMENT}_test_data (test_name, test_value)
+            VALUES ('ci_test', '${ENVIRONMENT}_deployment_$(date +%s)');
+            SELECT COUNT(*) FROM ${ENVIRONMENT}_test_data WHERE test_name = 'ci_test';
           "
 
-          echo "✅ Staging integration tests completed"
+          echo "✅ ${ENVIRONMENT} integration tests completed"
 
-      - name: Staging environment logs
+      - name: Environment logs
         if: always()
         run: |
-          echo "📝 Staging environment logs:"
+          echo "📝 ${ENVIRONMENT} environment logs:"
           echo "=== Backend Logs ==="
-          docker-compose -f docker-compose.staging.yml logs backend --tail=50 || true
+          docker-compose -f docker-compose.${ENVIRONMENT}.yml logs backend --tail=50 || true
           echo "=== Frontend Logs ==="
-          docker-compose -f docker-compose.staging.yml logs frontend --tail=50 || true
+          docker-compose -f docker-compose.${ENVIRONMENT}.yml logs frontend --tail=50 || true
           echo "=== Database Logs ==="
-          docker-compose -f docker-compose.staging.yml logs db --tail=20 || true
+          docker-compose -f docker-compose.${ENVIRONMENT}.yml logs db --tail=20 || true
 
-      - name: Cleanup staging environment
+      - name: Cleanup environment
         if: always()
         run: |
-          echo "🧹 Cleaning up staging environment..."
-          docker-compose -f docker-compose.staging.yml down -v --remove-orphans || true
+          echo "🧹 Cleaning up ${ENVIRONMENT} environment..."
+          docker-compose -f docker-compose.${ENVIRONMENT}.yml down -v --remove-orphans || true
           docker system prune -f || true
-          echo "✅ Staging environment cleaned up"
+          echo "✅ ${ENVIRONMENT} environment cleaned up"
 
-      - name: Staging deployment summary
+      - name: Environment deployment summary
         run: |
-          echo "✅ GitHub Staging Deployment Complete!"
-          echo "💰 Cost-effective staging using GitHub Actions runners"
+          echo "✅ GitHub ${ENVIRONMENT} Deployment Complete!"
+          echo "💰 Cost-effective ${ENVIRONMENT} deployment using GitHub Actions runners"
           echo "📦 Tested Images:"
-          echo "   Backend: ${{ needs.build-staging.outputs.backend-tag }}"
-          echo "   Frontend: ${{ needs.build-staging.outputs.frontend-tag }}"
-          echo "   Pipeline: ${{ needs.build-staging.outputs.pipeline-tag }}"
+          echo "   Backend: ${{ needs.build-images.outputs.backend-tag }}"
+          echo "   Frontend: ${{ needs.build-images.outputs.frontend-tag }}"
+          echo "   Pipeline: ${{ needs.build-images.outputs.pipeline-tag }}"
           echo ""
-          echo "🎯 Staging Tests Passed:"
+          echo "🎯 ${ENVIRONMENT} Tests Passed:"
           echo "   ✓ Docker Compose deployment"
           echo "   ✓ Service health checks"
           echo "   ✓ Database connectivity"
@@ -518,16 +539,16 @@ jobs:
   # STAGE 6: SMOKE TESTS ON STAGING
   # ============================================================================
   smoke-tests:
-    name: Staging Smoke Tests
+    name: Environment Smoke Tests
     runs-on: ubuntu-latest
-    needs: [deploy-staging]
+    needs: [deploy-environment]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Wait for staging deployment
+      - name: Wait for environment deployment
         run: |
-          echo "⏳ Waiting for staging deployment to stabilize..."
+          echo "⏳ Waiting for environment deployment to stabilize..."
           sleep 30
 
       - name: Run smoke tests
@@ -582,7 +603,7 @@ jobs:
   deploy-production:
     name: Deploy to Production (Legacy)
     runs-on: ubuntu-latest
-    needs: [smoke-tests, build-staging]
+    needs: [integration-tests]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip-legacy-deploy]')
     environment: production
     steps:

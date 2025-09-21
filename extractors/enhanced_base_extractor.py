@@ -4,20 +4,18 @@ Enhanced base extractor with optimized circuit breaker usage and smart error rec
 Demonstrates best practices for using the new optimization features.
 """
 
-from typing import List, Dict, Optional, Any
 import time
+from typing import Any, Dict, List, Optional
+
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 
-from core.logger import get_logger
 from core.enhanced_element_wait import (
-    create_parish_extraction_selectors,
     create_map_interaction_selectors,
-    create_search_form_selectors
+    create_parish_extraction_selectors,
+    create_search_form_selectors,
 )
-from core.optimized_circuit_breaker_configs import (
-    OptimizedCircuitBreakerConfigs,
-    ErrorRecoveryStrategies
-)
+from core.logger import get_logger
+from core.optimized_circuit_breaker_configs import ErrorRecoveryStrategies, OptimizedCircuitBreakerConfigs
 from core.parish_validation import filter_valid_parishes
 
 logger = get_logger(__name__)
@@ -35,12 +33,7 @@ class EnhancedBaseExtractor:
         self.error_history = []
         self.last_successful_selectors = {}
 
-    def extract_parishes_with_recovery(
-        self,
-        driver,
-        url: str,
-        operation_type: str = "element"
-    ) -> List[Dict[str, Any]]:
+    def extract_parishes_with_recovery(self, driver, url: str, operation_type: str = "element") -> List[Dict[str, Any]]:
         """
         Extract parishes with intelligent error recovery and optimized circuit breaker usage.
 
@@ -129,11 +122,7 @@ class EnhancedBaseExtractor:
         # Try extraction with progressive complexity
         for selector_group in self._group_selectors_by_complexity(selectors):
             try:
-                elements = driver.smart_find_elements(
-                    selector_group,
-                    timeout=10.0,
-                    min_count=1
-                )
+                elements = driver.smart_find_elements(selector_group, timeout=10.0, min_count=1)
 
                 if elements:
                     logger.debug(f"✅ Found {len(elements)} elements with selector group")
@@ -149,9 +138,7 @@ class EnhancedBaseExtractor:
                 logger.debug(f"❌ Selector group failed: {error_type}")
 
                 # Check if we should skip this extraction method
-                if ErrorRecoveryStrategies.should_skip_extractor(
-                    self.name, self.failure_count, error_type
-                ):
+                if ErrorRecoveryStrategies.should_skip_extractor(self.name, self.failure_count, error_type):
                     logger.info(f"🚫 Skipping {self.name} due to repeated {error_type} failures")
                     break
 
@@ -162,14 +149,14 @@ class EnhancedBaseExtractor:
     def _group_selectors_by_complexity(self, selectors: List[str]) -> List[List[str]]:
         """Group selectors by complexity for progressive extraction."""
         # Simple selectors (class-based, high probability)
-        simple = [s for s in selectors if s.startswith('.') and len(s.split()) == 1]
+        simple = [s for s in selectors if s.startswith(".") and len(s.split()) == 1]
 
         # Medium selectors (id-based, multi-class, attribute-based)
-        medium = [s for s in selectors if (
-            s.startswith('#') or
-            ('[' in s and ']' in s) or
-            (s.startswith('.') and len(s.split()) > 1)
-        )]
+        medium = [
+            s
+            for s in selectors
+            if (s.startswith("#") or ("[" in s and "]" in s) or (s.startswith(".") and len(s.split()) > 1))
+        ]
 
         # Complex selectors (descendant, multiple conditions)
         complex_selectors = [s for s in selectors if s not in simple and s not in medium]
@@ -206,15 +193,10 @@ class EnhancedBaseExtractor:
         try:
             # Basic extraction - override in specific extractors
             name = element.text.strip() if element.text else "Unknown Parish"
-            href = element.get_attribute('href') if element.tag_name == 'a' else None
+            href = element.get_attribute("href") if element.tag_name == "a" else None
 
             if name and len(name) > 3:  # Basic validation
-                return {
-                    'name': name,
-                    'url': href,
-                    'extraction_method': self.name,
-                    'element_tag': element.tag_name
-                }
+                return {"name": name, "url": href, "extraction_method": self.name, "element_tag": element.tag_name}
 
         except Exception as e:
             logger.debug(f"❌ Error extracting from element: {str(e)}")
@@ -233,7 +215,9 @@ class EnhancedBaseExtractor:
             # Apply validation filter
             validated_parishes = filter_valid_parishes(parishes)
 
-            logger.info(f"✅ Parish validation: {len(validated_parishes)}/{len(parishes)} entities validated as actual parishes")
+            logger.info(
+                f"✅ Parish validation: {len(validated_parishes)}/{len(parishes)} entities validated as actual parishes"
+            )
 
             return validated_parishes
 
@@ -247,14 +231,16 @@ class EnhancedBaseExtractor:
 
         for parish in parishes:
             # Basic validation
-            if (parish.get('name') and
-                len(parish['name'].strip()) > 3 and
-                not parish['name'].strip().lower() in ['home', 'contact', 'about']):
+            if (
+                parish.get("name")
+                and len(parish["name"].strip()) > 3
+                and not parish["name"].strip().lower() in ["home", "contact", "about"]
+            ):
 
                 # Clean data
-                parish['name'] = parish['name'].strip()
-                if parish.get('url'):
-                    parish['url'] = parish['url'].strip()
+                parish["name"] = parish["name"].strip()
+                if parish.get("url"):
+                    parish["url"] = parish["url"].strip()
 
                 valid_parishes.append(parish)
 
@@ -267,12 +253,7 @@ class EnhancedBaseExtractor:
         error_msg = str(error)[:200]
 
         # Track error history for pattern analysis
-        self.error_history.append({
-            'type': error_type,
-            'message': error_msg,
-            'timestamp': time.time(),
-            'url': url
-        })
+        self.error_history.append({"type": error_type, "message": error_msg, "timestamp": time.time(), "url": url})
 
         # Keep only recent errors (last 20)
         if len(self.error_history) > 20:
@@ -280,27 +261,29 @@ class EnhancedBaseExtractor:
 
         # Analyze failure patterns if we have enough data
         if len(self.error_history) >= 5:
-            analysis = ErrorRecoveryStrategies.analyze_failure_pattern(
-                [e['message'] for e in self.error_history[-5:]]
-            )
+            analysis = ErrorRecoveryStrategies.analyze_failure_pattern([e["message"] for e in self.error_history[-5:]])
 
-            if analysis['recommendations']:
+            if analysis["recommendations"]:
                 logger.info(f"📊 Failure pattern analysis for {self.name}:")
-                for rec in analysis['recommendations']:
+                for rec in analysis["recommendations"]:
                     logger.info(f"   • {rec}")
 
     def get_extractor_stats(self) -> Dict[str, Any]:
         """Get statistics about this extractor's performance."""
-        recent_errors = [e for e in self.error_history if time.time() - e['timestamp'] < 3600]
+        recent_errors = [e for e in self.error_history if time.time() - e["timestamp"] < 3600]
 
         return {
-            'name': self.name,
-            'total_failures': self.failure_count,
-            'recent_failures': len(recent_errors),
-            'successful_selectors': dict(self.last_successful_selectors),
-            'dominant_error': max(
-                {e['type'] for e in recent_errors},
-                key=lambda x: sum(1 for e in recent_errors if e['type'] == x),
-                default="None"
-            ) if recent_errors else "None"
+            "name": self.name,
+            "total_failures": self.failure_count,
+            "recent_failures": len(recent_errors),
+            "successful_selectors": dict(self.last_successful_selectors),
+            "dominant_error": (
+                max(
+                    {e["type"] for e in recent_errors},
+                    key=lambda x: sum(1 for e in recent_errors if e["type"] == x),
+                    default="None",
+                )
+                if recent_errors
+                else "None"
+            ),
         }

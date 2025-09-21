@@ -1,21 +1,24 @@
-import os
-import json
 import asyncio
-import psutil
+import json
+import os
 import time
-from datetime import datetime, timezone
-from typing import Dict, List, Set
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.websockets import WebSocketState
-from dotenv import load_dotenv
-from supabase import create_client, Client
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Dict, List, Set
+
+import psutil
+from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.websockets import WebSocketState
+
+from supabase import Client, create_client
 
 # Load .env file from the project root
-dotenv_path = Path(__file__).resolve().parent.parent / '.env'
+dotenv_path = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(dotenv_path=dotenv_path)
+
 
 # Global monitoring state
 class MonitoringManager:
@@ -40,7 +43,7 @@ class MonitoringManager:
             "success_rate": 0,
             "started_at": None,
             "progress_percentage": 0,
-            "estimated_completion": None
+            "estimated_completion": None,
         }
         self.extraction_last_updated = time.time()
 
@@ -52,7 +55,7 @@ class MonitoringManager:
             "queue_size": 0,
             "pool_utilization": 0,
             "total_requests": 0,
-            "successful_requests": 0
+            "successful_requests": 0,
         }
         self.recent_errors = []
         self.extraction_history = []
@@ -64,22 +67,10 @@ class MonitoringManager:
         print(f"New WebSocket connection added. Total: {len(self.websocket_connections)}")
 
         # Send initial state to new connection
-        await self.send_to_connection(websocket, {
-            "type": "system_health",
-            "payload": self.get_system_health()
-        })
-        await self.send_to_connection(websocket, {
-            "type": "extraction_status",
-            "payload": self.extraction_status
-        })
-        await self.send_to_connection(websocket, {
-            "type": "circuit_breaker_status",
-            "payload": self.circuit_breakers
-        })
-        await self.send_to_connection(websocket, {
-            "type": "performance_metrics",
-            "payload": self.performance_metrics
-        })
+        await self.send_to_connection(websocket, {"type": "system_health", "payload": self.get_system_health()})
+        await self.send_to_connection(websocket, {"type": "extraction_status", "payload": self.extraction_status})
+        await self.send_to_connection(websocket, {"type": "circuit_breaker_status", "payload": self.circuit_breakers})
+        await self.send_to_connection(websocket, {"type": "performance_metrics", "payload": self.performance_metrics})
 
     async def remove_connection(self, websocket: WebSocket):
         """Remove a WebSocket connection"""
@@ -131,79 +122,48 @@ class MonitoringManager:
                 "cpu_usage": round(cpu_percent, 1),
                 "memory_usage": round(memory.percent, 1),
                 "uptime": round(uptime),
-                "timestamp": datetime.now(timezone.utc).isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
         except Exception as e:
-            return {
-                "status": "error",
-                "error": str(e),
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }
+            return {"status": "error", "error": str(e), "timestamp": datetime.now(timezone.utc).isoformat()}
 
     async def update_extraction_status(self, status_data: Dict):
         """Update and broadcast extraction status"""
         self.extraction_status.update(status_data)
         self.extraction_last_updated = time.time()  # Update timestamp
-        await self.broadcast({
-            "type": "extraction_status",
-            "payload": self.extraction_status
-        })
+        await self.broadcast({"type": "extraction_status", "payload": self.extraction_status})
 
     async def update_circuit_breakers(self, circuit_data: Dict):
         """Update and broadcast circuit breaker status"""
         self.circuit_breakers.update(circuit_data)
         self.circuit_breakers_last_updated = time.time()  # Update timestamp
-        await self.broadcast({
-            "type": "circuit_breaker_status",
-            "payload": self.circuit_breakers
-        })
+        await self.broadcast({"type": "circuit_breaker_status", "payload": self.circuit_breakers})
 
     async def update_performance_metrics(self, metrics_data: Dict):
         """Update and broadcast performance metrics"""
         self.performance_metrics.update(metrics_data)
-        await self.broadcast({
-            "type": "performance_metrics",
-            "payload": self.performance_metrics
-        })
+        await self.broadcast({"type": "performance_metrics", "payload": self.performance_metrics})
 
     async def add_error(self, error_data: Dict):
         """Add error to recent errors and broadcast"""
-        error_entry = {
-            **error_data,
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        }
+        error_entry = {**error_data, "timestamp": datetime.now(timezone.utc).isoformat()}
         self.recent_errors.insert(0, error_entry)
-        self.recent_errors = self.recent_errors[:self.max_errors]
+        self.recent_errors = self.recent_errors[: self.max_errors]
 
-        await self.broadcast({
-            "type": "error_alert",
-            "payload": error_entry
-        })
+        await self.broadcast({"type": "error_alert", "payload": error_entry})
 
     async def add_extraction_complete(self, extraction_data: Dict):
         """Add completed extraction to history"""
-        extraction_entry = {
-            **extraction_data,
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        }
+        extraction_entry = {**extraction_data, "timestamp": datetime.now(timezone.utc).isoformat()}
         self.extraction_history.insert(0, extraction_entry)
         self.extraction_history = self.extraction_history[:20]  # Keep last 20
 
-        await self.broadcast({
-            "type": "extraction_complete",
-            "payload": extraction_entry
-        })
+        await self.broadcast({"type": "extraction_complete", "payload": extraction_entry})
 
     async def send_live_log(self, log_data: Dict):
         """Send live log entry to all connections"""
-        log_entry = {
-            **log_data,
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        }
-        await self.broadcast({
-            "type": "live_log",
-            "payload": log_entry
-        })
+        log_entry = {**log_data, "timestamp": datetime.now(timezone.utc).isoformat()}
+        await self.broadcast({"type": "live_log", "payload": log_entry})
 
     def check_and_reset_stale_data(self):
         """Check for stale data and reset to safe defaults"""
@@ -211,10 +171,14 @@ class MonitoringManager:
         changes_made = False
 
         # Check extraction status staleness
-        if (self.extraction_status["status"] in ["running", "paused"] and
-            current_time - self.extraction_last_updated > self.extraction_timeout):
+        if (
+            self.extraction_status["status"] in ["running", "paused"]
+            and current_time - self.extraction_last_updated > self.extraction_timeout
+        ):
 
-            print(f"⚠️ Extraction status is stale (last updated {current_time - self.extraction_last_updated:.0f}s ago), resetting to stale")
+            print(
+                f"⚠️ Extraction status is stale (last updated {current_time - self.extraction_last_updated:.0f}s ago), resetting to stale"
+            )
             self.extraction_status = {
                 "status": "stale",
                 "current_diocese": None,
@@ -224,16 +188,17 @@ class MonitoringManager:
                 "started_at": None,
                 "progress_percentage": 0,
                 "estimated_completion": None,
-                "stale_reason": f"No updates for {(current_time - self.extraction_last_updated)/60:.1f} minutes"
+                "stale_reason": f"No updates for {(current_time - self.extraction_last_updated)/60:.1f} minutes",
             }
             self.extraction_last_updated = current_time
             changes_made = True
 
         # Check circuit breaker staleness
-        if (self.circuit_breakers and
-            current_time - self.circuit_breakers_last_updated > self.circuit_breaker_timeout):
+        if self.circuit_breakers and current_time - self.circuit_breakers_last_updated > self.circuit_breaker_timeout:
 
-            print(f"⚠️ Circuit breaker data is stale (last updated {current_time - self.circuit_breakers_last_updated:.0f}s ago), clearing")
+            print(
+                f"⚠️ Circuit breaker data is stale (last updated {current_time - self.circuit_breakers_last_updated:.0f}s ago), clearing"
+            )
             self.circuit_breakers = {}
             self.circuit_breakers_last_updated = current_time
             changes_made = True
@@ -264,7 +229,7 @@ class MonitoringManager:
                     "success_rate": 0,
                     "started_at": None,
                     "progress_percentage": 0,
-                    "estimated_completion": None
+                    "estimated_completion": None,
                 },
                 "circuit_breakers": {},
                 "performance_metrics": {
@@ -272,11 +237,11 @@ class MonitoringManager:
                     "queue_size": 0,
                     "pool_utilization": 0,
                     "total_requests": 0,
-                    "successful_requests": 0
+                    "successful_requests": 0,
                 },
                 "last_updated": time.time(),
                 "recent_errors": [],
-                "extraction_history": []
+                "extraction_history": [],
             }
             print(f"📊 Initialized monitoring for worker: {worker_id}")
 
@@ -292,21 +257,17 @@ class MonitoringManager:
             self.extraction_last_updated = time.time()
 
         # Broadcast worker-specific update
-        await self.broadcast({
-            "type": "worker_extraction_status",
-            "payload": {
-                "worker_id": worker_id,
-                "status": self.workers[worker_id]["extraction_status"]
+        await self.broadcast(
+            {
+                "type": "worker_extraction_status",
+                "payload": {"worker_id": worker_id, "status": self.workers[worker_id]["extraction_status"]},
             }
-        })
+        )
 
         # If in aggregate mode, also broadcast aggregate data
         if self.aggregate_mode:
             aggregate_status = self.get_aggregate_extraction_status()
-            await self.broadcast({
-                "type": "extraction_status",
-                "payload": aggregate_status
-            })
+            await self.broadcast({"type": "extraction_status", "payload": aggregate_status})
 
     async def update_worker_circuit_breakers(self, worker_id: str, circuit_data: Dict):
         """Update circuit breaker status for a specific worker"""
@@ -316,18 +277,14 @@ class MonitoringManager:
 
         # Broadcast aggregate circuit breaker data
         aggregate_circuits = self.get_aggregate_circuit_breakers()
-        await self.broadcast({
-            "type": "circuit_breaker_status",
-            "payload": aggregate_circuits
-        })
+        await self.broadcast({"type": "circuit_breaker_status", "payload": aggregate_circuits})
 
     def get_aggregate_extraction_status(self):
         """Calculate aggregate extraction status across all workers"""
         if not self.workers:
             return self.extraction_status
 
-        active_workers = [w for w in self.workers.values()
-                         if w["extraction_status"]["status"] in ["running", "paused"]]
+        active_workers = [w for w in self.workers.values() if w["extraction_status"]["status"] in ["running", "paused"]]
 
         if not active_workers:
             return {
@@ -339,8 +296,7 @@ class MonitoringManager:
                 "started_at": None,
                 "progress_percentage": 0,
                 "estimated_completion": None,
-                "active_workers": len([w for w in self.workers.values()
-                                     if w["extraction_status"]["status"] != "idle"])
+                "active_workers": len([w for w in self.workers.values() if w["extraction_status"]["status"] != "idle"]),
             }
 
         # Aggregate data from active workers
@@ -348,7 +304,9 @@ class MonitoringManager:
         total_parishes = sum(w["extraction_status"]["total_parishes"] for w in active_workers)
 
         # Calculate weighted success rate
-        success_rates = [w["extraction_status"]["success_rate"] for w in active_workers if w["extraction_status"]["parishes_processed"] > 0]
+        success_rates = [
+            w["extraction_status"]["success_rate"] for w in active_workers if w["extraction_status"]["parishes_processed"] > 0
+        ]
         avg_success_rate = sum(success_rates) / len(success_rates) if success_rates else 0
 
         # Get earliest start time
@@ -356,8 +314,9 @@ class MonitoringManager:
         earliest_start = min(start_times) if start_times else None
 
         # Get current dioceses being processed
-        current_dioceses = [w["extraction_status"]["current_diocese"] for w in active_workers
-                           if w["extraction_status"]["current_diocese"]]
+        current_dioceses = [
+            w["extraction_status"]["current_diocese"] for w in active_workers if w["extraction_status"]["current_diocese"]
+        ]
 
         return {
             "status": "running" if active_workers else "idle",
@@ -369,7 +328,7 @@ class MonitoringManager:
             "progress_percentage": (total_parishes_processed / max(total_parishes, 1)) * 100 if total_parishes > 0 else 0,
             "estimated_completion": None,  # Could be calculated based on processing rate
             "active_workers": len(active_workers),
-            "total_workers": len(self.workers)
+            "total_workers": len(self.workers),
         }
 
     def get_aggregate_circuit_breakers(self):
@@ -418,7 +377,7 @@ class MonitoringManager:
                 "total_successes": total_successes,
                 "total_failures": total_failures,
                 "total_blocked": total_blocked,
-                "success_rate": round(success_rate, 1)
+                "success_rate": round(success_rate, 1),
             }
 
         return aggregate_circuits
@@ -440,28 +399,33 @@ class MonitoringManager:
             else:  # Stale: no updates for more than 5 minutes
                 worker_status = "stale"
 
-            worker_list.append({
-                "worker_id": worker_id,
-                "status": worker_data["extraction_status"]["status"],
-                "worker_status": worker_status,  # New field for activity classification
-                "current_diocese": worker_data["extraction_status"]["current_diocese"],
-                "parishes_processed": worker_data["extraction_status"]["parishes_processed"],
-                "last_updated": worker_data["last_updated"],
-                "time_since_update": int(time_since_update)
-            })
+            worker_list.append(
+                {
+                    "worker_id": worker_id,
+                    "status": worker_data["extraction_status"]["status"],
+                    "worker_status": worker_status,  # New field for activity classification
+                    "current_diocese": worker_data["extraction_status"]["current_diocese"],
+                    "parishes_processed": worker_data["extraction_status"]["parishes_processed"],
+                    "last_updated": worker_data["last_updated"],
+                    "time_since_update": int(time_since_update),
+                }
+            )
 
         # Sort by activity: active first, then recent, then stale
         # Within each group, sort by most recently updated
-        worker_list.sort(key=lambda w: (
-            0 if w["worker_status"] == "active" else
-            1 if w["worker_status"] == "recent" else 2,
-            -w["last_updated"]  # Most recent first within each group
-        ))
+        worker_list.sort(
+            key=lambda w: (
+                0 if w["worker_status"] == "active" else 1 if w["worker_status"] == "recent" else 2,
+                -w["last_updated"],  # Most recent first within each group
+            )
+        )
 
         return worker_list
 
+
 # Global monitoring manager instance
 monitoring_manager = MonitoringManager()
+
 
 # Background task to periodically update system health
 async def periodic_health_update():
@@ -473,26 +437,22 @@ async def periodic_health_update():
 
             # Broadcast system health
             health_data = monitoring_manager.get_system_health()
-            await monitoring_manager.broadcast({
-                "type": "system_health",
-                "payload": health_data
-            })
+            await monitoring_manager.broadcast({"type": "system_health", "payload": health_data})
 
             # If stale data was detected and reset, broadcast the updates
             if changes_made:
-                await monitoring_manager.broadcast({
-                    "type": "extraction_status",
-                    "payload": monitoring_manager.extraction_status
-                })
-                await monitoring_manager.broadcast({
-                    "type": "circuit_breaker_status",
-                    "payload": monitoring_manager.circuit_breakers
-                })
+                await monitoring_manager.broadcast(
+                    {"type": "extraction_status", "payload": monitoring_manager.extraction_status}
+                )
+                await monitoring_manager.broadcast(
+                    {"type": "circuit_breaker_status", "payload": monitoring_manager.circuit_breakers}
+                )
 
             await asyncio.sleep(10)  # Update every 10 seconds
         except Exception as e:
             print(f"Error in periodic health update: {e}")
             await asyncio.sleep(10)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -508,6 +468,7 @@ async def lifespan(app: FastAPI):
     # Shutdown (if needed)
     print("🛑 Shutting down monitoring dashboard backend")
 
+
 app = FastAPI(lifespan=lifespan)
 
 # Configure CORS middleware
@@ -516,10 +477,10 @@ origins = [
     "https://diocesanvitality.org",
     "http://diocesanvitality.org",
     "https://diocesanvitality.org",
-    "http://localhost:3000",    # React development server
+    "http://localhost:3000",  # React development server
     "http://localhost:8080",
     "http://localhost:8081",
-    "http://localhost:5173",    # Vite development server
+    "http://localhost:5173",  # Vite development server
 ]
 
 app.add_middleware(
@@ -544,6 +505,7 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 def read_root():
     return {"message": "Hello from the Python backend!"}
 
+
 @app.get("/api/summary")
 async def get_summary():
     """
@@ -551,23 +513,29 @@ async def get_summary():
     """
     try:
         # Dioceses summary
-        total_dioceses_response = supabase.table('Dioceses').select('count', count='exact').execute()
+        total_dioceses_response = supabase.table("Dioceses").select("count", count="exact").execute()
         total_dioceses_processed = total_dioceses_response.count
 
-        dir_response = supabase.table('DiocesesParishDirectory').select('diocese_id').execute()
+        dir_response = supabase.table("DiocesesParishDirectory").select("diocese_id").execute()
         dir_data = dir_response.data
-        dioceses_with_parish_directories_found = len(set(item['diocese_id'] for item in dir_data))
+        dioceses_with_parish_directories_found = len(set(item["diocese_id"] for item in dir_data))
         dioceses_without_parish_directories_found = total_dioceses_processed - dioceses_with_parish_directories_found
 
         # Parishes summary
-        parishes_count_response = supabase.table('Parishes').select('count', count='exact').execute()
+        parishes_count_response = supabase.table("Parishes").select("count", count="exact").execute()
         parishes_extracted = parishes_count_response.count
 
-        parish_data_response = supabase.table('ParishData').select('parish_id, fact_value').execute()
+        parish_data_response = supabase.table("ParishData").select("parish_id, fact_value").execute()
         parish_data = parish_data_response.data
-        
-        parishes_with_data_extracted = len(set(item['parish_id'] for item in parish_data if item['fact_value'] and item['fact_value'] != 'Information not found'))
-        
+
+        parishes_with_data_extracted = len(
+            set(
+                item["parish_id"]
+                for item in parish_data
+                if item["fact_value"] and item["fact_value"] != "Information not found"
+            )
+        )
+
         parishes_with_data_not_extracted = parishes_extracted - parishes_with_data_extracted
 
         return {
@@ -581,6 +549,7 @@ async def get_summary():
     except Exception as e:
         return {"error": str(e)}
 
+
 @app.get("/api/dioceses")
 def get_dioceses(
     page: int = 1,
@@ -589,53 +558,62 @@ def get_dioceses(
     sort_order: str = "asc",
     filter_name: str = None,
     filter_address: str = None,
-    filter_website: str = None
+    filter_website: str = None,
 ):
     """
     Fetches records from the 'Dioceses' table with pagination, sorting, and filtering.
     """
     try:
         offset = (page - 1) * page_size
-        
-        query = supabase.table('Dioceses').select('*')
+
+        query = supabase.table("Dioceses").select("*")
         dioceses = query.execute().data
 
         # Apply filtering in Python
         if filter_name:
-            dioceses = [d for d in dioceses if filter_name.lower() in d.get('Name', '').lower()]
+            dioceses = [d for d in dioceses if filter_name.lower() in d.get("Name", "").lower()]
         if filter_address:
-            dioceses = [d for d in dioceses if filter_address.lower() in d.get('Address', '').lower()]
+            dioceses = [d for d in dioceses if filter_address.lower() in d.get("Address", "").lower()]
         if filter_website:
-            dioceses = [d for d in dioceses if filter_website.lower() in d.get('Website', '').lower()]
+            dioceses = [d for d in dioceses if filter_website.lower() in d.get("Website", "").lower()]
 
         total_count = len(dioceses)
 
         # Fetch additional data including blocking detection
-        all_dir_response = supabase.table('DiocesesParishDirectory').select(
-            'diocese_id, parish_directory_url, is_blocked, blocking_type, blocking_evidence, status_code, robots_txt_check, respectful_automation_used, status_description'
-        ).execute()
-        dir_url_map = {item['diocese_id']: item['parish_directory_url'] for item in all_dir_response.data}
+        all_dir_response = (
+            supabase.table("DiocesesParishDirectory")
+            .select(
+                "diocese_id, parish_directory_url, is_blocked, blocking_type, blocking_evidence, status_code, robots_txt_check, respectful_automation_used, status_description"
+            )
+            .execute()
+        )
+        dir_url_map = {item["diocese_id"]: item["parish_directory_url"] for item in all_dir_response.data}
         blocking_data_map = {
-            item['diocese_id']: {
-                'is_blocked': item.get('is_blocked', False),
-                'blocking_type': item.get('blocking_type'),
-                'blocking_evidence': item.get('blocking_evidence', {}),
-                'status_code': item.get('status_code'),
-                'robots_txt_check': item.get('robots_txt_check', {}),
-                'respectful_automation_used': item.get('respectful_automation_used', False),
-                'status_description': item.get('status_description', 'Unknown')
-            } for item in all_dir_response.data
+            item["diocese_id"]: {
+                "is_blocked": item.get("is_blocked", False),
+                "blocking_type": item.get("blocking_type"),
+                "blocking_evidence": item.get("blocking_evidence", {}),
+                "status_code": item.get("status_code"),
+                "robots_txt_check": item.get("robots_txt_check", {}),
+                "respectful_automation_used": item.get("respectful_automation_used", False),
+                "status_description": item.get("status_description", "Unknown"),
+            }
+            for item in all_dir_response.data
         }
 
-        parishes_response = supabase.table('Parishes').select('id, diocese_url').execute()
-        parishes_map = {p['id']: p['diocese_url'] for p in parishes_response.data}
+        parishes_response = supabase.table("Parishes").select("id, diocese_url").execute()
+        parishes_map = {p["id"]: p["diocese_url"] for p in parishes_response.data}
         parish_counts = {}
         for parish in parishes_response.data:
-            url = parish['diocese_url']
+            url = parish["diocese_url"]
             parish_counts[url] = parish_counts.get(url, 0) + 1
 
-        parish_data_response = supabase.table('ParishData').select('parish_id, fact_value').execute()
-        parishes_with_data = {item['parish_id'] for item in parish_data_response.data if item['fact_value'] and item['fact_value'] != 'Information not found'}
+        parish_data_response = supabase.table("ParishData").select("parish_id, fact_value").execute()
+        parishes_with_data = {
+            item["parish_id"]
+            for item in parish_data_response.data
+            if item["fact_value"] and item["fact_value"] != "Information not found"
+        }
 
         parishes_with_data_extracted_counts = {}
         for parish_id in parishes_with_data:
@@ -644,40 +622,35 @@ def get_dioceses(
                 parishes_with_data_extracted_counts[diocese_url] = parishes_with_data_extracted_counts.get(diocese_url, 0) + 1
 
         for diocese in dioceses:
-            diocese['parish_directory_url'] = dir_url_map.get(diocese['id'])
-            diocese['parishes_in_db_count'] = parish_counts.get(diocese['Website'], 0)
-            diocese['parishes_with_data_extracted_count'] = parishes_with_data_extracted_counts.get(diocese['Website'], 0)
+            diocese["parish_directory_url"] = dir_url_map.get(diocese["id"])
+            diocese["parishes_in_db_count"] = parish_counts.get(diocese["Website"], 0)
+            diocese["parishes_with_data_extracted_count"] = parishes_with_data_extracted_counts.get(diocese["Website"], 0)
 
             # Add blocking detection data
-            blocking_data = blocking_data_map.get(diocese['id'], {})
-            diocese['is_blocked'] = blocking_data.get('is_blocked', False)
-            diocese['blocking_type'] = blocking_data.get('blocking_type')
-            diocese['blocking_evidence'] = blocking_data.get('blocking_evidence', {})
-            diocese['status_code'] = blocking_data.get('status_code')
-            diocese['robots_txt_check'] = blocking_data.get('robots_txt_check', {})
-            diocese['respectful_automation_used'] = blocking_data.get('respectful_automation_used', False)
-            diocese['status_description'] = blocking_data.get('status_description', 'Not tested')
+            blocking_data = blocking_data_map.get(diocese["id"], {})
+            diocese["is_blocked"] = blocking_data.get("is_blocked", False)
+            diocese["blocking_type"] = blocking_data.get("blocking_type")
+            diocese["blocking_evidence"] = blocking_data.get("blocking_evidence", {})
+            diocese["status_code"] = blocking_data.get("status_code")
+            diocese["robots_txt_check"] = blocking_data.get("robots_txt_check", {})
+            diocese["respectful_automation_used"] = blocking_data.get("respectful_automation_used", False)
+            diocese["status_description"] = blocking_data.get("status_description", "Not tested")
 
         # Sort in Python
-        reverse = sort_order.lower() == 'desc'
-        if sort_by == 'parishes_in_db_count':
-            dioceses.sort(key=lambda d: d.get('parishes_in_db_count', 0), reverse=reverse)
+        reverse = sort_order.lower() == "desc"
+        if sort_by == "parishes_in_db_count":
+            dioceses.sort(key=lambda d: d.get("parishes_in_db_count", 0), reverse=reverse)
         else:
             # Use .get for safer access and handle None values
-            dioceses.sort(key=lambda d: (d.get(sort_by) is None, d.get(sort_by, '')), reverse=reverse)
-
+            dioceses.sort(key=lambda d: (d.get(sort_by) is None, d.get(sort_by, "")), reverse=reverse)
 
         # Paginate the sorted list
-        paginated_dioceses = dioceses[offset:offset + page_size]
+        paginated_dioceses = dioceses[offset : offset + page_size]
 
-        return {
-            "data": paginated_dioceses,
-            "total_count": total_count,
-            "page": page,
-            "page_size": page_size
-        }
+        return {"data": paginated_dioceses, "total_count": total_count, "page": page, "page_size": page_size}
     except Exception as e:
         return {"error": str(e)}
+
 
 @app.get("/api/dioceses/{diocese_id}")
 def get_diocese(diocese_id: int):
@@ -685,12 +658,13 @@ def get_diocese(diocese_id: int):
     Fetches a single diocese by its ID.
     """
     try:
-        response = supabase.table('Dioceses').select('*').eq('id', diocese_id).execute()
+        response = supabase.table("Dioceses").select("*").eq("id", diocese_id).execute()
         if not response.data:
             raise HTTPException(status_code=404, detail="Diocese not found")
         return {"data": response.data[0]}
     except Exception as e:
         return {"error": str(e)}
+
 
 @app.get("/api/dioceses/{diocese_id}/parishes")
 def get_parishes_for_diocese(
@@ -704,7 +678,7 @@ def get_parishes_for_diocese(
     filter_data_extracted: str = None,
     filter_data_available: str = None,
     filter_blocked: str = None,
-    filter_diocese_name: str = None
+    filter_diocese_name: str = None,
 ):
     """
     Fetches all parishes for a given diocese ID with pagination, sorting, and filtering.
@@ -713,51 +687,59 @@ def get_parishes_for_diocese(
         offset = (page - 1) * page_size
 
         # First, get the diocese's website using its ID
-        diocese_response = supabase.table('Dioceses').select('Website').eq('id', diocese_id).execute()
+        diocese_response = supabase.table("Dioceses").select("Website").eq("id", diocese_id).execute()
         if not diocese_response.data:
             raise HTTPException(status_code=404, detail="Diocese not found")
-        diocese_website = diocese_response.data[0]['Website']
+        diocese_website = diocese_response.data[0]["Website"]
 
-        query = supabase.table('parishes_with_diocese_name').select('*', count='exact').eq('diocese_id', diocese_id)
+        query = supabase.table("parishes_with_diocese_name").select("*", count="exact").eq("diocese_id", diocese_id)
 
         # Apply filters
         if filter_name:
-            query = query.ilike('Name', f'%{filter_name}%')
+            query = query.ilike("Name", f"%{filter_name}%")
         if filter_diocese_name:
-            query = query.ilike('diocese_name', f'%{filter_diocese_name}%')
+            query = query.ilike("diocese_name", f"%{filter_diocese_name}%")
 
         if filter_website:
-            query = query.ilike('Web', f'%{filter_website}%') # Use 'Web' for website column
+            query = query.ilike("Web", f"%{filter_website}%")  # Use 'Web' for website column
 
         if filter_blocked:
-            if filter_blocked.lower() == 'true':
-                query = query.eq('is_blocked', True)
-            elif filter_blocked.lower() == 'false':
-                query = query.eq('is_blocked', False)
+            if filter_blocked.lower() == "true":
+                query = query.eq("is_blocked", True)
+            elif filter_blocked.lower() == "false":
+                query = query.eq("is_blocked", False)
 
         # Handle data_extracted and data_available filters by pre-filtering parish IDs
         if filter_data_extracted or filter_data_available:
             # Get all parishes with data
-            all_parish_data_response = supabase.table('ParishData').select('parish_id, fact_value').execute()
-            parishes_with_data = {item['parish_id'] for item in all_parish_data_response.data if item['fact_value'] and item['fact_value'] != 'Information not found'}
+            all_parish_data_response = supabase.table("ParishData").select("parish_id, fact_value").execute()
+            parishes_with_data = {
+                item["parish_id"]
+                for item in all_parish_data_response.data
+                if item["fact_value"] and item["fact_value"] != "Information not found"
+            }
 
             # Determine which parish IDs to filter by
             filter_parish_ids = None
             if filter_data_extracted:
-                if filter_data_extracted.lower() == 'true':
+                if filter_data_extracted.lower() == "true":
                     filter_parish_ids = list(parishes_with_data)
-                elif filter_data_extracted.lower() == 'false':
+                elif filter_data_extracted.lower() == "false":
                     # Get all parish IDs for this diocese, then subtract those with data
-                    all_parishes_response = supabase.table('parishes_with_diocese_name').select('id').eq('diocese_id', diocese_id).execute()
-                    all_parish_ids = {p['id'] for p in all_parishes_response.data}
+                    all_parishes_response = (
+                        supabase.table("parishes_with_diocese_name").select("id").eq("diocese_id", diocese_id).execute()
+                    )
+                    all_parish_ids = {p["id"] for p in all_parishes_response.data}
                     filter_parish_ids = list(all_parish_ids - parishes_with_data)
             elif filter_data_available:
-                if filter_data_available.lower() == 'true':
+                if filter_data_available.lower() == "true":
                     filter_parish_ids = list(parishes_with_data)
-                elif filter_data_available.lower() == 'false':
+                elif filter_data_available.lower() == "false":
                     # Get all parish IDs for this diocese, then subtract those with data
-                    all_parishes_response = supabase.table('parishes_with_diocese_name').select('id').eq('diocese_id', diocese_id).execute()
-                    all_parish_ids = {p['id'] for p in all_parishes_response.data}
+                    all_parishes_response = (
+                        supabase.table("parishes_with_diocese_name").select("id").eq("diocese_id", diocese_id).execute()
+                    )
+                    all_parish_ids = {p["id"] for p in all_parishes_response.data}
                     filter_parish_ids = list(all_parish_ids - parishes_with_data)
 
             # Apply the parish ID filter to the query
@@ -765,91 +747,94 @@ def get_parishes_for_diocese(
                 if len(filter_parish_ids) == 0:
                     # No parishes match the criteria, return empty result
                     return {"data": [], "total_count": 0, "page": page, "page_size": page_size}
-                query = query.in_('id', filter_parish_ids)
+                query = query.in_("id", filter_parish_ids)
 
         # Apply sorting and pagination
         if sort_by == "Name":
-            query = query.order('Name', desc=sort_order.lower() == 'desc')
+            query = query.order("Name", desc=sort_order.lower() == "desc")
         elif sort_by == "DioceseName":
-            query = query.order('diocese_name', desc=sort_order.lower() == 'desc')
+            query = query.order("diocese_name", desc=sort_order.lower() == "desc")
 
         parishes_response = query.range(offset, offset + page_size - 1).execute()
-        
+
         parishes = parishes_response.data
         total_count = parishes_response.count
 
         if not parishes:
             return {"data": [], "total_count": 0, "page": page, "page_size": page_size}
 
-        parish_ids = [parish['id'] for parish in parishes]
+        parish_ids = [parish["id"] for parish in parishes]
 
         # Fetch all reconciliation and adoration facts for all parishes in a single query
-        parish_data_response = supabase.table('ParishData').select('parish_id, fact_type, fact_value').in_('parish_id', parish_ids).in_('fact_type', ['ReconciliationSchedule', 'AdorationSchedule']).execute()
+        parish_data_response = (
+            supabase.table("ParishData")
+            .select("parish_id, fact_type, fact_value")
+            .in_("parish_id", parish_ids)
+            .in_("fact_type", ["ReconciliationSchedule", "AdorationSchedule"])
+            .execute()
+        )
         parish_data = parish_data_response.data
 
         # Create a lookup for parish facts
         parish_facts = {}
         for fact in parish_data:
-            pid = fact['parish_id']
+            pid = fact["parish_id"]
             if pid not in parish_facts:
                 parish_facts[pid] = {}
-            if fact['fact_type'] == 'ReconciliationSchedule':
-                parish_facts[pid]['reconciliation_facts'] = fact['fact_value']
-            elif fact['fact_type'] == 'AdorationSchedule':
-                parish_facts[pid]['adoration_facts'] = fact['fact_value']
+            if fact["fact_type"] == "ReconciliationSchedule":
+                parish_facts[pid]["reconciliation_facts"] = fact["fact_value"]
+            elif fact["fact_type"] == "AdorationSchedule":
+                parish_facts[pid]["adoration_facts"] = fact["fact_value"]
 
         # Add facts to parishes and data_extracted flag
-        all_parishes_with_data = {item['parish_id'] for item in parish_data if item['fact_value'] and item['fact_value'] != 'Information not found'}
+        all_parishes_with_data = {
+            item["parish_id"] for item in parish_data if item["fact_value"] and item["fact_value"] != "Information not found"
+        }
 
         for parish in parishes:
-            facts = parish_facts.get(parish['id'], {})
-            parish['reconciliation_facts'] = facts.get('reconciliation_facts')
-            parish['adoration_facts'] = facts.get('adoration_facts')
-            parish['data_extracted'] = parish['id'] in all_parishes_with_data
+            facts = parish_facts.get(parish["id"], {})
+            parish["reconciliation_facts"] = facts.get("reconciliation_facts")
+            parish["adoration_facts"] = facts.get("adoration_facts")
+            parish["data_extracted"] = parish["id"] in all_parishes_with_data
 
             # Map database column names to frontend expectations
-            if 'Web' in parish:
-                parish['Website'] = parish['Web']
+            if "Web" in parish:
+                parish["Website"] = parish["Web"]
 
             # Ensure blocking detection fields are present
-            parish['is_blocked'] = parish.get('is_blocked', False)
-            parish['blocking_type'] = parish.get('blocking_type')
-            parish['blocking_evidence'] = parish.get('blocking_evidence', {})
-            parish['status_code'] = parish.get('status_code')
-            parish['robots_txt_check'] = parish.get('robots_txt_check', {})
-            parish['respectful_automation_used'] = parish.get('respectful_automation_used', False)
-            parish['status_description'] = parish.get('status_description', 'Not tested')
+            parish["is_blocked"] = parish.get("is_blocked", False)
+            parish["blocking_type"] = parish.get("blocking_type")
+            parish["blocking_evidence"] = parish.get("blocking_evidence", {})
+            parish["status_code"] = parish.get("status_code")
+            parish["robots_txt_check"] = parish.get("robots_txt_check", {})
+            parish["respectful_automation_used"] = parish.get("respectful_automation_used", False)
+            parish["status_description"] = parish.get("status_description", "Not tested")
 
         if filter_data_extracted:
-            if filter_data_extracted.lower() == 'true':
-                parishes = [p for p in parishes if p['data_extracted']]
-            elif filter_data_extracted.lower() == 'false':
-                parishes = [p for p in parishes if not p['data_extracted']]
+            if filter_data_extracted.lower() == "true":
+                parishes = [p for p in parishes if p["data_extracted"]]
+            elif filter_data_extracted.lower() == "false":
+                parishes = [p for p in parishes if not p["data_extracted"]]
 
         if filter_data_available:
-            if filter_data_available.lower() == 'true':
-                parishes = [p for p in parishes if p['data_extracted']]
-            elif filter_data_available.lower() == 'false':
-                parishes = [p for p in parishes if not p['data_extracted']]
+            if filter_data_available.lower() == "true":
+                parishes = [p for p in parishes if p["data_extracted"]]
+            elif filter_data_available.lower() == "false":
+                parishes = [p for p in parishes if not p["data_extracted"]]
 
         if filter_blocked:
-            if filter_blocked.lower() == 'true':
-                parishes = [p for p in parishes if p.get('is_blocked', False)]
-            elif filter_blocked.lower() == 'false':
-                parishes = [p for p in parishes if not p.get('is_blocked', False)]
+            if filter_blocked.lower() == "true":
+                parishes = [p for p in parishes if p.get("is_blocked", False)]
+            elif filter_blocked.lower() == "false":
+                parishes = [p for p in parishes if not p.get("is_blocked", False)]
 
         # Apply Python-side sorting for data_extracted and is_blocked if requested
         if sort_by == "data_extracted":
-            parishes.sort(key=lambda p: p.get('data_extracted', False), reverse=sort_order.lower() == 'desc')
+            parishes.sort(key=lambda p: p.get("data_extracted", False), reverse=sort_order.lower() == "desc")
         elif sort_by == "is_blocked":
-            parishes.sort(key=lambda p: p.get('is_blocked', False), reverse=sort_order.lower() == 'desc')
+            parishes.sort(key=lambda p: p.get("is_blocked", False), reverse=sort_order.lower() == "desc")
 
-        return {
-            "data": parishes,
-            "total_count": total_count,
-            "page": page,
-            "page_size": page_size
-        }
+        return {"data": parishes, "total_count": total_count, "page": page, "page_size": page_size}
     except Exception as e:
         return {"error": str(e)}
 
@@ -865,54 +850,58 @@ def get_all_parishes(
     filter_data_extracted: str = None,
     filter_data_available: str = None,
     filter_blocked: str = None,
-    filter_diocese_name: str = None
+    filter_diocese_name: str = None,
 ):
     """
     Fetches all parishes with pagination, sorting, and filtering.
     """
     try:
         offset = (page - 1) * page_size
-        
-        query = supabase.table('parishes_with_diocese_name').select('*', count='exact')
-        
+
+        query = supabase.table("parishes_with_diocese_name").select("*", count="exact")
+
         # Apply filters
         if filter_name:
-            query = query.ilike('Name', f'%{filter_name}%')
+            query = query.ilike("Name", f"%{filter_name}%")
         if filter_diocese_name:
-            query = query.ilike('diocese_name', f'%{filter_diocese_name}%')
+            query = query.ilike("diocese_name", f"%{filter_diocese_name}%")
 
         if filter_website:
-            query = query.ilike('Website', f'%{filter_website}%')
+            query = query.ilike("Website", f"%{filter_website}%")
 
         if filter_blocked:
-            if filter_blocked.lower() == 'true':
-                query = query.eq('is_blocked', True)
-            elif filter_blocked.lower() == 'false':
-                query = query.eq('is_blocked', False)
+            if filter_blocked.lower() == "true":
+                query = query.eq("is_blocked", True)
+            elif filter_blocked.lower() == "false":
+                query = query.eq("is_blocked", False)
 
         # Handle data_extracted and data_available filters by pre-filtering parish IDs
         if filter_data_extracted or filter_data_available:
             # Get all parishes with data
-            all_parish_data_response = supabase.table('ParishData').select('parish_id, fact_value').execute()
-            parishes_with_data = {item['parish_id'] for item in all_parish_data_response.data if item['fact_value'] and item['fact_value'] != 'Information not found'}
+            all_parish_data_response = supabase.table("ParishData").select("parish_id, fact_value").execute()
+            parishes_with_data = {
+                item["parish_id"]
+                for item in all_parish_data_response.data
+                if item["fact_value"] and item["fact_value"] != "Information not found"
+            }
 
             # Determine which parish IDs to filter by
             filter_parish_ids = None
             if filter_data_extracted:
-                if filter_data_extracted.lower() == 'true':
+                if filter_data_extracted.lower() == "true":
                     filter_parish_ids = list(parishes_with_data)
-                elif filter_data_extracted.lower() == 'false':
+                elif filter_data_extracted.lower() == "false":
                     # Get all parish IDs from the current query, then subtract those with data
-                    all_parishes_response = supabase.table('parishes_with_diocese_name').select('id').execute()
-                    all_parish_ids = {p['id'] for p in all_parishes_response.data}
+                    all_parishes_response = supabase.table("parishes_with_diocese_name").select("id").execute()
+                    all_parish_ids = {p["id"] for p in all_parishes_response.data}
                     filter_parish_ids = list(all_parish_ids - parishes_with_data)
             elif filter_data_available:
-                if filter_data_available.lower() == 'true':
+                if filter_data_available.lower() == "true":
                     filter_parish_ids = list(parishes_with_data)
-                elif filter_data_available.lower() == 'false':
+                elif filter_data_available.lower() == "false":
                     # Get all parish IDs from the current query, then subtract those with data
-                    all_parishes_response = supabase.table('parishes_with_diocese_name').select('id').execute()
-                    all_parish_ids = {p['id'] for p in all_parishes_response.data}
+                    all_parishes_response = supabase.table("parishes_with_diocese_name").select("id").execute()
+                    all_parish_ids = {p["id"] for p in all_parishes_response.data}
                     filter_parish_ids = list(all_parish_ids - parishes_with_data)
 
             # Apply the parish ID filter to the query
@@ -920,90 +909,90 @@ def get_all_parishes(
                 if len(filter_parish_ids) == 0:
                     # No parishes match the criteria, return empty result
                     return {"data": [], "total_count": 0, "page": page, "page_size": page_size}
-                query = query.in_('id', filter_parish_ids)
+                query = query.in_("id", filter_parish_ids)
 
         # Apply sorting and pagination
         if sort_by == "Name":
-            query = query.order('Name', desc=sort_order.lower() == 'desc')
+            query = query.order("Name", desc=sort_order.lower() == "desc")
         elif sort_by == "DioceseName":
-            query = query.order('diocese_name', desc=sort_order.lower() == 'desc')
+            query = query.order("diocese_name", desc=sort_order.lower() == "desc")
         elif sort_by == "Web":
-            query = query.order('Web', desc=sort_order.lower() == 'desc')
+            query = query.order("Web", desc=sort_order.lower() == "desc")
         elif sort_by == "is_blocked":
-            query = query.order('is_blocked', desc=sort_order.lower() == 'desc')
+            query = query.order("is_blocked", desc=sort_order.lower() == "desc")
         # Add other sortable columns as needed
 
         parishes_response = query.range(offset, offset + page_size - 1).execute()
-        
+
         parishes = parishes_response.data
         total_count = parishes_response.count
 
         # Fetch parish data for 'data_extracted' filter and add data_extracted flag
-        all_parish_ids = [p['id'] for p in parishes]
-        all_parish_data_response = supabase.table('ParishData').select('parish_id, fact_value').in_('parish_id', all_parish_ids).execute()
-        all_parishes_with_data = {item['parish_id'] for item in all_parish_data_response.data if item['fact_value'] and item['fact_value'] != 'Information not found'}
+        all_parish_ids = [p["id"] for p in parishes]
+        all_parish_data_response = (
+            supabase.table("ParishData").select("parish_id, fact_value").in_("parish_id", all_parish_ids).execute()
+        )
+        all_parishes_with_data = {
+            item["parish_id"]
+            for item in all_parish_data_response.data
+            if item["fact_value"] and item["fact_value"] != "Information not found"
+        }
 
         for parish in parishes:
-            parish['data_extracted'] = parish['id'] in all_parishes_with_data
+            parish["data_extracted"] = parish["id"] in all_parishes_with_data
 
             # Map database column names to frontend expectations
 
-            if 'Web' in parish:
-                parish['Website'] = parish['Web']
+            if "Web" in parish:
+                parish["Website"] = parish["Web"]
 
             # Ensure blocking detection fields are present
-            parish['is_blocked'] = parish.get('is_blocked', False)
-            parish['blocking_type'] = parish.get('blocking_type')
-            parish['blocking_evidence'] = parish.get('blocking_evidence', {})
-            parish['status_code'] = parish.get('status_code')
-            parish['robots_txt_check'] = parish.get('robots_txt_check', {})
-            parish['respectful_automation_used'] = parish.get('respectful_automation_used', False)
-            parish['status_description'] = parish.get('status_description', 'Not tested')
+            parish["is_blocked"] = parish.get("is_blocked", False)
+            parish["blocking_type"] = parish.get("blocking_type")
+            parish["blocking_evidence"] = parish.get("blocking_evidence", {})
+            parish["status_code"] = parish.get("status_code")
+            parish["robots_txt_check"] = parish.get("robots_txt_check", {})
+            parish["respectful_automation_used"] = parish.get("respectful_automation_used", False)
+            parish["status_description"] = parish.get("status_description", "Not tested")
 
         # Apply filter for data_extracted after computing the flag
         if filter_data_extracted:
-            if filter_data_extracted.lower() == 'true':
-                parishes = [p for p in parishes if p['data_extracted']]
-            elif filter_data_extracted.lower() == 'false':
-                parishes = [p for p in parishes if not p['data_extracted']]
+            if filter_data_extracted.lower() == "true":
+                parishes = [p for p in parishes if p["data_extracted"]]
+            elif filter_data_extracted.lower() == "false":
+                parishes = [p for p in parishes if not p["data_extracted"]]
 
         if filter_data_available:
-            if filter_data_available.lower() == 'true':
-                parishes = [p for p in parishes if p['data_extracted']]
-            elif filter_data_available.lower() == 'false':
-                parishes = [p for p in parishes if not p['data_extracted']]
+            if filter_data_available.lower() == "true":
+                parishes = [p for p in parishes if p["data_extracted"]]
+            elif filter_data_available.lower() == "false":
+                parishes = [p for p in parishes if not p["data_extracted"]]
 
         if filter_blocked:
-            if filter_blocked.lower() == 'true':
-                parishes = [p for p in parishes if p.get('is_blocked', False)]
-            elif filter_blocked.lower() == 'false':
-                parishes = [p for p in parishes if not p.get('is_blocked', False)]
+            if filter_blocked.lower() == "true":
+                parishes = [p for p in parishes if p.get("is_blocked", False)]
+            elif filter_blocked.lower() == "false":
+                parishes = [p for p in parishes if not p.get("is_blocked", False)]
 
         # Apply Python-side sorting for data_extracted and is_blocked if requested
         if sort_by == "data_extracted":
-            parishes.sort(key=lambda p: p.get('data_extracted', False), reverse=sort_order.lower() == 'desc')
+            parishes.sort(key=lambda p: p.get("data_extracted", False), reverse=sort_order.lower() == "desc")
         elif sort_by == "is_blocked":
-            parishes.sort(key=lambda p: p.get('is_blocked', False), reverse=sort_order.lower() == 'desc')
+            parishes.sort(key=lambda p: p.get("is_blocked", False), reverse=sort_order.lower() == "desc")
 
-        return {
-            "data": parishes,
-            "total_count": total_count,
-            "page": page,
-            "page_size": page_size
-        }
+        return {"data": parishes, "total_count": total_count, "page": page, "page_size": page_size}
     except Exception as e:
         return {"error": str(e)}
 
+
 @app.get("/api/parish")
-def get_parish(
-    parish_id: int
-):
+def get_parish(parish_id: int):
     """
     Fetches a single parish by its ID with diocese name and schedule data.
     """
     try:
         # Get parish basic info
-        parish_response = supabase.table('Parishes').select('*').eq('id', parish_id).execute()
+        parish_response = supabase.table("Parishes").select("*").eq("id", parish_id).execute()
 
         if not parish_response.data:
             raise HTTPException(status_code=404, detail="Parish not found")
@@ -1011,24 +1000,25 @@ def get_parish(
         parish = parish_response.data[0]
 
         # Get diocese name
-        if parish.get('diocese_id'):
-            diocese_response = supabase.table('Dioceses').select('Name').eq('id', parish['diocese_id']).execute()
+        if parish.get("diocese_id"):
+            diocese_response = supabase.table("Dioceses").select("Name").eq("id", parish["diocese_id"]).execute()
             if diocese_response.data:
-                parish['diocese_name'] = diocese_response.data[0]['Name']
+                parish["diocese_name"] = diocese_response.data[0]["Name"]
             else:
-                parish['diocese_name'] = None
+                parish["diocese_name"] = None
         else:
-            parish['diocese_name'] = None
+            parish["diocese_name"] = None
 
         # Get schedule data
-        schedule_response = supabase.table('ParishData').select('*').eq('parish_id', parish_id).execute()
+        schedule_response = supabase.table("ParishData").select("*").eq("parish_id", parish_id).execute()
 
         # Add schedule data to parish
-        parish['schedules'] = schedule_response.data
+        parish["schedules"] = schedule_response.data
 
         return {"data": parish}
     except Exception as e:
         return {"error": str(e)}
+
 
 # WebSocket endpoint for real-time monitoring
 @app.websocket("/ws/monitoring")
@@ -1036,7 +1026,7 @@ async def websocket_monitoring(websocket: WebSocket):
     """WebSocket endpoint for real-time monitoring updates"""
     await websocket.accept()
     await monitoring_manager.add_connection(websocket)
-    
+
     try:
         while True:
             # Keep connection alive and handle any incoming messages
@@ -1051,11 +1041,12 @@ async def websocket_monitoring(websocket: WebSocket):
             except Exception as e:
                 print(f"WebSocket error: {e}")
                 break
-            
+
     except WebSocketDisconnect:
         pass
     finally:
         await monitoring_manager.remove_connection(websocket)
+
 
 # Monitoring API endpoints
 @app.get("/api/monitoring/status")
@@ -1068,8 +1059,9 @@ async def get_monitoring_status():
         "performance_metrics": monitoring_manager.performance_metrics,
         "recent_errors": monitoring_manager.recent_errors[:10],  # Last 10 errors
         "extraction_history": monitoring_manager.extraction_history[:10],  # Last 10 extractions
-        "websocket_connections": len(monitoring_manager.websocket_connections)
+        "websocket_connections": len(monitoring_manager.websocket_connections),
     }
+
 
 @app.post("/api/monitoring/extraction_status")
 async def update_extraction_status_endpoint(status_data: dict):
@@ -1080,6 +1072,7 @@ async def update_extraction_status_endpoint(status_data: dict):
     except Exception as e:
         return {"error": str(e)}
 
+
 @app.post("/api/monitoring/circuit_breakers")
 async def update_circuit_breakers_endpoint(circuit_data: dict):
     """Update circuit breaker status (for async extraction scripts to call)"""
@@ -1088,6 +1081,7 @@ async def update_circuit_breakers_endpoint(circuit_data: dict):
         return {"status": "success"}
     except Exception as e:
         return {"error": str(e)}
+
 
 @app.post("/api/monitoring/performance")
 async def update_performance_metrics_endpoint(metrics_data: dict):
@@ -1098,6 +1092,7 @@ async def update_performance_metrics_endpoint(metrics_data: dict):
     except Exception as e:
         return {"error": str(e)}
 
+
 @app.post("/api/monitoring/error")
 async def report_error_endpoint(error_data: dict):
     """Report an error (for async extraction scripts to call)"""
@@ -1106,6 +1101,7 @@ async def report_error_endpoint(error_data: dict):
         return {"status": "success"}
     except Exception as e:
         return {"error": str(e)}
+
 
 @app.post("/api/monitoring/extraction_complete")
 async def report_extraction_complete_endpoint(extraction_data: dict):
@@ -1116,6 +1112,7 @@ async def report_extraction_complete_endpoint(extraction_data: dict):
     except Exception as e:
         return {"error": str(e)}
 
+
 @app.post("/api/monitoring/log")
 async def send_log_endpoint(log_data: dict):
     """Send live log entry (for async extraction scripts to call)"""
@@ -1124,6 +1121,7 @@ async def send_log_endpoint(log_data: dict):
         return {"status": "success"}
     except Exception as e:
         return {"error": str(e)}
+
 
 # Multi-worker endpoints
 @app.post("/api/monitoring/worker/{worker_id}/extraction_status")
@@ -1135,6 +1133,7 @@ async def update_worker_extraction_status(worker_id: str, status_data: dict):
     except Exception as e:
         return {"error": str(e)}
 
+
 @app.post("/api/monitoring/worker/{worker_id}/circuit_breakers")
 async def update_worker_circuit_breakers(worker_id: str, circuit_data: dict):
     """Update circuit breaker status for a specific worker"""
@@ -1144,16 +1143,15 @@ async def update_worker_circuit_breakers(worker_id: str, circuit_data: dict):
     except Exception as e:
         return {"error": str(e)}
 
+
 @app.get("/api/monitoring/workers")
 async def get_workers():
     """Get list of all workers"""
     try:
-        return {
-            "workers": monitoring_manager.get_worker_list(),
-            "aggregate_mode": monitoring_manager.aggregate_mode
-        }
+        return {"workers": monitoring_manager.get_worker_list(), "aggregate_mode": monitoring_manager.aggregate_mode}
     except Exception as e:
         return {"error": str(e)}
+
 
 @app.get("/api/monitoring/worker/{worker_id}")
 async def get_worker_details(worker_id: str):
@@ -1168,10 +1166,11 @@ async def get_worker_details(worker_id: str):
             "extraction_status": worker_data["extraction_status"],
             "circuit_breakers": worker_data["circuit_breakers"],
             "performance_metrics": worker_data["performance_metrics"],
-            "last_updated": worker_data["last_updated"]
+            "last_updated": worker_data["last_updated"],
         }
     except Exception as e:
         return {"error": str(e)}
+
 
 @app.post("/api/monitoring/mode/{mode}")
 async def set_monitoring_mode(mode: str):
@@ -1180,8 +1179,7 @@ async def set_monitoring_mode(mode: str):
         if mode not in ["aggregate", "individual"]:
             raise HTTPException(status_code=400, detail="Mode must be 'aggregate' or 'individual'")
 
-        monitoring_manager.aggregate_mode = (mode == "aggregate")
+        monitoring_manager.aggregate_mode = mode == "aggregate"
         return {"status": "success", "mode": mode}
     except Exception as e:
         return {"error": str(e)}
-

@@ -6,10 +6,10 @@ This example demonstrates how to extract data for a specific diocese
 using the async extraction capabilities.
 """
 
-import os
-import sys
 import argparse
 import logging
+import os
+import sys
 from pathlib import Path
 
 # Add the project root to Python path
@@ -17,10 +17,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -31,13 +28,10 @@ def get_diocese_info(diocese_id: int) -> dict:
     sample_dioceses = {
         1: {"name": "Archdiocese of Atlanta", "state": "Georgia"},
         2: {"name": "Diocese of Savannah", "state": "Georgia"},
-        123: {"name": "Example Diocese", "state": "Example State"}
+        123: {"name": "Example Diocese", "state": "Example State"},
     }
 
-    return sample_dioceses.get(diocese_id, {
-        "name": f"Diocese {diocese_id}",
-        "state": "Unknown"
-    })
+    return sample_dioceses.get(diocese_id, {"name": f"Diocese {diocese_id}", "state": "Unknown"})
 
 
 def extract_diocese(diocese_id: int, pool_size: int = 6, batch_size: int = 12):
@@ -60,10 +54,13 @@ def extract_diocese(diocese_id: int, pool_size: int = 6, batch_size: int = 12):
         # Set up parameters for async extraction
         original_argv = sys.argv
         sys.argv = [
-            'async_extract_parishes.py',
-            '--diocese_id', str(diocese_id),
-            '--pool_size', str(pool_size),
-            '--batch_size', str(batch_size)
+            "async_extract_parishes.py",
+            "--diocese_id",
+            str(diocese_id),
+            "--pool_size",
+            str(pool_size),
+            "--batch_size",
+            str(batch_size),
         ]
 
         logger.info("🚀 Starting async extraction...")
@@ -111,29 +108,14 @@ Available Diocese IDs (examples):
   123 - Example Diocese for testing
 
 Note: Check your database for the complete list of available dioceses.
-        """
+        """,
     )
 
-    parser.add_argument(
-        "--diocese-id",
-        type=int,
-        required=True,
-        help="Diocese ID to extract (required)"
-    )
+    parser.add_argument("--diocese-id", type=int, required=True, help="Diocese ID to extract (required)")
 
-    parser.add_argument(
-        "--pool-size",
-        type=int,
-        default=6,
-        help="Number of concurrent workers (default: 6)"
-    )
+    parser.add_argument("--pool-size", type=int, default=6, help="Number of concurrent workers (default: 6)")
 
-    parser.add_argument(
-        "--batch-size",
-        type=int,
-        default=12,
-        help="Number of parishes to process per batch (default: 12)"
-    )
+    parser.add_argument("--batch-size", type=int, default=12, help="Number of parishes to process per batch (default: 12)")
 
     args = parser.parse_args()
 
@@ -148,7 +130,7 @@ Note: Check your database for the complete list of available dioceses.
         return 1
 
     # Check prerequisites
-    required_vars = ['SUPABASE_URL', 'SUPABASE_KEY', 'GENAI_API_KEY']
+    required_vars = ["SUPABASE_URL", "SUPABASE_KEY", "GENAI_API_KEY"]
     missing_vars = [var for var in required_vars if not os.getenv(var)]
 
     if missing_vars:

@@ -6,12 +6,14 @@ Uses Google Gemini AI to extract structured schedule information.
 
 import json
 import re
-from typing import Dict, List, Optional, Tuple
 from datetime import datetime, timezone
+from typing import Dict, List, Optional, Tuple
+
 import google.generativeai as genai
-from core.logger import get_logger
-from core.db import get_supabase_client
+
 import config
+from core.db import get_supabase_client
+from core.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -23,7 +25,7 @@ class ScheduleAIExtractor:
         """Initialize the AI extractor with Gemini API."""
         try:
             genai.configure(api_key=config.GENAI_API_KEY)
-            self.model = genai.GenerativeModel('gemini-1.5-flash')
+            self.model = genai.GenerativeModel("gemini-1.5-flash")
             logger.info("AI Schedule Extractor initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize AI Schedule Extractor: {e}")
@@ -47,17 +49,20 @@ class ScheduleAIExtractor:
         url_lower = url.lower()
 
         # Major parishes/cathedrals should have lower thresholds
-        if any(keyword in url_lower for keyword in ['cathedral', 'basilica', 'shrine']):
+        if any(keyword in url_lower for keyword in ["cathedral", "basilica", "shrine"]):
             adjustments -= 10
             logger.debug(f"Major parish detected, lowering threshold by 10")
 
         # Dedicated schedule pages should have lower thresholds
-        if any(keyword in url_lower for keyword in ['schedule', 'hours', 'mass-times', 'adoration', 'confession', 'reconciliation']):
+        if any(
+            keyword in url_lower
+            for keyword in ["schedule", "hours", "mass-times", "adoration", "confession", "reconciliation"]
+        ):
             adjustments -= 7  # Increased from 5 to be more permissive
             logger.debug(f"Dedicated schedule page detected, lowering threshold by 7")
 
         # Parish life/ministry pages often contain schedule info
-        if any(keyword in url_lower for keyword in ['parish-life', 'ministry', 'ministries', 'worship', 'sacrament']):
+        if any(keyword in url_lower for keyword in ["parish-life", "ministry", "ministries", "worship", "sacrament"]):
             adjustments -= 5
             logger.debug(f"Parish life/ministry page detected, lowering threshold by 5")
 
@@ -73,19 +78,21 @@ class ScheduleAIExtractor:
             logger.debug(f"Very small page ({content_length} words), raising threshold by 3")
 
         # Sitemap pages should have higher thresholds but not too high
-        if 'sitemap' in url_lower:
+        if "sitemap" in url_lower:
             adjustments += 10  # Reduced from 15
             logger.debug(f"Sitemap page detected, raising threshold by 10")
 
         # Generic 'about' pages might contain schedules
-        if any(keyword in url_lower for keyword in ['about', 'contact', 'home', 'welcome']):
+        if any(keyword in url_lower for keyword in ["about", "contact", "home", "welcome"]):
             adjustments -= 2
             logger.debug(f"Generic page that might contain schedule info, lowering threshold by 2")
 
         final_threshold = max(3, base_threshold + adjustments)  # Minimum threshold lowered to 3
 
         if final_threshold != base_threshold:
-            logger.info(f"Adaptive threshold for {url}: {final_threshold} (base: {base_threshold}, adjustment: {adjustments:+d})")
+            logger.info(
+                f"Adaptive threshold for {url}: {final_threshold} (base: {base_threshold}, adjustment: {adjustments:+d})"
+            )
 
         return final_threshold
 
@@ -113,9 +120,9 @@ class ScheduleAIExtractor:
             if content_size > 20000:
                 timeout_seconds = 120  # 2 minutes for very large content
             elif content_size > 10000:
-                timeout_seconds = 90   # 1.5 minutes for large content
+                timeout_seconds = 90  # 1.5 minutes for large content
             else:
-                timeout_seconds = 60   # 1 minute for normal content
+                timeout_seconds = 60  # 1 minute for normal content
 
             logger.info(f"Processing {content_size} chars with {timeout_seconds}s timeout for {schedule_type}")
 
@@ -137,8 +144,8 @@ class ScheduleAIExtractor:
             result = self._parse_ai_response(response.text, url, schedule_type)
 
             # Add URL and content for adaptive threshold calculation
-            result['url'] = url
-            result['content'] = content[:1000]  # Store first 1000 chars for threshold calculation
+            result["url"] = url
+            result["content"] = content[:1000]  # Store first 1000 chars for threshold calculation
 
             logger.info(f"AI extraction completed for {schedule_type} at {url}")
             return result
@@ -253,10 +260,10 @@ If no Mass schedule is found, return has_weekly_schedule: false and schedule_fou
     def _clean_content_for_ai(self, content: str) -> str:
         """Clean and intelligently truncate content for AI processing."""
         # Remove HTML tags
-        content = re.sub(r'<[^>]+>', ' ', content)
+        content = re.sub(r"<[^>]+>", " ", content)
 
         # Remove excessive whitespace
-        content = re.sub(r'\s+', ' ', content)
+        content = re.sub(r"\s+", " ", content)
 
         # Increased limit for large sitemap processing (Gemini 1.5 Flash can handle more)
         max_chars = 32000  # Increased from 8000 to handle large sitemaps
@@ -264,10 +271,29 @@ If no Mass schedule is found, return has_weekly_schedule: false and schedule_fou
         if len(content) > max_chars:
             # For large content, try to find schedule-relevant sections first
             schedule_keywords = [
-                'mass', 'schedule', 'confession', 'reconciliation', 'adoration',
-                'eucharistic', 'holy hour', 'sacrament', 'liturgy', 'service',
-                'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday',
-                'daily', 'weekly', 'am', 'pm', 'time', 'hour'
+                "mass",
+                "schedule",
+                "confession",
+                "reconciliation",
+                "adoration",
+                "eucharistic",
+                "holy hour",
+                "sacrament",
+                "liturgy",
+                "service",
+                "sunday",
+                "monday",
+                "tuesday",
+                "wednesday",
+                "thursday",
+                "friday",
+                "saturday",
+                "daily",
+                "weekly",
+                "am",
+                "pm",
+                "time",
+                "hour",
             ]
 
             # Split content into chunks and prioritize schedule-relevant sections
@@ -290,7 +316,7 @@ If no Mass schedule is found, return has_weekly_schedule: false and schedule_fou
                 else:
                     break
 
-            content = ' '.join(current_chunk)
+            content = " ".join(current_chunk)
             if len(content) > max_chars:
                 content = content[:max_chars] + "..."
 
@@ -302,21 +328,21 @@ If no Mass schedule is found, return has_weekly_schedule: false and schedule_fou
         """Parse AI response into structured format."""
         try:
             # Try to extract JSON from AI response
-            json_match = re.search(r'\{.*\}', ai_response, re.DOTALL)
+            json_match = re.search(r"\{.*\}", ai_response, re.DOTALL)
             if json_match:
                 json_str = json_match.group(0)
                 parsed = json.loads(json_str)
 
                 # Add metadata
-                parsed['source_url'] = url
-                parsed['extraction_method'] = 'ai_gemini'
-                parsed['extracted_at'] = datetime.now(timezone.utc).isoformat()
-                parsed['schedule_type'] = schedule_type
+                parsed["source_url"] = url
+                parsed["extraction_method"] = "ai_gemini"
+                parsed["extracted_at"] = datetime.now(timezone.utc).isoformat()
+                parsed["schedule_type"] = schedule_type
 
                 # Validate required fields
-                parsed.setdefault('has_weekly_schedule', False)
-                parsed.setdefault('schedule_found', False)
-                parsed.setdefault('confidence_score', 0)
+                parsed.setdefault("has_weekly_schedule", False)
+                parsed.setdefault("schedule_found", False)
+                parsed.setdefault("confidence_score", 0)
 
                 return parsed
             else:
@@ -333,20 +359,19 @@ If no Mass schedule is found, return has_weekly_schedule: false and schedule_fou
     def _get_empty_result(self, error_message: str) -> Dict:
         """Return empty result structure."""
         return {
-            'has_weekly_schedule': False,
-            'schedule_found': False,
-            'days_offered': [],
-            'times': [],
-            'frequency': 'unknown',
-            'schedule_details': '',
-            'confidence_score': 0,
-            'notes': error_message,
-            'extraction_method': 'ai_gemini',
-            'extracted_at': datetime.now(timezone.utc).isoformat()
+            "has_weekly_schedule": False,
+            "schedule_found": False,
+            "days_offered": [],
+            "times": [],
+            "frequency": "unknown",
+            "schedule_details": "",
+            "confidence_score": 0,
+            "notes": error_message,
+            "extraction_method": "ai_gemini",
+            "extracted_at": datetime.now(timezone.utc).isoformat(),
         }
 
-    def batch_extract_schedules(self, parish_urls: List[Tuple[str, int, str]],
-                              schedule_type: str) -> List[Dict]:
+    def batch_extract_schedules(self, parish_urls: List[Tuple[str, int, str]], schedule_type: str) -> List[Dict]:
         """
         Extract schedules for multiple parish URLs.
 
@@ -363,11 +388,12 @@ If no Mass schedule is found, return has_weekly_schedule: false and schedule_fou
             logger.info(f"Processing {schedule_type} extraction for parish {parish_id}: {url}")
 
             result = self.extract_schedule_from_content(content, url, schedule_type)
-            result['parish_id'] = parish_id
+            result["parish_id"] = parish_id
             results.append(result)
 
             # Small delay to be respectful to the API
             import time
+
             time.sleep(0.5)
 
         return results
@@ -382,49 +408,50 @@ def save_ai_schedule_results(supabase, results: List[Dict]):
     facts_to_save = []
 
     for result in results:
-        parish_id = result.get('parish_id')
-        schedule_type = result.get('schedule_type')
+        parish_id = result.get("parish_id")
+        schedule_type = result.get("schedule_type")
 
         if not parish_id or not schedule_type:
             continue
 
         # Use adaptive confidence threshold based on URL and content
-        url = result.get('url', '')
-        content = result.get('content', '')
+        url = result.get("url", "")
+        content = result.get("content", "")
 
         # Create temporary extractor instance if we need to calculate adaptive threshold
         temp_extractor = ScheduleAIExtractor()
         adaptive_threshold = temp_extractor.get_adaptive_confidence_threshold(url, content)
 
-        confidence_score = result.get('confidence_score', 0)
+        confidence_score = result.get("confidence_score", 0)
 
         # Only save if schedule was found with adaptive confidence threshold
-        if result.get('schedule_found') and confidence_score >= adaptive_threshold:
+        if result.get("schedule_found") and confidence_score >= adaptive_threshold:
 
             # Create structured fact value
             fact_value = {
-                'has_weekly_schedule': result.get('has_weekly_schedule', False),
-                'days_offered': result.get('days_offered', []),
-                'times': result.get('times', []),
-                'frequency': result.get('frequency', 'unknown'),
-                'schedule_details': result.get('schedule_details', ''),
-                'confidence_score': result.get('confidence_score', 0)
+                "has_weekly_schedule": result.get("has_weekly_schedule", False),
+                "days_offered": result.get("days_offered", []),
+                "times": result.get("times", []),
+                "frequency": result.get("frequency", "unknown"),
+                "schedule_details": result.get("schedule_details", ""),
+                "confidence_score": result.get("confidence_score", 0),
             }
 
-            facts_to_save.append({
-                'parish_id': parish_id,
-                'fact_type': f'{schedule_type.title()}Schedule',  # Use existing enum values
-                'fact_value': json.dumps(fact_value),
-                'fact_source_url': result.get('source_url'),
-                'fact_string': result.get('schedule_details', ''),
-                'confidence_score': result.get('confidence_score', 0),
-                'extraction_method': 'ai_gemini'  # This field distinguishes AI vs keyword extraction
-            })
+            facts_to_save.append(
+                {
+                    "parish_id": parish_id,
+                    "fact_type": f"{schedule_type.title()}Schedule",  # Use existing enum values
+                    "fact_value": json.dumps(fact_value),
+                    "fact_source_url": result.get("source_url"),
+                    "fact_string": result.get("schedule_details", ""),
+                    "confidence_score": result.get("confidence_score", 0),
+                    "extraction_method": "ai_gemini",  # This field distinguishes AI vs keyword extraction
+                }
+            )
 
     if facts_to_save:
         try:
-            supabase.table('ParishData').upsert(facts_to_save,
-                                              on_conflict='parish_id,fact_type').execute()
+            supabase.table("ParishData").upsert(facts_to_save, on_conflict="parish_id,fact_type").execute()
             logger.info(f"Successfully saved {len(facts_to_save)} AI schedule facts to database")
         except Exception as e:
             logger.error(f"Error saving AI schedule facts: {e}")
@@ -451,11 +478,7 @@ def test_ai_extraction():
     <p>Reconciliation: Saturdays 3:30 PM - 4:30 PM, or by appointment</p>
     """
 
-    result = extractor.extract_schedule_from_content(
-        sample_content,
-        "https://example.com",
-        "mass"
-    )
+    result = extractor.extract_schedule_from_content(sample_content, "https://example.com", "mass")
 
     print("AI Extraction Result:")
     print(json.dumps(result, indent=2))

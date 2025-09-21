@@ -8,21 +8,21 @@ throughput while respecting server limits and maintaining system stability.
 """
 
 import asyncio
-import time
+import logging
+import random
 import threading
-from typing import Any, Callable, List, Dict, Optional, Tuple, Union
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+import time
 from collections import defaultdict, deque
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from queue import Queue, PriorityQueue
-import logging
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from queue import PriorityQueue, Queue
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from urllib.parse import urlparse
-import random
 
-from core.logger import get_logger
 from core.adaptive_timeout_manager import get_adaptive_timeout_manager
 from core.intelligent_cache_manager import get_cache_manager
+from core.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -30,6 +30,7 @@ logger = get_logger(__name__)
 @dataclass
 class ExtractionTask:
     """Represents a single extraction task."""
+
     task_id: str
     url: str
     parish_id: Optional[int]
@@ -52,6 +53,7 @@ class ExtractionTask:
 @dataclass
 class DomainLimits:
     """Rate limiting configuration for a domain."""
+
     domain: str
     max_concurrent: int = 2
     requests_per_second: float = 0.5
@@ -114,6 +116,7 @@ class DomainLimits:
 @dataclass
 class WorkerStats:
     """Statistics for a worker thread."""
+
     worker_id: int
     tasks_completed: int = 0
     tasks_failed: int = 0
@@ -160,12 +163,12 @@ class ParallelExtractionManager:
 
         # Global statistics
         self.global_stats = {
-            'total_tasks': 0,
-            'completed_tasks': 0,
-            'failed_tasks': 0,
-            'avg_completion_time': 0.0,
-            'peak_concurrency': 0,
-            'start_time': time.time()
+            "total_tasks": 0,
+            "completed_tasks": 0,
+            "failed_tasks": 0,
+            "avg_completion_time": 0.0,
+            "peak_concurrency": 0,
+            "start_time": time.time(),
         }
 
         # Integration with other managers
@@ -178,15 +181,11 @@ class ParallelExtractionManager:
 
         logger.info(f"⚡ Parallel Extraction Manager initialized (max_workers: {max_workers})")
 
-    def configure_domain_limits(self, domain: str, max_concurrent: int = 2,
-                              requests_per_second: float = 0.5, **kwargs):
+    def configure_domain_limits(self, domain: str, max_concurrent: int = 2, requests_per_second: float = 0.5, **kwargs):
         """Configure rate limiting for a specific domain."""
         with self._lock:
             self.domain_limits[domain] = DomainLimits(
-                domain=domain,
-                max_concurrent=max_concurrent,
-                requests_per_second=requests_per_second,
-                **kwargs
+                domain=domain, max_concurrent=max_concurrent, requests_per_second=requests_per_second, **kwargs
             )
         logger.info(f"⚡ Configured limits for {domain}: {max_concurrent} concurrent, {requests_per_second} RPS")
 
@@ -198,7 +197,7 @@ class ParallelExtractionManager:
                     return False
 
                 self.task_queue.put(task)
-                self.global_stats['total_tasks'] += 1
+                self.global_stats["total_tasks"] += 1
 
             logger.debug(f"⚡ Added task {task.task_id} for {task.url}")
             return True
@@ -218,7 +217,7 @@ class ParallelExtractionManager:
             for task in tasks:
                 try:
                     self.task_queue.put(task)
-                    self.global_stats['total_tasks'] += 1
+                    self.global_stats["total_tasks"] += 1
                     added_count += 1
                 except Exception as e:
                     logger.error(f"⚡ Error adding task {task.task_id}: {e}")
@@ -226,9 +225,9 @@ class ParallelExtractionManager:
         logger.info(f"⚡ Added {added_count}/{len(tasks)} tasks to extraction queue")
         return added_count
 
-    def extract_parallel(self, extraction_func: Callable,
-                        max_concurrent_domains: int = 10,
-                        timeout_per_task: float = 120.0) -> Dict[str, Any]:
+    def extract_parallel(
+        self, extraction_func: Callable, max_concurrent_domains: int = 10, timeout_per_task: float = 120.0
+    ) -> Dict[str, Any]:
         """
         Execute parallel extraction with intelligent resource management.
 
@@ -254,19 +253,13 @@ class ParallelExtractionManager:
             logger.info(f"⚡ Using {actual_workers} workers (optimal: {optimal_workers})")
 
             # Start thread pool
-            with ThreadPoolExecutor(max_workers=actual_workers,
-                                  thread_name_prefix="ExtractWorker") as executor:
+            with ThreadPoolExecutor(max_workers=actual_workers, thread_name_prefix="ExtractWorker") as executor:
                 self.executor = executor
 
                 # Submit worker tasks
                 futures = []
                 for worker_id in range(actual_workers):
-                    future = executor.submit(
-                        self._worker_loop,
-                        worker_id,
-                        extraction_func,
-                        timeout_per_task
-                    )
+                    future = executor.submit(self._worker_loop, worker_id, extraction_func, timeout_per_task)
                     futures.append(future)
 
                 # Monitor progress
@@ -326,25 +319,20 @@ class ParallelExtractionManager:
                     # Update domain tracking
                     with self._lock:
                         domain_limits.active_requests += 1
-                        self.active_workers = max(self.active_workers, sum(
-                            limits.active_requests for limits in self.domain_limits.values()
-                        ))
-                        self.global_stats['peak_concurrency'] = max(
-                            self.global_stats['peak_concurrency'],
-                            self.active_workers
+                        self.active_workers = max(
+                            self.active_workers, sum(limits.active_requests for limits in self.domain_limits.values())
                         )
+                        self.global_stats["peak_concurrency"] = max(self.global_stats["peak_concurrency"], self.active_workers)
 
                     success = False
                     try:
                         # Execute extraction with timeout
-                        result = self._execute_task_with_timeout(
-                            task, extraction_func, task_timeout
-                        )
+                        result = self._execute_task_with_timeout(task, extraction_func, task_timeout)
 
                         # Store result
                         with self._lock:
                             self.completed_tasks[task.task_id] = result
-                            self.global_stats['completed_tasks'] += 1
+                            self.global_stats["completed_tasks"] += 1
 
                         success = True
                         stats.tasks_completed += 1
@@ -358,14 +346,14 @@ class ParallelExtractionManager:
                         if task.retry_count <= task.max_retries:
                             # Requeue with exponential backoff
                             task.priority *= 0.8  # Lower priority for retries
-                            delay = min(30.0, 2.0 ** task.retry_count)
+                            delay = min(30.0, 2.0**task.retry_count)
                             time.sleep(delay)
                             self.task_queue.put(task)
                         else:
                             # Max retries exceeded
                             with self._lock:
                                 self.failed_tasks[task.task_id] = task
-                                self.global_stats['failed_tasks'] += 1
+                                self.global_stats["failed_tasks"] += 1
                             stats.tasks_failed += 1
 
                     finally:
@@ -381,11 +369,10 @@ class ParallelExtractionManager:
 
                         # Update global average
                         if success:
-                            old_avg = self.global_stats['avg_completion_time']
-                            completed = self.global_stats['completed_tasks']
-                            self.global_stats['avg_completion_time'] = (
-                                (old_avg * (completed - 1) + task_duration) / completed
-                                if completed > 0 else task_duration
+                            old_avg = self.global_stats["avg_completion_time"]
+                            completed = self.global_stats["completed_tasks"]
+                            self.global_stats["avg_completion_time"] = (
+                                (old_avg * (completed - 1) + task_duration) / completed if completed > 0 else task_duration
                             )
 
                         self.task_queue.task_done()
@@ -400,15 +387,11 @@ class ParallelExtractionManager:
         finally:
             logger.info(f"⚡ Worker {worker_id} finished ({stats.tasks_completed} completed, {stats.tasks_failed} failed)")
 
-    def _execute_task_with_timeout(self, task: ExtractionTask,
-                                 extraction_func: Callable, timeout: float) -> Any:
+    def _execute_task_with_timeout(self, task: ExtractionTask, extraction_func: Callable, timeout: float) -> Any:
         """Execute a single task with intelligent timeout."""
         # Use adaptive timeout if available
         adaptive_timeout = self.timeout_manager.get_optimal_timeout(
-            task.url,
-            operation_type='page_load',
-            retry_count=task.retry_count,
-            context=task.metadata
+            task.url, operation_type="page_load", retry_count=task.retry_count, context=task.metadata
         )
 
         # Use the minimum of configured and adaptive timeout
@@ -431,19 +414,23 @@ class ParallelExtractionManager:
             # Record successful response time
             response_time = time.time() - start_time
             self.timeout_manager.record_response(
-                task.url, response_time, True,
-                complexity_indicators=task.metadata.get('complexity_indicators'),
-                timeout_occurred=False
+                task.url,
+                response_time,
+                True,
+                complexity_indicators=task.metadata.get("complexity_indicators"),
+                timeout_occurred=False,
             )
 
             # Cache successful result
             if result:
                 from core.intelligent_cache_manager import ContentType
+
                 self.cache_manager.set(
-                    cache_key, result,
+                    cache_key,
+                    result,
                     content_type=ContentType.SCHEDULE_DATA,
                     ttl=1800.0,  # 30 minutes for schedule data
-                    metadata={'parish_id': task.parish_id, 'url': task.url}
+                    metadata={"parish_id": task.parish_id, "url": task.url},
                 )
 
             return result
@@ -451,18 +438,13 @@ class ParallelExtractionManager:
         except TimeoutError:
             # Record timeout
             response_time = time.time() - start_time
-            self.timeout_manager.record_response(
-                task.url, response_time, False,
-                timeout_occurred=True
-            )
+            self.timeout_manager.record_response(task.url, response_time, False, timeout_occurred=True)
             raise
 
         except Exception as e:
             # Record failed response
             response_time = time.time() - start_time
-            self.timeout_manager.record_response(
-                task.url, response_time, False
-            )
+            self.timeout_manager.record_response(task.url, response_time, False)
             raise
 
     def _get_domain_limits(self, domain: str) -> DomainLimits:
@@ -478,33 +460,15 @@ class ParallelExtractionManager:
     def _create_domain_limits(self, domain: str) -> DomainLimits:
         """Create domain limits based on domain characteristics."""
         # Known domain patterns
-        if any(pattern in domain for pattern in ['archatl.com', 'wordpress.com']):
+        if any(pattern in domain for pattern in ["archatl.com", "wordpress.com"]):
             # Fast, reliable domains
-            return DomainLimits(
-                domain=domain,
-                max_concurrent=3,
-                requests_per_second=1.0,
-                burst_limit=5,
-                cooldown_period=30.0
-            )
-        elif any(pattern in domain for pattern in ['wix.com', 'weebly.com', 'squarespace.com']):
+            return DomainLimits(domain=domain, max_concurrent=3, requests_per_second=1.0, burst_limit=5, cooldown_period=30.0)
+        elif any(pattern in domain for pattern in ["wix.com", "weebly.com", "squarespace.com"]):
             # Platform sites with potential rate limiting
-            return DomainLimits(
-                domain=domain,
-                max_concurrent=2,
-                requests_per_second=0.3,
-                burst_limit=3,
-                cooldown_period=90.0
-            )
+            return DomainLimits(domain=domain, max_concurrent=2, requests_per_second=0.3, burst_limit=3, cooldown_period=90.0)
         else:
             # Conservative defaults for unknown domains
-            return DomainLimits(
-                domain=domain,
-                max_concurrent=2,
-                requests_per_second=0.5,
-                burst_limit=3,
-                cooldown_period=60.0
-            )
+            return DomainLimits(domain=domain, max_concurrent=2, requests_per_second=0.5, burst_limit=3, cooldown_period=60.0)
 
     def _calculate_optimal_workers(self) -> int:
         """Calculate optimal number of workers based on queue size and domain distribution."""
@@ -563,10 +527,9 @@ class ParallelExtractionManager:
         """Log current progress report."""
         with self._lock:
             queue_size = self.task_queue.qsize()
-            completed = self.global_stats['completed_tasks']
-            failed = self.global_stats['failed_tasks']
-            active_domains = sum(1 for limits in self.domain_limits.values()
-                               if limits.active_requests > 0)
+            completed = self.global_stats["completed_tasks"]
+            failed = self.global_stats["failed_tasks"]
+            active_domains = sum(1 for limits in self.domain_limits.values() if limits.active_requests > 0)
 
             logger.info(
                 f"⚡ Progress: {completed} completed, {failed} failed, "
@@ -576,7 +539,7 @@ class ParallelExtractionManager:
     def _compile_results(self, duration: float) -> Dict[str, Any]:
         """Compile final extraction results."""
         with self._lock:
-            total_tasks = self.global_stats['total_tasks']
+            total_tasks = self.global_stats["total_tasks"]
             completed = len(self.completed_tasks)
             failed = len(self.failed_tasks)
             success_rate = completed / total_tasks if total_tasks > 0 else 0
@@ -585,36 +548,35 @@ class ParallelExtractionManager:
             worker_stats = {}
             for worker_id, stats in self.worker_stats.items():
                 worker_stats[worker_id] = {
-                    'tasks_completed': stats.tasks_completed,
-                    'tasks_failed': stats.tasks_failed,
-                    'success_rate': stats.success_rate,
-                    'avg_task_time': stats.avg_task_time
+                    "tasks_completed": stats.tasks_completed,
+                    "tasks_failed": stats.tasks_failed,
+                    "success_rate": stats.success_rate,
+                    "avg_task_time": stats.avg_task_time,
                 }
 
             # Domain statistics
             domain_stats = {}
             for domain, limits in self.domain_limits.items():
                 domain_stats[domain] = {
-                    'total_requests': limits.total_requests,
-                    'failed_requests': limits.failed_requests,
-                    'failure_rate': limits.failure_rate,
-                    'avg_rps': limits.current_rps
+                    "total_requests": limits.total_requests,
+                    "failed_requests": limits.failed_requests,
+                    "failure_rate": limits.failure_rate,
+                    "avg_rps": limits.current_rps,
                 }
 
             return {
-                'duration': duration,
-                'total_tasks': total_tasks,
-                'completed': completed,
-                'failed': failed,
-                'success_rate': success_rate,
-                'avg_completion_time': self.global_stats['avg_completion_time'],
-                'peak_concurrency': self.global_stats['peak_concurrency'],
-                'tasks_per_second': completed / duration if duration > 0 else 0,
-                'completed_tasks': dict(self.completed_tasks),
-                'failed_tasks': {k: {'url': v.url, 'retries': v.retry_count}
-                               for k, v in self.failed_tasks.items()},
-                'worker_stats': worker_stats,
-                'domain_stats': domain_stats
+                "duration": duration,
+                "total_tasks": total_tasks,
+                "completed": completed,
+                "failed": failed,
+                "success_rate": success_rate,
+                "avg_completion_time": self.global_stats["avg_completion_time"],
+                "peak_concurrency": self.global_stats["peak_concurrency"],
+                "tasks_per_second": completed / duration if duration > 0 else 0,
+                "completed_tasks": dict(self.completed_tasks),
+                "failed_tasks": {k: {"url": v.url, "retries": v.retry_count} for k, v in self.failed_tasks.items()},
+                "worker_stats": worker_stats,
+                "domain_stats": domain_stats,
             }
 
     def shutdown(self, wait_for_completion: bool = True, timeout: float = 60.0):
@@ -644,29 +606,29 @@ class ParallelExtractionManager:
         """Get comprehensive extraction statistics."""
         with self._lock:
             return {
-                'global_stats': dict(self.global_stats),
-                'active_workers': self.active_workers,
-                'queue_size': self.task_queue.qsize(),
-                'domain_count': len(self.domain_limits),
-                'worker_stats': {
+                "global_stats": dict(self.global_stats),
+                "active_workers": self.active_workers,
+                "queue_size": self.task_queue.qsize(),
+                "domain_count": len(self.domain_limits),
+                "worker_stats": {
                     worker_id: {
-                        'tasks_completed': stats.tasks_completed,
-                        'tasks_failed': stats.tasks_failed,
-                        'success_rate': stats.success_rate,
-                        'avg_task_time': stats.avg_task_time,
-                        'current_task': stats.current_task
+                        "tasks_completed": stats.tasks_completed,
+                        "tasks_failed": stats.tasks_failed,
+                        "success_rate": stats.success_rate,
+                        "avg_task_time": stats.avg_task_time,
+                        "current_task": stats.current_task,
                     }
                     for worker_id, stats in self.worker_stats.items()
                 },
-                'domain_stats': {
+                "domain_stats": {
                     domain: {
-                        'active_requests': limits.active_requests,
-                        'total_requests': limits.total_requests,
-                        'failure_rate': limits.failure_rate,
-                        'blocked_until': limits.blocked_until
+                        "active_requests": limits.active_requests,
+                        "total_requests": limits.total_requests,
+                        "failure_rate": limits.failure_rate,
+                        "blocked_until": limits.blocked_until,
                     }
                     for domain, limits in self.domain_limits.items()
-                }
+                },
             }
 
 
@@ -677,15 +639,15 @@ def create_extraction_tasks(parishes: List[Dict], base_priority: float = 1.0) ->
     for i, parish in enumerate(parishes):
         task = ExtractionTask(
             task_id=f"parish_{parish.get('id', i)}_{int(time.time())}",
-            url=parish.get('website_url', ''),
-            parish_id=parish.get('id'),
-            diocese_id=parish.get('diocese_id'),
+            url=parish.get("website_url", ""),
+            parish_id=parish.get("id"),
+            diocese_id=parish.get("diocese_id"),
             priority=base_priority - (i * 0.01),  # Slight priority decrease for ordering
             metadata={
-                'parish_name': parish.get('name', ''),
-                'diocese_name': parish.get('diocese_name', ''),
-                'address': parish.get('address', '')
-            }
+                "parish_name": parish.get("name", ""),
+                "diocese_name": parish.get("diocese_name", ""),
+                "address": parish.get("address", ""),
+            },
         )
         tasks.append(task)
 
@@ -694,6 +656,7 @@ def create_extraction_tasks(parishes: List[Dict], base_priority: float = 1.0) ->
 
 # Global parallel manager instance
 _global_parallel_manager = None
+
 
 def get_parallel_extraction_manager(max_workers: int = 5) -> ParallelExtractionManager:
     """Get global parallel extraction manager."""

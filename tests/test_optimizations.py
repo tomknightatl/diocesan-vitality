@@ -6,16 +6,14 @@ Tests the new components without running the full pipeline.
 
 import sys
 import time
-from core.logger import get_logger
-from core.optimized_circuit_breaker_configs import (
-    OptimizedCircuitBreakerConfigs,
-    ErrorRecoveryStrategies
-)
+
 from core.enhanced_element_wait import (
-    create_parish_extraction_selectors,
     create_map_interaction_selectors,
-    create_search_form_selectors
+    create_parish_extraction_selectors,
+    create_search_form_selectors,
 )
+from core.logger import get_logger
+from core.optimized_circuit_breaker_configs import ErrorRecoveryStrategies, OptimizedCircuitBreakerConfigs
 
 logger = get_logger(__name__)
 
@@ -26,19 +24,21 @@ def test_circuit_breaker_configs():
 
     # Test each configuration type
     configs = {
-        'element': OptimizedCircuitBreakerConfigs.get_element_interaction_config(),
-        'page_load': OptimizedCircuitBreakerConfigs.get_page_load_config(),
-        'javascript': OptimizedCircuitBreakerConfigs.get_javascript_execution_config(),
-        'search': OptimizedCircuitBreakerConfigs.get_search_interaction_config(),
-        'map': OptimizedCircuitBreakerConfigs.get_map_interaction_config(),
+        "element": OptimizedCircuitBreakerConfigs.get_element_interaction_config(),
+        "page_load": OptimizedCircuitBreakerConfigs.get_page_load_config(),
+        "javascript": OptimizedCircuitBreakerConfigs.get_javascript_execution_config(),
+        "search": OptimizedCircuitBreakerConfigs.get_search_interaction_config(),
+        "map": OptimizedCircuitBreakerConfigs.get_map_interaction_config(),
     }
 
     for config_type, config in configs.items():
-        logger.info(f"  ✅ {config_type}: threshold={config.failure_threshold}, "
-                   f"recovery={config.recovery_timeout}s, timeout={config.request_timeout}s")
+        logger.info(
+            f"  ✅ {config_type}: threshold={config.failure_threshold}, "
+            f"recovery={config.recovery_timeout}s, timeout={config.request_timeout}s"
+        )
 
     # Test adaptive config
-    adaptive_config = OptimizedCircuitBreakerConfigs.get_adaptive_config('unknown_type')
+    adaptive_config = OptimizedCircuitBreakerConfigs.get_adaptive_config("unknown_type")
     logger.info(f"  ✅ adaptive (default): threshold={adaptive_config.failure_threshold}")
 
     logger.info("✅ Circuit breaker configurations test passed!")
@@ -73,12 +73,11 @@ def test_error_recovery_strategies():
         "NoSuchElementException: selector failed",
         "TimeoutException: timeout occurred",
         "NoSuchElementException: another element issue",
-        "WebDriverException: driver error"
+        "WebDriverException: driver error",
     ]
 
     analysis = ErrorRecoveryStrategies.analyze_failure_pattern(test_errors)
-    logger.info(f"  ✅ Pattern analysis: {analysis['total_errors']} errors, "
-               f"dominant: {analysis['dominant_error']}")
+    logger.info(f"  ✅ Pattern analysis: {analysis['total_errors']} errors, " f"dominant: {analysis['dominant_error']}")
 
     logger.info("✅ Error recovery strategies test passed!")
 
@@ -110,9 +109,11 @@ def test_imports():
 
     try:
         from core.driver import ProtectedWebDriver, get_protected_driver
+
         logger.info("  ✅ Enhanced driver imports successful")
 
         from extractors.enhanced_base_extractor import EnhancedBaseExtractor
+
         logger.info("  ✅ Enhanced base extractor import successful")
 
         # Test that we can create an instance

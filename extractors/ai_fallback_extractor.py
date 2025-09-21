@@ -6,14 +6,15 @@ This extractor is called when all standard extraction methods fail.
 It uses AI-powered content analysis to understand page structure and extract parishes.
 """
 
-from typing import List, Dict, Optional, Any
+from typing import Any, Dict, List, Optional
 from urllib.parse import urljoin
+
 from selenium.webdriver.remote.webdriver import WebDriver
 
-from core.logger import get_logger
-from core.ai_content_analyzer import get_ai_content_analyzer
-from extractors.base_extractor import BaseExtractor
 from config import get_genai_api_key
+from core.ai_content_analyzer import get_ai_content_analyzer
+from core.logger import get_logger
+from extractors.base_extractor import BaseExtractor
 
 logger = get_logger(__name__)
 
@@ -48,8 +49,7 @@ class AIFallbackExtractor(BaseExtractor):
         logger.info("🤖 AI Fallback Extractor: Ready to analyze failed extraction page")
         return True
 
-    def extract(self, driver: WebDriver, diocese_name: str, url: str,
-               max_parishes: int = None) -> List[Dict[str, Any]]:
+    def extract(self, driver: WebDriver, diocese_name: str, url: str, max_parishes: int = None) -> List[Dict[str, Any]]:
         """
         Extract parishes using AI-powered content analysis.
 
@@ -70,14 +70,12 @@ class AIFallbackExtractor(BaseExtractor):
         try:
             # Step 1: AI-powered content analysis
             logger.info("🤖 Step 1: Analyzing page content with AI...")
-            analysis_result = self.ai_analyzer.analyze_failed_extraction(
-                driver, diocese_name, url
-            )
+            analysis_result = self.ai_analyzer.analyze_failed_extraction(driver, diocese_name, url)
 
-            confidence = analysis_result.get('confidence', 0.0)
-            strategy = analysis_result.get('extraction_strategy', 'unknown')
-            parishes = analysis_result.get('parish_data', [])
-            insights = analysis_result.get('ai_insights', [])
+            confidence = analysis_result.get("confidence", 0.0)
+            strategy = analysis_result.get("extraction_strategy", "unknown")
+            parishes = analysis_result.get("parish_data", [])
+            insights = analysis_result.get("ai_insights", [])
 
             logger.info(f"🤖 AI Analysis Results:")
             logger.info(f"    📊 Confidence: {confidence:.2f}")
@@ -110,7 +108,7 @@ class AIFallbackExtractor(BaseExtractor):
                 # Log sample results
                 for i, parish in enumerate(validated_parishes[:3], 1):
                     logger.info(f"    {i}. {parish.get('name', 'N/A')}")
-                    if parish.get('url'):
+                    if parish.get("url"):
                         logger.info(f"       🔗 {parish['url']}")
             else:
                 logger.warning("🤖 ❌ AI Fallback Extraction found no valid parishes")
@@ -126,26 +124,52 @@ class AIFallbackExtractor(BaseExtractor):
     def _validate_ai_parish(self, parish: Dict[str, Any]) -> bool:
         """Validate an AI-extracted parish data structure."""
         # Must have a name
-        name = parish.get('name', '').strip()
+        name = parish.get("name", "").strip()
         if not name or len(name) < 3:
             return False
 
         # Should look like a parish name
         name_lower = name.lower()
         parish_indicators = [
-            'parish', 'church', 'cathedral', 'chapel', 'mission',
-            'saint', 'st.', 'holy', 'blessed', 'our lady', 'sacred'
+            "parish",
+            "church",
+            "cathedral",
+            "chapel",
+            "mission",
+            "saint",
+            "st.",
+            "holy",
+            "blessed",
+            "our lady",
+            "sacred",
         ]
 
         has_indicator = any(indicator in name_lower for indicator in parish_indicators)
 
         # Exclude administrative entities
         exclusion_terms = [
-            'office', 'department', 'ministry', 'bishop', 'chancellor',
-            'tribunal', 'education', 'finance', 'human resources',
-            'development', 'communications', 'vocations', 'youth director',
-            'home', 'about us', 'contact us', 'news', 'events', 'calendar',
-            'directions', 'staff', 'history'
+            "office",
+            "department",
+            "ministry",
+            "bishop",
+            "chancellor",
+            "tribunal",
+            "education",
+            "finance",
+            "human resources",
+            "development",
+            "communications",
+            "vocations",
+            "youth director",
+            "home",
+            "about us",
+            "contact us",
+            "news",
+            "events",
+            "calendar",
+            "directions",
+            "staff",
+            "history",
         ]
 
         has_exclusion = any(term in name_lower for term in exclusion_terms)
@@ -162,23 +186,25 @@ class AIFallbackExtractor(BaseExtractor):
         enriched = parish.copy()
 
         # Ensure URL is absolute
-        if 'url' in enriched and enriched['url']:
-            enriched['url'] = urljoin(base_url, enriched['url'])
+        if "url" in enriched and enriched["url"]:
+            enriched["url"] = urljoin(base_url, enriched["url"])
 
         # Add extraction metadata
-        enriched.update({
-            'extractor_used': self.extractor_name,
-            'extraction_method': 'ai_content_analysis',
-            'ai_extracted': True,
-            'validation_passed': True
-        })
+        enriched.update(
+            {
+                "extractor_used": self.extractor_name,
+                "extraction_method": "ai_content_analysis",
+                "ai_extracted": True,
+                "validation_passed": True,
+            }
+        )
 
         # Try to get additional data if we have a parish URL
-        if enriched.get('url') and not enriched.get('address'):
+        if enriched.get("url") and not enriched.get("address"):
             try:
                 # Navigate to parish page to get more details
                 original_url = driver.current_url
-                driver.get(enriched['url'])
+                driver.get(enriched["url"])
 
                 # Quick extraction of common elements
                 self._extract_contact_info(driver, enriched)
@@ -197,25 +223,26 @@ class AIFallbackExtractor(BaseExtractor):
             page_text = driver.find_element("tag name", "body").text.lower()
 
             # Extract address if not already present
-            if not parish.get('address'):
+            if not parish.get("address"):
                 import re
+
                 address_patterns = [
-                    r'\d+[^,\n]*(?:street|st|avenue|ave|road|rd|boulevard|blvd|drive|dr|lane|ln|circle|cir)[^,\n]*',
-                    r'\d+[^\n]*(?:suite|ste|unit|apt)[^\n]*'
+                    r"\d+[^,\n]*(?:street|st|avenue|ave|road|rd|boulevard|blvd|drive|dr|lane|ln|circle|cir)[^,\n]*",
+                    r"\d+[^\n]*(?:suite|ste|unit|apt)[^\n]*",
                 ]
 
                 for pattern in address_patterns:
                     match = re.search(pattern, page_text, re.IGNORECASE)
                     if match:
-                        parish['address'] = match.group().strip()
+                        parish["address"] = match.group().strip()
                         break
 
             # Extract phone if not already present
-            if not parish.get('phone'):
-                phone_pattern = r'\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}'
+            if not parish.get("phone"):
+                phone_pattern = r"\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}"
                 phone_match = re.search(phone_pattern, page_text)
                 if phone_match:
-                    parish['phone'] = phone_match.group().strip()
+                    parish["phone"] = phone_match.group().strip()
 
         except Exception as e:
             logger.debug(f"🤖 Contact info extraction failed: {e}")
@@ -223,15 +250,15 @@ class AIFallbackExtractor(BaseExtractor):
     def get_extraction_stats(self) -> Dict[str, Any]:
         """Get statistics about AI fallback extractions."""
         return {
-            'extractor_name': self.extractor_name,
-            'type': 'ai_fallback',
-            'ai_enabled': self.ai_analyzer is not None,
-            'description': 'AI-powered fallback extractor for failed standard extractions',
-            'capabilities': [
-                'DOM structure analysis',
-                'Custom selector generation',
-                'XPath expression creation',
-                'Content pattern recognition',
-                'Parish validation'
-            ]
+            "extractor_name": self.extractor_name,
+            "type": "ai_fallback",
+            "ai_enabled": self.ai_analyzer is not None,
+            "description": "AI-powered fallback extractor for failed standard extractions",
+            "capabilities": [
+                "DOM structure analysis",
+                "Custom selector generation",
+                "XPath expression creation",
+                "Content pattern recognition",
+                "Parish validation",
+            ],
         }

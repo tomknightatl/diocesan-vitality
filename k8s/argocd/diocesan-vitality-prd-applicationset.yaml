@@ -1,17 +1,17 @@
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: diocesan-vitality-stg
+  name: diocesan-vitality-prd
   namespace: argocd
 spec:
   generators:
     - clusters:
         selector:
           matchLabels:
-            environment: stg
+            environment: prd
   template:
     metadata:
-      name: "diocesan-vitality-stg"
+      name: "diocesan-vitality-prd"
       namespace: argocd
       finalizers:
         - resources-finalizer.argocd.argoproj.io/background
@@ -19,11 +19,11 @@ spec:
       project: default
       source:
         repoURL: https://github.com/tomknightatl/diocesan-vitality
-        targetRevision: "staging"
-        path: k8s/environments/staging
+        targetRevision: "main"
+        path: k8s/environments/production
       destination:
         server: "{{server}}"
-        namespace: "diocesan-vitality-stg"
+        namespace: "diocesan-vitality-production"
       syncPolicy:
         automated:
           prune: true

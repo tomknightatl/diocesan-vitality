@@ -11,13 +11,14 @@ This module implements performance optimizations for parish extraction:
 
 import re
 import time
-from typing import Dict, List, Tuple, Optional, Set
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from typing import Dict, List, Optional, Set, Tuple
 
-from core.circuit_breaker import circuit_manager, CircuitBreakerConfig, CircuitState
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+
+from core.circuit_breaker import CircuitBreakerConfig, CircuitState, circuit_manager
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -30,23 +31,23 @@ class ExtractorOptimizer:
 
     # Progressive timeout configuration based on extractor complexity
     EXTRACTOR_TIMEOUTS = {
-        'NavigationExtractor': 5,               # Fast - just clicks links
-        'PDFDirectoryExtractor': 3,             # Fast - checks for PDF links
-        'IframeExtractor': 8,                   # Medium - checks for iframes
-        'ParishFinderExtractor': 12,            # Medium - JavaScript interactions
-        'EnhancedDiocesesCardExtractor': 15,    # Medium-Slow - detail page navigation
-        'TableExtractor': 8,                    # Medium - HTML parsing
-        'ImprovedInteractiveMapExtractor': 15,  # Slow - JavaScript/map loading
-        'ImprovedGenericExtractor': 20,         # Slower - comprehensive parsing
-        'EnhancedAIFallbackExtractor': 30       # Slowest - AI analysis
+        "NavigationExtractor": 5,  # Fast - just clicks links
+        "PDFDirectoryExtractor": 3,  # Fast - checks for PDF links
+        "IframeExtractor": 8,  # Medium - checks for iframes
+        "ParishFinderExtractor": 12,  # Medium - JavaScript interactions
+        "EnhancedDiocesesCardExtractor": 15,  # Medium-Slow - detail page navigation
+        "TableExtractor": 8,  # Medium - HTML parsing
+        "ImprovedInteractiveMapExtractor": 15,  # Slow - JavaScript/map loading
+        "ImprovedGenericExtractor": 20,  # Slower - comprehensive parsing
+        "EnhancedAIFallbackExtractor": 30,  # Slowest - AI analysis
     }
 
     # Map indicator keywords for fast-fail detection
     MAP_KEYWORDS = {
-        'javascript_libs': ['leaflet', 'mapbox', 'google.maps', 'arcgis', 'openlayers', 'esri'],
-        'css_classes': ['leaflet-', 'mapbox-', 'gm-', 'esri-'],
-        'map_elements': ['#map', '.map', '.parish-map', '.church-map', '[id*="map"]'],
-        'container_patterns': ['map-container', 'map-wrapper', 'parish-locator']
+        "javascript_libs": ["leaflet", "mapbox", "google.maps", "arcgis", "openlayers", "esri"],
+        "css_classes": ["leaflet-", "mapbox-", "gm-", "esri-"],
+        "map_elements": ["#map", ".map", ".parish-map", ".church-map", '[id*="map"]'],
+        "container_patterns": ["map-container", "map-wrapper", "parish-locator"],
     }
 
     def __init__(self):
@@ -57,18 +58,17 @@ class ExtractorOptimizer:
         """Initialize per-extractor circuit breakers"""
         for extractor_name in self.EXTRACTOR_TIMEOUTS.keys():
             circuit_config = CircuitBreakerConfig(
-                failure_threshold=3,    # Fast-fail after 3 failures
-                recovery_timeout=30,    # 30 second recovery window
-                request_timeout=self.EXTRACTOR_TIMEOUTS[extractor_name]
+                failure_threshold=3,  # Fast-fail after 3 failures
+                recovery_timeout=30,  # 30 second recovery window
+                request_timeout=self.EXTRACTOR_TIMEOUTS[extractor_name],
             )
 
-            circuit_id = f'extractor_{extractor_name.lower()}'
-            self.extractor_circuits[extractor_name] = circuit_manager.get_circuit_breaker(
-                circuit_id, config=circuit_config
-            )
+            circuit_id = f"extractor_{extractor_name.lower()}"
+            self.extractor_circuits[extractor_name] = circuit_manager.get_circuit_breaker(circuit_id, config=circuit_config)
 
-            logger.debug(f"🔌 Initialized circuit breaker for {extractor_name} "
-                        f"(timeout: {circuit_config.request_timeout}s)")
+            logger.debug(
+                f"🔌 Initialized circuit breaker for {extractor_name} " f"(timeout: {circuit_config.request_timeout}s)"
+            )
 
     def analyze_page_content(self, driver, html_content: str) -> Dict[str, any]:
         """
@@ -82,61 +82,63 @@ class ExtractorOptimizer:
             - estimated_complexity: str
         """
         analysis = {
-            'has_map_features': False,
-            'suitable_extractors': [],
-            'skip_extractors': [],
-            'estimated_complexity': 'medium',
-            'content_indicators': {
-                'has_iframe': False,
-                'has_tables': False,
-                'has_parish_finder': False,
-                'has_navigation_menus': False,
-                'has_card_layout': False,
-                'has_pdf_links': False
-            }
+            "has_map_features": False,
+            "suitable_extractors": [],
+            "skip_extractors": [],
+            "estimated_complexity": "medium",
+            "content_indicators": {
+                "has_iframe": False,
+                "has_tables": False,
+                "has_parish_finder": False,
+                "has_navigation_menus": False,
+                "has_card_layout": False,
+                "has_pdf_links": False,
+            },
         }
 
         lower_content = html_content.lower()
 
         # Fast-fail map detection
-        analysis['has_map_features'] = self._detect_map_features(lower_content)
+        analysis["has_map_features"] = self._detect_map_features(lower_content)
 
         # Detect content patterns
-        indicators = analysis['content_indicators']
+        indicators = analysis["content_indicators"]
 
         # Iframe detection
-        indicators['has_iframe'] = bool(re.search(r'<iframe[^>]*>', lower_content))
+        indicators["has_iframe"] = bool(re.search(r"<iframe[^>]*>", lower_content))
 
         # Table detection
-        indicators['has_tables'] = bool(re.search(r'<table[^>]*>.*parish.*</table>', lower_content, re.DOTALL))
+        indicators["has_tables"] = bool(re.search(r"<table[^>]*>.*parish.*</table>", lower_content, re.DOTALL))
 
         # Parish finder detection
-        parish_finder_patterns = ['parish-finder', 'find.*parish', 'parish.*locator', 'parish.*search']
-        indicators['has_parish_finder'] = any(pattern in lower_content for pattern in parish_finder_patterns)
+        parish_finder_patterns = ["parish-finder", "find.*parish", "parish.*locator", "parish.*search"]
+        indicators["has_parish_finder"] = any(pattern in lower_content for pattern in parish_finder_patterns)
 
         # Navigation menu detection
-        nav_patterns = ['<nav', 'menu', 'dropdown', 'hover.*parish']
-        indicators['has_navigation_menus'] = any(pattern in lower_content for pattern in nav_patterns)
+        nav_patterns = ["<nav", "menu", "dropdown", "hover.*parish"]
+        indicators["has_navigation_menus"] = any(pattern in lower_content for pattern in nav_patterns)
 
         # Card layout detection
-        card_patterns = ['card-', 'col-lg.*location', 'parish.*card', 'church.*card']
-        indicators['has_card_layout'] = any(pattern in lower_content for pattern in card_patterns)
+        card_patterns = ["card-", "col-lg.*location", "parish.*card", "church.*card"]
+        indicators["has_card_layout"] = any(pattern in lower_content for pattern in card_patterns)
 
         # PDF link detection
-        indicators['has_pdf_links'] = bool(re.search(r'href=["\'][^"\']*\.pdf["\']', lower_content))
+        indicators["has_pdf_links"] = bool(re.search(r'href=["\'][^"\']*\.pdf["\']', lower_content))
 
         # Determine suitable extractors based on content analysis
-        analysis['suitable_extractors'] = self._determine_suitable_extractors(indicators, analysis['has_map_features'])
+        analysis["suitable_extractors"] = self._determine_suitable_extractors(indicators, analysis["has_map_features"])
 
         # Determine extractors to skip
-        analysis['skip_extractors'] = self._determine_skip_extractors(indicators, analysis['has_map_features'])
+        analysis["skip_extractors"] = self._determine_skip_extractors(indicators, analysis["has_map_features"])
 
         # Estimate page complexity
-        analysis['estimated_complexity'] = self._estimate_complexity(indicators, lower_content)
+        analysis["estimated_complexity"] = self._estimate_complexity(indicators, lower_content)
 
         logger.info(f"  📊 Page Analysis Complete:")
         logger.info(f"    🗺️ Map features: {analysis['has_map_features']}")
-        logger.info(f"    ✅ Suitable: {analysis['suitable_extractors'][:3]}{'...' if len(analysis['suitable_extractors']) > 3 else ''}")
+        logger.info(
+            f"    ✅ Suitable: {analysis['suitable_extractors'][:3]}{'...' if len(analysis['suitable_extractors']) > 3 else ''}"
+        )
         logger.info(f"    ❌ Skip: {analysis['skip_extractors']}")
         logger.info(f"    📈 Complexity: {analysis['estimated_complexity']}")
 
@@ -146,19 +148,19 @@ class ExtractorOptimizer:
         """Fast detection of map-related features in page content"""
 
         # Check for JavaScript map libraries
-        for lib in self.MAP_KEYWORDS['javascript_libs']:
+        for lib in self.MAP_KEYWORDS["javascript_libs"]:
             if lib in lower_content:
                 logger.debug(f"    🗺️ Found map library: {lib}")
                 return True
 
         # Check for map-specific CSS classes
-        for css_class in self.MAP_KEYWORDS['css_classes']:
+        for css_class in self.MAP_KEYWORDS["css_classes"]:
             if css_class in lower_content:
                 logger.debug(f"    🎨 Found map CSS: {css_class}")
                 return True
 
         # Check for map container patterns
-        for container in self.MAP_KEYWORDS['container_patterns']:
+        for container in self.MAP_KEYWORDS["container_patterns"]:
             if container in lower_content:
                 logger.debug(f"    📦 Found map container: {container}")
                 return True
@@ -170,29 +172,29 @@ class ExtractorOptimizer:
         suitable = []
 
         # High confidence extractors based on specific indicators
-        if indicators['has_iframe']:
-            suitable.append('IframeExtractor')
+        if indicators["has_iframe"]:
+            suitable.append("IframeExtractor")
 
-        if indicators['has_parish_finder']:
-            suitable.append('ParishFinderExtractor')
+        if indicators["has_parish_finder"]:
+            suitable.append("ParishFinderExtractor")
 
-        if indicators['has_card_layout']:
-            suitable.append('EnhancedDiocesesCardExtractor')
+        if indicators["has_card_layout"]:
+            suitable.append("EnhancedDiocesesCardExtractor")
 
-        if indicators['has_tables']:
-            suitable.append('TableExtractor')
+        if indicators["has_tables"]:
+            suitable.append("TableExtractor")
 
-        if indicators['has_pdf_links']:
-            suitable.append('PDFDirectoryExtractor')
+        if indicators["has_pdf_links"]:
+            suitable.append("PDFDirectoryExtractor")
 
-        if indicators['has_navigation_menus']:
-            suitable.append('NavigationExtractor')
+        if indicators["has_navigation_menus"]:
+            suitable.append("NavigationExtractor")
 
         if has_map:
-            suitable.append('ImprovedInteractiveMapExtractor')
+            suitable.append("ImprovedInteractiveMapExtractor")
 
         # Always include generic and AI fallback as last resorts
-        suitable.extend(['ImprovedGenericExtractor', 'EnhancedAIFallbackExtractor'])
+        suitable.extend(["ImprovedGenericExtractor", "EnhancedAIFallbackExtractor"])
 
         return suitable
 
@@ -202,15 +204,15 @@ class ExtractorOptimizer:
 
         # Skip interactive map extractor if no map features detected
         if not has_map:
-            skip.append('ImprovedInteractiveMapExtractor')
+            skip.append("ImprovedInteractiveMapExtractor")
 
         # Skip PDF extractor if no PDF links
-        if not indicators['has_pdf_links']:
-            skip.append('PDFDirectoryExtractor')
+        if not indicators["has_pdf_links"]:
+            skip.append("PDFDirectoryExtractor")
 
         # Skip iframe extractor if no iframes
-        if not indicators['has_iframe']:
-            skip.append('IframeExtractor')
+        if not indicators["has_iframe"]:
+            skip.append("IframeExtractor")
 
         return skip
 
@@ -219,28 +221,28 @@ class ExtractorOptimizer:
         complexity_score = 0
 
         # JavaScript complexity indicators
-        if 'angular' in content or 'react' in content or 'vue' in content:
+        if "angular" in content or "react" in content or "vue" in content:
             complexity_score += 3
 
-        if 'ajax' in content or 'xhr' in content or 'fetch(' in content:
+        if "ajax" in content or "xhr" in content or "fetch(" in content:
             complexity_score += 2
 
         # Content complexity indicators
-        if indicators['has_parish_finder']:
+        if indicators["has_parish_finder"]:
             complexity_score += 2
 
-        if indicators['has_iframe']:
+        if indicators["has_iframe"]:
             complexity_score += 2
 
         if len(content) > 500000:  # Large pages
             complexity_score += 1
 
         if complexity_score >= 5:
-            return 'high'
+            return "high"
         elif complexity_score >= 2:
-            return 'medium'
+            return "medium"
         else:
-            return 'low'
+            return "low"
 
     def should_skip_extractor(self, extractor_name: str, page_analysis: Dict) -> bool:
         """
@@ -253,7 +255,7 @@ class ExtractorOptimizer:
             return True
 
         # Check page analysis recommendations
-        if extractor_name in page_analysis.get('skip_extractors', []):
+        if extractor_name in page_analysis.get("skip_extractors", []):
             logger.info(f"  🚫 Skipping {extractor_name} - not suitable for page content")
             return True
 
@@ -263,12 +265,12 @@ class ExtractorOptimizer:
         """Get optimized timeout for extractor based on page complexity"""
         base_timeout = self.EXTRACTOR_TIMEOUTS.get(extractor_name, 15)
 
-        complexity = page_analysis.get('estimated_complexity', 'medium')
+        complexity = page_analysis.get("estimated_complexity", "medium")
 
         # Adjust timeout based on complexity
-        if complexity == 'high':
+        if complexity == "high":
             return int(base_timeout * 1.5)
-        elif complexity == 'low':
+        elif complexity == "low":
             return max(3, int(base_timeout * 0.7))
         else:
             return base_timeout
@@ -290,9 +292,7 @@ class ExtractorOptimizer:
 
             for selector in map_selectors:
                 try:
-                    WebDriverWait(driver, 0.5).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, selector))
-                    )
+                    WebDriverWait(driver, 0.5).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
                     logger.debug(f"  ✅ Fast-fail: Found map element {selector}")
                     return True
                 except TimeoutException:
@@ -328,12 +328,14 @@ class ExtractorOptimizer:
             logger.warning(f"  ❌ {extractor_name} failed via circuit breaker: {str(e)[:100]}")
             raise
 
-    def optimize_extractor_sequence(self, extractors_to_try: List[Tuple[str, any]], page_analysis: Dict) -> List[Tuple[str, any]]:
+    def optimize_extractor_sequence(
+        self, extractors_to_try: List[Tuple[str, any]], page_analysis: Dict
+    ) -> List[Tuple[str, any]]:
         """
         Optimize the sequence of extractors based on page analysis
         """
-        suitable_extractors = page_analysis.get('suitable_extractors', [])
-        skip_extractors = page_analysis.get('skip_extractors', [])
+        suitable_extractors = page_analysis.get("suitable_extractors", [])
+        skip_extractors = page_analysis.get("skip_extractors", [])
 
         # Filter out extractors that should be skipped
         filtered_extractors = []
@@ -368,17 +370,13 @@ class ExtractorOptimizer:
 
     def get_optimization_stats(self) -> Dict:
         """Get statistics about optimization performance"""
-        stats = {
-            'circuit_breakers': {},
-            'total_skipped_extractors': 0,
-            'total_optimized_timeouts': 0
-        }
+        stats = {"circuit_breakers": {}, "total_skipped_extractors": 0, "total_optimized_timeouts": 0}
 
         for extractor_name, circuit in self.extractor_circuits.items():
-            stats['circuit_breakers'][extractor_name] = {
-                'state': circuit.state.value,
-                'failure_count': circuit.failure_count,
-                'last_failure_time': getattr(circuit, 'last_failure_time', None)
+            stats["circuit_breakers"][extractor_name] = {
+                "state": circuit.state.value,
+                "failure_count": circuit.failure_count,
+                "last_failure_time": getattr(circuit, "last_failure_time", None),
             }
 
         return stats
@@ -386,6 +384,7 @@ class ExtractorOptimizer:
 
 # Global optimizer instance
 _extractor_optimizer = None
+
 
 def get_extractor_optimizer() -> ExtractorOptimizer:
     """Get the global extractor optimizer instance"""
