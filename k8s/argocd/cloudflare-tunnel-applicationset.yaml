@@ -5,28 +5,30 @@ metadata:
   namespace: argocd
 spec:
   generators:
-  - clusters:
-      selector:
-        matchLabels:
-          argocd.argoproj.io/secret-type: cluster
-          environment: prd  # Only looking for production clusters
+    - clusters:
+        selector:
+          matchLabels:
+            argocd.argoproj.io/secret-type: cluster
+            environment: prd # Only looking for production clusters
   template:
     metadata:
-      name: 'cloudflare-tunnel-{{name}}'
+      name: "cloudflare-tunnel-{{name}}"
       namespace: argocd
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io/background
     spec:
       project: default
       source:
         repoURL: https://github.com/tomknightatl/diocesan-vitality.git
         targetRevision: HEAD
-        path: 'k8s/argocd/cloudflare-tunnel/overlays/prd'  # Direct path to prd
+        path: "k8s/argocd/cloudflare-tunnel/overlays/prd" # Direct path to prd
       destination:
-        server: '{{server}}'
+        server: "{{server}}"
         namespace: cloudflare-tunnel
       syncPolicy:
         automated:
           prune: true
           selfHeal: true
         syncOptions:
-        - CreateNamespace=true
-        - ServerSideApply=true
+          - CreateNamespace=true
+          - ServerSideApply=true

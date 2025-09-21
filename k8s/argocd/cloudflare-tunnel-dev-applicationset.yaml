@@ -5,16 +5,18 @@ metadata:
   namespace: argocd
 spec:
   generators:
-  - clusters:
-      selector:
-        matchLabels:
-          environment: dev
+    - clusters:
+        selector:
+          matchLabels:
+            environment: dev
   template:
     metadata:
-      name: 'cloudflare-tunnel-dev'
+      name: "cloudflare-tunnel-dev"
       namespace: argocd
       annotations:
         argocd.argoproj.io/sync-wave: "1"
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io/background
     spec:
       project: default
       source:
@@ -29,10 +31,10 @@ spec:
           prune: true
           selfHeal: true
         syncOptions:
-        - CreateNamespace=true
-        - ServerSideApply=true
+          - CreateNamespace=true
+          - ServerSideApply=true
       ignoreDifferences:
-      - group: ""
-        kind: Secret
-        jsonPointers:
-        - /data
+        - group: ""
+          kind: Secret
+          jsonPointers:
+            - /data
