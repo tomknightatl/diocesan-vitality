@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: diocesan-vitality-production
+
+resources:
+  - ../../application/base
+  - namespace.yaml
+
+patches:
+  - path: production-patches.yaml
+
+images:
+  - name: tomatl/diocesan-vitality
+    newTag: latest
+
+commonLabels:
+  environment: production
+  cluster: do-nyc2-dv-prd
+
+replicas:
+  - name: backend-deployment
+    count: 3
+  - name: frontend-deployment
+    count: 3
+  - name: pipeline-deployment
+    count: 2

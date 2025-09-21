@@ -16,6 +16,24 @@ includeClaudeAttribution: false
   3. Wait for explicit user approval before proceeding
 - **This policy applies to all kubectl commands, including those in Makefile targets**
 
+## Environment Strategy
+
+### Branch-Based Promotion Flow
+```bash
+# Development: Push to develop branch → Dev cluster
+git checkout develop && git push origin develop
+
+# Staging: Promote develop to staging → Staging cluster
+git checkout staging && git merge develop && git push origin staging
+
+# Production: Semantic release on main → Production cluster
+git checkout main && git commit -m "feat: new feature" && git push origin main
+```
+
+**Safe Testing**: Always test in `develop` branch first - production deployments only occur from `main` branch with semantic versioning.
+
+📖 **Full Documentation**: [docs/ENVIRONMENT_STRATEGY.md](../docs/ENVIRONMENT_STRATEGY.md)
+
 ## Development Commands
 
 ### Quick Development Setup

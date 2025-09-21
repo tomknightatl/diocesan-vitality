@@ -22,10 +22,10 @@ This directory contains comprehensive documentation for the Diocesan Vitality pr
 
 | Document | Description |
 |----------|-------------|
-| [Deployment Guide](DEPLOYMENT_GUIDE.md) | Docker and Kubernetes deployment |
+| [Environment Strategy](ENVIRONMENT_STRATEGY.md) | Branch-based environment promotion guide |
+| [Kubernetes Deployment](KUBERNETES_DEPLOYMENT.md) | Kubernetes deployment and operations |
 | [CI/CD Pipeline](CI_CD_PIPELINE.md) | Continuous integration and deployment |
 | [Infrastructure Setup](INFRASTRUCTURE_SETUP.md) | Cloud infrastructure configuration |
-| [Development Environments](DEVELOPMENT_ENVIRONMENTS.md) | Environment management |
 
 ## 🔧 Advanced Topics
 
