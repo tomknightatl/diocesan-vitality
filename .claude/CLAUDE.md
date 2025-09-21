@@ -42,6 +42,34 @@ make format
 make lint
 ```
 
+### Cluster Development Commands
+```bash
+# Build and push development images to Docker Hub
+DEV_TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)-dev
+docker buildx build --platform linux/amd64,linux/arm64 -f backend/Dockerfile -t tomatl/diocesan-vitality:backend-${DEV_TIMESTAMP} --push backend/
+docker buildx build --platform linux/amd64,linux/arm64 -f frontend/Dockerfile -t tomatl/diocesan-vitality:frontend-${DEV_TIMESTAMP} --push frontend/
+docker buildx build --platform linux/amd64,linux/arm64 -f Dockerfile.pipeline -t tomatl/diocesan-vitality:pipeline-${DEV_TIMESTAMP} --push .
+
+# Alternative: Build for GitHub Container Registry
+docker buildx build --platform linux/amd64,linux/arm64 -f backend/Dockerfile -t ghcr.io/tomknightatl/diocesan-vitality:backend-${DEV_TIMESTAMP} --push backend/
+
+# Update development environment manifests
+sed -i "s|image: tomatl/diocesan-vitality:.*backend.*|image: tomatl/diocesan-vitality:backend-${DEV_TIMESTAMP}|g" k8s/environments/development/development-patches.yaml
+sed -i "s|image: tomatl/diocesan-vitality:.*frontend.*|image: tomatl/diocesan-vitality:frontend-${DEV_TIMESTAMP}|g" k8s/environments/development/development-patches.yaml
+sed -i "s|image: tomatl/diocesan-vitality:.*pipeline.*|image: tomatl/diocesan-vitality:pipeline-${DEV_TIMESTAMP}|g" k8s/environments/development/development-patches.yaml
+
+# Deploy to development cluster via GitOps
+git add k8s/environments/development/
+git commit -m "Development deployment: ${DEV_TIMESTAMP}"
+git push origin develop
+
+# Monitor development cluster deployment
+kubectl config use-context do-nyc2-dv-dev
+kubectl get application diocesan-vitality-dev -n argocd -w
+kubectl get pods -n diocesan-vitality-dev -w
+kubectl logs deployment/backend-deployment -n diocesan-vitality-dev --follow
+```
+
 ### Pipeline Commands
 ```bash
 # Quick pipeline test (5 parishes from diocese 1)
@@ -144,6 +172,12 @@ Required environment variables in `.env` (copy from `.env.example`):
 - `GENAI_API_KEY`: Google Gemini AI for content analysis
 - `SEARCH_API_KEY`, `SEARCH_CX`: Google Custom Search
 - `MONITORING_URL`: Backend monitoring endpoint (default: http://localhost:8000)
+- `DOCKER_USERNAME`, `DOCKER_PASSWORD`: Docker Hub credentials for pushing images
+- `GITHUB_TOKEN`: GitHub Personal Access Token for GitHub Container Registry access
+
+**Container Registry Options**:
+- **Docker Hub**: `tomatl/diocesan-vitality` (production deployments)
+- **GitHub Container Registry**: `ghcr.io/tomknightatl/diocesan-vitality` (development/internal)
 
 **Setup**: Copy `.env.example` to `.env` and fill in your API keys
 ```bash
@@ -152,10 +186,18 @@ cp .env.example .env
 ```
 
 ### Development Workflow
+
+#### Local Development
 1. Start backend: `cd backend && uvicorn main:app --reload --port 8000`
 2. Start frontend: `cd frontend && npm run dev`
 3. Run pipeline: `python run_pipeline.py --max_parishes_per_diocese 5`
 4. Monitor via dashboard: http://localhost:3000/dashboard
+
+#### Cluster Development (Alternative)
+1. Build and push development images: `DEV_TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)-dev && docker buildx build --platform linux/amd64,linux/arm64 -f backend/Dockerfile -t tomatl/diocesan-vitality:backend-${DEV_TIMESTAMP} --push backend/`
+2. Update development manifests: `sed -i "s|image: tomatl/diocesan-vitality:.*backend.*|image: tomatl/diocesan-vitality:backend-${DEV_TIMESTAMP}|g" k8s/environments/development/development-patches.yaml`
+3. Deploy via GitOps: `git add k8s/environments/development/ && git commit -m "Development deployment: ${DEV_TIMESTAMP}" && git push origin develop`
+4. Monitor cluster: `kubectl config use-context do-nyc2-dv-dev && kubectl get pods -n diocesan-vitality-dev -w`
 
 ### Key Features
 - **Respectful Automation**: Comprehensive robots.txt compliance, rate limiting, blocking detection

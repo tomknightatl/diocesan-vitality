@@ -372,6 +372,206 @@ docker build -f Dockerfile.pipeline -t diocesan-vitality:pipeline-dev .
 docker run --rm --env-file .env diocesan-vitality:pipeline-dev python run_pipeline.py --diocese_id 123 --max_parishes_per_diocese 5
 ```
 
+## ☸️ Cluster Development Environment
+
+### Overview
+
+In addition to local development, you can now develop directly in a Kubernetes cluster using the development environment. This provides a production-like environment for testing changes and running the full distributed pipeline.
+
+### Prerequisites for Cluster Development
+
+1. **kubectl access** to the development cluster:
+   ```bash
+   # Check available contexts
+   kubectl config get-contexts
+
+   # Switch to development cluster (when available)
+   kubectl config use-context do-nyc2-dv-dev
+   ```
+
+2. **Docker Hub access** for pushing development images:
+   ```bash
+   # Login to Docker Hub
+   docker login
+   ```
+
+### Cluster Development Workflow
+
+#### Step 1: Build and Push Development Images
+
+When developing features that need cluster testing, build and push images with development tags:
+
+```bash
+# Generate development timestamp
+DEV_TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)-dev
+
+# Build multi-architecture images for cluster compatibility
+echo "🏗️ Building development images..."
+
+# Backend
+docker buildx build --platform linux/amd64,linux/arm64 \
+  -f backend/Dockerfile \
+  -t tomatl/diocesan-vitality:backend-${DEV_TIMESTAMP} \
+  --push backend/
+
+# Frontend
+docker buildx build --platform linux/amd64,linux/arm64 \
+  -f frontend/Dockerfile \
+  -t tomatl/diocesan-vitality:frontend-${DEV_TIMESTAMP} \
+  --push frontend/
+
+# Pipeline
+docker buildx build --platform linux/amd64,linux/arm64 \
+  -f Dockerfile.pipeline \
+  -t tomatl/diocesan-vitality:pipeline-${DEV_TIMESTAMP} \
+  --push .
+
+echo "✅ Development images pushed with tag: ${DEV_TIMESTAMP}"
+```
+
+#### Step 2: Update Development Environment
+
+Update the development Kubernetes manifests to use your new images:
+
+```bash
+# Update development patches with new image tags
+sed -i "s|image: tomatl/diocesan-vitality:.*backend.*|image: tomatl/diocesan-vitality:backend-${DEV_TIMESTAMP}|g" k8s/environments/development/development-patches.yaml
+sed -i "s|image: tomatl/diocesan-vitality:.*frontend.*|image: tomatl/diocesan-vitality:frontend-${DEV_TIMESTAMP}|g" k8s/environments/development/development-patches.yaml
+sed -i "s|image: tomatl/diocesan-vitality:.*pipeline.*|image: tomatl/diocesan-vitality:pipeline-${DEV_TIMESTAMP}|g" k8s/environments/development/development-patches.yaml
+```
+
+#### Step 3: Deploy via GitOps
+
+Commit and push the changes to trigger ArgoCD deployment to the development cluster:
+
+```bash
+# Commit development changes
+git add k8s/environments/development/
+git commit -m "Development cluster update: ${DEV_TIMESTAMP}
+
+🔧 Development images:
+- backend: tomatl/diocesan-vitality:backend-${DEV_TIMESTAMP}
+- frontend: tomatl/diocesan-vitality:frontend-${DEV_TIMESTAMP}
+- pipeline: tomatl/diocesan-vitality:pipeline-${DEV_TIMESTAMP}
+
+Feature: [describe your changes]"
+
+# Push to trigger ArgoCD sync
+git push origin develop  # Development uses develop branch
+```
+
+#### Step 4: Monitor Deployment
+
+Watch the deployment progress in the development cluster:
+
+```bash
+# Switch to development cluster context
+kubectl config use-context do-nyc2-dv-dev
+
+# Monitor ArgoCD application sync
+kubectl get application diocesan-vitality-dev -n argocd -w
+
+# Watch pod updates
+kubectl get pods -n diocesan-vitality-dev -w
+
+# Check deployment status
+kubectl get deployments -n diocesan-vitality-dev
+
+# View logs
+kubectl logs deployment/backend-deployment -n diocesan-vitality-dev --follow
+kubectl logs deployment/frontend-deployment -n diocesan-vitality-dev --follow
+kubectl logs deployment/extraction-deployment -n diocesan-vitality-dev --follow
+```
+
+### Development Cluster Features
+
+#### Real-time Pipeline Testing
+```bash
+# Monitor distributed pipeline in development cluster
+kubectl get pods -n diocesan-vitality-dev -l worker-type
+
+# Check pipeline coordination
+kubectl logs deployment/discovery-deployment -n diocesan-vitality-dev --follow
+kubectl logs deployment/extraction-deployment -n diocesan-vitality-dev --follow
+kubectl logs deployment/schedule-deployment -n diocesan-vitality-dev --follow
+```
+
+#### Development Database Access
+```bash
+# Port-forward to access development database
+kubectl port-forward service/backend-service 8000:80 -n diocesan-vitality-dev
+
+# Access development API
+curl http://localhost:8000/api/dioceses
+curl http://localhost:8000/api/monitoring/status
+```
+
+#### Debug and Troubleshooting
+```bash
+# Get detailed pod information
+kubectl describe pods -n diocesan-vitality-dev
+
+# Execute commands in development pods
+kubectl exec -it deployment/backend-deployment -n diocesan-vitality-dev -- /bin/bash
+
+# Check resource usage
+kubectl top pods -n diocesan-vitality-dev
+kubectl top nodes
+```
+
+### Automated Development Builds (Recommended)
+
+Use GitHub Actions to automatically build and deploy development images:
+
+```bash
+# Push to develop branch triggers automatic development deployment
+git checkout develop
+git push origin develop
+
+# Or manually trigger build via GitHub Actions
+gh workflow run ci-cd-pipeline.yml -f environment=staging
+```
+
+**GitHub Actions handles:**
+- Multi-architecture builds (ARM64 + AMD64)
+- Automatic tagging with timestamps
+- Push to Docker Hub
+- Development cluster deployment
+- Integration testing
+
+### Development vs Production Workflow
+
+| **Development Cluster** | **Production** |
+|------------------------|----------------|
+| Manual image builds → Push to `develop` branch | Automatic builds via CI/CD |
+| Quick iteration cycle | Full test suite required |
+| `k8s/environments/development/` | `k8s/environments/production/` |
+| ArgoCD syncs from `develop` branch | ArgoCD syncs from `main` branch |
+| Test distributed pipeline | Production data collection |
+
+### Best Practices for Cluster Development
+
+1. **Use development timestamps**: Add `-dev` suffix to distinguish from production
+2. **Test locally first**: Verify basic functionality before cluster deployment
+3. **Monitor resource usage**: Check CPU/memory limits in development cluster
+4. **Use feature branches**: Create feature branches for complex changes
+5. **Clean up**: Remove old development images regularly
+
+### Development Cluster Setup
+
+If you need to create a development cluster:
+
+```bash
+# Create development cluster infrastructure
+make cluster-create CLUSTER_LABEL=dev
+make tunnel-create CLUSTER_LABEL=dev
+make argocd-install CLUSTER_LABEL=dev
+make argocd-apps CLUSTER_LABEL=dev
+make sealed-secrets-create CLUSTER_LABEL=dev
+```
+
+See the **[Infrastructure Commands](#infrastructure-commands)** section in the Makefile for complete cluster setup.
+
 ## 📊 Monitoring & Debugging
 
 ### Real-time Monitoring
