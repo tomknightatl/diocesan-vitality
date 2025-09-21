@@ -168,14 +168,20 @@ See `docs/DATABASE.md` for complete schema documentation.
 ```bash
 # Code formatting (Black)
 make format            # Format all Python code
-black . --line-length=127
+black . --line-length=127 --exclude="venv|node_modules"
 
 # Linting (Flake8)
 make lint             # Run Python linting
-flake8 . --max-line-length=88
+flake8 . --exclude=venv,node_modules --max-line-length=88 --extend-ignore=E203,W503
 
 # Frontend linting
 cd frontend && npm run lint
+
+# Development utilities
+make clean            # Clean cache and temporary files
+make kill-chrome      # Kill stuck Chrome processes
+make restart          # Restart all services
+make ports            # Check development port usage
 ```
 
 ### Important Documentation References
@@ -183,6 +189,8 @@ cd frontend && npm run lint
 - **[docs/COMMANDS.md](docs/COMMANDS.md)**: Comprehensive command reference
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**: Detailed system architecture
 - **[docs/DATABASE.md](docs/DATABASE.md)**: Database schema and operations
+- **[docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md)**: Docker and Kubernetes deployment
+- **[docs/CI_CD_PIPELINE.md](docs/CI_CD_PIPELINE.md)**: Complete CI/CD pipeline documentation
 
 ## Git Workflow Rules
 
