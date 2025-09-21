@@ -53,7 +53,7 @@ spec:
               path: /ready
               port: 2000
             failureThreshold: 5
-            initialDelaySeconds: 60
+            initialDelaySeconds: 120
             periodSeconds: 30
             timeoutSeconds: 10
           readinessProbe:
@@ -61,14 +61,15 @@ spec:
               path: /ready
               port: 2000
             failureThreshold: 10
-            initialDelaySeconds: 30
+            initialDelaySeconds: 60
             periodSeconds: 30
             timeoutSeconds: 10
           startupProbe:
             httpGet:
               path: /ready
               port: 2000
-            failureThreshold: 30
+            failureThreshold: 60
+            initialDelaySeconds: 30
             periodSeconds: 10
           securityContext:
             capabilities: {}
