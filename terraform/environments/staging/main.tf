@@ -77,8 +77,8 @@ module "k8s_cluster" {
   cluster_tags         = local.common_tags
   node_tags            = concat(local.common_tags, ["worker-node"])
   write_kubeconfig     = true
-  add_kubectl_context  = true
-  kubectl_context_name = "diocesan-vitality-staging"
+  add_kubectl_context  = false
+  kubectl_context_name = ""
 }
 
 # Create Cloudflare tunnel and DNS records
