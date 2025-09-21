@@ -268,23 +268,29 @@ sealed-secrets-create: ## Step 5: Create tunnel token sealed secret (usage: make
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	echo "🚀 Step 5: Creating tunnel token sealed secret for '$$CLUSTER_LABEL'..." && \
 	if [ "$$CLUSTER_LABEL" = "stg" ]; then ENV_DIR="staging"; else ENV_DIR="$$CLUSTER_LABEL"; fi && \
-	echo "🔍 Extracting tunnel token from Terraform state..." && \
+	echo "🔍 Extracting tunnel credentials from Terraform k8s-secrets..." && \
 	cd terraform/environments/$$ENV_DIR && \
-	TUNNEL_TOKEN=$$(terraform show -json | jq -r '.values.outputs.tunnel_token.value') && \
-	TUNNEL_ID=$$(terraform show -json | jq -r '.values.outputs.tunnel_id.value') && \
-	cd - >/dev/null && \
-	if [ "$$TUNNEL_TOKEN" = "null" ] || [ -z "$$TUNNEL_TOKEN" ]; then \
-		echo "❌ Could not extract tunnel token from Terraform state"; \
+	CREDENTIALS_FILE="k8s-secrets/cloudflare-tunnel-$$CLUSTER_LABEL.yaml" && \
+	if [ ! -f "$$CREDENTIALS_FILE" ]; then \
+		echo "❌ Could not find tunnel credentials file: $$CREDENTIALS_FILE"; \
 		echo "💡 Ensure tunnel has been created: make tunnel-create CLUSTER_LABEL=$$CLUSTER_LABEL"; \
 		exit 1; \
 	fi && \
-	if [ "$$TUNNEL_ID" = "null" ] || [ -z "$$TUNNEL_ID" ]; then \
-		echo "❌ Could not extract tunnel ID from Terraform state"; \
+	CREDENTIALS_B64=$$(grep "credentials.json" "$$CREDENTIALS_FILE" | cut -d'"' -f4) && \
+	CREDENTIALS_JSON=$$(echo "$$CREDENTIALS_B64" | base64 -d) && \
+	ACCOUNT_TAG=$$(echo "$$CREDENTIALS_JSON" | jq -r '.AccountTag') && \
+	TUNNEL_ID=$$(echo "$$CREDENTIALS_JSON" | jq -r '.TunnelID') && \
+	TUNNEL_SECRET=$$(echo "$$CREDENTIALS_JSON" | jq -r '.TunnelSecret') && \
+	TUNNEL_SECRET_B64=$$(echo -n "$$TUNNEL_SECRET" | base64 -w0) && \
+	TUNNEL_TOKEN=$$(echo "{\"a\":\"$$ACCOUNT_TAG\",\"t\":\"$$TUNNEL_ID\",\"s\":\"$$TUNNEL_SECRET_B64\"}" | base64 -w0) && \
+	cd - >/dev/null && \
+	if [ -z "$$TUNNEL_TOKEN" ] || [ -z "$$TUNNEL_ID" ]; then \
+		echo "❌ Could not extract tunnel credentials"; \
 		echo "💡 Ensure tunnel has been created: make tunnel-create CLUSTER_LABEL=$$CLUSTER_LABEL"; \
 		exit 1; \
 	fi && \
 	echo "✅ Extracted tunnel ID: $$TUNNEL_ID" && \
-	echo "✅ Extracted tunnel token: $${TUNNEL_TOKEN:0:20}..." && \
+	echo "✅ Generated tunnel token: $$(echo "$$TUNNEL_TOKEN" | cut -c1-20)..." && \
 	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
 	echo "🔧 Installing kubeseal CLI if needed..." && \
 	$(MAKE) _install-kubeseal && \
