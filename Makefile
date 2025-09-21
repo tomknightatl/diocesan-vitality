@@ -158,7 +158,7 @@ cluster-create: ## Step 1: Create cluster and kubectl context (usage: make clust
 				echo "❌ Timeout: Cluster creation exceeded 15 minutes" && \
 				exit 1; \
 			fi && \
-			STATUS=$$(doctl kubernetes cluster get $$CLUSTER_NAME -o json 2>/dev/null | jq -r '.status // "not_found"') && \
+			STATUS=$$(doctl kubernetes cluster get $$CLUSTER_NAME -o json 2>/dev/null | jq -r '.[0].status // "not_found"') && \
 			if [ "$$STATUS" = "running" ]; then \
 				echo "✅ Cluster is running! (Total time: $$((ELAPSED/60))m $$((ELAPSED%60))s)" && \
 				break; \
