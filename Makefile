@@ -225,32 +225,34 @@ argocd-apps: ## Step 4: Install ArgoCD ApplicationSets (usage: make argocd-apps 
 		kubectl apply -f k8s/argocd/diocesan-vitality-$$CLUSTER_LABEL-applicationset.yaml
 	@echo "✅ Step 4 Complete: ApplicationSets installed for $$CLUSTER_LABEL"
 
-sealed-secrets-create: ## Step 5: Convert tunnel credentials to sealed secrets (usage: make sealed-secrets-create CLUSTER_LABEL=dev)
+sealed-secrets-create: ## Step 5: Create tunnel token sealed secret (usage: make sealed-secrets-create CLUSTER_LABEL=dev TUNNEL_TOKEN=<token>)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
-	echo "🚀 Step 5: Converting tunnel credentials to sealed secrets for '$$CLUSTER_LABEL'..." && \
+	echo "🚀 Step 5: Creating tunnel token sealed secret for '$$CLUSTER_LABEL'..." && \
+	if [ -z "$$TUNNEL_TOKEN" ]; then \
+		echo "❌ TUNNEL_TOKEN environment variable is required"; \
+		echo "💡 Get token from Cloudflare Web UI: Zero Trust > Networks > Tunnels > [Your Tunnel] > Configure"; \
+		echo "💡 Copy the token from the Docker command shown"; \
+		echo "💡 Usage: make sealed-secrets-create CLUSTER_LABEL=$$CLUSTER_LABEL TUNNEL_TOKEN=<your_token>"; \
+		exit 1; \
+	fi && \
 	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
 	echo "🔧 Installing kubeseal CLI if needed..." && \
 	$(MAKE) _install-kubeseal && \
 	echo "⏳ Waiting for sealed-secrets controller to be ready..." && \
 	kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=sealed-secrets -n kube-system --timeout=300s && \
-	echo "📋 Reading tunnel credentials from terraform..." && \
-	TUNNEL_CREDS_B64=$$(grep -A 1 'credentials.json' terraform/environments/dev/k8s-secrets/cloudflare-tunnel-dev.yaml | tail -1 | cut -d'"' -f2) && \
-	if [ -z "$$TUNNEL_CREDS_B64" ]; then echo "❌ No tunnel credentials found in terraform output"; exit 1; fi && \
-	echo "🔐 Creating sealed secret..." && \
-	kubectl create secret generic cloudflare-tunnel-credentials \
-		--from-literal=credentials.json="$$(echo $$TUNNEL_CREDS_B64 | base64 -d)" \
-		--namespace=cloudflare-tunnel-$$CLUSTER_LABEL \
-		--dry-run=client -o yaml | \
-	kubeseal -o yaml > k8s/infrastructure/cloudflare-tunnel/environments/$$CLUSTER_LABEL/sealedsecret.yaml && \
-	echo "📝 Updating kustomization to use sealed secret..." && \
-	$(MAKE) _update-kustomization-for-sealed-secret CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	echo "🔐 Creating sealed secret from tunnel token..." && \
+	echo -n "$$TUNNEL_TOKEN" | kubectl create secret generic cloudflared-token \
+		--dry-run=client --from-file=tunnel-token=/dev/stdin \
+		--namespace=cloudflare-tunnel-$$CLUSTER_LABEL -o yaml | \
+	kubeseal -o yaml --namespace=cloudflare-tunnel-$$CLUSTER_LABEL > \
+		k8s/infrastructure/cloudflare-tunnel/environments/$$CLUSTER_LABEL/cloudflared-token-sealedsecret.yaml && \
 	echo "💾 Committing sealed secret to repository..." && \
 	git add k8s/infrastructure/cloudflare-tunnel/environments/$$CLUSTER_LABEL/ && \
-	git commit -m "Add sealed secret for cloudflare-tunnel-$$CLUSTER_LABEL credentials" && \
+	git commit -m "Add tunnel token sealed secret for cloudflare-tunnel-$$CLUSTER_LABEL" && \
 	git push && \
 	echo "⏳ Waiting for tunnel application to sync and become healthy..." && \
 	sleep 30 && \
-	echo "✅ Step 5 Complete: Sealed secret created and tunnel should be syncing for $$CLUSTER_LABEL"
+	echo "✅ Step 5 Complete: Tunnel token sealed secret created for $$CLUSTER_LABEL"
 
 _install-kubeseal: ## Install kubeseal CLI if not present
 	@if ! command -v kubeseal >/dev/null 2>&1; then \

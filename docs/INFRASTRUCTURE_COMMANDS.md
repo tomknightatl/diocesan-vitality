@@ -65,26 +65,59 @@ Each environment:
 
 ## Step 5: Sealed Secrets (Security)
 
-Step 5 converts the Terraform-generated Cloudflare tunnel credentials into secure sealed secrets:
+Step 5 creates secure sealed secrets for Cloudflare tunnel authentication using tokens from the Cloudflare Web UI:
 
 **What it does:**
 1. Waits for sealed-secrets controller to be ready (deployed in Step 4)
-2. Extracts tunnel credentials from Terraform output files
-3. Creates a sealed secret using `kubeseal` CLI
-4. Updates kustomization to use the sealed secret instead of plain text
-5. Commits and pushes the sealed secret to the repository
-6. Waits for the tunnel application to sync and become healthy
+2. Uses tunnel token from Cloudflare Web UI (not credentials.json)
+3. Creates a sealed secret using `kubeseal` CLI with correct kubectl context
+4. Commits and pushes the sealed secret to the repository
+5. Waits for the tunnel application to sync and become healthy
 
 **Security Benefits:**
-- Credentials are encrypted and safe to store in Git
+- Tunnel tokens are encrypted and safe to store in Git
 - Only the target cluster can decrypt the sealed secret
 - Follows GitOps principles - all configuration in repository
-- Eliminates need for manual secret management
+- Uses Cloudflare's recommended token-based authentication
 
 **Requirements:**
 - `kubeseal` CLI must be installed
 - Sealed-secrets controller must be running (automatic after Step 4)
 - Git repository access for committing sealed secrets
+- Fresh tunnel token from Cloudflare Web UI
+
+**Troubleshooting Step 5:**
+If tunnel pods show `CrashLoopBackOff` or authentication errors:
+
+1. **Get fresh token from Cloudflare Web UI:**
+   ```bash
+   # Navigate to Cloudflare Dashboard > Zero Trust > Networks > Tunnels
+   # Click your tunnel > Configure > Copy the token from the Docker command
+   ```
+
+2. **Create sealed secret manually:**
+   ```bash
+   # Ensure correct kubectl context
+   kubectl config use-context do-nyc2-dv-dev
+   
+   # Create sealed secret (replace TOKEN with actual token)
+   echo -n "TOKEN_HERE" | kubectl create secret generic cloudflared-token \
+     --dry-run=client --from-file=tunnel-token=/dev/stdin \
+     --namespace=cloudflare-tunnel-dev -o yaml | \
+     kubeseal -o yaml --namespace=cloudflare-tunnel-dev > \
+     k8s/infrastructure/cloudflare-tunnel/environments/dev/cloudflared-token-sealedsecret.yaml
+   
+   # Commit and push
+   git add k8s/infrastructure/cloudflare-tunnel/environments/dev/
+   git commit -m "Update tunnel token sealed secret"
+   git push
+   ```
+
+3. **Common fixes applied:**
+   - Switched from QUIC to HTTP/2 transport (resolves UDP buffer issues)
+   - Reduced resource limits for small clusters
+   - Removed config file dependencies (uses token-only approach)
+   - Applied proper security context with NET_ADMIN capability
 
 ## Cleanup
 
