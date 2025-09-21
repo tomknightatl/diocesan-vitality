@@ -13,6 +13,8 @@ spec:
     metadata:
       name: "diocesan-vitality-dev"
       namespace: argocd
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io/background
     spec:
       project: default
       source:
