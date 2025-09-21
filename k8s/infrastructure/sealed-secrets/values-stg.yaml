@@ -10,10 +10,10 @@ resources:
     cpu: 200m
     memory: 256Mi
 
-# Enable metrics for monitoring
+# Enable metrics for monitoring (disabled until monitoring stack is installed)
 metrics:
   serviceMonitor:
-    enabled: true
+    enabled: false
 
 # Staging logging
 logLevel: info

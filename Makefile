@@ -270,7 +270,7 @@ sealed-secrets-create: ## Step 5: Create tunnel token sealed secret (usage: make
 	if [ "$$CLUSTER_LABEL" = "stg" ]; then ENV_DIR="staging"; else ENV_DIR="$$CLUSTER_LABEL"; fi && \
 	echo "🔍 Extracting tunnel credentials from Terraform k8s-secrets..." && \
 	cd terraform/environments/$$ENV_DIR && \
-	CREDENTIALS_FILE="k8s-secrets/cloudflare-tunnel-$$CLUSTER_LABEL.yaml" && \
+	CREDENTIALS_FILE="k8s-secrets/cloudflare-tunnel-$$ENV_DIR.yaml" && \
 	if [ ! -f "$$CREDENTIALS_FILE" ]; then \
 		echo "❌ Could not find tunnel credentials file: $$CREDENTIALS_FILE"; \
 		echo "💡 Ensure tunnel has been created: make tunnel-create CLUSTER_LABEL=$$CLUSTER_LABEL"; \
