@@ -3,27 +3,47 @@ kind: Deployment
 metadata:
   name: cloudflared
 spec:
-  replicas: 1
   selector:
     matchLabels:
       app: cloudflared
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   template:
     metadata:
       labels:
         app: cloudflared
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
     spec:
+      terminationGracePeriodSeconds: 120
       containers:
         - name: cloudflared
-          image: cloudflare/cloudflared:latest
+          image: cloudflare/cloudflared:2025.4.0
           args:
-            - tunnel
-            - --metrics
-            - 0.0.0.0:2000
-            - run
-            - 22440329-d3f3-4b0c-8e59-3328a9bb1209
+            - "tunnel"
+            - "--config"
+            - "/etc/cloudflared/config.yaml"
+            - "run"
           env:
-            - name: TUNNEL_CRED_FILE
-              value: /etc/cloudflared/creds/credentials.json
+            - name: TUNNEL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cloudflared-token
+                  key: tunnel-token
+            - name: TUNNEL_TRANSPORT_PROTOCOL
+              value: "quic"
+            - name: TUNNEL_RETRIES
+              value: "10"
+            - name: TUNNEL_GRACE_PERIOD
+              value: "30s"
+            - name: TUNNEL_ORIGIN_CERT
+              value: "false"
+            - name: TUNNEL_METRICS
+              value: "0.0.0.0:2000"
           ports:
             - containerPort: 2000
               name: metrics
@@ -32,37 +52,37 @@ spec:
             httpGet:
               path: /ready
               port: 2000
-            failureThreshold: 1
-            initialDelaySeconds: 10
-            periodSeconds: 10
+            failureThreshold: 5
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
           readinessProbe:
             httpGet:
               path: /ready
               port: 2000
-            failureThreshold: 1
-            initialDelaySeconds: 10
+            failureThreshold: 10
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+          startupProbe:
+            httpGet:
+              path: /ready
+              port: 2000
+            failureThreshold: 30
             periodSeconds: 10
-          volumeMounts:
-            - name: config
-              mountPath: /etc/cloudflared/config
-              readOnly: true
-            - name: creds
-              mountPath: /etc/cloudflared/creds
-              readOnly: true
+          securityContext:
+            capabilities: {}
           resources:
             limits:
               cpu: 200m
               memory: 256Mi
             requests:
-              cpu: 100m
+              cpu: 50m
               memory: 128Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/cloudflared/
       volumes:
-        - name: creds
-          secret:
-            secretName: cloudflare-tunnel-credentials
         - name: config
           configMap:
             name: cloudflared-config
-            items:
-              - key: config.yaml
-                path: config.yaml

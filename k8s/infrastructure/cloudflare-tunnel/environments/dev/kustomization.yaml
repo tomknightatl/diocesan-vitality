@@ -5,27 +5,9 @@ namespace: cloudflare-tunnel-dev
 
 resources:
   - ../../base
-  - sealedsecret.yaml
+  - cloudflared-token-sealedsecret.yaml
 
 patches:
-  - target:
-      kind: Deployment
-      name: cloudflared
-    patch: |-
-      - op: replace
-        path: /spec/template/spec/containers/0/image
-        value: cloudflare/cloudflared:2024.6.1
-      - op: replace
-        path: /spec/template/spec/containers/0/args
-        value:
-          - tunnel
-          - --config
-          - /etc/cloudflared/config/config.yaml
-          - --metrics
-          - 0.0.0.0:2000
-          - run
-          - da4b9224-567a-4ba1-b1b3-9c4eceddfa1e
-
   - target:
       kind: ConfigMap
       name: cloudflared-config
@@ -34,7 +16,6 @@ patches:
         path: /data/config.yaml
         value: |
           tunnel: da4b9224-567a-4ba1-b1b3-9c4eceddfa1e
-          credentials-file: /etc/cloudflared/creds/credentials.json
           metrics: 0.0.0.0:2000
 
           ingress:
