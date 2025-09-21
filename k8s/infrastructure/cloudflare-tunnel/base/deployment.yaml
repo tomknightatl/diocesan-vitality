@@ -72,14 +72,19 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 10
           securityContext:
-            capabilities: {}
+            capabilities:
+              add:
+                - NET_ADMIN
+            runAsUser: 65532
+            runAsGroup: 65532
+            allowPrivilegeEscalation: false
           resources:
             limits:
               cpu: 100m
-              memory: 64Mi
+              memory: 128Mi
             requests:
               cpu: 25m
-              memory: 32Mi
+              memory: 64Mi
           volumeMounts:
             - name: config
               mountPath: /etc/cloudflared/
