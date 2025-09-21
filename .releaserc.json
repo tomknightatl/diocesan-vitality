@@ -66,7 +66,7 @@
       ],
       "addReleases": "bottom",
       "releasedLabels": ["released"],
-      "successComment": "🎉 This ${issue.pull_request ? 'PR is included' : 'issue has been resolved'} in version [${nextRelease.version}](${releases.filter(release => !/^[\w-]+\.[\w-]+\.[\w-]+$/.test(release.name))[0].url}) 🎉",
+      "successComment": "🎉 This ${issue.pull_request ? 'PR is included' : 'issue has been resolved'} in version [${nextRelease.version}](${releases.filter(release => !/^[\\w-]+\\.[\\w-]+\\.[\\w-]+$/.test(release.name))[0].url}) 🎉",
       "failTitle": "❌ The automated release failed",
       "failComment": "The automated release from the `${branch.name}` branch failed. See the [workflow run]({env.GITHUB_SERVER_URL}/{env.GITHUB_REPOSITORY}/actions/runs/{env.GITHUB_RUN_ID}) for details."
     }]
