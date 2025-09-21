@@ -48,6 +48,7 @@ git push origin main
 - **🚀 Caching**: Uses GitHub Actions cache for faster builds
 - **🔐 Secure**: Uses repository secrets for Docker Hub credentials
 - **📊 Monitoring**: Full build logs and status in GitHub Actions tab
+- **🔄 GitOps Integration**: Automatically updates Kubernetes manifests and triggers ArgoCD sync
 
 ### 🛠️ Manual Build Trigger
 
@@ -74,11 +75,24 @@ gh workflow run docker-build-push.yml -f force_build=true
 
 ## 🐳 Manual Docker Builds (Alternative)
 
+### Container Registry Options
+
+This project supports both **Docker Hub** and **GitHub Container Registry (GHCR)**:
+
+| Registry | Use Case | Access |
+|----------|----------|--------|
+| **Docker Hub** (`tomatl/diocesan-vitality`) | Production deployments, public images | Docker Hub account |
+| **GitHub Container Registry** (`ghcr.io/tomknightatl/diocesan-vitality`) | Development, private/internal use | GitHub PAT token |
+
 ### Step 1: Build Images with Timestamp
 
 For comprehensive Docker commands and deployment scripts, see the **[📝 Commands Guide](COMMANDS.md#docker-commands)**.
 
 **Multi-Architecture Build (Recommended):**
+
+Choose your target registry:
+
+#### Docker Hub (Production)
 ```bash
 # Generate timestamp
 TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)
@@ -97,9 +111,7 @@ echo "🏗️ Building multi-arch frontend image..."
 docker buildx build --platform linux/amd64,linux/arm64 \
   -f frontend/Dockerfile \
   -t tomatl/diocesan-vitality:frontend-$TIMESTAMP \
-  --push frontend/ \
-  --progress=plain \
-  --debug
+  --push frontend/
 
 echo "🏗️ Building multi-arch pipeline image..."
 docker buildx build --platform linux/amd64,linux/arm64 \
@@ -107,7 +119,37 @@ docker buildx build --platform linux/amd64,linux/arm64 \
   -t tomatl/diocesan-vitality:pipeline-$TIMESTAMP \
   --push .
 
-echo "✅ All multi-arch images built and pushed with timestamp: $TIMESTAMP"
+echo "✅ All multi-arch images built and pushed to Docker Hub with timestamp: $TIMESTAMP"
+```
+
+#### GitHub Container Registry (Development/Internal)
+```bash
+# Generate timestamp
+TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)
+
+# Login to GitHub Container Registry (requires GitHub PAT token)
+echo $GITHUB_TOKEN | docker login ghcr.io -u tomknightatl --password-stdin
+
+# Build multi-arch images for GitHub Container Registry
+echo "🏗️ Building multi-arch backend image for GHCR..."
+docker buildx build --platform linux/amd64,linux/arm64 \
+  -f backend/Dockerfile \
+  -t ghcr.io/tomknightatl/diocesan-vitality:backend-$TIMESTAMP \
+  --push backend/
+
+echo "🏗️ Building multi-arch frontend image for GHCR..."
+docker buildx build --platform linux/amd64,linux/arm64 \
+  -f frontend/Dockerfile \
+  -t ghcr.io/tomknightatl/diocesan-vitality:frontend-$TIMESTAMP \
+  --push frontend/
+
+echo "🏗️ Building multi-arch pipeline image for GHCR..."
+docker buildx build --platform linux/amd64,linux/arm64 \
+  -f Dockerfile.pipeline \
+  -t ghcr.io/tomknightatl/diocesan-vitality:pipeline-$TIMESTAMP \
+  --push .
+
+echo "✅ All multi-arch images built and pushed to GHCR with timestamp: $TIMESTAMP"
 ```
 
 **Single Architecture Build (Alternative):**
@@ -280,13 +322,90 @@ This project supports both ARM64 (development on Raspberry Pi/Apple Silicon) and
 - **Pipeline Image**: Requires Chrome/Chromium for web scraping - multi-arch build handles architecture-specific browser installation
 - **Backend/Frontend**: Platform-agnostic Python and Node.js applications work on both architectures
 
+## 🔄 Development Cluster Deployment
+
+### Overview
+
+In addition to production deployments, you can deploy to a development cluster for testing changes in a production-like environment.
+
+### Development Deployment Workflow
+
+#### Option 1: Automatic via GitHub Actions
+```bash
+# Push to develop branch triggers automatic development deployment
+git checkout develop
+git push origin develop
+
+# GitHub Actions will:
+# 1. Build multi-arch images with development tags
+# 2. Push to Docker Hub
+# 3. Update k8s/environments/development/ manifests
+# 4. Commit changes back to develop branch
+# 5. ArgoCD syncs to development cluster
+```
+
+#### Option 2: Manual Development Deployment
+```bash
+# Build and push development images (see previous section)
+DEV_TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)-dev
+
+# Build and push to Docker Hub or GHCR
+docker buildx build --platform linux/amd64,linux/arm64 \
+  -f backend/Dockerfile \
+  -t tomatl/diocesan-vitality:backend-${DEV_TIMESTAMP} \
+  --push backend/
+
+# Update development manifests
+sed -i "s|image: tomatl/diocesan-vitality:.*backend.*|image: tomatl/diocesan-vitality:backend-${DEV_TIMESTAMP}|g" k8s/environments/development/development-patches.yaml
+
+# Commit and push to develop branch
+git add k8s/environments/development/
+git commit -m "Development deployment: ${DEV_TIMESTAMP}"
+git push origin develop
+```
+
+### Development Cluster Monitoring
+
+Monitor the development cluster deployment:
+
+```bash
+# Switch to development cluster
+kubectl config use-context do-nyc2-dv-dev
+
+# Monitor ArgoCD application sync for development
+kubectl get application diocesan-vitality-dev -n argocd -w
+
+# Watch development pods
+kubectl get pods -n diocesan-vitality-dev -w
+
+# Check development deployments
+kubectl get deployments -n diocesan-vitality-dev
+
+# View development logs
+kubectl logs deployment/backend-deployment -n diocesan-vitality-dev --follow
+kubectl logs deployment/extraction-deployment -n diocesan-vitality-dev --follow
+```
+
+### Development vs Production Environments
+
+| **Development** | **Production** |
+|----------------|----------------|
+| `kubectl config use-context do-nyc2-dv-dev` | `kubectl config use-context do-nyc2-dv-prd` |
+| `diocesan-vitality-dev` namespace | `diocesan-vitality` namespace |
+| ArgoCD syncs from `develop` branch | ArgoCD syncs from `main` branch |
+| `k8s/environments/development/` | `k8s/environments/production/` |
+| Development image tags (`-dev` suffix) | Production image tags (timestamps only) |
+
 ## 📊 Monitoring Deployment
 
 ### Watch ArgoCD Sync
 
 ```bash
-# Monitor ArgoCD application sync status
+# Production monitoring
 kubectl get application diocesan-vitality-app -n argocd -w
+
+# Development monitoring
+kubectl get application diocesan-vitality-dev -n argocd -w
 
 # Check sync status once
 kubectl get application diocesan-vitality-app -n argocd -o jsonpath='{.status.sync.status}'
