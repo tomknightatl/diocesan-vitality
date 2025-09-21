@@ -203,6 +203,9 @@ argocd-install: ## Step 3: Install ArgoCD and configure repository (usage: make 
 		kubectl create namespace argocd && \
 		kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml && \
 		kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=argocd-server -n argocd --timeout=300s && \
+		echo "⏳ Waiting for argocd-cm configmap to be ready..." && \
+		while ! kubectl get configmap argocd-cm -n argocd >/dev/null 2>&1; do sleep 2; done && \
+		sleep 5 && \
 		kubectl patch configmap argocd-cm -n argocd --patch '{"data":{"repositories":"- url: https://github.com/t-k-/diocesan-vitality.git"}}'
 	@echo "🔧 Setting up custom ArgoCD password..."
 	@$(MAKE) _setup-argocd-password CLUSTER_LABEL=$$CLUSTER_LABEL
