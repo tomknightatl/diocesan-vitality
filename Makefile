@@ -136,7 +136,8 @@ infra-setup: ## Set up complete infrastructure (all 5 steps, usage: make infra-s
 cluster-create: ## Step 1: Create cluster and kubectl context (usage: make cluster-create CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	echo "🚀 Step 1: Creating cluster and kubectl context for '$$CLUSTER_LABEL'..." && \
-	cd terraform/environments/dev && \
+	if [ "$$CLUSTER_LABEL" = "stg" ]; then ENV_DIR="staging"; else ENV_DIR="$$CLUSTER_LABEL"; fi && \
+	cd terraform/environments/$$ENV_DIR && \
 		export DIGITALOCEAN_TOKEN=$$(grep DIGITALOCEAN_TOKEN ../../../.env | cut -d'=' -f2) && \
 		terraform init && \
 		terraform apply -target=module.k8s_cluster -auto-approve && \
@@ -154,7 +155,8 @@ tunnel-create: ## Step 2: Create Cloudflare tunnel and DNS records (usage: make 
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	echo "🚀 Step 2: Creating Cloudflare tunnel for '$$CLUSTER_LABEL'..." && \
 	echo "🧹 Cleaning up any stale tunnel state..." && \
-	cd terraform/environments/dev && \
+	if [ "$$CLUSTER_LABEL" = "stg" ]; then ENV_DIR="staging"; else ENV_DIR="$$CLUSTER_LABEL"; fi && \
+	cd terraform/environments/$$ENV_DIR && \
 		export CLOUDFLARE_API_TOKEN=$$(grep CLOUDFLARE_API_TOKEN ../../../.env | cut -d'=' -f2) && \
 		terraform state list | grep "module.cloudflare_tunnel" | xargs -r terraform state rm || true && \
 		terraform apply -target=module.cloudflare_tunnel -auto-approve
