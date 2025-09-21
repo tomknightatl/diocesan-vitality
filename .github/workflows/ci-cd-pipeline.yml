@@ -13,6 +13,11 @@ on:
       - "requirements.txt"
       - "package.json"
       - "package-lock.json"
+    paths-ignore:
+      - "src/**"  # Avoid conflict with semantic-release workflow
+      - "setup.py"
+      - "CHANGELOG.md"
+      - ".releaserc.json"
   pull_request:
     branches: [main, develop]
     paths:
@@ -25,6 +30,11 @@ on:
       - "requirements.txt"
       - "package.json"
       - "package-lock.json"
+    paths-ignore:
+      - "src/**"  # Avoid conflict with semantic-release workflow
+      - "setup.py"
+      - "CHANGELOG.md"
+      - ".releaserc.json"
   workflow_dispatch:
     inputs:
       environment:
@@ -296,7 +306,7 @@ jobs:
     name: Build Staging Images
     runs-on: ubuntu-latest
     needs: [integration-tests]
-    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/develop' || (github.ref == 'refs/heads/main' && github.event_name == 'pull_request')
     outputs:
       backend-tag: ${{ steps.meta.outputs.backend-tag }}
       frontend-tag: ${{ steps.meta.outputs.frontend-tag }}
@@ -315,24 +325,60 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: Get version information
+        id: version
+        run: |
+          # Check if we can get semantic version from VERSION file
+          if [ -f "VERSION" ]; then
+            VERSION=$(cat VERSION)
+            echo "Using semantic version: $VERSION"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "version-type=semantic" >> $GITHUB_OUTPUT
+          else
+            # Fallback to timestamp for non-release builds
+            TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)
+            echo "Using timestamp version: $TIMESTAMP"
+            echo "version=$TIMESTAMP" >> $GITHUB_OUTPUT
+            echo "version-type=timestamp" >> $GITHUB_OUTPUT
+          fi
+
       - name: Generate staging tags
         id: meta
         run: |
-          TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)
           BRANCH=$(echo ${GITHUB_REF#refs/heads/} | sed 's/[^a-zA-Z0-9]/-/g')
+          VERSION=${{ steps.version.outputs.version }}
+          VERSION_TYPE=${{ steps.version.outputs.version-type }}
 
-          echo "backend-tag=${{ env.IMAGE_NAMESPACE }}:${BRANCH}-backend-${TIMESTAMP}" >> $GITHUB_OUTPUT
-          echo "frontend-tag=${{ env.IMAGE_NAMESPACE }}:${BRANCH}-frontend-${TIMESTAMP}" >> $GITHUB_OUTPUT
-          echo "pipeline-tag=${{ env.IMAGE_NAMESPACE }}:${BRANCH}-pipeline-${TIMESTAMP}" >> $GITHUB_OUTPUT
+          if [ "$VERSION_TYPE" = "semantic" ]; then
+            # Use semantic version format for release builds
+            echo "backend-tag=${{ env.IMAGE_NAMESPACE }}:backend-${VERSION}-staging" >> $GITHUB_OUTPUT
+            echo "frontend-tag=${{ env.IMAGE_NAMESPACE }}:frontend-${VERSION}-staging" >> $GITHUB_OUTPUT
+            echo "pipeline-tag=${{ env.IMAGE_NAMESPACE }}:pipeline-${VERSION}-staging" >> $GITHUB_OUTPUT
+          else
+            # Use timestamp format for development builds
+            echo "backend-tag=${{ env.IMAGE_NAMESPACE }}:${BRANCH}-backend-${VERSION}" >> $GITHUB_OUTPUT
+            echo "frontend-tag=${{ env.IMAGE_NAMESPACE }}:${BRANCH}-frontend-${VERSION}" >> $GITHUB_OUTPUT
+            echo "pipeline-tag=${{ env.IMAGE_NAMESPACE }}:${BRANCH}-pipeline-${VERSION}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Build and push staging images
         run: |
+          VERSION=${{ steps.version.outputs.version }}
+          BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          GIT_COMMIT=${GITHUB_SHA}
+
           # Backend
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --file backend/Dockerfile \
             --tag ${{ steps.meta.outputs.backend-tag }} \
             --tag ${{ env.IMAGE_NAMESPACE }}:staging-backend-latest \
+            --build-arg VERSION="$VERSION" \
+            --build-arg BUILD_DATE="$BUILD_DATE" \
+            --build-arg GIT_COMMIT="$GIT_COMMIT" \
+            --label org.opencontainers.image.version="$VERSION" \
+            --label org.opencontainers.image.created="$BUILD_DATE" \
+            --label org.opencontainers.image.revision="$GIT_COMMIT" \
             --push backend/
 
           # Frontend
@@ -341,6 +387,12 @@ jobs:
             --file frontend/Dockerfile \
             --tag ${{ steps.meta.outputs.frontend-tag }} \
             --tag ${{ env.IMAGE_NAMESPACE }}:staging-frontend-latest \
+            --build-arg VERSION="$VERSION" \
+            --build-arg BUILD_DATE="$BUILD_DATE" \
+            --build-arg GIT_COMMIT="$GIT_COMMIT" \
+            --label org.opencontainers.image.version="$VERSION" \
+            --label org.opencontainers.image.created="$BUILD_DATE" \
+            --label org.opencontainers.image.revision="$GIT_COMMIT" \
             --push frontend/
 
           # Pipeline
@@ -349,9 +401,15 @@ jobs:
             --file Dockerfile.pipeline \
             --tag ${{ steps.meta.outputs.pipeline-tag }} \
             --tag ${{ env.IMAGE_NAMESPACE }}:staging-pipeline-latest \
+            --build-arg VERSION="$VERSION" \
+            --build-arg BUILD_DATE="$BUILD_DATE" \
+            --build-arg GIT_COMMIT="$GIT_COMMIT" \
+            --label org.opencontainers.image.version="$VERSION" \
+            --label org.opencontainers.image.created="$BUILD_DATE" \
+            --label org.opencontainers.image.revision="$GIT_COMMIT" \
             --push .
 
-          echo "✅ Staging images built and pushed"
+          echo "✅ Staging images built and pushed with version: $VERSION"
 
   # ============================================================================
   # STAGE 5: DEPLOY TO STAGING (GitHub Actions Runner)
@@ -522,25 +580,38 @@ jobs:
   # STAGE 7: PRODUCTION DEPLOYMENT (MAIN BRANCH ONLY)
   # ============================================================================
   deploy-production:
-    name: Deploy to Production
+    name: Deploy to Production (Legacy)
     runs-on: ubuntu-latest
     needs: [smoke-tests, build-staging]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip-legacy-deploy]')
     environment: production
     steps:
+      - name: Production deployment notice
+        run: |
+          echo "⚠️ NOTICE: Legacy production deployment triggered"
+          echo "🔔 Recommendation: Use semantic-release workflow for production deployments"
+          echo "📖 The semantic-release workflow provides:"
+          echo "   - Automated version management"
+          echo "   - Proper release tagging"
+          echo "   - Changelog generation"
+          echo "   - GitOps-compliant manifest updates"
+          echo ""
+          echo "💡 To skip this legacy deployment, include '[skip-legacy-deploy]' in commit message"
+          echo "🚀 To trigger semantic release: Push changes that match conventional commit format"
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Tag production images
+      - name: Tag production images (legacy)
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: |
           echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
 
-          # Tag staging images as production
+          # Tag staging images as production (legacy timestamp format)
           TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)
 
           # Pull staging images and retag as production
@@ -569,20 +640,34 @@ jobs:
           echo "PROD_FRONTEND_TAG=${{ env.IMAGE_NAMESPACE }}:frontend-${TIMESTAMP}" >> $GITHUB_ENV
           echo "PROD_PIPELINE_TAG=${{ env.IMAGE_NAMESPACE }}:pipeline-${TIMESTAMP}" >> $GITHUB_ENV
 
-      - name: Update production manifests
+      - name: Update production manifests (legacy)
         run: |
-          # Update production manifests
-          sed -i "s|image: tomatl/diocesan-vitality:.*backend.*|image: ${{ env.PROD_BACKEND_TAG }}|g" k8s/backend-deployment.yaml
-          sed -i "s|image: tomatl/diocesan-vitality:.*frontend.*|image: ${{ env.PROD_FRONTEND_TAG }}|g" k8s/frontend-deployment.yaml
-          sed -i "s|image: tomatl/diocesan-vitality:.*pipeline.*|image: ${{ env.PROD_PIPELINE_TAG }}|g" k8s/pipeline-deployment.yaml
+          echo "⚠️ Updating production manifests with legacy timestamp tags"
+          echo "📝 Consider migrating to semantic-release workflow for better version management"
 
-      - name: Commit production deployment
+          # Update production manifests with legacy timestamp format
+          find k8s/ -name "*deployment.yaml" -type f | while read -r file; do
+            echo "Updating $file with legacy tags"
+            sed -i "s|image: tomatl/diocesan-vitality:.*backend.*|image: ${{ env.PROD_BACKEND_TAG }}|g" "$file"
+            sed -i "s|image: tomatl/diocesan-vitality:.*frontend.*|image: ${{ env.PROD_FRONTEND_TAG }}|g" "$file"
+            sed -i "s|image: tomatl/diocesan-vitality:.*pipeline.*|image: ${{ env.PROD_PIPELINE_TAG }}|g" "$file"
+          done
+
+      - name: Commit production deployment (legacy)
         run: |
           git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          git config --local user.name "GitHub Action (Legacy CI/CD)"
 
-          git add k8s/*.yaml
-          git commit -m "🚀 Deploy to production: $(date +%Y-%m-%d-%H-%M-%S)
+          # Check if there are changes to commit
+          if git diff --quiet k8s/; then
+            echo "ℹ️ No changes to Kubernetes manifests"
+            exit 0
+          fi
+
+          git add k8s/
+          git commit -m "🚀 Legacy Deploy to production: $(date +%Y-%m-%d-%H-%M-%S)
+
+          ⚠️ LEGACY DEPLOYMENT - Consider migrating to semantic-release
 
           🎉 Production Release:
           - Backend: ${{ env.PROD_BACKEND_TAG }}
@@ -590,15 +675,25 @@ jobs:
           - Pipeline: ${{ env.PROD_PIPELINE_TAG }}
 
           ✅ All tests passed
-          🔄 Auto-generated production deployment"
+          🔄 Auto-generated legacy production deployment
+
+          💡 Migrate to semantic-release for:
+          - Automated version management
+          - Conventional commit parsing
+          - Automatic changelog generation
+          - Better GitOps compliance"
 
           git push
 
-      - name: Production deployment summary
+      - name: Legacy production deployment summary
         run: |
-          echo "🎉 PRODUCTION DEPLOYMENT SUCCESSFUL!"
+          echo "🎉 LEGACY PRODUCTION DEPLOYMENT COMPLETED!"
           echo ""
-          echo "📦 Production Images:"
+          echo "⚠️ DEPRECATION NOTICE:"
+          echo "   This legacy deployment uses timestamp-based versioning"
+          echo "   Consider migrating to semantic-release workflow"
+          echo ""
+          echo "📦 Production Images (Legacy Format):"
           echo "   Backend: ${{ env.PROD_BACKEND_TAG }}"
           echo "   Frontend: ${{ env.PROD_FRONTEND_TAG }}"
           echo "   Pipeline: ${{ env.PROD_PIPELINE_TAG }}"
@@ -609,4 +704,10 @@ jobs:
           echo "   ✓ Integration tests passed"
           echo "   ✓ Staging deployment successful"
           echo "   ✓ Smoke tests passed"
-          echo "   ✓ Production deployment complete"
+          echo "   ✓ Legacy production deployment complete"
+          echo ""
+          echo "🚀 Next Steps:"
+          echo "   1. Monitor deployment in Kubernetes cluster"
+          echo "   2. Consider migrating to semantic-release workflow"
+          echo "   3. Use conventional commits for automated releases"
+          echo "   4. Include '[skip-legacy-deploy]' in commits to skip this workflow"

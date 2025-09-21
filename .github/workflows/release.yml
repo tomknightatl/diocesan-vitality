@@ -1,0 +1,376 @@
+name: Automated Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'backend/**'
+      - 'frontend/**'
+      - 'core/**'
+      - 'extractors/**'
+      - 'setup.py'
+      - 'requirements.txt'
+      - 'package.json'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Run in dry-run mode (no actual release)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAMESPACE: tomatl/diocesan-vitality
+
+jobs:
+  # ============================================================================
+  # SEMANTIC RELEASE - Determine if release is needed
+  # ============================================================================
+  semantic-release:
+    name: Semantic Release
+    runs-on: ubuntu-latest
+    outputs:
+      new-release-published: ${{ steps.semantic.outputs.new-release-published }}
+      new-release-version: ${{ steps.semantic.outputs.new-release-version }}
+      new-release-major-version: ${{ steps.semantic.outputs.new-release-major-version }}
+      new-release-minor-version: ${{ steps.semantic.outputs.new-release-minor-version }}
+      new-release-patch-version: ${{ steps.semantic.outputs.new-release-patch-version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install semantic-release
+        run: |
+          npm install -g semantic-release @semantic-release/changelog @semantic-release/git @semantic-release/github @semantic-release/exec
+
+      - name: Verify semantic-release config
+        run: |
+          if [ ! -f .releaserc.json ]; then
+            echo "❌ .releaserc.json not found"
+            exit 1
+          fi
+          echo "✅ Found semantic-release configuration"
+
+      - name: Setup Python for version script
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Make version script executable
+        run: chmod +x scripts/update_version.py
+
+      - name: Run semantic release
+        id: semantic
+        run: |
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "🔍 Running semantic-release in dry-run mode"
+            semantic-release --dry-run
+          else
+            echo "🚀 Running semantic-release"
+            semantic-release
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Display release information
+        if: steps.semantic.outputs.new-release-published == 'true'
+        run: |
+          echo "🎉 New release published!"
+          echo "Version: ${{ steps.semantic.outputs.new-release-version }}"
+          echo "Major: ${{ steps.semantic.outputs.new-release-major-version }}"
+          echo "Minor: ${{ steps.semantic.outputs.new-release-minor-version }}"
+          echo "Patch: ${{ steps.semantic.outputs.new-release-patch-version }}"
+
+  # ============================================================================
+  # BUILD RELEASE IMAGES - Only if semantic release created a new version
+  # ============================================================================
+  build-release-images:
+    name: Build Release Images
+    runs-on: ubuntu-latest
+    needs: semantic-release
+    if: needs.semantic-release.outputs.new-release-published == 'true'
+    env:
+      VERSION: ${{ needs.semantic-release.outputs.new-release-version }}
+      MAJOR_VERSION: ${{ needs.semantic-release.outputs.new-release-major-version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main  # Ensure we have the updated code with version bump
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Set build metadata
+        id: meta
+        run: |
+          echo "build-date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+          echo "git-commit=${GITHUB_SHA}" >> $GITHUB_OUTPUT
+          echo "git-branch=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: backend/
+          file: backend/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAMESPACE }}:backend-${{ env.VERSION }}
+            ${{ env.IMAGE_NAMESPACE }}:backend-${{ env.MAJOR_VERSION }}
+            ${{ env.IMAGE_NAMESPACE }}:backend-latest
+          labels: |
+            org.opencontainers.image.title=Diocesan Vitality Backend
+            org.opencontainers.image.description=FastAPI backend for Diocesan Vitality
+            org.opencontainers.image.version=${{ env.VERSION }}
+            org.opencontainers.image.created=${{ steps.meta.outputs.build-date }}
+            org.opencontainers.image.revision=${{ steps.meta.outputs.git-commit }}
+            org.opencontainers.image.source=https://github.com/tomknightatl/diocesan-vitality
+          build-args: |
+            VERSION=${{ env.VERSION }}
+            BUILD_DATE=${{ steps.meta.outputs.build-date }}
+            GIT_COMMIT=${{ steps.meta.outputs.git-commit }}
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: frontend/
+          file: frontend/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAMESPACE }}:frontend-${{ env.VERSION }}
+            ${{ env.IMAGE_NAMESPACE }}:frontend-${{ env.MAJOR_VERSION }}
+            ${{ env.IMAGE_NAMESPACE }}:frontend-latest
+          labels: |
+            org.opencontainers.image.title=Diocesan Vitality Frontend
+            org.opencontainers.image.description=React frontend for Diocesan Vitality
+            org.opencontainers.image.version=${{ env.VERSION }}
+            org.opencontainers.image.created=${{ steps.meta.outputs.build-date }}
+            org.opencontainers.image.revision=${{ steps.meta.outputs.git-commit }}
+            org.opencontainers.image.source=https://github.com/tomknightatl/diocesan-vitality
+          build-args: |
+            VERSION=${{ env.VERSION }}
+            BUILD_DATE=${{ steps.meta.outputs.build-date }}
+            GIT_COMMIT=${{ steps.meta.outputs.git-commit }}
+
+      - name: Build and push pipeline image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.pipeline
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAMESPACE }}:pipeline-${{ env.VERSION }}
+            ${{ env.IMAGE_NAMESPACE }}:pipeline-${{ env.MAJOR_VERSION }}
+            ${{ env.IMAGE_NAMESPACE }}:pipeline-latest
+          labels: |
+            org.opencontainers.image.title=Diocesan Vitality Pipeline
+            org.opencontainers.image.description=Data extraction pipeline for Diocesan Vitality
+            org.opencontainers.image.version=${{ env.VERSION }}
+            org.opencontainers.image.created=${{ steps.meta.outputs.build-date }}
+            org.opencontainers.image.revision=${{ steps.meta.outputs.git-commit }}
+            org.opencontainers.image.source=https://github.com/tomknightatl/diocesan-vitality
+          build-args: |
+            VERSION=${{ env.VERSION }}
+            BUILD_DATE=${{ steps.meta.outputs.build-date }}
+            GIT_COMMIT=${{ steps.meta.outputs.git-commit }}
+
+      - name: Verify image builds
+        run: |
+          echo "✅ Successfully built and pushed release images:"
+          echo "   Backend: ${{ env.IMAGE_NAMESPACE }}:backend-${{ env.VERSION }}"
+          echo "   Frontend: ${{ env.IMAGE_NAMESPACE }}:frontend-${{ env.VERSION }}"
+          echo "   Pipeline: ${{ env.IMAGE_NAMESPACE }}:pipeline-${{ env.VERSION }}"
+
+  # ============================================================================
+  # UPDATE KUBERNETES MANIFESTS
+  # ============================================================================
+  update-manifests:
+    name: Update Kubernetes Manifests
+    runs-on: ubuntu-latest
+    needs: [semantic-release, build-release-images]
+    if: needs.semantic-release.outputs.new-release-published == 'true'
+    env:
+      VERSION: ${{ needs.semantic-release.outputs.new-release-version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Kubernetes deployment manifests
+        run: |
+          echo "📝 Updating Kubernetes manifests with version $VERSION"
+
+          # Update all deployment files with new semantic version
+          find k8s/ -name "*deployment.yaml" -type f | while read -r file; do
+            echo "Updating $file"
+
+            # Update backend images
+            sed -i "s|image: tomatl/diocesan-vitality:.*backend.*|image: tomatl/diocesan-vitality:backend-$VERSION|g" "$file"
+
+            # Update frontend images
+            sed -i "s|image: tomatl/diocesan-vitality:.*frontend.*|image: tomatl/diocesan-vitality:frontend-$VERSION|g" "$file"
+
+            # Update pipeline images
+            sed -i "s|image: tomatl/diocesan-vitality:.*pipeline.*|image: tomatl/diocesan-vitality:pipeline-$VERSION|g" "$file"
+          done
+
+          echo "✅ Updated all Kubernetes manifests"
+
+      - name: Verify manifest updates
+        run: |
+          echo "🔍 Verifying manifest updates..."
+          grep -r "tomatl/diocesan-vitality:.*-$VERSION" k8s/ || echo "⚠️ No updated images found"
+          echo "✅ Manifest verification complete"
+
+      - name: Commit updated manifests
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Actions Release Bot"
+
+          # Check if there are changes to commit
+          if git diff --quiet k8s/; then
+            echo "ℹ️ No changes to Kubernetes manifests"
+            exit 0
+          fi
+
+          git add k8s/
+          git commit -m "🚀 Release v$VERSION: Update Kubernetes manifests
+
+          📦 Updated Images:
+          - Backend: tomatl/diocesan-vitality:backend-$VERSION
+          - Frontend: tomatl/diocesan-vitality:frontend-$VERSION
+          - Pipeline: tomatl/diocesan-vitality:pipeline-$VERSION
+
+          🔄 This commit triggers ArgoCD sync for production deployment
+
+          🤖 Auto-generated by release automation"
+
+          git push origin main
+
+          echo "✅ Pushed updated Kubernetes manifests"
+
+  # ============================================================================
+  # BUILD PYTHON PACKAGE
+  # ============================================================================
+  build-python-package:
+    name: Build Python Package
+    runs-on: ubuntu-latest
+    needs: semantic-release
+    if: needs.semantic-release.outputs.new-release-published == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Build package
+        run: |
+          python -m build
+          echo "✅ Successfully built Python package"
+
+      - name: Check package
+        run: |
+          twine check dist/*
+          echo "✅ Package validation passed"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package
+          path: dist/
+
+  # ============================================================================
+  # DEPLOYMENT SUMMARY
+  # ============================================================================
+  deployment-summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [semantic-release, build-release-images, update-manifests, build-python-package]
+    if: always() && needs.semantic-release.outputs.new-release-published == 'true'
+    env:
+      VERSION: ${{ needs.semantic-release.outputs.new-release-version }}
+    steps:
+      - name: Generate deployment summary
+        run: |
+          echo "# 🎉 Release v$VERSION Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📦 Release Information" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: v$VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release Date**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "- **Git Commit**: ${GITHUB_SHA:0:7}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🐳 Docker Images" >> $GITHUB_STEP_SUMMARY
+          echo "- **Backend**: \`tomatl/diocesan-vitality:backend-$VERSION\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Frontend**: \`tomatl/diocesan-vitality:frontend-$VERSION\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Pipeline**: \`tomatl/diocesan-vitality:pipeline-$VERSION\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚀 Deployment Status" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.build-release-images.result }}" = "success" ]; then
+            echo "- ✅ **Docker Images**: Built and pushed successfully" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ❌ **Docker Images**: Build failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.update-manifests.result }}" = "success" ]; then
+            echo "- ✅ **Kubernetes Manifests**: Updated successfully" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ❌ **Kubernetes Manifests**: Update failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.build-python-package.result }}" = "success" ]; then
+            echo "- ✅ **Python Package**: Built successfully" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ❌ **Python Package**: Build failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔄 Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. ArgoCD will automatically sync the updated manifests to production" >> $GITHUB_STEP_SUMMARY
+          echo "2. Monitor deployment progress in the Kubernetes cluster" >> $GITHUB_STEP_SUMMARY
+          echo "3. Verify application health after deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Links" >> $GITHUB_STEP_SUMMARY
+          echo "- [Release Notes](https://github.com/tomknightatl/diocesan-vitality/releases/tag/v$VERSION)" >> $GITHUB_STEP_SUMMARY
+          echo "- [Docker Hub](https://hub.docker.com/r/tomatl/diocesan-vitality)" >> $GITHUB_STEP_SUMMARY
+          echo "- [Live Dashboard](https://diocesanvitality.org/dashboard)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Post-release notification
+        run: |
+          echo "🎉 Release v$VERSION completed successfully!"
+          echo "📊 Monitor the deployment at: https://diocesanvitality.org/dashboard"
+          echo "📝 Release notes: https://github.com/tomknightatl/diocesan-vitality/releases/tag/v$VERSION"
