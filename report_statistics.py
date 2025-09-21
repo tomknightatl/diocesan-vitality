@@ -37,6 +37,9 @@ def fetch_and_process_table(table_name: str, supabase_client: Client):
         if 'created_at' in df.columns:
             df['created_at'] = pd.to_datetime(df['created_at'], utc=True, errors='coerce')
             date_cols.append('created_at')
+        if 'updated_at' in df.columns:
+            df['updated_at'] = pd.to_datetime(df['updated_at'], utc=True, errors='coerce')
+            date_cols.append('updated_at')
         if 'extracted_at' in df.columns:
             df['extracted_at'] = pd.to_datetime(df['extracted_at'], format='ISO8601', utc=True, errors='coerce')
             date_cols.append('extracted_at')
@@ -50,6 +53,10 @@ def fetch_and_process_table(table_name: str, supabase_client: Client):
 
         # Exclude 'created_at' for specific tables as per request
         if table_name in ['Dioceses', 'Parishes'] and 'created_at' in date_cols:
+            date_cols.remove('created_at')
+
+        # For ParishData, prioritize updated_at over created_at since schedule extractions update existing records
+        if table_name == 'ParishData' and 'updated_at' in date_cols and 'created_at' in date_cols:
             date_cols.remove('created_at')
 
         # Aggregate data by date with dual granularity
