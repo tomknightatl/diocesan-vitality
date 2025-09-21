@@ -111,3 +111,8 @@ dmypy.json
 # Infrastructure secrets and passwords
 .argocd-admin-password
 .cloudflare-tunnel-token
+
+# Terraform-generated secrets (never commit these!)
+terraform/**/k8s-secrets/
+**/k8s-secrets/*.yaml
+**/k8s-secrets/*.yml
