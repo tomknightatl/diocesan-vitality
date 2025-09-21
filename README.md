@@ -431,3 +431,4 @@ The web application uses **Docker Hub** for container image storage. Docker Hub 
 
 ### ⚙️ Project Configuration
 - **[.claude/CLAUDE.md](.claude/CLAUDE.md)**: Claude Code assistant project instructions and commands
+# CI test
