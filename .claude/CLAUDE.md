@@ -4,6 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 includeClaudeAttribution: false
 
+## kubectl Command Policy
+
+**🚨 CRITICAL: kubectl Command Approval Required**
+- **NEVER run kubectl create, kubectl apply, kubectl delete, or kubectl patch commands without explicit user permission**
+- **ALWAYS ask for permission before executing any kubectl command that modifies cluster state**
+- **Exception: Read-only commands (kubectl get, kubectl describe, kubectl logs) are allowed**
+- **Required format when kubectl commands are needed:**
+  1. List all kubectl commands that will be executed
+  2. Ask: "May I run these kubectl commands?"
+  3. Wait for explicit user approval before proceeding
+- **This policy applies to all kubectl commands, including those in Makefile targets**
+
 ## Development Commands
 
 ### Quick Development Setup
