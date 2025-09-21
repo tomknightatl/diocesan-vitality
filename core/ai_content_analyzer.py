@@ -61,9 +61,7 @@ class AIContentAnalyzer:
         logger.info("🤖 AI Content Analyzer initialized")
 
     @circuit_breaker("ai_content_analysis")
-    def analyze_failed_extraction(
-        self, driver: WebDriver, diocese_name: str, url: str
-    ) -> Dict[str, Any]:
+    def analyze_failed_extraction(self, driver: WebDriver, diocese_name: str, url: str) -> Dict[str, Any]:
         """
         Analyze a parish directory page when standard extraction fails.
 
@@ -83,9 +81,7 @@ class AIContentAnalyzer:
             content_snippets = self._extract_content_snippets(driver)
 
             # Step 3: Generate AI analysis prompt
-            analysis_result = self._generate_ai_analysis(
-                diocese_name, url, dom_analysis, content_snippets
-            )
+            analysis_result = self._generate_ai_analysis(diocese_name, url, dom_analysis, content_snippets)
 
             # Step 4: Apply AI - generated selectors
             parish_data = self._apply_ai_selectors(driver, analysis_result, url)
@@ -114,9 +110,7 @@ class AIContentAnalyzer:
         """Analyze the DOM structure for parish - related patterns."""
         try:
             structure = self._get_page_structure_overview(driver)
-            structure["parish_related_elements"] = self._find_parish_related_elements(
-                driver
-            )
+            structure["parish_related_elements"] = self._find_parish_related_elements(driver)
             structure["cms_indicators"] = self._detect_cms_indicators(driver)
             return structure
 
@@ -160,11 +154,7 @@ class AIContentAnalyzer:
                             {
                                 "selector": selector,
                                 "count": len(elements),
-                                "sample_texts": [
-                                    elem.text.strip()[:50]
-                                    for elem in elements[:3]
-                                    if elem.text.strip()
-                                ],
+                                "sample_texts": [elem.text.strip()[:50] for elem in elements[:3] if elem.text.strip()],
                             }
                         ]
                     )
@@ -268,10 +258,7 @@ class AIContentAnalyzer:
                 elements = driver.find_elements(By.CSS_SELECTOR, selector)
                 for elem in elements[:2]:  # Limit to first 2 matches
                     text = elem.text.strip()
-                    if len(text) > 50 and any(
-                        indicator.lower() in text.lower()
-                        for indicator in self.parish_indicators
-                    ):
+                    if len(text) > 50 and any(indicator.lower() in text.lower() for indicator in self.parish_indicators):
                         snippets.append(text[:1000])  # Limit snippet length
             except (NoSuchElementException, WebDriverException):
                 continue
@@ -331,9 +318,7 @@ class AIContentAnalyzer:
             matches = re.findall(pattern, html_source, re.IGNORECASE | re.DOTALL)
             for match in matches:
                 if len(match) < 2000:  # Reasonable size
-                    keyword_count = sum(
-                        1 for keyword in parish_keywords if keyword in match.lower()
-                    )
+                    keyword_count = sum(1 for keyword in parish_keywords if keyword in match.lower())
                     if keyword_count >= 2:
                         return match[:1500]  # Truncate for API limits
 
@@ -427,9 +412,7 @@ Be specific and actionable. Focus on elements that actually exist on this page.
                 "error": str(e),
             }
 
-    def _extract_parishes_with_css_selectors(
-        self, driver: WebDriver, analysis: Dict, base_url: str
-    ) -> List[Dict[str, Any]]:
+    def _extract_parishes_with_css_selectors(self, driver: WebDriver, analysis: Dict, base_url: str) -> List[Dict[str, Any]]:
         """Extract parishes using CSS selectors from AI analysis."""
         parishes = []
         for selector in analysis.get("selectors", []):
@@ -461,9 +444,7 @@ Be specific and actionable. Focus on elements that actually exist on this page.
                 continue
         return parishes
 
-    def _remove_duplicate_parishes(
-        self, parishes: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+    def _remove_duplicate_parishes(self, parishes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Remove duplicate parishes based on name."""
         unique_parishes = []
         seen_names = set()
@@ -474,24 +455,16 @@ Be specific and actionable. Focus on elements that actually exist on this page.
                 unique_parishes.append(parish)
         return unique_parishes
 
-    def _apply_ai_selectors(
-        self, driver: WebDriver, analysis: Dict, base_url: str
-    ) -> List[Dict[str, Any]]:
+    def _apply_ai_selectors(self, driver: WebDriver, analysis: Dict, base_url: str) -> List[Dict[str, Any]]:
         """Apply AI - generated selectors to extract parish data."""
         try:
             parishes = []
 
             # Try CSS selectors first
-            parishes.extend(
-                self._extract_parishes_with_css_selectors(driver, analysis, base_url)
-            )
+            parishes.extend(self._extract_parishes_with_css_selectors(driver, analysis, base_url))
 
             # Try XPath expressions
-            parishes.extend(
-                self._extract_parishes_with_xpath_expressions(
-                    driver, analysis, base_url
-                )
-            )
+            parishes.extend(self._extract_parishes_with_xpath_expressions(driver, analysis, base_url))
 
             # Remove duplicates based on name
             unique_parishes = self._remove_duplicate_parishes(parishes)
@@ -502,9 +475,7 @@ Be specific and actionable. Focus on elements that actually exist on this page.
             logger.error(f"🤖 Failed to apply AI selectors: {e}")
             return []
 
-    def _extract_parish_from_element(
-        self, element, base_url: str
-    ) -> Optional[Dict[str, Any]]:
+    def _extract_parish_from_element(self, element, base_url: str) -> Optional[Dict[str, Any]]:
         """Extract parish data from a web element."""
         try:
             parish_data = {}
@@ -529,7 +500,9 @@ Be specific and actionable. Focus on elements that actually exist on this page.
                 parent_text = parent.text.strip()
 
                 # Extract address patterns
-                address_pattern = r"\d+[^,\n]*(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Lane|Ln|Circle|Cir)[^,\n]*"
+                address_pattern = (
+                    r"\d+[^,\n]*(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Lane|Ln|Circle|Cir)[^,\n]*"
+                )
                 address_match = re.search(address_pattern, parent_text, re.IGNORECASE)
                 if address_match:
                     parish_data["address"] = address_match.group().strip()

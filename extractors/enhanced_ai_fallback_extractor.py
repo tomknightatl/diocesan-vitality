@@ -46,32 +46,24 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
         if genai_api_key:
             self.ai_analyzer = get_ai_content_analyzer(genai_api_key)
             self.profile_manager = get_diocese_profile_manager()
-            logger.info(
-                "🚀 Enhanced AI Fallback Extractor initialized with full capabilities"
-            )
+            logger.info("🚀 Enhanced AI Fallback Extractor initialized with full capabilities")
         else:
             self.ai_analyzer = None
             self.profile_manager = None
-            logger.warning(
-                "🚀 Enhanced AI Fallback Extractor disabled - missing GenAI API key"
-            )
+            logger.warning("🚀 Enhanced AI Fallback Extractor disabled - missing GenAI API key")
 
     def can_extract(self, driver: WebDriver, url: str) -> bool:
         """
         This enhanced extractor can attempt extraction if AI and profiles are available.
         """
         if not self.ai_analyzer or not self.profile_manager:
-            logger.warning(
-                "🚀 Enhanced AI Fallback Extractor disabled - missing components"
-            )
+            logger.warning("🚀 Enhanced AI Fallback Extractor disabled - missing components")
             return False
 
         logger.info("🚀 Enhanced AI Fallback Extractor: Ready for advanced extraction")
         return True
 
-    def _initialize_extraction(
-        self, diocese_name: str, url: str, max_parishes: int
-    ) -> bool:
+    def _initialize_extraction(self, diocese_name: str, url: str, max_parishes: int) -> bool:
         """Initialize extraction and validate prerequisites."""
         logger.info(f"🚀 Enhanced AI Fallback Extraction starting for {diocese_name}")
         logger.info(f"    📊 Target: up to {max_parishes or 'unlimited'} parishes")
@@ -93,26 +85,16 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
         profile = self.profile_manager.get_profile(url, diocese_name)
         if profile:
             logger.info(f"🎯 Using diocese profile: {profile.strategy_type} strategy")
-            parishes = self._extract_with_profile(
-                driver, diocese_name, url, profile, max_parishes
-            )
+            parishes = self._extract_with_profile(driver, diocese_name, url, profile, max_parishes)
             if parishes:
-                self.profile_manager.update_profile_success(
-                    domain, profile.strategy_type, True
-                )
+                self.profile_manager.update_profile_success(domain, profile.strategy_type, True)
                 return parishes, domain
             else:
-                self.profile_manager.update_profile_success(
-                    domain, profile.strategy_type, False
-                )
-                logger.warning(
-                    "🎯 Profile - based extraction failed, falling back to dynamic analysis"
-                )
+                self.profile_manager.update_profile_success(domain, profile.strategy_type, False)
+                logger.warning("🎯 Profile - based extraction failed, falling back to dynamic analysis")
         return [], domain
 
-    def _perform_dynamic_loading_and_ai_analysis(
-        self, driver: WebDriver, diocese_name: str, url: str
-    ) -> tuple[dict, dict]:
+    def _perform_dynamic_loading_and_ai_analysis(self, driver: WebDriver, diocese_name: str, url: str) -> tuple[dict, dict]:
         """Perform dynamic content loading and AI analysis."""
         # Dynamic content loading with JavaScript engine
         js_engine = get_dynamic_content_engine(driver)
@@ -122,29 +104,21 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
         logger.info(f"    📊 Content loaded: {loading_result['content_loaded']}")
         logger.info(f"    🔧 Method used: {loading_result['method_used']}")
         logger.info(f"    ⏱️ Loading time: {loading_result['loading_time']:.2f}s")
-        logger.info(
-            f"    🌐 API endpoints found: {len(loading_result['api_endpoints'])}"
-        )
+        logger.info(f"    🌐 API endpoints found: {len(loading_result['api_endpoints'])}")
 
         # AI analysis with enhanced context
         logger.info("🤖 Running enhanced AI content analysis...")
-        ai_result = self.ai_analyzer.analyze_failed_extraction(
-            driver, diocese_name, url
-        )
+        ai_result = self.ai_analyzer.analyze_failed_extraction(driver, diocese_name, url)
 
         return loading_result, ai_result
 
-    def _merge_extraction_results(
-        self, loading_result: dict, ai_result: dict, url: str
-    ) -> List[Dict[str, Any]]:
+    def _merge_extraction_results(self, loading_result: dict, ai_result: dict, url: str) -> List[Dict[str, Any]]:
         """Merge results from different extraction methods."""
         all_parish_data = []
 
         # Add parishes found by JavaScript engine
         if loading_result["parish_elements"]:
-            logger.info(
-                f"🚀 Adding {len(loading_result['parish_elements'])} parishes from dynamic loading"
-            )
+            logger.info(f"🚀 Adding {len(loading_result['parish_elements'])} parishes from dynamic loading")
             for elem in loading_result["parish_elements"]:
                 parish_data = {
                     "name": elem["name"],
@@ -158,9 +132,7 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
 
         # Add parishes found by AI analysis
         if ai_result.get("parish_data"):
-            logger.info(
-                f"🤖 Adding {len(ai_result['parish_data'])} parishes from AI analysis"
-            )
+            logger.info(f"🤖 Adding {len(ai_result['parish_data'])} parishes from AI analysis")
             for parish in ai_result["parish_data"]:
                 parish["extractor_used"] = self.extractor_name
                 parish["extraction_method"] = "ai_content_analysis"
@@ -170,12 +142,8 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
 
         # Try API endpoints if discovered
         if loading_result["api_endpoints"]:
-            logger.info(
-                f"🌐 Attempting API extraction from {len(loading_result['api_endpoints'])} endpoints"
-            )
-            api_parishes = self._extract_from_api_endpoints(
-                loading_result["api_endpoints"], url
-            )
+            logger.info(f"🌐 Attempting API extraction from {len(loading_result['api_endpoints'])} endpoints")
+            api_parishes = self._extract_from_api_endpoints(loading_result["api_endpoints"], url)
             all_parish_data.extend(api_parishes)
 
         return all_parish_data
@@ -195,23 +163,15 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
             # Successful extraction - create confidence profile
             new_profile = self.profile_manager.create_custom_profile(domain, ai_result)
             if new_profile:
-                logger.info(
-                    f"🎯 Created high - confidence profile for {domain} based on successful extraction"
-                )
-        elif ai_result.get("confidence", 0.0) >= 0.6 and ai_result.get(
-            "extraction_strategy"
-        ):
+                logger.info(f"🎯 Created high - confidence profile for {domain} based on successful extraction")
+        elif ai_result.get("confidence", 0.0) >= 0.6 and ai_result.get("extraction_strategy"):
             # Failed extraction but high AI confidence - create learning profile
-            learning_profile = self.profile_manager.create_custom_profile(
-                domain, ai_result
-            )
+            learning_profile = self.profile_manager.create_custom_profile(domain, ai_result)
             if learning_profile:
                 logger.info(
                     f"🎯 Created learning profile for {domain} - Strategy: {ai_result.get('extraction_strategy')} (confidence: {ai_result.get('confidence', 0.0):.2f})"
                 )
-                logger.info(
-                    "    💡 Profile will be used for future extractions to improve success rate"
-                )
+                logger.info("    💡 Profile will be used for future extractions to improve success rate")
 
     def _log_final_results(
         self,
@@ -224,11 +184,7 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
             logger.info("🚀 ✅ Enhanced AI Fallback Extraction successful!")
             logger.info(f"    📊 Final count: {len(validated_parishes)} parishes")
             api_count = (
-                len(
-                    self._extract_from_api_endpoints(
-                        loading_result.get("api_endpoints", []), ""
-                    )
-                )
+                len(self._extract_from_api_endpoints(loading_result.get("api_endpoints", []), ""))
                 if loading_result.get("api_endpoints")
                 else 0
             )
@@ -238,28 +194,16 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
 
             # Log sample results
             for i, parish in enumerate(validated_parishes[:3], 1):
-                logger.info(
-                    f"    {i}. {parish.get('name', 'N/A')} ({parish.get('extraction_method', 'unknown')})"
-                )
+                logger.info(f"    {i}. {parish.get('name', 'N/A')} ({parish.get('extraction_method', 'unknown')})")
                 if parish.get("url"):
                     logger.info(f"       🔗 {parish['url']}")
         else:
-            logger.warning(
-                "🚀 ❌ Enhanced AI Fallback Extraction found no valid parishes"
-            )
-            logger.warning(
-                f"    💭 AI suggested strategy: {ai_result.get('extraction_strategy', 'unknown')}"
-            )
-            logger.warning(
-                f"    📊 AI confidence: {ai_result.get('confidence', 0.0):.2f}"
-            )
-            logger.warning(
-                f"    🚀 JS content loaded: {loading_result['content_loaded']}"
-            )
+            logger.warning("🚀 ❌ Enhanced AI Fallback Extraction found no valid parishes")
+            logger.warning(f"    💭 AI suggested strategy: {ai_result.get('extraction_strategy', 'unknown')}")
+            logger.warning(f"    📊 AI confidence: {ai_result.get('confidence', 0.0):.2f}")
+            logger.warning(f"    🚀 JS content loaded: {loading_result['content_loaded']}")
 
-    def extract(
-        self, driver: WebDriver, diocese_name: str, url: str, max_parishes: int = None
-    ) -> List[Dict[str, Any]]:
+    def extract(self, driver: WebDriver, diocese_name: str, url: str, max_parishes: int = None) -> List[Dict[str, Any]]:
         """
         Enhanced extraction using AI analysis, JavaScript execution, and profiles.
 
@@ -276,30 +220,22 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
 
         try:
             # Step 2: Try profile - based extraction first
-            parishes, domain = self._try_profile_extraction(
-                driver, diocese_name, url, max_parishes
-            )
+            parishes, domain = self._try_profile_extraction(driver, diocese_name, url, max_parishes)
             if parishes:
                 return parishes
 
             # Step 3: Perform dynamic loading and AI analysis
-            loading_result, ai_result = self._perform_dynamic_loading_and_ai_analysis(
-                driver, diocese_name, url
-            )
+            loading_result, ai_result = self._perform_dynamic_loading_and_ai_analysis(driver, diocese_name, url)
 
             # Step 4: Merge results from different extraction methods
-            all_parish_data = self._merge_extraction_results(
-                loading_result, ai_result, url
-            )
+            all_parish_data = self._merge_extraction_results(loading_result, ai_result, url)
 
             # Step 5: Validate and deduplicate results
             validated_parishes = self._validate_and_deduplicate(all_parish_data)
 
             # Step 6: Manage profiles based on results
             profile = self.profile_manager.get_profile(url, diocese_name)
-            self._manage_profiles_based_on_results(
-                profile, domain, validated_parishes, ai_result
-            )
+            self._manage_profiles_based_on_results(profile, domain, validated_parishes, ai_result)
 
             # Step 7: Apply max_parishes limit
             if max_parishes and len(validated_parishes) > max_parishes:
@@ -312,33 +248,23 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
             return validated_parishes
 
         except Exception as e:
-            logger.error(
-                f"🚀 Enhanced AI Fallback Extraction failed: {e}", exc_info=True
-            )
+            logger.error(f"🚀 Enhanced AI Fallback Extraction failed: {e}", exc_info=True)
             return []
 
-    def _wait_for_dynamic_content_if_needed(
-        self, driver: WebDriver, diocese_name: str, profile
-    ):
+    def _wait_for_dynamic_content_if_needed(self, driver: WebDriver, diocese_name: str, profile):
         """Wait for dynamic content loading if required by profile."""
         if not profile.javascript_required:
             return
 
         js_engine = get_dynamic_content_engine(driver)
-        loading_result = js_engine.wait_for_dynamic_content(
-            diocese_name, profile.wait_time
-        )
+        loading_result = js_engine.wait_for_dynamic_content(diocese_name, profile.wait_time)
 
         if loading_result["content_loaded"]:
             logger.info("🎯 Dynamic content loaded using profile settings")
         else:
-            logger.warning(
-                "🎯 Profile dynamic loading failed, continuing with static extraction"
-            )
+            logger.warning("🎯 Profile dynamic loading failed, continuing with static extraction")
 
-    def _extract_with_custom_selectors(
-        self, driver: WebDriver, url: str, profile, max_parishes: int
-    ) -> List[Dict[str, Any]]:
+    def _extract_with_custom_selectors(self, driver: WebDriver, url: str, profile, max_parishes: int) -> List[Dict[str, Any]]:
         """Extract parishes using profile's custom selectors."""
         parishes = []
         if not profile.custom_selectors:
@@ -348,9 +274,7 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
             try:
                 elements = driver.find_elements("css selector", selector)
                 for elem in elements:
-                    parish_data = self._extract_parish_from_element(
-                        elem, url, "profile_selector"
-                    )
+                    parish_data = self._extract_parish_from_element(elem, url, "profile_selector")
                     if parish_data and self._validate_parish_data(parish_data):
                         parishes.append(parish_data)
 
@@ -363,18 +287,14 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
 
         return parishes
 
-    def _extract_with_button_interactions(
-        self, driver: WebDriver, url: str, profile
-    ) -> List[Dict[str, Any]]:
+    def _extract_with_button_interactions(self, driver: WebDriver, url: str, profile) -> List[Dict[str, Any]]:
         """Extract parishes using profile's button click interactions."""
         if not self._should_perform_button_interactions(profile):
             return []
 
         parishes = []
         for button_selector in profile.button_clicks:
-            interaction_parishes = self._try_button_interaction(
-                driver, url, button_selector, profile
-            )
+            interaction_parishes = self._try_button_interaction(driver, url, button_selector, profile)
             parishes.extend(interaction_parishes)
             if interaction_parishes:  # Only click first successful button
                 break
@@ -385,17 +305,13 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
         """Check if button interactions should be performed."""
         return bool(profile.button_clicks and profile.interaction_required)
 
-    def _try_button_interaction(
-        self, driver: WebDriver, url: str, button_selector: str, profile
-    ) -> List[Dict[str, Any]]:
+    def _try_button_interaction(self, driver: WebDriver, url: str, button_selector: str, profile) -> List[Dict[str, Any]]:
         """Try clicking a button and extracting parishes after interaction."""
         try:
             buttons = driver.find_elements("css selector", button_selector)
             for button in buttons:
                 if self._is_button_clickable(button):
-                    return self._perform_button_click_extraction(
-                        driver, url, button, button_selector, profile
-                    )
+                    return self._perform_button_click_extraction(driver, url, button, button_selector, profile)
         except Exception as e:
             logger.debug(f"🎯 Profile button click '{button_selector}' failed: {e}")
 
@@ -421,17 +337,13 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
 
         return parishes
 
-    def _extract_after_interaction(
-        self, driver: WebDriver, url: str, selector: str
-    ) -> List[Dict[str, Any]]:
+    def _extract_after_interaction(self, driver: WebDriver, url: str, selector: str) -> List[Dict[str, Any]]:
         """Extract parishes using selector after button interaction."""
         parishes = []
         try:
             elements = driver.find_elements("css selector", selector)
             for elem in elements:
-                parish_data = self._extract_parish_from_element(
-                    elem, url, "profile_interaction"
-                )
+                parish_data = self._extract_parish_from_element(elem, url, "profile_interaction")
                 if parish_data and self._validate_parish_data(parish_data):
                     parishes.append(parish_data)
         except (NoSuchElementException, WebDriverException):
@@ -457,14 +369,10 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
             self._wait_for_dynamic_content_if_needed(driver, diocese_name, profile)
 
             # Try profile custom selectors
-            parishes.extend(
-                self._extract_with_custom_selectors(driver, url, profile, max_parishes)
-            )
+            parishes.extend(self._extract_with_custom_selectors(driver, url, profile, max_parishes))
 
             # Try profile button clicks if specified
-            parishes.extend(
-                self._extract_with_button_interactions(driver, url, profile)
-            )
+            parishes.extend(self._extract_with_button_interactions(driver, url, profile))
 
             # Remove duplicates
             unique_parishes = self._deduplicate_parishes(parishes)
@@ -476,9 +384,7 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
             logger.error(f"🎯 Profile - based extraction failed: {e}")
             return []
 
-    def _extract_from_api_endpoints(
-        self, api_endpoints: set, base_url: str
-    ) -> List[Dict[str, Any]]:
+    def _extract_from_api_endpoints(self, api_endpoints: set, base_url: str) -> List[Dict[str, Any]]:
         """Extract parish data from discovered API endpoints."""
         parishes = []
 
@@ -498,14 +404,10 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
                             parishes.extend(api_parishes)
 
                             if api_parishes:
-                                logger.info(
-                                    f"🌐 API endpoint {endpoint} returned {len(api_parishes)} parishes"
-                                )
+                                logger.info(f"🌐 API endpoint {endpoint} returned {len(api_parishes)} parishes")
 
                         except json.JSONDecodeError:
-                            logger.debug(
-                                f"🌐 API endpoint {endpoint} returned non - JSON data"
-                            )
+                            logger.debug(f"🌐 API endpoint {endpoint} returned non - JSON data")
 
                 except Exception as e:
                     logger.debug(f"🌐 API endpoint {endpoint} failed: {e}")
@@ -532,9 +434,7 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
             if isinstance(data, list):
                 for item in data:
                     if isinstance(item, dict):
-                        parish_data = self._extract_parish_from_api_item(
-                            item, base_url
-                        )
+                        parish_data = self._extract_parish_from_api_item(item, base_url)
                         if parish_data:
                             parishes.append(parish_data)
 
@@ -543,9 +443,7 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
 
         return parishes
 
-    def _extract_parish_from_api_item(
-        self, item: Dict, base_url: str
-    ) -> Optional[Dict[str, Any]]:
+    def _extract_parish_from_api_item(self, item: Dict, base_url: str) -> Optional[Dict[str, Any]]:
         """Extract parish data from API response item."""
         try:
             name = self._extract_name_from_api_item(item)
@@ -578,9 +476,7 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
             "extraction_method": "api_endpoint",
         }
 
-    def _add_url_data_from_api_item(
-        self, parish_data: Dict[str, Any], item: Dict, base_url: str
-    ):
+    def _add_url_data_from_api_item(self, parish_data: Dict[str, Any], item: Dict, base_url: str):
         """Add URL data from API item."""
         url_fields = ["url", "link", "website", "page_url"]
         for url_field in url_fields:
@@ -604,9 +500,7 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
                 parish_data["phone"] = item[phone_field]
                 break
 
-    def _extract_parish_from_element(
-        self, element, base_url: str, method: str
-    ) -> Optional[Dict[str, Any]]:
+    def _extract_parish_from_element(self, element, base_url: str, method: str) -> Optional[Dict[str, Any]]:
         """Extract parish data from a web element."""
         try:
             parish_data = {}
@@ -697,9 +591,7 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
 
         return has_indicator and not has_exclusion
 
-    def _validate_and_deduplicate(
-        self, parishes: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+    def _validate_and_deduplicate(self, parishes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Validate and remove duplicate parishes."""
         validated = []
         seen = set()
@@ -717,9 +609,7 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
 
         return validated
 
-    def _deduplicate_parishes(
-        self, parishes: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+    def _deduplicate_parishes(self, parishes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Remove duplicate parishes based on name and URL."""
         seen = set()
         unique = []
@@ -742,7 +632,7 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
             "type": "enhanced_ai_fallback",
             "ai_enabled": self.ai_analyzer is not None,
             "profiles_enabled": self.profile_manager is not None,
-            "description": "Enhanced AI - powered fallback with JavaScript execution and network analysis",
+            "description": ("Enhanced AI - powered fallback with JavaScript execution and network analysis"),
         }
 
         if self.profile_manager:

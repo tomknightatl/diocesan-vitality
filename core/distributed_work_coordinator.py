@@ -89,9 +89,7 @@ class DistributedWorkCoordinator:
                 "created_at": datetime.utcnow().isoformat(),
             }
 
-            response = (
-                self.supabase.table("pipeline_workers").upsert(worker_data).execute()
-            )
+            response = self.supabase.table("pipeline_workers").upsert(worker_data).execute()
 
             if response.data:
                 logger.info(f"✅ Worker {self.worker_id} registered successfully")
@@ -112,17 +110,11 @@ class DistributedWorkCoordinator:
 
             # Check if tables exist by attempting to query them
             try:
-                self.supabase.table("pipeline_workers").select("worker_id").limit(
-                    1
-                ).execute()
-                self.supabase.table("diocese_work_assignments").select(
-                    "diocese_id"
-                ).limit(1).execute()
+                self.supabase.table("pipeline_workers").select("worker_id").limit(1).execute()
+                self.supabase.table("diocese_work_assignments").select("diocese_id").limit(1).execute()
                 logger.debug("✅ Coordination tables already exist")
             except Exception:
-                logger.warning(
-                    "⚠️ Coordination tables may not exist. Please ensure they are created via migration."
-                )
+                logger.warning("⚠️ Coordination tables may not exist. Please ensure they are created via migration.")
                 # In a real implementation, we'd create these via proper SQL migrations
 
         except Exception as e:
@@ -149,9 +141,7 @@ class DistributedWorkCoordinator:
                 # Assign dioceses to this worker
                 await self._assign_dioceses_to_worker(available_dioceses)
 
-                logger.info(
-                    f"📋 Assigned {len(available_dioceses)} dioceses to worker {self.worker_id}"
-                )
+                logger.info(f"📋 Assigned {len(available_dioceses)} dioceses to worker {self.worker_id}")
                 for diocese in available_dioceses:
                     logger.debug(f"   • {diocese['name']} (ID: {diocese['id']})")
             else:
@@ -175,10 +165,7 @@ class DistributedWorkCoordinator:
 
             # Get all dioceses with parish directories
             dioceses_response = (
-                self.supabase.table("Dioceses")
-                .select("id, Name, Website")
-                .limit(limit * 2)
-                .execute()
+                self.supabase.table("Dioceses").select("id, Name, Website").limit(limit * 2).execute()
             )  # Get more than needed for filtering
 
             if not dioceses_response.data:
@@ -248,22 +235,14 @@ class DistributedWorkCoordinator:
                     "worker_id": self.worker_id,
                     "status": "processing",
                     "assigned_at": datetime.utcnow().isoformat(),
-                    "estimated_completion": (
-                        datetime.utcnow() + timedelta(hours=1)
-                    ).isoformat(),
+                    "estimated_completion": ((datetime.utcnow() + timedelta(hours=1)).isoformat()),
                 }
                 assignments.append(assignment)
 
             if assignments:
-                response = (
-                    self.supabase.table("diocese_work_assignments")
-                    .insert(assignments)
-                    .execute()
-                )
+                response = self.supabase.table("diocese_work_assignments").insert(assignments).execute()
                 if response.data:
-                    logger.debug(
-                        f"✅ Successfully assigned {len(assignments)} dioceses"
-                    )
+                    logger.debug(f"✅ Successfully assigned {len(assignments)} dioceses")
                 else:
                     logger.error(f"❌ Failed to assign dioceses: {response}")
 
@@ -302,19 +281,12 @@ class DistributedWorkCoordinator:
                 "status": "active",
             }
 
-            response = (
-                self.supabase.table("pipeline_workers")
-                .update(update_data)
-                .eq("worker_id", self.worker_id)
-                .execute()
-            )
+            response = self.supabase.table("pipeline_workers").update(update_data).eq("worker_id", self.worker_id).execute()
 
             if response.data:
                 logger.debug(f"💓 Heartbeat sent by worker {self.worker_id}")
             else:
-                logger.warning(
-                    f"⚠️ Failed to send heartbeat for worker {self.worker_id}"
-                )
+                logger.warning(f"⚠️ Failed to send heartbeat for worker {self.worker_id}")
 
         except Exception as e:
             logger.error(f"❌ Error sending heartbeat: {e}")
@@ -337,16 +309,14 @@ class DistributedWorkCoordinator:
                 stale_worker_ids = [w["worker_id"] for w in stale_response.data]
 
                 # Mark stale workers as failed
-                self.supabase.table("pipeline_workers").update(
-                    {"status": "failed"}
-                ).in_("worker_id", stale_worker_ids).execute()
+                self.supabase.table("pipeline_workers").update({"status": "failed"}).in_(
+                    "worker_id", stale_worker_ids
+                ).execute()
 
                 # Release their work assignments
                 self.supabase.table("diocese_work_assignments").update(
                     {"status": "failed", "completed_at": datetime.utcnow().isoformat()}
-                ).in_("worker_id", stale_worker_ids).eq(
-                    "status", "processing"
-                ).execute()
+                ).in_("worker_id", stale_worker_ids).eq("status", "processing").execute()
 
                 logger.info(f"🧹 Cleaned up {len(stale_worker_ids)} stale workers")
 
@@ -374,9 +344,7 @@ class DistributedWorkCoordinator:
 
             # Compile status
             active_workers = len(workers_response.data) if workers_response.data else 0
-            active_assignments = (
-                len(assignments_response.data) if assignments_response.data else 0
-            )
+            active_assignments = len(assignments_response.data) if assignments_response.data else 0
 
             return {
                 "active_workers": active_workers,
@@ -403,18 +371,14 @@ class DistributedWorkCoordinator:
             ).eq("worker_id", self.worker_id).eq("status", "processing").execute()
 
             # Mark worker as inactive
-            self.supabase.table("pipeline_workers").update({"status": "inactive"}).eq(
-                "worker_id", self.worker_id
-            ).execute()
+            self.supabase.table("pipeline_workers").update({"status": "inactive"}).eq("worker_id", self.worker_id).execute()
 
             logger.info(f"🛑 Worker {self.worker_id} shutdown gracefully")
 
         except Exception as e:
             logger.error(f"❌ Error during worker shutdown: {e}")
 
-    async def get_available_schedule_work(
-        self, max_parishes: int = 100
-    ) -> List[Dict[str, Any]]:
+    async def get_available_schedule_work(self, max_parishes: int = 100) -> List[Dict[str, Any]]:
         """
         Get parishes that need schedule extraction.
 
@@ -436,9 +400,7 @@ class DistributedWorkCoordinator:
             )
 
             if parishes_response.data:
-                logger.info(
-                    f"📋 Found {len(parishes_response.data)} parishes needing schedule extraction"
-                )
+                logger.info(f"📋 Found {len(parishes_response.data)} parishes needing schedule extraction")
                 return parishes_response.data
             else:
                 return []

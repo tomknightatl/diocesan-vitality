@@ -18,9 +18,7 @@ def check_environment():
     """Check if environment is properly configured"""
     env_file = Path(".env")
     if not env_file.exists():
-        print(
-            "❌ .env file not found. Please copy .env.example to .env and configure it."
-        )
+        print("❌ .env file not found. Please copy .env.example to .env and configure it.")
         return False
 
     load_dotenv()
@@ -129,18 +127,10 @@ def _create_argument_parser():
         action="store_true",
         help="Only check environment, don't start services",
     )
-    parser.add_argument(
-        "--backend - only", action="store_true", help="Start only the backend"
-    )
-    parser.add_argument(
-        "--frontend - only", action="store_true", help="Start only the frontend"
-    )
-    parser.add_argument(
-        "--test - pipeline", action="store_true", help="Run a quick pipeline test"
-    )
-    parser.add_argument(
-        "--foreground", action="store_true", help="Start services in foreground"
-    )
+    parser.add_argument("--backend - only", action="store_true", help="Start only the backend")
+    parser.add_argument("--frontend - only", action="store_true", help="Start only the frontend")
+    parser.add_argument("--test - pipeline", action="store_true", help="Run a quick pipeline test")
+    parser.add_argument("--foreground", action="store_true", help="Start services in foreground")
     return parser
 
 

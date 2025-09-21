@@ -41,12 +41,8 @@ def test_circuit_breaker_configs():
         )
 
     # Test adaptive config
-    adaptive_config = OptimizedCircuitBreakerConfigs.get_adaptive_config(
-        "unknown_type"
-    )
-    logger.info(
-        f"  ✅ adaptive (default): threshold={adaptive_config.failure_threshold}"
-    )
+    adaptive_config = OptimizedCircuitBreakerConfigs.get_adaptive_config("unknown_type")
+    logger.info(f"  ✅ adaptive (default): threshold={adaptive_config.failure_threshold}")
 
     logger.info("✅ Circuit breaker configurations test passed!")
 
@@ -69,9 +65,7 @@ def test_error_recovery_strategies():
     ]
 
     for extractor, failures, error_type, expected in skip_tests:
-        result = ErrorRecoveryStrategies.should_skip_extractor(
-            extractor, failures, error_type
-        )
+        result = ErrorRecoveryStrategies.should_skip_extractor(extractor, failures, error_type)
         status = "✅" if result == expected else "❌"
         logger.info(f"  {status} {extractor} ({failures} {error_type}): skip={result}")
 
@@ -95,10 +89,7 @@ def test_error_recovery_strategies():
     ]
 
     analysis = ErrorRecoveryStrategies.analyze_failure_pattern(test_errors)
-    logger.info(
-        f"  ✅ Pattern analysis: {analysis['total_errors']} errors, "
-        f"dominant: {analysis['dominant_error']}"
-    )
+    logger.info(f"  ✅ Pattern analysis: {analysis['total_errors']} errors, " f"dominant: {analysis['dominant_error']}")
 
     logger.info("✅ Error recovery strategies test passed!")
 
@@ -168,14 +159,10 @@ def main():
             sys.exit(1)
 
         test_time = time.time() - start_time
-        logger.info(
-            f"🎉 All optimization tests passed! (completed in {test_time:.2f}s)"
-        )
+        logger.info(f"🎉 All optimization tests passed! (completed in {test_time:.2f}s)")
 
         logger.info("\n📊 Optimization Summary:")
-        logger.info(
-            "  • Circuit breaker thresholds optimized for element interactions (30 failures)"
-        )
+        logger.info("  • Circuit breaker thresholds optimized for element interactions (30 failures)")
         logger.info("  • Progressive timeout strategies implemented")
         logger.info("  • Smart element waiting with 50+ selector patterns")
         logger.info("  • Error recovery strategies with adaptive delays")

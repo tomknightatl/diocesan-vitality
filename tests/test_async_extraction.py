@@ -22,10 +22,7 @@ class MockParishData(ParishData):
 
     def __init__(self, name: str, detail_url: str = None, **kwargs):
         super().__init__(name=name, **kwargs)
-        self.detail_url = (
-            detail_url
-            or f"https://example.com/parish/{name.lower().replace(' ', '-')}"
-        )
+        self.detail_url = detail_url or f"https://example.com/parish/{name.lower().replace(' ', '-')}"
 
 
 def create_test_parishes(count: int) -> List[ParishData]:
@@ -37,24 +34,16 @@ def create_test_parishes(count: int) -> List[ParishData]:
             name=f"Test Parish {i + 1}",
             address=f"{100 + i} Test Street",
             phone="" if random.random() < 0.3 else f"555-{1000 + i:04d}",
-            website=(
-                "" if random.random() < 0.4 else f"https://parish{i + 1}.example.com"
-            ),
+            website=("" if random.random() < 0.4 else f"https://parish{i + 1}.example.com"),
             zip_code="" if random.random() < 0.2 else f"{10001 + i:05d}",
-            full_address=(
-                ""
-                if random.random() < 0.3
-                else f"{100 + i} Test Street, Test City, TS {10001 + i:05d}"
-            ),
+            full_address=("" if random.random() < 0.3 else f"{100 + i} Test Street, Test City, TS {10001 + i:05d}"),
         )
         parishes.append(parish)
 
     return parishes
 
 
-def mock_parish_detail_extraction(
-    driver, parish_name: str, base_info: Dict
-) -> ParishData:
+def mock_parish_detail_extraction(driver, parish_name: str, base_info: Dict) -> ParishData:
     """Mock parish detail extraction function for testing"""
     # Simulate varying extraction times
     extraction_time = random.uniform(0.5, 2.0)
@@ -69,8 +58,7 @@ def mock_parish_detail_extraction(
         name=parish_name,
         address=base_info.get("address", f"Enhanced Address for {parish_name}"),
         phone=base_info.get("phone") or f"555-{random.randint(1000, 9999)}",
-        website=base_info.get("website")
-        or f"https://enhanced-{parish_name.lower().replace(' ', '-')}.com",
+        website=base_info.get("website") or f"https://enhanced-{parish_name.lower().replace(' ', '-')}.com",
         zip_code=base_info.get("zip_code") or f"{random.randint(10000, 99999)}",
         full_address=f"Enhanced full address for {parish_name}",
         clergy_info=f"Pastor: Rev. John Doe (for {parish_name})",
@@ -131,15 +119,11 @@ async def test_async_parish_extractor():
 
     # Test concurrent extraction
     start_time = time.time()
-    enhanced_parishes = await extractor.extract_parish_details_concurrent(
-        test_parishes, "Test Diocese", max_concurrent=8
-    )
+    enhanced_parishes = await extractor.extract_parish_details_concurrent(test_parishes, "Test Diocese", max_concurrent=8)
     total_time = time.time() - start_time
 
     # Analyze results
-    enhanced_count = sum(
-        1 for p in enhanced_parishes if getattr(p, "enhanced_extraction", False)
-    )
+    enhanced_count = sum(1 for p in enhanced_parishes if getattr(p, "enhanced_extraction", False))
     success_rate = (enhanced_count / len(test_parishes)) * 100
     parishes_per_second = len(test_parishes) / total_time
 
@@ -193,9 +177,7 @@ async def test_concurrent_vs_sequential():
 
     start_time = time.time()
     # Perform concurrent extraction for timing comparison
-    await extractor.extract_parish_details_concurrent(
-        test_parishes, "Performance Test Diocese", max_concurrent=8
-    )
+    await extractor.extract_parish_details_concurrent(test_parishes, "Performance Test Diocese", max_concurrent=8)
     concurrent_time = time.time() - start_time
 
     # Performance analysis
@@ -207,9 +189,7 @@ async def test_concurrent_vs_sequential():
     logger.info(f"   • Concurrent time: {concurrent_time:.2f}s")
     logger.info(f"   • Speedup: {speedup:.1f}x")
     logger.info(f"   • Efficiency: {efficiency:.1f}x (per core)")
-    logger.info(
-        f"   • Time savings: {((sequential_time - concurrent_time) / sequential_time * 100):.1f}%"
-    )
+    logger.info(f"   • Time savings: {((sequential_time - concurrent_time) / sequential_time * 100):.1f}%")
 
     if speedup > 2.0:
         logger.info("🚀 Excellent performance improvement!")
@@ -240,9 +220,7 @@ async def test_error_handling():
     extractor._extract_parish_detail_sync = failing_extraction
 
     start_time = time.time()
-    results = await extractor.extract_parish_details_concurrent(
-        test_parishes, "Error Test Diocese", max_concurrent=6
-    )
+    results = await extractor.extract_parish_details_concurrent(test_parishes, "Error Test Diocese", max_concurrent=6)
     total_time = time.time() - start_time
 
     # Analyze error handling
@@ -254,9 +232,7 @@ async def test_error_handling():
     logger.info(f"   • Total parishes: {len(test_parishes)}")
     logger.info(f"   • Successful: {successful}")
     logger.info(f"   • Failed gracefully: {failed}")
-    logger.info(
-        f"   • System stability: {'✅ Good' if len(results) == len(test_parishes) else '❌ Issues'}"
-    )
+    logger.info(f"   • System stability: {'✅ Good' if len(results) == len(test_parishes) else '❌ Issues'}")
 
     return len(results) == len(test_parishes)
 

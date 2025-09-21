@@ -64,17 +64,11 @@ class MonitoringManager:
     async def add_connection(self, websocket: WebSocket):
         """Add a new WebSocket connection"""
         self.websocket_connections.add(websocket)
-        print(
-            f"New WebSocket connection added. Total: {len(self.websocket_connections)}"
-        )
+        print(f"New WebSocket connection added. Total: {len(self.websocket_connections)}")
 
         # Send initial state to new connection
-        await self.send_to_connection(
-            websocket, {"type": "system_health", "payload": self.get_system_health()}
-        )
-        await self.send_to_connection(
-            websocket, {"type": "extraction_status", "payload": self.extraction_status}
-        )
+        await self.send_to_connection(websocket, {"type": "system_health", "payload": self.get_system_health()})
+        await self.send_to_connection(websocket, {"type": "extraction_status", "payload": self.extraction_status})
         await self.send_to_connection(
             websocket,
             {"type": "circuit_breaker_status", "payload": self.circuit_breakers},
@@ -87,9 +81,7 @@ class MonitoringManager:
     async def remove_connection(self, websocket: WebSocket):
         """Remove a WebSocket connection"""
         self.websocket_connections.discard(websocket)
-        print(
-            f"WebSocket connection removed. Total: {len(self.websocket_connections)}"
-        )
+        print(f"WebSocket connection removed. Total: {len(self.websocket_connections)}")
 
     async def send_to_connection(self, websocket: WebSocket, message: Dict):
         """Send message to a specific WebSocket connection"""
@@ -149,24 +141,18 @@ class MonitoringManager:
         """Update and broadcast extraction status"""
         self.extraction_status.update(status_data)
         self.extraction_last_updated = time.time()  # Update timestamp
-        await self.broadcast(
-            {"type": "extraction_status", "payload": self.extraction_status}
-        )
+        await self.broadcast({"type": "extraction_status", "payload": self.extraction_status})
 
     async def update_circuit_breakers(self, circuit_data: Dict):
         """Update and broadcast circuit breaker status"""
         self.circuit_breakers.update(circuit_data)
         self.circuit_breakers_last_updated = time.time()  # Update timestamp
-        await self.broadcast(
-            {"type": "circuit_breaker_status", "payload": self.circuit_breakers}
-        )
+        await self.broadcast({"type": "circuit_breaker_status", "payload": self.circuit_breakers})
 
     async def update_performance_metrics(self, metrics_data: Dict):
         """Update and broadcast performance metrics"""
         self.performance_metrics.update(metrics_data)
-        await self.broadcast(
-            {"type": "performance_metrics", "payload": self.performance_metrics}
-        )
+        await self.broadcast({"type": "performance_metrics", "payload": self.performance_metrics})
 
     async def add_error(self, error_data: Dict):
         """Add error to recent errors and broadcast"""
@@ -188,9 +174,7 @@ class MonitoringManager:
         self.extraction_history.insert(0, extraction_entry)
         self.extraction_history = self.extraction_history[:20]  # Keep last 20
 
-        await self.broadcast(
-            {"type": "extraction_complete", "payload": extraction_entry}
-        )
+        await self.broadcast({"type": "extraction_complete", "payload": extraction_entry})
 
     async def send_live_log(self, log_data: Dict):
         """Send live log entry to all connections"""
@@ -220,17 +204,13 @@ class MonitoringManager:
                 "started_at": None,
                 "progress_percentage": 0,
                 "estimated_completion": None,
-                "stale_reason": f"No updates for {(current_time - self.extraction_last_updated)/60:.1f} minutes",
+                "stale_reason": (f"No updates for {(current_time - self.extraction_last_updated)/60:.1f} minutes"),
             }
             self.extraction_last_updated = current_time
             changes_made = True
 
         # Check circuit breaker staleness
-        if (
-            self.circuit_breakers
-            and current_time - self.circuit_breakers_last_updated
-            > self.circuit_breaker_timeout
-        ):
+        if self.circuit_breakers and current_time - self.circuit_breakers_last_updated > self.circuit_breaker_timeout:
 
             print(
                 f"⚠️ Circuit breaker data is stale (last updated {current_time - self.circuit_breakers_last_updated:.0f}s ago), clearing"
@@ -306,9 +286,7 @@ class MonitoringManager:
         # If in aggregate mode, also broadcast aggregate data
         if self.aggregate_mode:
             aggregate_status = self.get_aggregate_extraction_status()
-            await self.broadcast(
-                {"type": "extraction_status", "payload": aggregate_status}
-            )
+            await self.broadcast({"type": "extraction_status", "payload": aggregate_status})
 
     async def update_worker_circuit_breakers(self, worker_id: str, circuit_data: Dict):
         """Update circuit breaker status for a specific worker"""
@@ -318,20 +296,14 @@ class MonitoringManager:
 
         # Broadcast aggregate circuit breaker data
         aggregate_circuits = self.get_aggregate_circuit_breakers()
-        await self.broadcast(
-            {"type": "circuit_breaker_status", "payload": aggregate_circuits}
-        )
+        await self.broadcast({"type": "circuit_breaker_status", "payload": aggregate_circuits})
 
     def get_aggregate_extraction_status(self):
         """Calculate aggregate extraction status across all workers"""
         if not self.workers:
             return self.extraction_status
 
-        active_workers = [
-            w
-            for w in self.workers.values()
-            if w["extraction_status"]["status"] in ["running", "paused"]
-        ]
+        active_workers = [w for w in self.workers.values() if w["extraction_status"]["status"] in ["running", "paused"]]
 
         if not active_workers:
             return {
@@ -343,63 +315,37 @@ class MonitoringManager:
                 "started_at": None,
                 "progress_percentage": 0,
                 "estimated_completion": None,
-                "active_workers": len(
-                    [
-                        w
-                        for w in self.workers.values()
-                        if w["extraction_status"]["status"] != "idle"
-                    ]
-                ),
+                "active_workers": len([w for w in self.workers.values() if w["extraction_status"]["status"] != "idle"]),
             }
 
         # Aggregate data from active workers
-        total_parishes_processed = sum(
-            w["extraction_status"]["parishes_processed"] for w in active_workers
-        )
-        total_parishes = sum(
-            w["extraction_status"]["total_parishes"] for w in active_workers
-        )
+        total_parishes_processed = sum(w["extraction_status"]["parishes_processed"] for w in active_workers)
+        total_parishes = sum(w["extraction_status"]["total_parishes"] for w in active_workers)
 
         # Calculate weighted success rate
         success_rates = [
-            w["extraction_status"]["success_rate"]
-            for w in active_workers
-            if w["extraction_status"]["parishes_processed"] > 0
+            w["extraction_status"]["success_rate"] for w in active_workers if w["extraction_status"]["parishes_processed"] > 0
         ]
-        avg_success_rate = (
-            sum(success_rates) / len(success_rates) if success_rates else 0
-        )
+        avg_success_rate = sum(success_rates) / len(success_rates) if success_rates else 0
 
         # Get earliest start time
-        start_times = [
-            w["extraction_status"]["started_at"]
-            for w in active_workers
-            if w["extraction_status"]["started_at"]
-        ]
+        start_times = [w["extraction_status"]["started_at"] for w in active_workers if w["extraction_status"]["started_at"]]
         earliest_start = min(start_times) if start_times else None
 
         # Get current dioceses being processed
         current_dioceses = [
-            w["extraction_status"]["current_diocese"]
-            for w in active_workers
-            if w["extraction_status"]["current_diocese"]
+            w["extraction_status"]["current_diocese"] for w in active_workers if w["extraction_status"]["current_diocese"]
         ]
 
         return {
             "status": "running" if active_workers else "idle",
-            "current_diocese": (
-                ", ".join(current_dioceses) if current_dioceses else None
-            ),
+            "current_diocese": (", ".join(current_dioceses) if current_dioceses else None),
             "parishes_processed": total_parishes_processed,
             "total_parishes": total_parishes,
             "success_rate": round(avg_success_rate, 1),
             "started_at": earliest_start,
-            "progress_percentage": (
-                (total_parishes_processed / max(total_parishes, 1)) * 100
-                if total_parishes > 0
-                else 0
-            ),
-            "estimated_completion": None,  # Could be calculated based on processing rate
+            "progress_percentage": ((total_parishes_processed / max(total_parishes, 1)) * 100 if total_parishes > 0 else 0),
+            "estimated_completion": (None),  # Could be calculated based on processing rate
             "active_workers": len(active_workers),
             "total_workers": len(self.workers),
         }
@@ -442,11 +388,7 @@ class MonitoringManager:
                 aggregate_state = "CLOSED"
 
             # Calculate success rate
-            success_rate = (
-                (total_successes / max(total_requests, 1)) * 100
-                if total_requests > 0
-                else 0
-            )
+            success_rate = (total_successes / max(total_requests, 1)) * 100 if total_requests > 0 else 0
 
             aggregate_circuits[circuit_name] = {
                 "state": aggregate_state,
@@ -480,13 +422,9 @@ class MonitoringManager:
                 {
                     "worker_id": worker_id,
                     "status": worker_data["extraction_status"]["status"],
-                    "worker_status": worker_status,  # New field for activity classification
-                    "current_diocese": worker_data["extraction_status"][
-                        "current_diocese"
-                    ],
-                    "parishes_processed": worker_data["extraction_status"][
-                        "parishes_processed"
-                    ],
+                    "worker_status": (worker_status),  # New field for activity classification
+                    "current_diocese": worker_data["extraction_status"]["current_diocese"],
+                    "parishes_processed": worker_data["extraction_status"]["parishes_processed"],
                     "last_updated": worker_data["last_updated"],
                     "time_since_update": int(time_since_update),
                 }
@@ -496,11 +434,7 @@ class MonitoringManager:
         # Within each group, sort by most recently updated
         worker_list.sort(
             key=lambda w: (
-                (
-                    0
-                    if w["worker_status"] == "active"
-                    else 1 if w["worker_status"] == "recent" else 2
-                ),
+                (0 if w["worker_status"] == "active" else 1 if w["worker_status"] == "recent" else 2),
                 -w["last_updated"],  # Most recent first within each group
             )
         )
@@ -522,9 +456,7 @@ async def periodic_health_update():
 
             # Broadcast system health
             health_data = monitoring_manager.get_system_health()
-            await monitoring_manager.broadcast(
-                {"type": "system_health", "payload": health_data}
-            )
+            await monitoring_manager.broadcast({"type": "system_health", "payload": health_data})
 
             # If stale data was detected and reset, broadcast the updates
             if changes_made:
@@ -606,31 +538,19 @@ async def get_summary():
     """
     try:
         # Dioceses summary
-        total_dioceses_response = (
-            supabase.table("Dioceses").select("count", count="exact").execute()
-        )
+        total_dioceses_response = supabase.table("Dioceses").select("count", count="exact").execute()
         total_dioceses_processed = total_dioceses_response.count
 
-        dir_response = (
-            supabase.table("DiocesesParishDirectory").select("diocese_id").execute()
-        )
+        dir_response = supabase.table("DiocesesParishDirectory").select("diocese_id").execute()
         dir_data = dir_response.data
-        dioceses_with_parish_directories_found = len(
-            set(item["diocese_id"] for item in dir_data)
-        )
-        dioceses_without_parish_directories_found = (
-            total_dioceses_processed - dioceses_with_parish_directories_found
-        )
+        dioceses_with_parish_directories_found = len(set(item["diocese_id"] for item in dir_data))
+        dioceses_without_parish_directories_found = total_dioceses_processed - dioceses_with_parish_directories_found
 
         # Parishes summary
-        parishes_count_response = (
-            supabase.table("Parishes").select("count", count="exact").execute()
-        )
+        parishes_count_response = supabase.table("Parishes").select("count", count="exact").execute()
         parishes_extracted = parishes_count_response.count
 
-        parish_data_response = (
-            supabase.table("ParishData").select("parish_id, fact_value").execute()
-        )
+        parish_data_response = supabase.table("ParishData").select("parish_id, fact_value").execute()
         parish_data = parish_data_response.data
 
         parishes_with_data_extracted = len(
@@ -641,9 +561,7 @@ async def get_summary():
             )
         )
 
-        parishes_with_data_not_extracted = (
-            parishes_extracted - parishes_with_data_extracted
-        )
+        parishes_with_data_not_extracted = parishes_extracted - parishes_with_data_extracted
 
         return {
             "total_dioceses_processed": total_dioceses_processed,
@@ -672,9 +590,7 @@ def get_dioceses(
     """
     try:
         offset = (page - 1) * page_size
-        dioceses = _fetch_and_filter_dioceses(
-            filter_name, filter_address, filter_website
-        )
+        dioceses = _fetch_and_filter_dioceses(filter_name, filter_address, filter_website)
         total_count = len(dioceses)
 
         # Fetch supporting data
@@ -711,21 +627,11 @@ def _fetch_and_filter_dioceses(filter_name, filter_address, filter_website):
 
     # Apply filtering in Python
     if filter_name:
-        dioceses = [
-            d for d in dioceses if filter_name.lower() in d.get("Name", "").lower()
-        ]
+        dioceses = [d for d in dioceses if filter_name.lower() in d.get("Name", "").lower()]
     if filter_address:
-        dioceses = [
-            d
-            for d in dioceses
-            if filter_address.lower() in d.get("Address", "").lower()
-        ]
+        dioceses = [d for d in dioceses if filter_address.lower() in d.get("Address", "").lower()]
     if filter_website:
-        dioceses = [
-            d
-            for d in dioceses
-            if filter_website.lower() in d.get("Website", "").lower()
-        ]
+        dioceses = [d for d in dioceses if filter_website.lower() in d.get("Website", "").lower()]
 
     return dioceses
 
@@ -740,10 +646,7 @@ def _fetch_directory_and_blocking_data():
         .execute()
     )
 
-    dir_url_map = {
-        item["diocese_id"]: item["parish_directory_url"]
-        for item in all_dir_response.data
-    }
+    dir_url_map = {item["diocese_id"]: item["parish_directory_url"] for item in all_dir_response.data}
     blocking_data_map = {
         item["diocese_id"]: {
             "is_blocked": item.get("is_blocked", False),
@@ -751,9 +654,7 @@ def _fetch_directory_and_blocking_data():
             "blocking_evidence": item.get("blocking_evidence", {}),
             "status_code": item.get("status_code"),
             "robots_txt_check": item.get("robots_txt_check", {}),
-            "respectful_automation_used": item.get(
-                "respectful_automation_used", False
-            ),
+            "respectful_automation_used": item.get("respectful_automation_used", False),
             "status_description": item.get("status_description", "Unknown"),
         }
         for item in all_dir_response.data
@@ -772,9 +673,7 @@ def _fetch_parish_counts():
         url = parish["diocese_url"]
         parish_counts[url] = parish_counts.get(url, 0) + 1
 
-    parish_data_response = (
-        supabase.table("ParishData").select("parish_id, fact_value").execute()
-    )
+    parish_data_response = supabase.table("ParishData").select("parish_id, fact_value").execute()
     parishes_with_data = {
         item["parish_id"]
         for item in parish_data_response.data
@@ -785,23 +684,17 @@ def _fetch_parish_counts():
     for parish_id in parishes_with_data:
         if parish_id in parishes_map:
             diocese_url = parishes_map[parish_id]
-            parishes_with_data_extracted_counts[diocese_url] = (
-                parishes_with_data_extracted_counts.get(diocese_url, 0) + 1
-            )
+            parishes_with_data_extracted_counts[diocese_url] = parishes_with_data_extracted_counts.get(diocese_url, 0) + 1
 
     return parish_counts, parishes_with_data_extracted_counts
 
 
-def _enrich_dioceses_with_additional_data(
-    dioceses, dir_url_map, blocking_data_map, parish_counts, parishes_with_data_counts
-):
+def _enrich_dioceses_with_additional_data(dioceses, dir_url_map, blocking_data_map, parish_counts, parishes_with_data_counts):
     """Enrich dioceses with directory URLs, parish counts, and blocking data."""
     for diocese in dioceses:
         diocese["parish_directory_url"] = dir_url_map.get(diocese["id"])
         diocese["parishes_in_db_count"] = parish_counts.get(diocese["Website"], 0)
-        diocese["parishes_with_data_extracted_count"] = parishes_with_data_counts.get(
-            diocese["Website"], 0
-        )
+        diocese["parishes_with_data_extracted_count"] = parishes_with_data_counts.get(diocese["Website"], 0)
 
         # Add blocking detection data
         blocking_data = blocking_data_map.get(diocese["id"], {})
@@ -810,12 +703,8 @@ def _enrich_dioceses_with_additional_data(
         diocese["blocking_evidence"] = blocking_data.get("blocking_evidence", {})
         diocese["status_code"] = blocking_data.get("status_code")
         diocese["robots_txt_check"] = blocking_data.get("robots_txt_check", {})
-        diocese["respectful_automation_used"] = blocking_data.get(
-            "respectful_automation_used", False
-        )
-        diocese["status_description"] = blocking_data.get(
-            "status_description", "Not tested"
-        )
+        diocese["respectful_automation_used"] = blocking_data.get("respectful_automation_used", False)
+        diocese["status_description"] = blocking_data.get("status_description", "Not tested")
 
 
 def _sort_dioceses(dioceses, sort_by, sort_order):
@@ -825,9 +714,7 @@ def _sort_dioceses(dioceses, sort_by, sort_order):
         dioceses.sort(key=lambda d: d.get("parishes_in_db_count", 0), reverse=reverse)
     else:
         # Use .get for safer access and handle None values
-        dioceses.sort(
-            key=lambda d: (d.get(sort_by) is None, d.get(sort_by, "")), reverse=reverse
-        )
+        dioceses.sort(key=lambda d: (d.get(sort_by) is None, d.get(sort_by, "")), reverse=reverse)
     return dioceses
 
 
@@ -837,9 +724,7 @@ def get_diocese(diocese_id: int):
     Fetches a single diocese by its ID.
     """
     try:
-        response = (
-            supabase.table("Dioceses").select("*").eq("id", diocese_id).execute()
-        )
+        response = supabase.table("Dioceses").select("*").eq("id", diocese_id).execute()
         if not response.data:
             raise HTTPException(status_code=404, detail="Diocese not found")
         return {"data": response.data[0]}
@@ -850,17 +735,13 @@ def get_diocese(diocese_id: int):
 @app.get("/api/dioceses/{diocese_id}/parishes")
 def _validate_diocese_exists(diocese_id: int):
     """Validate that the diocese exists in the database."""
-    diocese_response = (
-        supabase.table("Dioceses").select("Website").eq("id", diocese_id).execute()
-    )
+    diocese_response = supabase.table("Dioceses").select("Website").eq("id", diocese_id).execute()
     if not diocese_response.data:
         raise HTTPException(status_code=404, detail="Diocese not found")
     return diocese_response.data[0]["Website"]
 
 
-def _apply_basic_filters(
-    query, filter_name, filter_diocese_name, filter_website, filter_blocked
-):
+def _apply_basic_filters(query, filter_name, filter_diocese_name, filter_website, filter_blocked):
     """Apply basic filters to the parish query."""
     if filter_name:
         query = query.ilike("Name", f"%{filter_name}%")
@@ -876,17 +757,13 @@ def _apply_basic_filters(
     return query
 
 
-def _get_data_extraction_filter_ids(
-    filter_data_extracted, filter_data_available, diocese_id=None
-):
+def _get_data_extraction_filter_ids(filter_data_extracted, filter_data_available, diocese_id=None):
     """Get parish IDs that match data extraction filters."""
     if not (filter_data_extracted or filter_data_available):
         return None
 
     # Get all parishes with data
-    all_parish_data_response = (
-        supabase.table("ParishData").select("parish_id, fact_value").execute()
-    )
+    all_parish_data_response = supabase.table("ParishData").select("parish_id, fact_value").execute()
     parishes_with_data = {
         item["parish_id"]
         for item in all_parish_data_response.data
@@ -902,15 +779,10 @@ def _get_data_extraction_filter_ids(
             # Get all parish IDs, then subtract those with data
             if diocese_id:
                 all_parishes_response = (
-                    supabase.table("parishes_with_diocese_name")
-                    .select("id")
-                    .eq("diocese_id", diocese_id)
-                    .execute()
+                    supabase.table("parishes_with_diocese_name").select("id").eq("diocese_id", diocese_id).execute()
                 )
             else:
-                all_parishes_response = (
-                    supabase.table("parishes_with_diocese_name").select("id").execute()
-                )
+                all_parishes_response = supabase.table("parishes_with_diocese_name").select("id").execute()
             all_parish_ids = {p["id"] for p in all_parishes_response.data}
             filter_parish_ids = list(all_parish_ids - parishes_with_data)
     elif filter_data_available:
@@ -920,15 +792,10 @@ def _get_data_extraction_filter_ids(
             # Get all parish IDs, then subtract those with data
             if diocese_id:
                 all_parishes_response = (
-                    supabase.table("parishes_with_diocese_name")
-                    .select("id")
-                    .eq("diocese_id", diocese_id)
-                    .execute()
+                    supabase.table("parishes_with_diocese_name").select("id").eq("diocese_id", diocese_id).execute()
                 )
             else:
-                all_parishes_response = (
-                    supabase.table("parishes_with_diocese_name").select("id").execute()
-                )
+                all_parishes_response = supabase.table("parishes_with_diocese_name").select("id").execute()
             all_parish_ids = {p["id"] for p in all_parishes_response.data}
             filter_parish_ids = list(all_parish_ids - parishes_with_data)
 
@@ -979,9 +846,7 @@ def _enrich_parishes_with_data(parishes):
 
     # Determine parishes with data
     all_parishes_with_data = {
-        item["parish_id"]
-        for item in parish_data
-        if item["fact_value"] and item["fact_value"] != "Information not found"
+        item["parish_id"] for item in parish_data if item["fact_value"] and item["fact_value"] != "Information not found"
     }
 
     # Enrich each parish
@@ -1001,9 +866,7 @@ def _enrich_parishes_with_data(parishes):
         parish["blocking_evidence"] = parish.get("blocking_evidence", {})
         parish["status_code"] = parish.get("status_code")
         parish["robots_txt_check"] = parish.get("robots_txt_check", {})
-        parish["respectful_automation_used"] = parish.get(
-            "respectful_automation_used", False
-        )
+        parish["respectful_automation_used"] = parish.get("respectful_automation_used", False)
         parish["status_description"] = parish.get("status_description", "Not tested")
 
     return parishes
@@ -1019,18 +882,14 @@ def _apply_post_query_filters_and_sorting(
 ):
     """Apply filters and sorting that need to be done after data enrichment."""
     # Apply data extraction filters
-    parishes = _apply_data_extraction_filters(
-        parishes, filter_data_extracted, filter_data_available
-    )
+    parishes = _apply_data_extraction_filters(parishes, filter_data_extracted, filter_data_available)
     parishes = _apply_blocking_filters(parishes, filter_blocked)
     parishes = _apply_computed_field_sorting(parishes, sort_by, sort_order)
 
     return parishes
 
 
-def _apply_data_extraction_filters(
-    parishes: list, filter_data_extracted: str, filter_data_available: str
-) -> list:
+def _apply_data_extraction_filters(parishes: list, filter_data_extracted: str, filter_data_available: str) -> list:
     """Apply data extraction related filters"""
     if filter_data_extracted:
         if filter_data_extracted.lower() == "true":
@@ -1058,9 +917,7 @@ def _apply_blocking_filters(parishes: list, filter_blocked: str) -> list:
     return parishes
 
 
-def _apply_computed_field_sorting(
-    parishes: list, sort_by: str, sort_order: str
-) -> list:
+def _apply_computed_field_sorting(parishes: list, sort_by: str, sort_order: str) -> list:
     """Apply Python-side sorting for computed fields"""
     if sort_by == "data_extracted":
         parishes.sort(
@@ -1099,21 +956,13 @@ def get_parishes_for_diocese(
         _validate_diocese_exists(diocese_id)
 
         # Build base query
-        query = (
-            supabase.table("parishes_with_diocese_name")
-            .select("*", count="exact")
-            .eq("diocese_id", diocese_id)
-        )
+        query = supabase.table("parishes_with_diocese_name").select("*", count="exact").eq("diocese_id", diocese_id)
 
         # Apply basic filters
-        query = _apply_basic_filters(
-            query, filter_name, filter_diocese_name, filter_website, filter_blocked
-        )
+        query = _apply_basic_filters(query, filter_name, filter_diocese_name, filter_website, filter_blocked)
 
         # Handle data extraction filters
-        filter_parish_ids = _get_data_extraction_filter_ids(
-            filter_data_extracted, filter_data_available, diocese_id
-        )
+        filter_parish_ids = _get_data_extraction_filter_ids(filter_data_extracted, filter_data_available, diocese_id)
         if filter_parish_ids is not None:
             if len(filter_parish_ids) == 0:
                 return {
@@ -1125,9 +974,7 @@ def get_parishes_for_diocese(
             query = query.in_("id", filter_parish_ids)
 
         # Apply sorting and pagination
-        query = _apply_sorting_and_pagination(
-            query, sort_by, sort_order, offset, page_size
-        )
+        query = _apply_sorting_and_pagination(query, sort_by, sort_order, offset, page_size)
         parishes_response = query.execute()
 
         parishes = parishes_response.data
@@ -1178,19 +1025,13 @@ def get_all_parishes(
     try:
         offset = (page - 1) * page_size
 
-        query = _build_parishes_query(
-            filter_name, filter_diocese_name, filter_website, filter_blocked
-        )
-        query = _apply_data_extraction_query_filters(
-            query, filter_data_extracted, filter_data_available, page, page_size
-        )
+        query = _build_parishes_query(filter_name, filter_diocese_name, filter_website, filter_blocked)
+        query = _apply_data_extraction_query_filters(query, filter_data_extracted, filter_data_available, page, page_size)
 
         if query is None:  # Early return from empty filter results
             return {"data": [], "total_count": 0, "page": page, "page_size": page_size}
 
-        query = _apply_sorting_and_pagination(
-            query, sort_by, sort_order, offset, page_size
-        )
+        query = _apply_sorting_and_pagination(query, sort_by, sort_order, offset, page_size)
         parishes_response = query.execute()
 
         parishes = parishes_response.data
@@ -1251,9 +1092,7 @@ def _apply_data_extraction_query_filters(
     page_size: int,
 ):
     """Apply data extraction filters to query"""
-    filter_parish_ids = _get_data_extraction_filter_ids(
-        filter_data_extracted, filter_data_available
-    )
+    filter_parish_ids = _get_data_extraction_filter_ids(filter_data_extracted, filter_data_available)
     if filter_parish_ids is not None:
         if len(filter_parish_ids) == 0:
             return None  # Signal early return
@@ -1265,10 +1104,7 @@ def _enrich_parishes_with_data_flags(parishes: list) -> list:
     """Enrich parishes with data extraction flags"""
     all_parish_ids = [p["id"] for p in parishes]
     all_parish_data_response = (
-        supabase.table("ParishData")
-        .select("parish_id, fact_value")
-        .in_("parish_id", all_parish_ids)
-        .execute()
+        supabase.table("ParishData").select("parish_id, fact_value").in_("parish_id", all_parish_ids).execute()
     )
     all_parishes_with_data = {
         item["parish_id"]
@@ -1295,9 +1131,7 @@ def _normalize_parish_fields(parishes: list) -> list:
         parish["blocking_evidence"] = parish.get("blocking_evidence", {})
         parish["status_code"] = parish.get("status_code")
         parish["robots_txt_check"] = parish.get("robots_txt_check", {})
-        parish["respectful_automation_used"] = parish.get(
-            "respectful_automation_used", False
-        )
+        parish["respectful_automation_used"] = parish.get("respectful_automation_used", False)
         parish["status_description"] = parish.get("status_description", "Not tested")
 
     return parishes
@@ -1310,9 +1144,7 @@ def get_parish(parish_id: int):
     """
     try:
         # Get parish basic info
-        parish_response = (
-            supabase.table("Parishes").select("*").eq("id", parish_id).execute()
-        )
+        parish_response = supabase.table("Parishes").select("*").eq("id", parish_id).execute()
 
         if not parish_response.data:
             raise HTTPException(status_code=404, detail="Parish not found")
@@ -1321,12 +1153,7 @@ def get_parish(parish_id: int):
 
         # Get diocese name
         if parish.get("diocese_id"):
-            diocese_response = (
-                supabase.table("Dioceses")
-                .select("Name")
-                .eq("id", parish["diocese_id"])
-                .execute()
-            )
+            diocese_response = supabase.table("Dioceses").select("Name").eq("id", parish["diocese_id"]).execute()
             if diocese_response.data:
                 parish["diocese_name"] = diocese_response.data[0]["Name"]
             else:
@@ -1335,12 +1162,7 @@ def get_parish(parish_id: int):
             parish["diocese_name"] = None
 
         # Get schedule data
-        schedule_response = (
-            supabase.table("ParishData")
-            .select("*")
-            .eq("parish_id", parish_id)
-            .execute()
-        )
+        schedule_response = supabase.table("ParishData").select("*").eq("parish_id", parish_id).execute()
 
         # Add schedule data to parish
         parish["schedules"] = schedule_response.data
@@ -1388,9 +1210,7 @@ async def get_monitoring_status():
         "circuit_breakers": await monitoring_manager.get_current_circuit_breakers(),
         "performance_metrics": monitoring_manager.performance_metrics,
         "recent_errors": monitoring_manager.recent_errors[:10],  # Last 10 errors
-        "extraction_history": monitoring_manager.extraction_history[
-            :10
-        ],  # Last 10 extractions
+        "extraction_history": monitoring_manager.extraction_history[:10],  # Last 10 extractions
         "websocket_connections": len(monitoring_manager.websocket_connections),
     }
 
@@ -1460,9 +1280,7 @@ async def send_log_endpoint(log_data: dict):
 async def update_worker_extraction_status(worker_id: str, status_data: dict):
     """Update extraction status for a specific worker"""
     try:
-        await monitoring_manager.update_worker_extraction_status(
-            worker_id, status_data
-        )
+        await monitoring_manager.update_worker_extraction_status(worker_id, status_data)
         return {"status": "success"}
     except Exception as e:
         return {"error": str(e)}
@@ -1472,9 +1290,7 @@ async def update_worker_extraction_status(worker_id: str, status_data: dict):
 async def update_worker_circuit_breakers(worker_id: str, circuit_data: dict):
     """Update circuit breaker status for a specific worker"""
     try:
-        await monitoring_manager.update_worker_circuit_breakers(
-            worker_id, circuit_data
-        )
+        await monitoring_manager.update_worker_circuit_breakers(worker_id, circuit_data)
         return {"status": "success"}
     except Exception as e:
         return {"error": str(e)}
@@ -1516,9 +1332,7 @@ async def set_monitoring_mode(mode: str):
     """Switch between aggregate and individual worker view"""
     try:
         if mode not in ["aggregate", "individual"]:
-            raise HTTPException(
-                status_code=400, detail="Mode must be 'aggregate' or 'individual'"
-            )
+            raise HTTPException(status_code=400, detail="Mode must be 'aggregate' or 'individual'")
 
         monitoring_manager.aggregate_mode = mode == "aggregate"
         return {"status": "success", "mode": mode}

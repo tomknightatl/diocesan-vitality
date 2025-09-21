@@ -28,14 +28,10 @@ def test_database_connection():
 
         # Test specific query
         if count > 0:
-            sample = (
-                supabase.table("Dioceses").select("id, Name, State").limit(1).execute()
-            )
+            sample = supabase.table("Dioceses").select("id, Name, State").limit(1).execute()
             if sample.data:
                 diocese = sample.data[0]
-                print(
-                    f"   Sample: {diocese['Name']}, {diocese['State']} (ID: {diocese['id']})"
-                )
+                print(f"   Sample: {diocese['Name']}, {diocese['State']} (ID: {diocese['id']})")
 
         return True
     except Exception as e:
@@ -58,9 +54,7 @@ def test_ai_connection():
             print("✅ AI API connected and responding")
             return True
         else:
-            print(
-                f"⚠️ AI API connected but unexpected response: {response_text[:50]}..."
-            )
+            print(f"⚠️ AI API connected but unexpected response: {response_text[:50]}...")
             return True
     except Exception as e:
         print(f"❌ AI API connection failed: {e}")
@@ -255,22 +249,16 @@ def run_environment_check():
         print("❌ .env file not found")
 
     # Check virtual environment
-    if hasattr(sys, "real_prefix") or (
-        hasattr(sys, "base_prefix") and sys.base_prefix != sys.prefix
-    ):
+    if hasattr(sys, "real_prefix") or (hasattr(sys, "base_prefix") and sys.base_prefix != sys.prefix):
         print("✅ Virtual environment active")
     else:
         print("⚠️ Virtual environment not detected")
 
     # Check Python version
     if sys.version_info >= (3, 8):
-        print(
-            f"✅ Python {sys.version_info.major}.{sys.version_info.minor} (compatible)"
-        )
+        print(f"✅ Python {sys.version_info.major}.{sys.version_info.minor} (compatible)")
     else:
-        print(
-            f"⚠️ Python {sys.version_info.major}.{sys.version_info.minor} (may have issues)"
-        )
+        print(f"⚠️ Python {sys.version_info.major}.{sys.version_info.minor} (may have issues)")
 
 
 def main():
@@ -295,18 +283,10 @@ def _create_argument_parser():
     parser.add_argument("--all", action="store_true", help="Run all tests")
     parser.add_argument("--db", action="store_true", help="Test database connection")
     parser.add_argument("--ai", action="store_true", help="Test AI API connection")
-    parser.add_argument(
-        "--webdriver", action="store_true", help="Test Chrome WebDriver"
-    )
-    parser.add_argument(
-        "--monitoring", action="store_true", help="Test monitoring integration"
-    )
-    parser.add_argument(
-        "--data", action="store_true", help="Show current data overview"
-    )
-    parser.add_argument(
-        "--env", action="store_true", help="Check environment configuration"
-    )
+    parser.add_argument("--webdriver", action="store_true", help="Test Chrome WebDriver")
+    parser.add_argument("--monitoring", action="store_true", help="Test monitoring integration")
+    parser.add_argument("--data", action="store_true", help="Show current data overview")
+    parser.add_argument("--env", action="store_true", help="Check environment configuration")
     parser.add_argument(
         "--script",
         type=str,

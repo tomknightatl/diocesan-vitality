@@ -82,20 +82,14 @@ async def _simulate_diocese_extraction(client, diocese, circuit_breakers):
 
     with ExtractionMonitoring(diocese_name, total_parishes) as monitor:
         try:
-            await _process_parishes_simulation(
-                client, total_parishes, diocese_name, monitor, circuit_breakers
-            )
+            await _process_parishes_simulation(client, total_parishes, diocese_name, monitor, circuit_breakers)
             await asyncio.sleep(2)  # Small delay between dioceses
         except Exception as e:
             logger.error(f"Error in simulation: {e}")
-            client.report_error(
-                error_type="SimulationError", message=str(e), diocese=diocese_name
-            )
+            client.report_error(error_type="SimulationError", message=str(e), diocese=diocese_name)
 
 
-async def _process_parishes_simulation(
-    client, total_parishes, diocese_name, monitor, circuit_breakers
-):
+async def _process_parishes_simulation(client, total_parishes, diocese_name, monitor, circuit_breakers):
     """Process parish simulation for a diocese."""
     parishes_processed = 0
     successful_parishes = 0
@@ -107,12 +101,8 @@ async def _process_parishes_simulation(
         processing_time = random.uniform(0.2, 0.8)
         await asyncio.sleep(processing_time)
 
-        successful_parishes = _simulate_parish_processing(
-            client, i, successful_parishes
-        )
-        _update_monitoring_progress(
-            monitor, client, parishes_processed, successful_parishes, total_parishes
-        )
+        successful_parishes = _simulate_parish_processing(client, i, successful_parishes)
+        _update_monitoring_progress(monitor, client, parishes_processed, successful_parishes, total_parishes)
         _simulate_random_events(client, diocese_name, circuit_breakers)
 
 
@@ -121,25 +111,17 @@ def _simulate_parish_processing(client, parish_index, successful_parishes):
     if random.random() < 0.85:  # 85% success rate
         successful_parishes += 1
         if random.random() < 0.3:  # 30% chance of detailed log
-            client.send_log(
-                f"✅ Extracted parish {parish_index + 1}: Enhanced data found", "INFO"
-            )
+            client.send_log(f"✅ Extracted parish {parish_index + 1}: Enhanced data found", "INFO")
     else:
-        client.send_log(
-            f"⚠️ Parish {parish_index + 1}: Partial data extracted", "WARNING"
-        )
+        client.send_log(f"⚠️ Parish {parish_index + 1}: Partial data extracted", "WARNING")
     return successful_parishes
 
 
-def _update_monitoring_progress(
-    monitor, client, parishes_processed, successful_parishes, total_parishes
-):
+def _update_monitoring_progress(monitor, client, parishes_processed, successful_parishes, total_parishes):
     """Update monitoring progress and performance metrics."""
     monitor.update_progress(parishes_processed, successful_parishes)
 
-    parishes_per_minute = parishes_processed / (
-        (time.time() - monitor.start_time) / 60
-    )
+    parishes_per_minute = parishes_processed / ((time.time() - monitor.start_time) / 60)
     client.performance_update(
         parishes_per_minute=parishes_per_minute,
         queue_size=max(0, total_parishes - parishes_processed),
@@ -167,9 +149,7 @@ def _simulate_circuit_breaker_change(client, circuit_breakers):
     """Simulate circuit breaker state changes."""
     if circuit_breakers["webdriver_requests"]["state"] == "CLOSED":
         circuit_breakers["webdriver_requests"]["state"] = "HALF_OPEN"
-        client.circuit_breaker_opened(
-            "webdriver_requests", "Multiple timeouts detected"
-        )
+        client.circuit_breaker_opened("webdriver_requests", "Multiple timeouts detected")
     elif circuit_breakers["webdriver_requests"]["state"] == "HALF_OPEN":
         circuit_breakers["webdriver_requests"]["state"] = "CLOSED"
         client.circuit_breaker_closed("webdriver_requests")
@@ -261,9 +241,7 @@ def test_basic_monitoring():
     )
 
     # Test performance update
-    client.performance_update(
-        parishes_per_minute=25.5, queue_size=3, pool_utilization=75.0
-    )
+    client.performance_update(parishes_per_minute=25.5, queue_size=3, pool_utilization=75.0)
 
     # Test circuit breaker updates
     test_circuits = {
@@ -284,9 +262,7 @@ def test_basic_monitoring():
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="Test the real - time monitoring dashboard"
-    )
+    parser = argparse.ArgumentParser(description="Test the real - time monitoring dashboard")
     parser.add_argument(
         "--mode",
         choices=["basic", "extraction", "continuous"],

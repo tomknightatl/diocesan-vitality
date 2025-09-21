@@ -53,9 +53,7 @@ class ElementWaitStrategy:
         timeout = timeout or self.base_timeout
         timeout_progression = self._calculate_progressive_timeouts(selectors, timeout)
 
-        for i, (selector, selector_timeout) in enumerate(
-            zip(selectors, timeout_progression)
-        ):
+        for i, (selector, selector_timeout) in enumerate(zip(selectors, timeout_progression)):
             element = self._try_single_selector(
                 selector,
                 selector_timeout,
@@ -68,9 +66,7 @@ class ElementWaitStrategy:
                 return element
 
         if log_attempts:
-            logger.debug(
-                f"❌ No elements found with any of {len(selectors)} selectors"
-            )
+            logger.debug(f"❌ No elements found with any of {len(selectors)} selectors")
         return None
 
     def _try_single_selector(
@@ -104,9 +100,7 @@ class ElementWaitStrategy:
 
         return None
 
-    def _calculate_progressive_timeouts(
-        self, selectors: List[str], max_timeout: float
-    ) -> List[float]:
+    def _calculate_progressive_timeouts(self, selectors: List[str], max_timeout: float) -> List[float]:
         """
         Calculate progressive timeouts: shorter for simple selectors, longer for complex ones.
         """
@@ -117,9 +111,7 @@ class ElementWaitStrategy:
             position_factor = i / len(selectors)  # Later selectors get more time
 
             # Progressive timeout: 20% to 100% of max_timeout
-            progress_timeout = max_timeout * (
-                0.2 + 0.8 * position_factor + complexity_factor * 0.1
-            )
+            progress_timeout = max_timeout * (0.2 + 0.8 * position_factor + complexity_factor * 0.1)
             progress_timeout = min(progress_timeout, max_timeout)  # Cap at max_timeout
             progress_timeout = max(progress_timeout, 1.0)  # Minimum 1 second
 
@@ -132,13 +124,9 @@ class ElementWaitStrategy:
         wait = WebDriverWait(self.driver, timeout)
 
         if condition == "presence":
-            return wait.until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, selector))
-            )
+            return wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
         elif condition == "visible":
-            return wait.until(
-                EC.visibility_of_element_located((By.CSS_SELECTOR, selector))
-            )
+            return wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, selector)))
         elif condition == "clickable":
             return wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, selector)))
         else:
@@ -166,9 +154,7 @@ class ElementWaitStrategy:
         timeout = timeout or self.base_timeout
         timeout_progression = self._calculate_progressive_timeouts(selectors, timeout)
 
-        for i, (selector, selector_timeout) in enumerate(
-            zip(selectors, timeout_progression)
-        ):
+        for i, (selector, selector_timeout) in enumerate(zip(selectors, timeout_progression)):
             elements = self._try_find_elements_with_selector(
                 selector,
                 selector_timeout,
@@ -181,9 +167,7 @@ class ElementWaitStrategy:
                 return elements
 
         if log_attempts:
-            logger.debug(
-                f"❌ No elements found with any of {len(selectors)} selectors"
-            )
+            logger.debug(f"❌ No elements found with any of {len(selectors)} selectors")
         return []
 
     def _try_find_elements_with_selector(
@@ -203,23 +187,17 @@ class ElementWaitStrategy:
                 )
 
             # Wait for at least one element to be present
-            WebDriverWait(self.driver, selector_timeout).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, selector))
-            )
+            WebDriverWait(self.driver, selector_timeout).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
 
             # Get all matching elements
             elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
 
             if len(elements) >= min_count:
                 if log_attempts:
-                    logger.debug(
-                        f"✅ Found {len(elements)} elements with selector: '{selector}'"
-                    )
+                    logger.debug(f"✅ Found {len(elements)} elements with selector: '{selector}'")
                 return elements
             elif log_attempts:
-                logger.debug(
-                    f"⚠️ Found {len(elements)} elements, need at least {min_count}"
-                )
+                logger.debug(f"⚠️ Found {len(elements)} elements, need at least {min_count}")
 
         except TimeoutException:
             if log_attempts:
@@ -230,9 +208,7 @@ class ElementWaitStrategy:
 
         return []
 
-    def wait_for_page_stable(
-        self, stability_timeout: float = 2.0, max_wait: float = 10.0
-    ):
+    def wait_for_page_stable(self, stability_timeout: float = 2.0, max_wait: float = 10.0):
         """
         Wait for page to become stable (no new elements appearing).
         Useful for dynamic/AJAX content.
@@ -268,9 +244,7 @@ class ElementWaitStrategy:
         logger.debug("⚠️ Page stability timeout reached")
         return False
 
-    def smart_form_wait(
-        self, form_selectors: List[str], timeout: float = None
-    ) -> Optional[Tuple[Any, str]]:
+    def smart_form_wait(self, form_selectors: List[str], timeout: float = None) -> Optional[Tuple[Any, str]]:
         """
         Wait for forms with intelligent detection of form types.
         Returns the form element and the selector that found it.
@@ -295,17 +269,12 @@ class ElementWaitStrategy:
             if selector not in unique_selectors:
                 unique_selectors.append(selector)
 
-        form_element = self.smart_element_wait(
-            unique_selectors, timeout, condition="presence"
-        )
+        form_element = self.smart_element_wait(unique_selectors, timeout, condition="presence")
         if form_element:
             # Return both element and the working selector for future reference
             for selector in unique_selectors:
                 try:
-                    if (
-                        self.driver.find_element(By.CSS_SELECTOR, selector)
-                        == form_element
-                    ):
+                    if self.driver.find_element(By.CSS_SELECTOR, selector) == form_element:
                         return form_element, selector
                 except (NoSuchElementException, WebDriverException):
                     continue

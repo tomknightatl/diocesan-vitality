@@ -160,9 +160,7 @@ class IntelligentURLFilter:
             ".wmv",
         }
 
-    def analyze_urls(
-        self, urls: List[str], ml_predictions: Dict[str, float] = None
-    ) -> List[URLAnalysis]:
+    def analyze_urls(self, urls: List[str], ml_predictions: Dict[str, float] = None) -> List[URLAnalysis]:
         """
         Analyze a list of URLs and return quality assessments.
 
@@ -183,16 +181,12 @@ class IntelligentURLFilter:
             analyses.append(analysis)
 
         # Sort by quality and confidence score
-        analyses.sort(
-            key=lambda x: (x.quality.value, x.confidence_score), reverse=True
-        )
+        analyses.sort(key=lambda x: (x.quality.value, x.confidence_score), reverse=True)
 
         # Log analysis summary
         quality_counts = {}
         for analysis in analyses:
-            quality_counts[analysis.quality.value] = (
-                quality_counts.get(analysis.quality.value, 0) + 1
-            )
+            quality_counts[analysis.quality.value] = quality_counts.get(analysis.quality.value, 0) + 1
 
         self.logger.info(f"🔍 URL Analysis Summary: {quality_counts}")
 
@@ -210,9 +204,7 @@ class IntelligentURLFilter:
             self.logger.warning(f"🔍 Failed to parse URL {url}: {e}")
             return None, None, None, None, e
 
-    def _check_blacklisted_content(
-        self, url: str, domain: str, path: str, full_url_lower: str
-    ) -> URLAnalysis:
+    def _check_blacklisted_content(self, url: str, domain: str, path: str, full_url_lower: str) -> URLAnalysis:
         """Check if URL should be skipped due to blacklisted content."""
         # Check blacklisted domains
         if any(blacklisted in domain for blacklisted in self.blacklisted_domains):
@@ -221,16 +213,12 @@ class IntelligentURLFilter:
         # Check blacklisted patterns
         for pattern in self.blacklisted_patterns:
             if re.search(pattern, full_url_lower):
-                return URLAnalysis(
-                    url, URLQuality.SKIP, 0.0, [f"Blacklisted pattern: {pattern}"], 0.0
-                )
+                return URLAnalysis(url, URLQuality.SKIP, 0.0, [f"Blacklisted pattern: {pattern}"], 0.0)
 
         # Check file extensions
         for ext in self.blacklisted_extensions:
             if path.endswith(ext):
-                return URLAnalysis(
-                    url, URLQuality.SKIP, 0.0, [f"Blacklisted extension: {ext}"], 0.0
-                )
+                return URLAnalysis(url, URLQuality.SKIP, 0.0, [f"Blacklisted extension: {ext}"], 0.0)
 
         return None  # Not blacklisted
 
@@ -273,9 +261,7 @@ class IntelligentURLFilter:
             estimated_time *= 0.8  # ML - predicted URLs process faster
         return confidence_score, reasons, estimated_time
 
-    def _analyze_url_structure(
-        self, parsed, confidence_score: float, reasons: list, estimated_time: float
-    ) -> tuple:
+    def _analyze_url_structure(self, parsed, confidence_score: float, reasons: list, estimated_time: float) -> tuple:
         """Analyze URL structure and adjust scoring accordingly."""
         # URL depth analysis
         path_depth = len([p for p in parsed.path.split("/") if p])
@@ -295,9 +281,7 @@ class IntelligentURLFilter:
 
         return confidence_score, reasons, estimated_time
 
-    def _determine_quality_level(
-        self, confidence_score: float, estimated_time: float
-    ) -> tuple:
+    def _determine_quality_level(self, confidence_score: float, estimated_time: float) -> tuple:
         """Determine URL quality level based on confidence score."""
         if confidence_score >= 80.0:
             quality = URLQuality.EXCELLENT
@@ -326,9 +310,7 @@ class IntelligentURLFilter:
             return URLAnalysis(url, URLQuality.SKIP, 0.0, ["Invalid URL format"], 0.0)
 
         # Check for blacklisted content
-        blacklist_result = self._check_blacklisted_content(
-            url, domain, path, full_url_lower
-        )
+        blacklist_result = self._check_blacklisted_content(url, domain, path, full_url_lower)
         if blacklist_result:
             return blacklist_result
 
@@ -346,9 +328,7 @@ class IntelligentURLFilter:
         )
 
         # Determine quality level
-        quality, estimated_time = self._determine_quality_level(
-            confidence_score, estimated_time
-        )
+        quality, estimated_time = self._determine_quality_level(confidence_score, estimated_time)
 
         return URLAnalysis(
             url=url,
@@ -399,22 +379,14 @@ class IntelligentURLFilter:
         self.logger.info(f"   🎯 Selected for processing: {len(filtered_urls)}")
 
         if top_analyses:
-            avg_confidence = sum(a.confidence_score for a in top_analyses) / len(
-                top_analyses
-            )
-            estimated_total_time = sum(
-                a.estimated_processing_time for a in top_analyses
-            )
+            avg_confidence = sum(a.confidence_score for a in top_analyses) / len(top_analyses)
+            estimated_total_time = sum(a.estimated_processing_time for a in top_analyses)
             self.logger.info(f"   🎯 Average confidence: {avg_confidence:.1f}%")
-            self.logger.info(
-                f"   ⏱️ Estimated processing time: {estimated_total_time:.1f}s"
-            )
+            self.logger.info(f"   ⏱️ Estimated processing time: {estimated_total_time:.1f}s")
 
         return filtered_urls, analysis_dict
 
-    def get_priority_batches(
-        self, analyses: List[URLAnalysis], batch_size: int = 10
-    ) -> List[List[URLAnalysis]]:
+    def get_priority_batches(self, analyses: List[URLAnalysis], batch_size: int = 10) -> List[List[URLAnalysis]]:
         """
         Group URLs into priority batches for sequential processing.
 

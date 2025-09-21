@@ -43,15 +43,9 @@ class PipelineMonitor:
             )
 
             # Get diocese info for assignments
-            diocese_response = (
-                self.supabase.table("Dioceses").select("id, Name").execute()
-            )
+            diocese_response = self.supabase.table("Dioceses").select("id, Name").execute()
 
-            diocese_names = (
-                {d["id"]: d["Name"] for d in diocese_response.data}
-                if diocese_response.data
-                else {}
-            )
+            diocese_names = {d["id"]: d["Name"] for d in diocese_response.data} if diocese_response.data else {}
 
             # Compile overview
             now = datetime.utcnow()
@@ -60,9 +54,7 @@ class PipelineMonitor:
 
             if workers_response.data:
                 for worker in workers_response.data:
-                    last_heartbeat = datetime.fromisoformat(
-                        worker["last_heartbeat"].replace("Z", "+00:00")
-                    )
+                    last_heartbeat = datetime.fromisoformat(worker["last_heartbeat"].replace("Z", "+00:00"))
                     time_since_heartbeat = (now - last_heartbeat).total_seconds()
 
                     worker_info = {
@@ -97,21 +89,13 @@ class PipelineMonitor:
                 "timestamp": now.isoformat(),
                 "active_workers": active_workers,
                 "inactive_workers": inactive_workers,
-                "total_workers": (
-                    len(workers_response.data) if workers_response.data else 0
-                ),
+                "total_workers": (len(workers_response.data) if workers_response.data else 0),
                 "assignments_by_status": assignments_by_status,
                 "cluster_health": {
                     "healthy_workers": len(active_workers),
-                    "total_workers": (
-                        len(workers_response.data) if workers_response.data else 0
-                    ),
-                    "processing_dioceses": len(
-                        assignments_by_status.get("processing", [])
-                    ),
-                    "completed_dioceses": len(
-                        assignments_by_status.get("completed", [])
-                    ),
+                    "total_workers": (len(workers_response.data) if workers_response.data else 0),
+                    "processing_dioceses": len(assignments_by_status.get("processing", [])),
+                    "completed_dioceses": len(assignments_by_status.get("completed", [])),
                     "failed_dioceses": len(assignments_by_status.get("failed", [])),
                 },
             }
@@ -142,9 +126,7 @@ class PipelineMonitor:
     def _print_cluster_health(self, health: Dict[str, Any]):
         """Print cluster health summary."""
         print("🩺 Cluster Health:")
-        print(
-            f"   • Healthy workers: {health['healthy_workers']}/{health['total_workers']}"
-        )
+        print(f"   • Healthy workers: {health['healthy_workers']}/{health['total_workers']}")
         print(f"   • Processing dioceses: {health['processing_dioceses']}")
         print(f"   • Completed dioceses: {health['completed_dioceses']}")
         print(f"   • Failed dioceses: {health['failed_dioceses']}")
@@ -189,14 +171,10 @@ class PipelineMonitor:
 
     def _print_assignment_status(self, status: str, assignment_list: list):
         """Print assignments for status."""
-        status_icon = {"processing": "🔄", "completed": "✅", "failed": "❌"}.get(
-            status, "❓"
-        )
+        status_icon = {"processing": "🔄", "completed": "✅", "failed": "❌"}.get(status, "❓")
         print(f"   {status_icon} {status.upper()} ({len(assignment_list)}):")
         for assignment in assignment_list[:5]:  # Show first 5
-            print(
-                f"      • {assignment['diocese_name']} (Worker: {assignment['worker_id'][:12]}...)"
-            )
+            print(f"      • {assignment['diocese_name']} (Worker: {assignment['worker_id'][:12]}...)")
         if len(assignment_list) > 5:
             print(f"      ... and {len(assignment_list) - 5} more")
         print()
@@ -216,9 +194,7 @@ class PipelineMonitor:
             )
 
             if stale_response.data:
-                print(
-                    f"🧹 Found {len(stale_response.data)} stale assignments (older than 2 hours)"
-                )
+                print(f"🧹 Found {len(stale_response.data)} stale assignments (older than 2 hours)")
 
                 if not dry_run:
                     # Mark as failed
@@ -234,9 +210,7 @@ class PipelineMonitor:
                 else:
                     print("🔍 Dry run - would mark these assignments as failed:")
                     for assignment in stale_response.data:
-                        print(
-                            f"   • Diocese {assignment['diocese_id']} (Worker: {assignment['worker_id']})"
-                        )
+                        print(f"   • Diocese {assignment['diocese_id']} (Worker: {assignment['worker_id']})")
             else:
                 print("✅ No stale assignments found")
 
@@ -246,15 +220,9 @@ class PipelineMonitor:
 
 async def main():
     """Main function"""
-    parser = argparse.ArgumentParser(
-        description="Monitor distributed pipeline cluster"
-    )
-    parser.add_argument(
-        "--watch", action="store_true", help="Watch mode - refresh every 30 seconds"
-    )
-    parser.add_argument(
-        "--cleanup", action="store_true", help="Clean up stale assignments"
-    )
+    parser = argparse.ArgumentParser(description="Monitor distributed pipeline cluster")
+    parser.add_argument("--watch", action="store_true", help="Watch mode - refresh every 30 seconds")
+    parser.add_argument("--cleanup", action="store_true", help="Clean up stale assignments")
     parser.add_argument(
         "--no - dry - run",
         action="store_true",

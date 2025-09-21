@@ -51,9 +51,7 @@ class AsyncParishExtractor:
             "average_time_per_parish": 0,
         }
 
-        logger.info(
-            f"🚀 Async Parish Extractor initialized (pool: {pool_size}, batch: {batch_size})"
-        )
+        logger.info(f"🚀 Async Parish Extractor initialized (pool: {pool_size}, batch: {batch_size})")
 
     async def initialize(self):
         """Initialize the async driver pool"""
@@ -87,12 +85,8 @@ class AsyncParishExtractor:
             logger.info("ℹ️ No parishes require detail extraction")
             return parishes
 
-        enhanced_parishes, failed_count = await self._process_extraction_batches(
-            extraction_jobs, max_concurrent
-        )
-        self._update_and_log_final_statistics(
-            parishes, extraction_jobs, failed_count, start_time
-        )
+        enhanced_parishes, failed_count = await self._process_extraction_batches(extraction_jobs, max_concurrent)
+        self._update_and_log_final_statistics(parishes, extraction_jobs, failed_count, start_time)
 
         return enhanced_parishes
 
@@ -101,16 +95,10 @@ class AsyncParishExtractor:
         if not self.driver_pool:
             await self.initialize()
 
-    def _log_extraction_start(
-        self, parishes: List[ParishData], max_concurrent: int
-    ) -> float:
+    def _log_extraction_start(self, parishes: List[ParishData], max_concurrent: int) -> float:
         """Log extraction start information and return start time"""
-        logger.info(
-            f"🔄 Starting concurrent parish detail extraction for {len(parishes)} parishes"
-        )
-        logger.info(
-            f"⚡ Concurrency: {max_concurrent} | Batch size: {self.batch_size}"
-        )
+        logger.info(f"🔄 Starting concurrent parish detail extraction for {len(parishes)} parishes")
+        logger.info(f"⚡ Concurrency: {max_concurrent} | Batch size: {self.batch_size}")
         return time.time()
 
     def _create_extraction_jobs(self, parishes: List[ParishData]) -> list:
@@ -130,9 +118,7 @@ class AsyncParishExtractor:
         logger.info(f"📝 Created {len(extraction_jobs)} extraction jobs")
         return extraction_jobs
 
-    async def _process_extraction_batches(
-        self, extraction_jobs: list, max_concurrent: int
-    ) -> tuple:
+    async def _process_extraction_batches(self, extraction_jobs: list, max_concurrent: int) -> tuple:
         """Process extraction jobs in batches"""
         enhanced_parishes = []
         failed_count = 0
@@ -140,13 +126,9 @@ class AsyncParishExtractor:
         for i in range(0, len(extraction_jobs), self.batch_size):
             batch = extraction_jobs[i : i + self.batch_size]
             batch_num = (i // self.batch_size) + 1
-            total_batches = (
-                len(extraction_jobs) + self.batch_size - 1
-            ) // self.batch_size
+            total_batches = (len(extraction_jobs) + self.batch_size - 1) // self.batch_size
 
-            logger.info(
-                f"📦 Processing batch {batch_num}/{total_batches} ({len(batch)} parishes)"
-            )
+            logger.info(f"📦 Processing batch {batch_num}/{total_batches} ({len(batch)} parishes)")
 
             batch_requests = self._create_batch_requests(batch)
             batch_enhanced, batch_failed = await self._execute_batch(
@@ -185,13 +167,9 @@ class AsyncParishExtractor:
         batch_failed = 0
 
         try:
-            batch_results = await self.driver_pool.batch_requests(
-                batch_requests, batch_size=min(max_concurrent, len(batch))
-            )
+            batch_results = await self.driver_pool.batch_requests(batch_requests, batch_size=min(max_concurrent, len(batch)))
 
-            batch_enhanced, batch_failed = self._process_batch_results(
-                batch, batch_results
-            )
+            batch_enhanced, batch_failed = self._process_batch_results(batch, batch_results)
 
             # Small delay between batches to be respectful
             if batch_num < total_batches:
@@ -210,9 +188,7 @@ class AsyncParishExtractor:
 
         for job, result in zip(batch, batch_results):
             if isinstance(result, Exception):
-                logger.warning(
-                    f"❌ Failed to extract details for {job.parish_name}: {result}"
-                )
+                logger.warning(f"❌ Failed to extract details for {job.parish_name}: {result}")
                 parish = self._create_parish_from_base_info(job.base_info)
                 batch_enhanced.append(parish)
                 batch_failed += 1
@@ -248,10 +224,7 @@ class AsyncParishExtractor:
             }
         )
 
-        success_rate = (
-            self.extraction_stats["successful_extractions"]
-            / max(len(extraction_jobs), 1)
-        ) * 100
+        success_rate = (self.extraction_stats["successful_extractions"] / max(len(extraction_jobs), 1)) * 100
 
         logger.info(f"✅ Concurrent extraction completed in {total_time:.2f}s")
         logger.info(
@@ -270,12 +243,7 @@ class AsyncParishExtractor:
             return False
 
         # Check if we're missing important information
-        missing_info = (
-            not parish.phone
-            or not parish.website
-            or not parish.full_address
-            or not parish.zip_code
-        )
+        missing_info = not parish.phone or not parish.website or not parish.full_address or not parish.zip_code
 
         return missing_info
 
@@ -314,9 +282,7 @@ class AsyncParishExtractor:
                 return "diocese_standard"
         return "standard"
 
-    def _extract_parish_detail_sync(
-        self, driver, parish_name: str, base_info: Dict
-    ) -> ParishData:
+    def _extract_parish_detail_sync(self, driver, parish_name: str, base_info: Dict) -> ParishData:
         """
         Synchronous parish detail extraction (runs in thread pool).
         This is the actual extraction logic that runs in the WebDriver.
@@ -326,9 +292,7 @@ class AsyncParishExtractor:
             self._prepare_page_for_extraction(driver)
             soup = self._get_page_content_safely(driver)
             enhanced_info = self._extract_enhanced_parish_info(soup, base_info)
-            parish = self._create_enhanced_parish_data(
-                enhanced_info, parish_name, base_info
-            )
+            parish = self._create_enhanced_parish_data(enhanced_info, parish_name, base_info)
             logger.debug(f"✅ Enhanced extraction completed for: {parish_name}")
             return parish
 
@@ -339,9 +303,7 @@ class AsyncParishExtractor:
     def _prepare_page_for_extraction(self, driver):
         """Prepare the page for content extraction."""
         # Wait for page content
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.TAG_NAME, "body"))
-        )
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
 
     def _get_page_content_safely(self, driver) -> BeautifulSoup:
         """Safely extract page content handling async driver issues."""
@@ -366,9 +328,7 @@ class AsyncParishExtractor:
             or str(type(html_content)) == "<class 'coroutine'>"
             or "Task" in str(type(html_content))
         ):
-            logger.warning(
-                "⚠️ Async driver returned Task object instead of string, using fallback"
-            )
+            logger.warning("⚠️ Async driver returned Task object instead of string, using fallback")
             return self._get_html_via_javascript(driver)
 
         return html_content
@@ -381,9 +341,7 @@ class AsyncParishExtractor:
             logger.error(f"❌ Fallback HTML extraction failed: {fallback_error}")
             raise
 
-    def _create_enhanced_parish_data(
-        self, enhanced_info: Dict, parish_name: str, base_info: Dict
-    ) -> ParishData:
+    def _create_enhanced_parish_data(self, enhanced_info: Dict, parish_name: str, base_info: Dict) -> ParishData:
         """Create ParishData object with enhanced information."""
         return ParishData(
             name=enhanced_info.get("name", parish_name),
@@ -391,17 +349,13 @@ class AsyncParishExtractor:
             phone=enhanced_info.get("phone", base_info.get("phone", "")),
             website=enhanced_info.get("website", base_info.get("website", "")),
             zip_code=enhanced_info.get("zip_code", base_info.get("zip_code", "")),
-            full_address=enhanced_info.get(
-                "full_address", base_info.get("full_address", "")
-            ),
+            full_address=enhanced_info.get("full_address", base_info.get("full_address", "")),
             clergy_info=enhanced_info.get("clergy_info", ""),
             service_times=enhanced_info.get("service_times", ""),
             enhanced_extraction=True,
         )
 
-    def _extract_enhanced_parish_info(
-        self, soup: BeautifulSoup, base_info: Dict
-    ) -> Dict:
+    def _extract_enhanced_parish_info(self, soup: BeautifulSoup, base_info: Dict) -> Dict:
         """Extract enhanced parish information from detail page"""
         enhanced_info = base_info.copy()
 
@@ -476,9 +430,7 @@ class AsyncParishExtractor:
                 address_text = element.get_text(strip=True)
                 if address_text and len(address_text) > 10:
                     # Use enhanced address parsing
-                    parsed_address = clean_parish_name_and_extract_address(
-                        address_text
-                    )
+                    parsed_address = clean_parish_name_and_extract_address(address_text)
                     if parsed_address.get("full_address"):
                         info.update(parsed_address)
                         break
@@ -573,15 +525,9 @@ class AsyncParishExtractor:
         """Log comprehensive extraction statistics"""
         logger.info("📊 Async Parish Extractor Statistics:")
         logger.info(f"  • Total Parishes: {self.extraction_stats['total_parishes']}")
-        logger.info(
-            f"  • Successful Extractions: {self.extraction_stats['successful_extractions']}"
-        )
-        logger.info(
-            f"  • Failed Extractions: {self.extraction_stats['failed_extractions']}"
-        )
-        logger.info(
-            f"  • Average Time per Parish: {self.extraction_stats['average_time_per_parish']:.2f}s"
-        )
+        logger.info(f"  • Successful Extractions: {self.extraction_stats['successful_extractions']}")
+        logger.info(f"  • Failed Extractions: {self.extraction_stats['failed_extractions']}")
+        logger.info(f"  • Average Time per Parish: {self.extraction_stats['average_time_per_parish']:.2f}s")
         logger.info(
             f"  • Extraction Rate: {60 / max(self.extraction_stats['average_time_per_parish'], 0.1):.1f} parishes/minute"
         )
@@ -594,9 +540,7 @@ class AsyncParishExtractor:
 _async_extractor = None
 
 
-async def get_async_parish_extractor(
-    pool_size: int = 4, batch_size: int = 8
-) -> AsyncParishExtractor:
+async def get_async_parish_extractor(pool_size: int = 4, batch_size: int = 8) -> AsyncParishExtractor:
     """Get or create the global async parish extractor"""
     global _async_extractor
 

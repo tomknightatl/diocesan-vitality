@@ -147,9 +147,7 @@ class IntelligentCacheManager:
         # Ensure cache directory exists
         os.makedirs(self.cache_dir, exist_ok=True)
 
-        logger.info(
-            f"💾 Intelligent Cache Manager initialized (max_size: {max_size}, max_memory: {max_memory_mb}MB)"
-        )
+        logger.info(f"💾 Intelligent Cache Manager initialized (max_size: {max_size}, max_memory: {max_memory_mb}MB)")
 
     def get(self, key: str, default: Any = None) -> Any:
         """
@@ -185,13 +183,9 @@ class IntelligentCacheManager:
                 entry.metadata["needs_refresh"] = True
 
             self.stats.cache_hits += 1
-            self.stats.avg_lookup_time = self._update_avg_lookup_time(
-                time.time() - start_time
-            )
+            self.stats.avg_lookup_time = self._update_avg_lookup_time(time.time() - start_time)
 
-            logger.debug(
-                f"💾 Cache hit for {key} (age: {entry.age:.0f}s, TTL: {entry.ttl:.0f}s)"
-            )
+            logger.debug(f"💾 Cache hit for {key} (age: {entry.age:.0f}s, TTL: {entry.ttl:.0f}s)")
 
             # Decompress if needed
             if entry.compression and hasattr(entry.value, "decode"):
@@ -217,9 +211,7 @@ class IntelligentCacheManager:
         try:
             with self._lock:
                 # Determine TTL
-                effective_ttl = ttl or self._calculate_intelligent_ttl(
-                    key, content_type, value
-                )
+                effective_ttl = ttl or self._calculate_intelligent_ttl(key, content_type, value)
 
                 # Determine compression
                 if compress is None:
@@ -272,9 +264,7 @@ class IntelligentCacheManager:
                 # Maintain cache size limits
                 self._enforce_size_limits()
 
-                logger.debug(
-                    f"💾 Cached {key} (TTL: {effective_ttl:.0f}s, compressed: {compress})"
-                )
+                logger.debug(f"💾 Cached {key} (TTL: {effective_ttl:.0f}s, compressed: {compress})")
                 return True
 
         except Exception as e:
@@ -307,9 +297,7 @@ class IntelligentCacheManager:
 
             self.stats.invalidations += count
 
-        logger.info(
-            f"💾 Invalidated {count} cache entries matching pattern: {pattern}"
-        )
+        logger.info(f"💾 Invalidated {count} cache entries matching pattern: {pattern}")
         return count
 
     def invalidate_by_content_type(self, content_type: ContentType) -> int:
@@ -317,11 +305,7 @@ class IntelligentCacheManager:
         count = 0
 
         with self._lock:
-            keys_to_remove = [
-                key
-                for key, entry in self._cache.items()
-                if entry.content_type == content_type
-            ]
+            keys_to_remove = [key for key, entry in self._cache.items() if entry.content_type == content_type]
 
             for key in keys_to_remove:
                 self._remove_entry(key)
@@ -338,11 +322,7 @@ class IntelligentCacheManager:
         current_time = time.time()
 
         with self._lock:
-            keys_to_remove = [
-                key
-                for key, entry in self._cache.items()
-                if current_time > entry.expires_at
-            ]
+            keys_to_remove = [key for key, entry in self._cache.items() if current_time > entry.expires_at]
 
             for key in keys_to_remove:
                 self._remove_entry(key)
@@ -406,24 +386,17 @@ class IntelligentCacheManager:
                 "total_size_mb": self.stats.total_size_bytes / (1024 * 1024),
                 "avg_lookup_time_ms": self.stats.avg_lookup_time * 1000,
                 "hit_rate_by_type": hit_rate_by_type,
-                "memory_usage_percent": (
-                    self.stats.total_size_bytes / self.max_memory_bytes
-                )
-                * 100,
+                "memory_usage_percent": ((self.stats.total_size_bytes / self.max_memory_bytes) * 100),
             }
 
-    def _calculate_intelligent_ttl(
-        self, key: str, content_type: ContentType, value: Any
-    ) -> float:
+    def _calculate_intelligent_ttl(self, key: str, content_type: ContentType, value: Any) -> float:
         """Calculate intelligent TTL based on content analysis."""
         base_ttl = self.ttl_configs.get(content_type, self.default_ttl)
         multiplier = self._calculate_content_multiplier(content_type, key, value)
         domain_multiplier = self._calculate_domain_multiplier(key)
         return base_ttl * multiplier * domain_multiplier
 
-    def _calculate_content_multiplier(
-        self, content_type: ContentType, key: str, value: Any
-    ) -> float:
+    def _calculate_content_multiplier(self, content_type: ContentType, key: str, value: Any) -> float:
         """Calculate TTL multiplier based on content type and characteristics."""
         if content_type == ContentType.HTML_PAGE:
             return self._calculate_html_page_multiplier(key, value)
@@ -516,9 +489,7 @@ class IntelligentCacheManager:
 
         # Calculate probability based on how close to expiry
         expiry_factor = 1 - (time_until_expiry / entry.ttl)
-        base_probability = self.refresh_probability_configs.get(
-            entry.content_type, 0.1
-        )
+        base_probability = self.refresh_probability_configs.get(entry.content_type, 0.1)
 
         # Increase probability for frequently accessed items
         access_factor = min(entry.access_count / 10.0, 2.0)  # Max 2x multiplier
@@ -537,9 +508,7 @@ class IntelligentCacheManager:
             elif isinstance(value, bytes):
                 content = value
             else:
-                content = json.dumps(value, sort_keys=True, default=str).encode(
-                    "utf - 8"
-                )
+                content = json.dumps(value, sort_keys=True, default=str).encode("utf - 8")
 
             return hashlib.md5(content).hexdigest()
         except Exception:
@@ -560,10 +529,7 @@ class IntelligentCacheManager:
     def _enforce_size_limits(self):
         """Enforce cache size and memory limits."""
         # Memory limit check
-        while (
-            self.stats.total_size_bytes > self.max_memory_bytes
-            or len(self._cache) > self.max_size
-        ):
+        while self.stats.total_size_bytes > self.max_memory_bytes or len(self._cache) > self.max_size:
 
             if not self._cache:
                 break
@@ -604,9 +570,7 @@ class IntelligentCacheManager:
         if headers:
             # Only include cache - relevant headers
             cache_headers = {
-                k.lower(): v
-                for k, v in headers.items()
-                if k.lower() in ["accept", "accept - language", "user - agent"]
+                k.lower(): v for k, v in headers.items() if k.lower() in ["accept", "accept - language", "user - agent"]
             }
             if cache_headers:
                 key_parts.append(json.dumps(cache_headers, sort_keys=True))
@@ -728,9 +692,7 @@ class IntelligentCacheManager:
 _global_cache_manager = None
 
 
-def get_cache_manager(
-    max_size: int = 1000, max_memory_mb: int = 500
-) -> IntelligentCacheManager:
+def get_cache_manager(max_size: int = 1000, max_memory_mb: int = 500) -> IntelligentCacheManager:
     """Get global cache manager instance."""
     global _global_cache_manager
     if _global_cache_manager is None:

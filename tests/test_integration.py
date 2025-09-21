@@ -50,9 +50,7 @@ def test_database_connection():
         cursor.close()
         conn.close()
     except ImportError:
-        pytest.skip(
-            "psycopg2 not available - skipping actual database connection test"
-        )
+        pytest.skip("psycopg2 not available - skipping actual database connection test")
     except Exception as e:
         pytest.fail(f"Database connection failed: {e}")
 

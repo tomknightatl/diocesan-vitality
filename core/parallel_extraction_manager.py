@@ -107,9 +107,7 @@ class DomainLimits:
         # Apply cooldown if failure rate is high
         if self.failure_rate > 0.5 and self.total_requests > 5:
             self.blocked_until = now + self.cooldown_period
-            logger.warning(
-                f"⚡ Domain {self.domain} in cooldown due to high failure rate"
-            )
+            logger.warning(f"⚡ Domain {self.domain} in cooldown due to high failure rate")
 
 
 @dataclass
@@ -178,9 +176,7 @@ class ParallelExtractionManager:
         self._lock = threading.RLock()
         self._shutdown = False
 
-        logger.info(
-            f"⚡ Parallel Extraction Manager initialized (max_workers: {max_workers})"
-        )
+        logger.info(f"⚡ Parallel Extraction Manager initialized (max_workers: {max_workers})")
 
     def configure_domain_limits(
         self,
@@ -197,9 +193,7 @@ class ParallelExtractionManager:
                 requests_per_second=requests_per_second,
                 **kwargs,
             )
-        logger.info(
-            f"⚡ Configured limits for {domain}: {max_concurrent} concurrent, {requests_per_second} RPS"
-        )
+        logger.info(f"⚡ Configured limits for {domain}: {max_concurrent} concurrent, {requests_per_second} RPS")
 
     def add_task(self, task: ExtractionTask) -> bool:
         """Add a task to the extraction queue."""
@@ -265,22 +259,16 @@ class ParallelExtractionManager:
             optimal_workers = self._calculate_optimal_workers()
             actual_workers = min(optimal_workers, self.max_workers)
 
-            logger.info(
-                f"⚡ Using {actual_workers} workers (optimal: {optimal_workers})"
-            )
+            logger.info(f"⚡ Using {actual_workers} workers (optimal: {optimal_workers})")
 
             # Start thread pool
-            with ThreadPoolExecutor(
-                max_workers=actual_workers, thread_name_prefix="ExtractWorker"
-            ) as executor:
+            with ThreadPoolExecutor(max_workers=actual_workers, thread_name_prefix="ExtractWorker") as executor:
                 self.executor = executor
 
                 # Submit worker tasks
                 futures = []
                 for worker_id in range(actual_workers):
-                    future = executor.submit(
-                        self._worker_loop, worker_id, extraction_func, timeout_per_task
-                    )
+                    future = executor.submit(self._worker_loop, worker_id, extraction_func, timeout_per_task)
                     futures.append(future)
 
                 # Monitor progress
@@ -310,9 +298,7 @@ class ParallelExtractionManager:
 
         return results
 
-    def _worker_loop(
-        self, worker_id: int, extraction_func: Callable, task_timeout: float
-    ):
+    def _worker_loop(self, worker_id: int, extraction_func: Callable, task_timeout: float):
         """Main worker loop for processing tasks."""
         stats = WorkerStats(worker_id)
         self.worker_stats[worker_id] = stats
@@ -327,16 +313,12 @@ class ParallelExtractionManager:
                 if not self._should_process_task(task):
                     continue
 
-                self._process_single_task(
-                    worker_id, task, extraction_func, task_timeout, stats
-                )
+                self._process_single_task(worker_id, task, extraction_func, task_timeout, stats)
 
         except Exception as e:
             logger.error(f"⚡ Worker {worker_id} fatal error: {e}")
         finally:
-            logger.info(
-                f"⚡ Worker {worker_id} finished ({stats.tasks_completed} completed, {stats.tasks_failed} failed)"
-            )
+            logger.info(f"⚡ Worker {worker_id} finished ({stats.tasks_completed} completed, {stats.tasks_failed} failed)")
 
     def _get_next_task(self):
         """Get the next task from queue with timeout."""
@@ -376,9 +358,7 @@ class ParallelExtractionManager:
 
         success = False
         try:
-            result = self._execute_task_with_timeout(
-                task, extraction_func, task_timeout
-            )
+            result = self._execute_task_with_timeout(task, extraction_func, task_timeout)
             self._handle_task_success(task, result, stats, worker_id)
             success = True
 
@@ -386,9 +366,7 @@ class ParallelExtractionManager:
             self._handle_task_failure(task, stats, worker_id, e)
 
         finally:
-            self._finalize_task_processing(
-                task, stats, domain_limits, success, task_start_time
-            )
+            self._finalize_task_processing(task, stats, domain_limits, success, task_start_time)
 
     def _update_domain_tracking_start(self, domain_limits):
         """Update domain tracking at task start."""
@@ -398,9 +376,7 @@ class ParallelExtractionManager:
                 self.active_workers,
                 sum(limits.active_requests for limits in self.domain_limits.values()),
             )
-            self.global_stats["peak_concurrency"] = max(
-                self.global_stats["peak_concurrency"], self.active_workers
-            )
+            self.global_stats["peak_concurrency"] = max(self.global_stats["peak_concurrency"], self.active_workers)
 
     def _handle_task_success(self, task, result, stats, worker_id: int):
         """Handle successful task completion."""
@@ -413,9 +389,7 @@ class ParallelExtractionManager:
 
     def _handle_task_failure(self, task, stats, worker_id: int, exception: Exception):
         """Handle task failure with retry logic."""
-        logger.warning(
-            f"⚡ Worker {worker_id} failed task {task.task_id}: {exception}"
-        )
+        logger.warning(f"⚡ Worker {worker_id} failed task {task.task_id}: {exception}")
 
         task.retry_count += 1
         if task.retry_count <= task.max_retries:
@@ -437,9 +411,7 @@ class ParallelExtractionManager:
             self.global_stats["failed_tasks"] += 1
         stats.tasks_failed += 1
 
-    def _finalize_task_processing(
-        self, task, stats, domain_limits, success: bool, task_start_time: float
-    ):
+    def _finalize_task_processing(self, task, stats, domain_limits, success: bool, task_start_time: float):
         """Finalize task processing and update statistics."""
         task_duration = time.time() - task_start_time
         stats.total_time += task_duration
@@ -460,14 +432,10 @@ class ParallelExtractionManager:
         old_avg = self.global_stats["avg_completion_time"]
         completed = self.global_stats["completed_tasks"]
         self.global_stats["avg_completion_time"] = (
-            (old_avg * (completed - 1) + task_duration) / completed
-            if completed > 0
-            else task_duration
+            (old_avg * (completed - 1) + task_duration) / completed if completed > 0 else task_duration
         )
 
-    def _execute_task_with_timeout(
-        self, task: ExtractionTask, extraction_func: Callable, timeout: float
-    ) -> Any:
+    def _execute_task_with_timeout(self, task: ExtractionTask, extraction_func: Callable, timeout: float) -> Any:
         """Execute a single task with intelligent timeout."""
         # Use adaptive timeout if available
         adaptive_timeout = self.timeout_manager.get_optimal_timeout(
@@ -521,9 +489,7 @@ class ParallelExtractionManager:
         except TimeoutError:
             # Record timeout
             response_time = time.time() - start_time
-            self.timeout_manager.record_response(
-                task.url, response_time, False, timeout_occurred=True
-            )
+            self.timeout_manager.record_response(task.url, response_time, False, timeout_occurred=True)
             raise
 
         except Exception:
@@ -554,10 +520,7 @@ class ParallelExtractionManager:
                 burst_limit=5,
                 cooldown_period=30.0,
             )
-        elif any(
-            pattern in domain
-            for pattern in ["wix.com", "weebly.com", "squarespace.com"]
-        ):
+        elif any(pattern in domain for pattern in ["wix.com", "weebly.com", "squarespace.com"]):
             # Platform sites with potential rate limiting
             return DomainLimits(
                 domain=domain,
@@ -635,11 +598,7 @@ class ParallelExtractionManager:
             queue_size = self.task_queue.qsize()
             completed = self.global_stats["completed_tasks"]
             failed = self.global_stats["failed_tasks"]
-            active_domains = sum(
-                1
-                for limits in self.domain_limits.values()
-                if limits.active_requests > 0
-            )
+            active_domains = sum(1 for limits in self.domain_limits.values() if limits.active_requests > 0)
 
             logger.info(
                 f"⚡ Progress: {completed} completed, {failed} failed, "
@@ -684,10 +643,7 @@ class ParallelExtractionManager:
                 "peak_concurrency": self.global_stats["peak_concurrency"],
                 "tasks_per_second": completed / duration if duration > 0 else 0,
                 "completed_tasks": dict(self.completed_tasks),
-                "failed_tasks": {
-                    k: {"url": v.url, "retries": v.retry_count}
-                    for k, v in self.failed_tasks.items()
-                },
+                "failed_tasks": {k: {"url": v.url, "retries": v.retry_count} for k, v in self.failed_tasks.items()},
                 "worker_stats": worker_stats,
                 "domain_stats": domain_stats,
             }
@@ -745,9 +701,7 @@ class ParallelExtractionManager:
             }
 
 
-def create_extraction_tasks(
-    parishes: List[Dict], base_priority: float = 1.0
-) -> List[ExtractionTask]:
+def create_extraction_tasks(parishes: List[Dict], base_priority: float = 1.0) -> List[ExtractionTask]:
     """Create extraction tasks from parish data."""
     tasks = []
 
@@ -757,8 +711,7 @@ def create_extraction_tasks(
             url=parish.get("website_url", ""),
             parish_id=parish.get("id"),
             diocese_id=parish.get("diocese_id"),
-            priority=base_priority
-            - (i * 0.01),  # Slight priority decrease for ordering
+            priority=base_priority - (i * 0.01),  # Slight priority decrease for ordering
             metadata={
                 "parish_name": parish.get("name", ""),
                 "diocese_name": parish.get("diocese_name", ""),

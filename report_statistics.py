@@ -18,15 +18,8 @@ def get_supabase_client():
     supabase_url = os.getenv("SUPABASE_URL")
     supabase_key = os.getenv("SUPABASE_KEY")
 
-    if (
-        not supabase_url
-        or not supabase_key
-        or supabase_url == "<url>"
-        or supabase_key == "<key>"
-    ):
-        raise ValueError(
-            "SUPABASE_URL and SUPABASE_KEY environment variables must be set with valid values"
-        )
+    if not supabase_url or not supabase_key or supabase_url == "<url>" or supabase_key == "<key>":
+        raise ValueError("SUPABASE_URL and SUPABASE_KEY environment variables must be set with valid values")
 
     return create_client(supabase_url, supabase_key)
 
@@ -41,9 +34,7 @@ def fetch_and_process_table(table_name: str, supabase_client: Client):
 
         date_cols = _convert_datetime_columns(df)
         if not date_cols:
-            print(
-                f"No relevant date columns found in {table_name} for time - series analysis."
-            )
+            print(f"No relevant date columns found in {table_name} for time - series analysis.")
             return df, None
 
         date_cols = _filter_date_columns_by_table(table_name, date_cols)
@@ -74,9 +65,7 @@ def _convert_datetime_columns(df: pd.DataFrame) -> list:
     datetime_conversions = {
         "created_at": lambda col: pd.to_datetime(col, utc=True, errors="coerce"),
         "updated_at": lambda col: pd.to_datetime(col, utc=True, errors="coerce"),
-        "extracted_at": lambda col: pd.to_datetime(
-            col, format="ISO8601", utc=True, errors="coerce"
-        ),
+        "extracted_at": lambda col: pd.to_datetime(col, format="ISO8601", utc=True, errors="coerce"),
         "scraped_at": lambda col: pd.to_datetime(col, utc=True, errors="coerce"),
     }
 
@@ -95,11 +84,7 @@ def _filter_date_columns_by_table(table_name: str, date_cols: list) -> list:
         date_cols.remove("created_at")
 
     # For ParishData, prioritize updated_at over created_at
-    if (
-        table_name == "ParishData"
-        and "updated_at" in date_cols
-        and "created_at" in date_cols
-    ):
+    if table_name == "ParishData" and "updated_at" in date_cols and "created_at" in date_cols:
         date_cols.remove("created_at")
 
     return date_cols
@@ -126,9 +111,7 @@ def _create_time_series_data(df: pd.DataFrame, date_cols: list) -> dict:
         cumulative_counts = combined_counts.cumsum()
 
         # Create final DataFrame for plotting
-        df_ts = pd.DataFrame(
-            {"date": cumulative_counts.index, "count": cumulative_counts.values}
-        )
+        df_ts = pd.DataFrame({"date": cumulative_counts.index, "count": cumulative_counts.values})
         time_series_data[col] = df_ts
 
     return time_series_data
@@ -191,13 +174,11 @@ def plot_time_series(
         "Dioceses": "Dioceses",
         "DiocesesParishDirectory": "Dioceses with a Parish Directory",
         "Parishes": "Parishes Extracted from their Diocese's Parish Directory",
-        "ParishData": "Parishes with Adoration or Reconcilation Schedules Extracted from their Website",
+        "ParishData": ("Parishes with Adoration or Reconcilation Schedules Extracted from their Website"),
     }
 
     # Use font sizes matching page text - minimum 14px
-    chart_title = custom_titles.get(
-        table_name, f"Number of Records in {table_name} Over Time"
-    )
+    chart_title = custom_titles.get(table_name, f"Number of Records in {table_name} Over Time")
     ax.set_title(chart_title, fontsize=16, fontweight="bold", pad=15)
     # Remove axis labels as requested
     ax.set_xlabel("")
@@ -251,9 +232,7 @@ def plot_time_series(
 
     filename = f"frontend/public/{table_name.lower()}_records_over_time.png"
     # Save with higher DPI for crisp display on modern screens
-    plt.savefig(
-        filename, dpi=150, bbox_inches=None, facecolor="white", edgecolor="none"
-    )
+    plt.savefig(filename, dpi=150, bbox_inches=None, facecolor="white", edgecolor="none")
     print(f"Chart saved to {filename}")
     plt.close(fig)  # Close the figure to free memory
 
@@ -269,18 +248,12 @@ def main():
         "Parishes",
         "ParishData",
     ]
-    all_time_series_data, all_min_dates, all_max_dates = _collect_table_data(
-        tables_to_report, supabase
-    )
+    all_time_series_data, all_min_dates, all_max_dates = _collect_table_data(tables_to_report, supabase)
 
-    global_min_date, global_max_date = _calculate_date_range(
-        all_min_dates, all_max_dates
-    )
+    global_min_date, global_max_date = _calculate_date_range(all_min_dates, all_max_dates)
     y_max_limits = _calculate_y_axis_limits(all_time_series_data)
 
-    _generate_plots(
-        all_time_series_data, global_min_date, global_max_date, y_max_limits
-    )
+    _generate_plots(all_time_series_data, global_min_date, global_max_date, y_max_limits)
 
 
 def _initialize_supabase_client():
@@ -312,9 +285,7 @@ def _collect_table_data(tables_to_report: list, supabase):
     return all_time_series_data, all_min_dates, all_max_dates
 
 
-def _extract_date_ranges(
-    time_series_data: dict, all_min_dates: list, all_max_dates: list
-):
+def _extract_date_ranges(time_series_data: dict, all_min_dates: list, all_max_dates: list):
     """Extract date ranges from time series data"""
     for col_name, df_ts in time_series_data.items():
         if not df_ts.empty:
@@ -339,9 +310,7 @@ def _calculate_date_range(all_min_dates: list, all_max_dates: list):
 def _calculate_y_axis_limits(all_time_series_data: dict) -> dict:
     """Calculate Y-axis limits for consistent chart scaling"""
     max_parish_related_count = _find_max_parish_count(all_time_series_data)
-    y_max_parish_related = (
-        max_parish_related_count * 1.1 if max_parish_related_count > 0 else 100
-    )
+    y_max_parish_related = max_parish_related_count * 1.1 if max_parish_related_count > 0 else 100
 
     return {
         "Dioceses": 200,
@@ -358,16 +327,12 @@ def _find_max_parish_count(all_time_series_data: dict) -> float:
     for table_name, time_series_data in all_time_series_data.items():
         for col_name, df_ts in time_series_data.items():
             if not df_ts.empty and table_name in ["Parishes", "ParishData"]:
-                max_parish_related_count = max(
-                    max_parish_related_count, df_ts["count"].max()
-                )
+                max_parish_related_count = max(max_parish_related_count, df_ts["count"].max())
 
     return max_parish_related_count
 
 
-def _generate_plots(
-    all_time_series_data: dict, global_min_date, global_max_date, y_max_limits: dict
-):
+def _generate_plots(all_time_series_data: dict, global_min_date, global_max_date, y_max_limits: dict):
     """Generate plots for all time series data"""
     for table_name, time_series_data in all_time_series_data.items():
         plot_time_series(

@@ -167,24 +167,20 @@ class OptimizedCircuitBreakerConfigs:
         configs = {
             "element": OptimizedCircuitBreakerConfigs.get_element_interaction_config(),
             "page_load": OptimizedCircuitBreakerConfigs.get_page_load_config(),
-            "javascript": OptimizedCircuitBreakerConfigs.get_javascript_execution_config(),
+            "javascript": (OptimizedCircuitBreakerConfigs.get_javascript_execution_config()),
             "search": OptimizedCircuitBreakerConfigs.get_search_interaction_config(),
             "map": OptimizedCircuitBreakerConfigs.get_map_interaction_config(),
-            "url_verification": OptimizedCircuitBreakerConfigs.get_url_verification_config(),
-            "ai_content_analysis": OptimizedCircuitBreakerConfigs.get_ai_content_analysis_config(),
+            "url_verification": (OptimizedCircuitBreakerConfigs.get_url_verification_config()),
+            "ai_content_analysis": (OptimizedCircuitBreakerConfigs.get_ai_content_analysis_config()),
         }
 
         config = configs.get(operation_type)
         if config:
-            logger.debug(
-                f"🔧 Using optimized circuit breaker config for '{operation_type}' operations"
-            )
+            logger.debug(f"🔧 Using optimized circuit breaker config for '{operation_type}' operations")
             return config
 
         # Default configuration for unknown operation types
-        logger.debug(
-            f"🔧 Using default circuit breaker config for '{operation_type}' operations"
-        )
+        logger.debug(f"🔧 Using default circuit breaker config for '{operation_type}' operations")
         return CircuitBreakerConfig(
             failure_threshold=10,
             recovery_timeout=30,
@@ -201,9 +197,7 @@ class ErrorRecoveryStrategies:
     """
 
     @staticmethod
-    def should_skip_extractor(
-        extractor_name: str, failure_count: int, error_type: str
-    ) -> bool:
+    def should_skip_extractor(extractor_name: str, failure_count: int, error_type: str) -> bool:
         """
         Determine if an extractor should be skipped based on failure patterns.
 
@@ -227,17 +221,13 @@ class ErrorRecoveryStrategies:
 
             threshold = skip_thresholds.get(extractor_name, 3)
             if failure_count >= threshold:
-                logger.info(
-                    f"🚫 Skipping {extractor_name} after {failure_count} {error_type} failures"
-                )
+                logger.info(f"🚫 Skipping {extractor_name} after {failure_count} {error_type} failures")
                 return True
 
         # Skip extractors with timeout issues
         elif error_type in ["TimeoutException", "TimeoutError"]:
             if failure_count >= 2:
-                logger.info(
-                    f"🚫 Skipping {extractor_name} after {failure_count} timeout failures"
-                )
+                logger.info(f"🚫 Skipping {extractor_name} after {failure_count} timeout failures")
                 return True
 
         return False
@@ -272,15 +262,11 @@ class ErrorRecoveryStrategies:
 
         final_delay = min(delay + jitter, 10.0)  # Cap at 10 seconds
 
-        logger.debug(
-            f"🔄 Recovery delay for {error_type} (attempt {attempt_number}): {final_delay:.2f}s"
-        )
+        logger.debug(f"🔄 Recovery delay for {error_type} (attempt {attempt_number}): {final_delay:.2f}s")
         return final_delay
 
     @staticmethod
-    def should_fallback_to_simpler_method(
-        failure_count: int, error_pattern: str
-    ) -> bool:
+    def should_fallback_to_simpler_method(failure_count: int, error_pattern: str) -> bool:
         """
         Determine if extraction should fallback to simpler methods.
 
@@ -293,15 +279,11 @@ class ErrorRecoveryStrategies:
         """
         # Fallback patterns
         if failure_count >= 5 and "NoSuchElementException" in error_pattern:
-            logger.info(
-                "🔄 Too many element detection failures - suggesting fallback to HTML parsing"
-            )
+            logger.info("🔄 Too many element detection failures - suggesting fallback to HTML parsing")
             return True
 
         if failure_count >= 3 and "TimeoutException" in error_pattern:
-            logger.info(
-                "🔄 Too many timeout failures - suggesting fallback to static content extraction"
-            )
+            logger.info("🔄 Too many timeout failures - suggesting fallback to static content extraction")
             return True
 
         return False
@@ -320,9 +302,7 @@ class ErrorRecoveryStrategies:
         from collections import Counter
 
         # Count error types
-        error_types = [
-            error.split(":")[0] if ":" in error else error for error in errors
-        ]
+        error_types = [error.split(":")[0] if ":" in error else error for error in errors]
         error_counts = Counter(error_types)
 
         # Analyze patterns
@@ -335,27 +315,15 @@ class ErrorRecoveryStrategies:
 
         # Generate recommendations based on patterns
         if error_counts.get("NoSuchElementException", 0) > 5:
-            analysis["recommendations"].append(
-                "Consider simpler CSS selectors or XPath alternatives"
-            )
-            analysis["recommendations"].append(
-                "Check if page uses dynamic content loading"
-            )
+            analysis["recommendations"].append("Consider simpler CSS selectors or XPath alternatives")
+            analysis["recommendations"].append("Check if page uses dynamic content loading")
 
         if error_counts.get("TimeoutException", 0) > 3:
-            analysis["recommendations"].append(
-                "Increase timeout values or check network connectivity"
-            )
-            analysis["recommendations"].append(
-                "Consider if page requires user interaction to load content"
-            )
+            analysis["recommendations"].append("Increase timeout values or check network connectivity")
+            analysis["recommendations"].append("Consider if page requires user interaction to load content")
 
         if error_counts.get("SessionNotCreatedException", 0) > 0:
-            analysis["recommendations"].append(
-                "Check WebDriver installation and browser compatibility"
-            )
-            analysis["recommendations"].append(
-                "Consider using different browser or clearing browser cache"
-            )
+            analysis["recommendations"].append("Check WebDriver installation and browser compatibility")
+            analysis["recommendations"].append("Consider using different browser or clearing browser cache")
 
         return analysis

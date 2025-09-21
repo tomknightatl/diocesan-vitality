@@ -40,9 +40,7 @@ class StealthBrowser:
         self.is_available = SELENIUM_AVAILABLE
 
         if not SELENIUM_AVAILABLE:
-            logger.warning(
-                "Selenium not available. Stealth browser functionality disabled."
-            )
+            logger.warning("Selenium not available. Stealth browser functionality disabled.")
             return
 
         self._setup_driver()
@@ -83,9 +81,7 @@ class StealthBrowser:
             self.driver = webdriver.Chrome(options=options)
 
             # Execute script to hide webdriver property
-            self.driver.execute_script(
-                "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
-            )
+            self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 
             # Set timeouts
             self.driver.set_page_load_timeout(30)
@@ -120,15 +116,11 @@ class StealthBrowser:
             self.driver.get(url)
 
             # Wait for page to load
-            WebDriverWait(self.driver, timeout).until(
-                EC.presence_of_element_located((By.TAG_NAME, "body"))
-            )
+            WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
 
             # Random scroll to mimic human behavior
             if random.random() < 0.3:  # 30% chance
-                self.driver.execute_script(
-                    "window.scrollTo(0, document.body.scrollHeight/2);"
-                )
+                self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2);")
                 time.sleep(random.uniform(0.5, 1.5))
 
             return self.driver.page_source
@@ -162,9 +154,7 @@ class StealthBrowser:
 
         try:
             # Find navigation links
-            links = self.driver.find_elements(
-                By.CSS_SELECTOR, "nav a, .nav a, .navigation a, .menu a"
-            )
+            links = self.driver.find_elements(By.CSS_SELECTOR, "nav a, .nav a, .navigation a, .menu a")
 
             discovered_urls = []
             base_domain = urlparse(url).netloc

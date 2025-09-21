@@ -38,9 +38,7 @@ def unreliable_service(fail_probability=0.7):
 
 @circuit_breaker(
     "test_service_timeout",
-    CircuitBreakerConfig(
-        failure_threshold=2, recovery_timeout=3, request_timeout=1, max_retries=0
-    ),
+    CircuitBreakerConfig(failure_threshold=2, recovery_timeout=3, request_timeout=1, max_retries=0),
 )
 def timeout_service(delay=2):
     """Simulates a service that times out"""
@@ -50,9 +48,7 @@ def timeout_service(delay=2):
 
 @circuit_breaker(
     "test_service_reliable",
-    CircuitBreakerConfig(
-        failure_threshold=5, recovery_timeout=10, request_timeout=5, max_retries=2
-    ),
+    CircuitBreakerConfig(failure_threshold=5, recovery_timeout=10, request_timeout=5, max_retries=2),
 )
 def reliable_service():
     """Simulates a reliable service"""
@@ -91,9 +87,7 @@ def _test_unreliable_service():
 
         time.sleep(0.1)  # Small delay between calls
 
-    logger.info(
-        f"📊 Test 2 Results: {success_count} successes, {failure_count} failures, {blocked_count} blocked"
-    )
+    logger.info(f"📊 Test 2 Results: {success_count} successes, {failure_count} failures, {blocked_count} blocked")
 
 
 def _test_timeout_service():

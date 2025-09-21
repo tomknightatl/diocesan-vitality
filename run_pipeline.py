@@ -23,9 +23,7 @@ logger = get_logger(__name__)
 
 def _parse_command_line_arguments():
     """Parse and return command line arguments."""
-    parser = argparse.ArgumentParser(
-        description="Run the data extraction pipeline with monitoring."
-    )
+    parser = argparse.ArgumentParser(description="Run the data extraction pipeline with monitoring.")
     parser.add_argument(
         "--skip_dioceses",
         action="store_true",
@@ -36,20 +34,14 @@ def _parse_command_line_arguments():
         action="store_true",
         help="Skip finding parish directories.",
     )
-    parser.add_argument(
-        "--skip_parishes", action="store_true", help="Skip the parish extraction step."
-    )
+    parser.add_argument("--skip_parishes", action="store_true", help="Skip the parish extraction step.")
     parser.add_argument(
         "--skip_schedules",
         action="store_true",
         help="Skip the schedule extraction step.",
     )
-    parser.add_argument(
-        "--skip_reporting", action="store_true", help="Skip the reporting step."
-    )
-    parser.add_argument(
-        "--diocese_id", type=int, help="ID of a specific diocese to process."
-    )
+    parser.add_argument("--skip_reporting", action="store_true", help="Skip the reporting step.")
+    parser.add_argument("--diocese_id", type=int, help="ID of a specific diocese to process.")
     parser.add_argument(
         "--max_parishes_per_diocese",
         type=int,
@@ -99,9 +91,7 @@ def _validate_environment():
         print("   - SUPABASE_URL and SUPABASE_KEY (database)")
         print("   - GENAI_API_KEY (Google Gemini AI)")
         print("   - SEARCH_API_KEY and SEARCH_CX (Google Custom Search)")
-        print(
-            "\nSee README.md or docs/LOCAL_DEVELOPMENT.md for detailed setup instructions."
-        )
+        print("\nSee README.md or docs/LOCAL_DEVELOPMENT.md for detailed setup instructions.")
         return False
     return True
 
@@ -131,15 +121,11 @@ def _run_diocese_extraction_step(args, monitoring_client):
             "Step 1 │ Extract Dioceses: Scraping official conference website for all U.S. dioceses",
             "INFO",
         )
-        monitoring_client.update_extraction_status(
-            status="running", current_diocese="Official Website", parishes_processed=0
-        )
+        monitoring_client.update_extraction_status(status="running", current_diocese="Official Website", parishes_processed=0)
 
         extract_dioceses_main(args.max_dioceses)
 
-        monitoring_client.send_log(
-            "Step 1 │ ✅ Diocese extraction completed successfully", "INFO"
-        )
+        monitoring_client.send_log("Step 1 │ ✅ Diocese extraction completed successfully", "INFO")
         monitoring_client.report_circuit_breaker_status()
 
     except Exception as e:
@@ -154,9 +140,7 @@ def _run_parish_directory_step(args, monitoring_client):
     """Execute Step 2: Find parish directories."""
     if args.skip_parish_directories:
         logger.info("\n--- Skipping Step 2: Find Parish Directories ---")
-        monitoring_client.send_log(
-            "Step 2 │ ⏭️ Parish directory discovery skipped", "INFO"
-        )
+        monitoring_client.send_log("Step 2 │ ⏭️ Parish directory discovery skipped", "INFO")
         return
 
     try:
@@ -171,13 +155,9 @@ def _run_parish_directory_step(args, monitoring_client):
             parishes_processed=0,
         )
 
-        find_parish_directories(
-            diocese_id=args.diocese_id, max_dioceses_to_process=args.max_dioceses
-        )
+        find_parish_directories(diocese_id=args.diocese_id, max_dioceses_to_process=args.max_dioceses)
 
-        monitoring_client.send_log(
-            "Step 2 │ ✅ Parish directory discovery completed", "INFO"
-        )
+        monitoring_client.send_log("Step 2 │ ✅ Parish directory discovery completed", "INFO")
         monitoring_client.report_circuit_breaker_status()
 
     except Exception as e:
@@ -203,24 +183,13 @@ def _run_parish_extraction_step(args, monitoring_client):
             from core.db import get_supabase_client
 
             supabase = get_supabase_client()
-            response = (
-                supabase.table("Dioceses")
-                .select("Name")
-                .eq("id", args.diocese_id)
-                .execute()
-            )
-            diocese_name = (
-                response.data[0]["Name"]
-                if response.data
-                else f"Diocese ID {args.diocese_id}"
-            )
+            response = supabase.table("Dioceses").select("Name").eq("id", args.diocese_id).execute()
+            diocese_name = response.data[0]["Name"] if response.data else f"Diocese ID {args.diocese_id}"
         else:
             diocese_name = "Multiple Dioceses"
 
         # Use monitoring context for parish extraction
-        with ExtractionMonitoring(
-            diocese_name, args.max_parishes_per_diocese
-        ) as monitor:
+        with ExtractionMonitoring(diocese_name, args.max_parishes_per_diocese) as monitor:
             monitoring_client.send_log(
                 f"Step 3 │ Extract Parishes: Async extraction of detailed parish information from {diocese_name}",
                 "INFO",
@@ -241,9 +210,7 @@ def _run_parish_extraction_step(args, monitoring_client):
                 int(args.max_parishes_per_diocese * 0.85),
             )
 
-        monitoring_client.send_log(
-            "Step 3 │ ✅ Parish extraction completed successfully", "INFO"
-        )
+        monitoring_client.send_log("Step 3 │ ✅ Parish extraction completed successfully", "INFO")
         monitoring_client.report_circuit_breaker_status()
 
     except Exception as e:
@@ -283,9 +250,7 @@ def _run_schedule_extraction_step(args, monitoring_client):
             diocese_id=args.diocese_id,
         )
 
-        monitoring_client.send_log(
-            "Step 4 │ ✅ Schedule extraction completed successfully", "INFO"
-        )
+        monitoring_client.send_log("Step 4 │ ✅ Schedule extraction completed successfully", "INFO")
         monitoring_client.report_circuit_breaker_status()
 
     except Exception as e:
@@ -309,14 +274,10 @@ def _run_reporting_step(args, monitoring_client):
 
         report_statistics_main()
 
-        monitoring_client.send_log(
-            "Step 5 │ ✅ Report generation completed successfully", "INFO"
-        )
+        monitoring_client.send_log("Step 5 │ ✅ Report generation completed successfully", "INFO")
 
     except Exception as e:
-        monitoring_client.report_error(
-            error_type="ReportingError", message=f"Report generation failed: {str(e)}"
-        )
+        monitoring_client.report_error(error_type="ReportingError", message=f"Report generation failed: {str(e)}")
         logger.error(f"Report generation failed: {e}", exc_info=True)
 
 
@@ -346,9 +307,7 @@ def main():
 
     # Adjust skip flags based on targeted diocese
     if args.diocese_id and not args.skip_dioceses:
-        logger.info(
-            f"--diocese_id is set to {args.diocese_id}, skipping full diocese extraction."
-        )
+        logger.info(f"--diocese_id is set to {args.diocese_id}, skipping full diocese extraction.")
         args.skip_dioceses = True
 
     # Execute pipeline steps
@@ -362,9 +321,7 @@ def main():
     total_time = time.time() - start_time
     monitoring_client.update_extraction_status(status="idle")
     monitoring_client.report_circuit_breaker_status()  # Final circuit breaker status report
-    monitoring_client.send_log(
-        f"Pipeline │ 🎉 Completed in {total_time:.1f} seconds", "INFO"
-    )
+    monitoring_client.send_log(f"Pipeline │ 🎉 Completed in {total_time:.1f} seconds", "INFO")
 
     logger.info("Data extraction pipeline completed!")
 

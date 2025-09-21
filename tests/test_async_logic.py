@@ -27,9 +27,7 @@ class MockAsyncRequestHandler:
         self.failed_requests = 0
         self.semaphore = asyncio.Semaphore(pool_size)
 
-    async def submit_request(
-        self, url: str, processing_time: float = 1.0, fail_probability: float = 0.1
-    ) -> Dict[str, Any]:
+    async def submit_request(self, url: str, processing_time: float = 1.0, fail_probability: float = 0.1) -> Dict[str, Any]:
         """Submit a mock async request"""
         async with self.semaphore:
             self.active_requests += 1
@@ -68,9 +66,7 @@ class MockAsyncRequestHandler:
             processing_time = random.uniform(0.5, 2.0)
             fail_prob = 0.05 if i % 4 != 0 else 0.15  # Some URLs more likely to fail
 
-            task = asyncio.create_task(
-                self.submit_request(url, processing_time, fail_prob)
-            )
+            task = asyncio.create_task(self.submit_request(url, processing_time, fail_prob))
             tasks.append(task)
 
             # Add small delay every batch_size requests
@@ -138,9 +134,7 @@ async def test_concurrent_processing():
             sequential_results.append(e)
 
     sequential_time = time.time() - start_time
-    sequential_success = len(
-        [r for r in sequential_results if not isinstance(r, Exception)]
-    )
+    sequential_success = len([r for r in sequential_results if not isinstance(r, Exception)])
 
     # Reset handler for concurrent test
     handler = MockAsyncRequestHandler(pool_size=4)
@@ -151,26 +145,18 @@ async def test_concurrent_processing():
 
     concurrent_results = await handler.batch_requests(test_urls, batch_size=8)
     concurrent_time = time.time() - start_time
-    concurrent_success = len(
-        [r for r in concurrent_results if not isinstance(r, Exception)]
-    )
+    concurrent_success = len([r for r in concurrent_results if not isinstance(r, Exception)])
 
     # Performance analysis
     speedup = sequential_time / concurrent_time
     efficiency = speedup / 4  # 4 - core simulation
 
     logger.info("🏁 Concurrent Processing Results:")
-    logger.info(
-        f"   • Sequential time: {sequential_time:.2f}s ({sequential_success} successful)"
-    )
-    logger.info(
-        f"   • Concurrent time: {concurrent_time:.2f}s ({concurrent_success} successful)"
-    )
+    logger.info(f"   • Sequential time: {sequential_time:.2f}s ({sequential_success} successful)")
+    logger.info(f"   • Concurrent time: {concurrent_time:.2f}s ({concurrent_success} successful)")
     logger.info(f"   • Speedup: {speedup:.1f}x")
     logger.info(f"   • Efficiency: {efficiency:.1f}x")
-    logger.info(
-        f"   • Time savings: {((sequential_time - concurrent_time) / sequential_time * 100):.1f}%"
-    )
+    logger.info(f"   • Time savings: {((sequential_time - concurrent_time) / sequential_time * 100):.1f}%")
 
     # Log handler statistics
     stats = handler.get_stats()
@@ -223,9 +209,7 @@ async def test_circuit_breaker_integration():
             "total": 15,
         }
 
-        logger.info(
-            f"📊 {service_name}: {success_count} success, {failure_count} failed, {blocked_count} blocked"
-        )
+        logger.info(f"📊 {service_name}: {success_count} success, {failure_count} failed, {blocked_count} blocked")
 
     # Log circuit breaker summary
     logger.info("\n📊 Circuit Breaker Summary:")
@@ -266,17 +250,12 @@ async def test_batch_optimization():
         }
 
         logger.info(f"   • Time: {processing_time:.2f}s")
-        logger.info(
-            f"   • Success: {success_count}/{len(test_urls)} ({stats['success_rate']:.1f}%)"
-        )
+        logger.info(f"   • Success: {success_count}/{len(test_urls)} ({stats['success_rate']:.1f}%)")
 
     # Find optimal batch size
     optimal_batch = min(batch_results.items(), key=lambda x: x[1]["time"])
 
-    logger.info(
-        f"🎯 Optimal batch size: {optimal_batch[0]} "
-        f"(completed in {optimal_batch[1]['time']:.2f}s)"
-    )
+    logger.info(f"🎯 Optimal batch size: {optimal_batch[0]} " f"(completed in {optimal_batch[1]['time']:.2f}s)")
 
     return True
 
@@ -327,9 +306,7 @@ async def test_rate_limiting_simulation():
     logger.info("   • Target rate: 5.0 requests/second")
     logger.info(f"   • Actual rate: {actual_rate:.1f} requests/second")
     logger.info(f"   • Total time: {total_time:.2f}s for {len(results)} requests")
-    logger.info(
-        f"   • Rate compliance: {'✅ Good' if actual_rate <= 5.5 else '❌ Exceeded'}"
-    )
+    logger.info(f"   • Rate compliance: {'✅ Good' if actual_rate <= 5.5 else '❌ Exceeded'}")
 
     return actual_rate <= 5.5
 

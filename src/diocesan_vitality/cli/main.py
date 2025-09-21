@@ -30,18 +30,12 @@ For more information, visit: https://diocesanvitality.org/docs
         """,
     )
 
-    parser.add_argument(
-        "--version", "-v", action="store_true", help="Show version information"
-    )
+    parser.add_argument("--version", "-v", action="store_true", help="Show version information")
 
-    parser.add_argument(
-        "--verbose", action="store_true", help="Show detailed version information"
-    )
+    parser.add_argument("--verbose", action="store_true", help="Show detailed version information")
 
     # Add subcommands
-    subparsers = parser.add_subparsers(
-        dest="command", help="Available commands", metavar="COMMAND"
-    )
+    subparsers = parser.add_subparsers(dest="command", help="Available commands", metavar="COMMAND")
 
     # Pipeline command
     pipeline_parser = subparsers.add_parser(
@@ -55,15 +49,9 @@ For more information, visit: https://diocesanvitality.org/docs
         default=50,
         help="Maximum parishes to process per diocese (default: 50)",
     )
-    pipeline_parser.add_argument(
-        "--diocese - id", type=int, help="Process specific diocese ID only"
-    )
-    pipeline_parser.add_argument(
-        "--skip - dioceses", action="store_true", help="Skip diocese extraction phase"
-    )
-    pipeline_parser.add_argument(
-        "--skip - parishes", action="store_true", help="Skip parish extraction phase"
-    )
+    pipeline_parser.add_argument("--diocese - id", type=int, help="Process specific diocese ID only")
+    pipeline_parser.add_argument("--skip - dioceses", action="store_true", help="Skip diocese extraction phase")
+    pipeline_parser.add_argument("--skip - parishes", action="store_true", help="Skip parish extraction phase")
     pipeline_parser.add_argument(
         "--skip - schedules",
         action="store_true",
@@ -76,9 +64,7 @@ For more information, visit: https://diocesanvitality.org/docs
         help="Run specific extraction tasks",
         description="Execute specific data extraction operations",
     )
-    extract_parser.add_argument(
-        "--diocese - id", type=int, required=True, help="Diocese ID to extract"
-    )
+    extract_parser.add_argument("--diocese - id", type=int, required=True, help="Diocese ID to extract")
     extract_parser.add_argument(
         "--pool - size",
         type=int,
@@ -104,9 +90,7 @@ For more information, visit: https://diocesanvitality.org/docs
         default=8000,
         help="Port to run dashboard on (default: 8000)",
     )
-    monitor_parser.add_argument(
-        "--host", default="0.0.0.0", help="Host to bind to (default: 0.0.0.0)"
-    )
+    monitor_parser.add_argument("--host", default="0.0.0.0", help="Host to bind to (default: 0.0.0.0)")
 
     # Quickstart command
     # quickstart_parser = subparsers.add_parser(  # Currently unused
@@ -132,9 +116,7 @@ def handle_pipeline(args: argparse.Namespace) -> None:
     pipeline_args = ["run_pipeline.py"]
 
     if args.max_parishes_per_diocese:
-        pipeline_args.extend(
-            ["--max_parishes_per_diocese", str(args.max_parishes_per_diocese)]
-        )
+        pipeline_args.extend(["--max_parishes_per_diocese", str(args.max_parishes_per_diocese)])
 
     if args.diocese_id:
         pipeline_args.extend(["--diocese_id", str(args.diocese_id)])

@@ -232,17 +232,13 @@ class ParishDeduplicator:
             # Normalize phones (remove non - digits)
             norm_phone1 = re.sub(r"\D", "", phone1)
             norm_phone2 = re.sub(r"\D", "", phone2)
-            metrics["phone_match"] = (
-                norm_phone1 == norm_phone2 and len(norm_phone1) >= 10
-            )
+            metrics["phone_match"] = norm_phone1 == norm_phone2 and len(norm_phone1) >= 10
 
         # Check website match
         website1 = getattr(parish1, "website", None)
         website2 = getattr(parish2, "website", None)
         if website1 and website2:
-            metrics["website_match"] = (
-                website1.lower().strip() == website2.lower().strip()
-            )
+            metrics["website_match"] = website1.lower().strip() == website2.lower().strip()
 
         # Determine if duplicate based on criteria
         is_duplicate = False
@@ -275,9 +271,7 @@ class ParishDeduplicator:
 
         return is_duplicate, metrics
 
-    def deduplicate_parishes(
-        self, parishes: List
-    ) -> Tuple[List, DeduplicationMetrics]:
+    def deduplicate_parishes(self, parishes: List) -> Tuple[List, DeduplicationMetrics]:
         """
         Remove duplicate parishes from a list.
 
@@ -310,9 +304,7 @@ class ParishDeduplicator:
                 if j in processed_indices:
                     continue
 
-                is_duplicate, metrics = self.are_parishes_duplicate(
-                    parish, other_parish
-                )
+                is_duplicate, metrics = self.are_parishes_duplicate(parish, other_parish)
 
                 if is_duplicate:
                     # Mark as processed (duplicate)

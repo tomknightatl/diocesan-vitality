@@ -71,34 +71,26 @@ def ensure_chrome_installed():
     """Ensures Chrome or Chromium is available for Selenium."""
     try:
         # Check for Chrome first
-        result = subprocess.run(
-            ["which", "google - chrome"], capture_output=True, text=True
-        )
+        result = subprocess.run(["which", "google - chrome"], capture_output=True, text=True)
         if result.returncode == 0:
             logger.info("✅ Chrome is already installed and available.")
             return True
 
         # Check for Chromium (common on ARM64/Raspberry Pi systems)
-        result = subprocess.run(
-            ["which", "chromium - browser"], capture_output=True, text=True
-        )
+        result = subprocess.run(["which", "chromium - browser"], capture_output=True, text=True)
         if result.returncode == 0:
             logger.info("✅ Chromium is already installed and available.")
             return True
 
         # Check for alternative Chromium binary names
         for chromium_binary in ["chromium", "chromium - browser"]:
-            result = subprocess.run(
-                ["which", chromium_binary], capture_output=True, text=True
-            )
+            result = subprocess.run(["which", chromium_binary], capture_output=True, text=True)
             if result.returncode == 0:
                 logger.info(f"✅ Found {chromium_binary} browser.")
                 return True
 
         logger.warning("🔧 Neither Chrome nor Chromium found. Step 3 will be skipped.")
-        logger.info(
-            "💡 To fix this: install Chrome/Chromium manually or run 'sudo apt install chromium - browser'"
-        )
+        logger.info("💡 To fix this: install Chrome/Chromium manually or run 'sudo apt install chromium - browser'")
 
         # Return True to allow pipeline to continue (Step 4 can work without Step 3)
         return True
@@ -133,9 +125,7 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
         parishes = []
 
         try:
-            logger.info(
-                "    📍 Enhanced diocese card layout detected - extracting with detail pages"
-            )
+            logger.info("    📍 Enhanced diocese card layout detected - extracting with detail pages")
 
             # Find all parish cards using the specific Salt Lake City structure
             parish_cards = soup.find_all("div", class_="col - lg location")
@@ -144,9 +134,7 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
             for i, card in enumerate(parish_cards, 1):
                 try:
                     logger.info(f"    🔄 Processing parish {i}/{len(parish_cards)}")
-                    parish_data = self._extract_parish_from_card_with_details(
-                        card, url, driver, i
-                    )
+                    parish_data = self._extract_parish_from_card_with_details(card, url, driver, i)
                     if parish_data:
                         parishes.append(parish_data)
                         if parish_data.detail_extraction_success:
@@ -154,9 +142,7 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
                         else:
                             self.detail_extraction_errors += 1
                 except Exception as e:
-                    logger.warning(
-                        f"    ⚠️ Error extracting from card {i}: {str(e)[:100]}..."
-                    )
+                    logger.warning(f"    ⚠️ Error extracting from card {i}: {str(e)[:100]}...")
                     self.detail_extraction_errors += 1
                     continue
 
@@ -165,9 +151,7 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
             )
 
         except Exception as e:
-            logger.error(
-                f"    ⚠️ Enhanced diocese card extraction error: {str(e)[:100]}..."
-            )
+            logger.error(f"    ⚠️ Enhanced diocese card extraction error: {str(e)[:100]}...")
 
         return parishes
 
@@ -226,15 +210,9 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
     def _merge_parish_details(self, parish_data, detailed_info, name):
         """Merge detailed information into parish data object."""
         if detailed_info["success"]:
-            parish_data.street_address = (
-                parish_data.street_address or detailed_info.get("street_address")
-            )
-            parish_data.full_address = parish_data.full_address or detailed_info.get(
-                "full_address"
-            )
-            parish_data.zip_code = parish_data.zip_code or detailed_info.get(
-                "zip_code"
-            )
+            parish_data.street_address = parish_data.street_address or detailed_info.get("street_address")
+            parish_data.full_address = parish_data.full_address or detailed_info.get("full_address")
+            parish_data.zip_code = parish_data.zip_code or detailed_info.get("zip_code")
             parish_data.phone = detailed_info.get("phone")
             parish_data.website = detailed_info.get("website")
             parish_data.clergy_info = detailed_info.get("clergy_info")
@@ -245,14 +223,10 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
         else:
             parish_data.detail_extraction_success = False
             parish_data.detail_extraction_error = detailed_info.get("error")
-            logger.warning(
-                f"      ⚠️ {name}: Basic info only - {detailed_info.get('error', 'Unknown error')}"
-            )
+            logger.warning(f"      ⚠️ {name}: Basic info only - {detailed_info.get('error', 'Unknown error')}")
         return parish_data
 
-    def _extract_parish_from_card_with_details(
-        self, card, base_url: str, driver, card_number: int
-    ) -> Optional[ParishData]:
+    def _extract_parish_from_card_with_details(self, card, base_url: str, driver, card_number: int) -> Optional[ParishData]:
         """Extract parish data from a single card and navigate to detail page"""
         try:
             # Step 1: Extract basic information from the card
@@ -290,9 +264,7 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
                     parish_detail_url = href
 
             # Step 2: Navigate to detail page and extract additional information
-            detailed_info = self._extract_details_from_parish_page(
-                driver, parish_detail_url, name
-            )
+            detailed_info = self._extract_details_from_parish_page(driver, parish_detail_url, name)
 
             # Step 3: Create comprehensive parish data object
             parish_data = ParishData(
@@ -317,9 +289,7 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
             logger.warning(f"    ⚠️ Error parsing card {card_number}: {str(e)[:50]}...")
             return None
 
-    def _extract_details_from_parish_page(
-        self, driver, parish_url: str, parish_name: str
-    ) -> Dict:
+    def _extract_details_from_parish_page(self, driver, parish_url: str, parish_name: str) -> Dict:
         """Navigate to parish detail page and extract detailed information with circuit breaker protection"""
 
         if not parish_url:
@@ -330,14 +300,10 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
 
             # Use protected loading with circuit breaker
             try:
-                detail_html = _protected_load_parish_detail(
-                    driver, parish_url, parish_name
-                )
+                detail_html = _protected_load_parish_detail(driver, parish_url, parish_name)
                 detail_soup = BeautifulSoup(detail_html, "html.parser")
             except CircuitBreakerOpenError as e:
-                logger.warning(
-                    f"🚫 Circuit breaker OPEN for parish detail: {parish_name}"
-                )
+                logger.warning(f"🚫 Circuit breaker OPEN for parish detail: {parish_name}")
                 return {
                     "success": False,
                     "error": f"Circuit breaker blocked request: {str(e)}",
@@ -372,9 +338,7 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
 
     def _find_contact_sections(self, soup: BeautifulSoup):
         """Find contact information sections in the page"""
-        contact_sections = soup.find_all(
-            ["div", "section"], class_=re.compile(r"contact", re.I)
-        )
+        contact_sections = soup.find_all(["div", "section"], class_=re.compile(r"contact", re.I))
         fa_ul_sections = soup.find_all("ul", class_="fa - ul")
         return contact_sections + fa_ul_sections
 
@@ -498,11 +462,7 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
             for section in all_service_sections:
                 if section:
                     service_text = section.get_text()
-                    lines = [
-                        line.strip()
-                        for line in service_text.split("\n")
-                        if line.strip()
-                    ]
+                    lines = [line.strip() for line in service_text.split("\n") if line.strip()]
                     schedule_lines = [
                         line
                         for line in lines
@@ -531,19 +491,13 @@ class EnhancedDiocesesCardExtractor(BaseExtractor):
     def _extract_clergy_info(self, soup: BeautifulSoup, result: Dict):
         """Extract clergy information from parish detail page"""
         try:
-            clergy_sections = soup.find_all(
-                ["div", "section"], class_=re.compile(r"clergy|pastor|priest", re.I)
-            )
-            directory_cards = soup.find_all(
-                ["div"], class_=re.compile(r"directory|card", re.I)
-            )
+            clergy_sections = soup.find_all(["div", "section"], class_=re.compile(r"clergy|pastor|priest", re.I))
+            directory_cards = soup.find_all(["div"], class_=re.compile(r"directory|card", re.I))
             all_clergy_sections = clergy_sections + directory_cards
 
             clergy_info = []
             for section in all_clergy_sections:
-                titles = section.find_all(
-                    ["h4", "h5"], class_=re.compile(r"title|name", re.I)
-                )
+                titles = section.find_all(["h4", "h5"], class_=re.compile(r"title|name", re.I))
                 for title in titles:
                     title_text = title.get_text().strip()
                     if any(
@@ -602,15 +556,11 @@ class ParishFinderExtractor(BaseExtractor):
             parish_elements = []
             for selector in parish_selectors:
                 elements = (
-                    soup.find_all(class_=lambda x: x and "site" in x)
-                    if selector == "li.site"
-                    else soup.select(selector)
+                    soup.find_all(class_=lambda x: x and "site" in x) if selector == "li.site" else soup.select(selector)
                 )
                 if elements:
                     parish_elements = elements
-                    logger.info(
-                        f"    📊 Found {len(parish_elements)} parish elements using {selector}"
-                    )
+                    logger.info(f"    📊 Found {len(parish_elements)} parish elements using {selector}")
                     break
 
             if not parish_elements:
@@ -619,26 +569,18 @@ class ParishFinderExtractor(BaseExtractor):
 
             for i, element in enumerate(parish_elements, 1):
                 try:
-                    parish_data = self._extract_parish_from_finder_element(
-                        element, url, i
-                    )
+                    parish_data = self._extract_parish_from_finder_element(element, url, i)
                     if parish_data:
                         parishes.append(parish_data)
                         logger.info(f"      ✅ Extracted: {parish_data.name}")
                     else:
-                        logger.warning(
-                            f"      ⚠️ Skipped element {i}: No valid parish data"
-                        )
+                        logger.warning(f"      ⚠️ Skipped element {i}: No valid parish data")
 
                 except Exception as e:
-                    logger.error(
-                        f"      ❌ Error processing element {i}: {str(e)[:50]}..."
-                    )
+                    logger.error(f"      ❌ Error processing element {i}: {str(e)[:50]}...")
                     continue
 
-            logger.info(
-                f"    📊 Successfully extracted {len(parishes)} parishes from parish finder"
-            )
+            logger.info(f"    📊 Successfully extracted {len(parishes)} parishes from parish finder")
 
         except Exception as e:
             logger.error(f"    ❌ Parish finder extraction error: {str(e)[:100]}...")
@@ -650,9 +592,7 @@ class ParishFinderExtractor(BaseExtractor):
         name = None
 
         # First try eCatholic specific selectors
-        title_span = element.find(
-            "span", {"data - bind": lambda x: x and "title" in x}
-        )
+        title_span = element.find("span", {"data - bind": lambda x: x and "title" in x})
         if title_span:
             name = self.clean_text(title_span.get_text())
 
@@ -676,9 +616,7 @@ class ParishFinderExtractor(BaseExtractor):
 
         return name
 
-    def _extract_coordinates_from_finder(
-        self, element
-    ) -> Tuple[Optional[float], Optional[float]]:
+    def _extract_coordinates_from_finder(self, element) -> Tuple[Optional[float], Optional[float]]:
         """Extract latitude and longitude from element attributes."""
         lat = lng = None
 
@@ -711,9 +649,7 @@ class ParishFinderExtractor(BaseExtractor):
 
         return lat, lng
 
-    def _extract_parish_from_finder_element(
-        self, element, base_url: str, element_num: int
-    ) -> Optional[ParishData]:
+    def _extract_parish_from_finder_element(self, element, base_url: str, element_num: int) -> Optional[ParishData]:
         """Extract parish data from a single parish finder element with enhanced detail extraction"""
         try:
             # Extract parish name using helper method
@@ -734,10 +670,7 @@ class ParishFinderExtractor(BaseExtractor):
                 return None
 
             # Skip non - parish entries based on the cleaned name
-            if any(
-                skip_word in clean_name.lower()
-                for skip_word in ["finder", "directory", "map", "search", "filter"]
-            ):
+            if any(skip_word in clean_name.lower() for skip_word in ["finder", "directory", "map", "search", "filter"]):
                 return None
 
             # Enhanced data extraction from expandable detail sections
@@ -776,9 +709,7 @@ class ParishFinderExtractor(BaseExtractor):
             )
 
         except Exception as e:
-            logger.warning(
-                f"        ⚠️ Error parsing parish element {element_num}: {str(e)[:50]}..."
-            )
+            logger.warning(f"        ⚠️ Error parsing parish element {element_num}: {str(e)[:50]}...")
             return None
 
     def _get_phone_patterns(self):
@@ -878,9 +809,7 @@ class ParishFinderExtractor(BaseExtractor):
                 # Extract contact information
                 self._extract_phone_from_detail_text(detail_text, enhanced_data)
                 self._extract_fax_from_detail_text(detail_text, enhanced_data)
-                self._extract_website_from_detail_section(
-                    detail_section, enhanced_data
-                )
+                self._extract_website_from_detail_section(detail_section, enhanced_data)
                 self._extract_address_from_detail_text(detail_text, enhanced_data)
 
         except Exception as e:
@@ -891,9 +820,7 @@ class ParishFinderExtractor(BaseExtractor):
     def _parse_address_components(self, full_address: str, enhanced_data: Dict):
         """Parse address components from full address string"""
         # City, State, Zip pattern
-        city_state_zip_match = re.search(
-            r"(.+?),\s*([A - Z]{2})\s*(\d{5}(?:-\d{4})?)$", full_address
-        )
+        city_state_zip_match = re.search(r"(.+?),\s*([A - Z]{2})\s*(\d{5}(?:-\d{4})?)$", full_address)
         if city_state_zip_match:
             before_city = city_state_zip_match.group(1)
             state = city_state_zip_match.group(2)
@@ -922,9 +849,7 @@ class ParishFinderExtractor(BaseExtractor):
                 ]
 
                 for i, part in enumerate(parts):
-                    if any(
-                        suffix.lower() == part.lower() for suffix in street_suffixes
-                    ):
+                    if any(suffix.lower() == part.lower() for suffix in street_suffixes):
                         street_address = " ".join(parts[: i + 1])
                         city = " ".join(parts[i + 1 :])
                         enhanced_data["street_address"] = street_address
@@ -941,9 +866,7 @@ class ParishFinderExtractor(BaseExtractor):
 
     def _parse_city_state_zip(self, city_state_zip: str, enhanced_data: Dict):
         """Parse city, state, and zip from city/state/zip string"""
-        match = re.search(
-            r"([A - Za - z\s]+),\s*([A - Z]{2})\s*(\d{5}(?:-\d{4})?)$", city_state_zip
-        )
+        match = re.search(r"([A - Za - z\s]+),\s*([A - Z]{2})\s*(\d{5}(?:-\d{4})?)$", city_state_zip)
         if match:
             enhanced_data["city"] = match.group(1).strip()
             enhanced_data["state"] = match.group(2).strip()
@@ -1009,9 +932,7 @@ class ParishFinderExtractor(BaseExtractor):
                     clergy_info = self.clean_text(details_text)
         return clergy_info
 
-    def _extract_from_site_info(
-        self, name: str, city: str, site_info, element, base_url: str
-    ) -> Optional[ParishData]:
+    def _extract_from_site_info(self, name: str, city: str, site_info, element, base_url: str) -> Optional[ParishData]:
         """Extract detailed information from siteInfo section"""
         try:
             main_section = site_info.find("div", class_="main")
@@ -1038,15 +959,11 @@ class ParishFinderExtractor(BaseExtractor):
                 clergy_info=clergy_info,
                 confidence_score=0.9,
                 extraction_method="parish_finder_detailed_extraction",
-                detail_extraction_success=(
-                    True if (address or phone or website or clergy_info) else False
-                ),
+                detail_extraction_success=(True if (address or phone or website or clergy_info) else False),
             )
 
         except Exception as e:
-            logger.warning(
-                f"        ⚠️ Error extracting from siteInfo: {str(e)[:50]}..."
-            )
+            logger.warning(f"        ⚠️ Error extracting from siteInfo: {str(e)[:50]}...")
             return None
 
 
@@ -1071,18 +988,14 @@ class TableExtractor(BaseExtractor):
 
         return parishes
 
-    def _handle_pagination_optimization(
-        self, driver, soup: BeautifulSoup
-    ) -> BeautifulSoup:
+    def _handle_pagination_optimization(self, driver, soup: BeautifulSoup) -> BeautifulSoup:
         """Handle pagination dropdown optimization and return updated soup."""
         initial_count = self._count_table_rows(soup)
         logger.info(f"    📊 Initial parish count: {initial_count}")
 
         enhanced_count = self._handle_pagination_dropdown(driver)
         if enhanced_count > initial_count:
-            logger.info(
-                f"    📈 Enhanced parish count: {enhanced_count} (increased by {enhanced_count - initial_count})"
-            )
+            logger.info(f"    📈 Enhanced parish count: {enhanced_count} (increased by {enhanced_count - initial_count})")
             # Re-parse the page after dropdown change
             return BeautifulSoup(driver.page_source, "html.parser")
         return soup
@@ -1119,9 +1032,7 @@ class TableExtractor(BaseExtractor):
                     continue
         return parishes
 
-    def _extract_parish_from_table_row(
-        self, cells, base_url: str
-    ) -> Optional[ParishData]:
+    def _extract_parish_from_table_row(self, cells, base_url: str) -> Optional[ParishData]:
         """Extract parish data from table row cells"""
         if not cells:
             return None
@@ -1158,9 +1069,7 @@ class TableExtractor(BaseExtractor):
                 phone = self.extract_phone(cell_text)
 
             # Check for address pattern
-            elif re.search(
-                r"\d+.*(?:street|st|avenue|ave|road|rd|drive|dr)", cell_text, re.I
-            ):
+            elif re.search(r"\d+.*(?:street|st|avenue|ave|road|rd|drive|dr)", cell_text, re.I):
                 address = self.clean_text(cell_text)
 
             # Check for website
@@ -1169,11 +1078,7 @@ class TableExtractor(BaseExtractor):
                 website = link.get("href")
 
             # If it looks like a city (short text, no numbers)
-            elif (
-                len(cell_text.strip()) < 30
-                and not re.search(r"\d", cell_text)
-                and len(cell_text.strip()) > 2
-            ):
+            elif len(cell_text.strip()) < 30 and not re.search(r"\d", cell_text) and len(cell_text.strip()) > 2:
                 city = self.clean_text(cell_text)
 
         return ParishData(
@@ -1198,10 +1103,7 @@ class TableExtractor(BaseExtractor):
             tables = soup.find_all("table")
             for table in tables:
                 table_text = table.get_text().lower()
-                if any(
-                    keyword in table_text
-                    for keyword in ["parish", "church", "name", "address"]
-                ):
+                if any(keyword in table_text for keyword in ["parish", "church", "name", "address"]):
                     rows = table.find_all("tr")[1:]  # Skip header row
                     count += len(rows)
         except Exception:
@@ -1216,9 +1118,7 @@ class TableExtractor(BaseExtractor):
 
             selects = driver.find_elements(By.TAG_NAME, "select")
             for select_element in selects:
-                new_count = self._try_optimize_select_dropdown(
-                    select_element, driver, time
-                )
+                new_count = self._try_optimize_select_dropdown(select_element, driver, time)
                 if new_count > 0:
                     return new_count
 
@@ -1235,12 +1135,8 @@ class TableExtractor(BaseExtractor):
             options = select_obj.options
 
             best_option = self._find_best_pagination_option(options)
-            if best_option and self._should_change_selection(
-                best_option, select_element
-            ):
-                return self._apply_dropdown_selection(
-                    select_obj, best_option, driver, time
-                )
+            if best_option and self._should_change_selection(best_option, select_element):
+                return self._apply_dropdown_selection(select_obj, best_option, driver, time)
 
         except Exception as e:
             logger.debug(f"    ⚠️ Dropdown handling error: {str(e)[:50]}...")
@@ -1281,15 +1177,11 @@ class TableExtractor(BaseExtractor):
 
     def _should_change_selection(self, best_option, select_element) -> bool:
         """Check if selection should be changed."""
-        return best_option.get_attribute("value") != select_element.get_attribute(
-            "value"
-        )
+        return best_option.get_attribute("value") != select_element.get_attribute("value")
 
     def _apply_dropdown_selection(self, select_obj, best_option, driver, time) -> int:
         """Apply the dropdown selection and return new count."""
-        logger.info(
-            f"    🔄 Setting dropdown to: {best_option.text} (value: {best_option.get_attribute('value')})"
-        )
+        logger.info(f"    🔄 Setting dropdown to: {best_option.text} (value: {best_option.get_attribute('value')})")
         select_obj.select_by_value(best_option.get_attribute("value"))
         time.sleep(3)  # Wait for page to reload
 
@@ -1317,9 +1209,7 @@ class ImprovedInteractiveMapExtractor(BaseExtractor):
 
             # Quick check if page has map features before attempting costly operations
             if not optimizer.fast_fail_map_check(driver):
-                logger.info(
-                    "    ⚡ Fast - fail: No map features detected, skipping map extraction"
-                )
+                logger.info("    ⚡ Fast - fail: No map features detected, skipping map extraction")
                 return parishes
 
             logger.info("    🗺️ Map features detected, proceeding with extraction...")
@@ -1462,9 +1352,7 @@ class ImprovedInteractiveMapExtractor(BaseExtractor):
                 )  # Fixed f - string braces
 
                 if js_data and isinstance(js_data, list) and len(js_data) > 0:
-                    print(
-                        f"    📊 Found data in window.{var_name}: {len(js_data)} items"
-                    )
+                    print(f"    📊 Found data in window.{var_name}: {len(js_data)} items")
 
                     for item in js_data:
                         parish = self._parse_js_parish_object(item)
@@ -1481,11 +1369,7 @@ class ImprovedInteractiveMapExtractor(BaseExtractor):
 
     def _extract_name_from_popup(self, data: Dict) -> Optional[str]:
         """Extract parish name from eCatholic popup HTML"""
-        if not (
-            "popup" in data
-            and isinstance(data["popup"], dict)
-            and "value" in data["popup"]
-        ):
+        if not ("popup" in data and isinstance(data["popup"], dict) and "value" in data["popup"]):
             return None
 
         popup_html = data["popup"]["value"]
@@ -1548,9 +1432,7 @@ class ImprovedInteractiveMapExtractor(BaseExtractor):
         # Fallback to standard field mapping
         return self._extract_name_from_standard_fields(data)
 
-    def _extract_contact_field(
-        self, data: Dict, field_names: List[str]
-    ) -> Optional[str]:
+    def _extract_contact_field(self, data: Dict, field_names: List[str]) -> Optional[str]:
         """Extract contact information using field name mapping"""
         for field in field_names:
             if field in data and data[field]:
@@ -1587,20 +1469,12 @@ class ImprovedInteractiveMapExtractor(BaseExtractor):
             return None
 
         # Extract city, prioritizing cleaned data over raw data
-        city = cleaned_data["city"] or data.get(
-            "city", data.get("location", data.get("City"))
-        )
+        city = cleaned_data["city"] or data.get("city", data.get("location", data.get("City")))
 
         # Extract contact information using field mappings
-        address = self._extract_contact_field(
-            data, ["address", "location", "fullAddress", "street", "addr"]
-        )
-        phone = self._extract_contact_field(
-            data, ["phone", "telephone", "phoneNumber", "tel", "Phone"]
-        )
-        website = self._extract_contact_field(
-            data, ["website", "url", "link", "web", "Website", "URL"]
-        )
+        address = self._extract_contact_field(data, ["address", "location", "fullAddress", "street", "addr"])
+        phone = self._extract_contact_field(data, ["phone", "telephone", "phoneNumber", "tel", "Phone"])
+        website = self._extract_contact_field(data, ["website", "url", "link", "web", "Website", "URL"])
 
         # Extract coordinates
         lat, lng = self._extract_coordinates(data)
@@ -1641,9 +1515,7 @@ class ImprovedInteractiveMapExtractor(BaseExtractor):
             try:
                 found_markers = driver.find_elements(By.CSS_SELECTOR, selector)
                 if found_markers:
-                    print(
-                        f"    📍 Found {len(found_markers)} markers using {selector}"
-                    )
+                    print(f"    📍 Found {len(found_markers)} markers using {selector}")
                     return found_markers
             except (NoSuchElementException, WebDriverException):
                 continue
@@ -1666,13 +1538,7 @@ class ImprovedInteractiveMapExtractor(BaseExtractor):
         driver.execute_script("arguments[0].click();", marker)
         # Wait for potential popup or content change
         WebDriverWait(driver, 5).until(
-            lambda d: len(
-                d.find_elements(
-                    By.CSS_SELECTOR, ".popup, .info - window, .marker - popup"
-                )
-            )
-            > 0
-            or True
+            lambda d: len(d.find_elements(By.CSS_SELECTOR, ".popup, .info - window, .marker - popup")) > 0 or True
         )
 
     def _get_popup_selectors(self):
@@ -1782,9 +1648,7 @@ class ImprovedInteractiveMapExtractor(BaseExtractor):
         for line in lines[1:]:
             if self.extract_phone(line):
                 phone = self.extract_phone(line)
-            elif re.search(
-                r"\d+.*(?:street|st|avenue|ave|road|rd|drive|dr)", line, re.I
-            ):
+            elif re.search(r"\d+.*(?:street|st|avenue|ave|road|rd|drive|dr)", line, re.I):
                 address = line
 
         return ParishData(
@@ -1832,9 +1696,7 @@ class ImprovedGenericExtractor(BaseExtractor):
                     print(f"      📊 Found {len(elements)} elements with {selector}")
 
                     for element in elements[:20]:  # Limit to prevent timeout
-                        parish_data = self._extract_parish_from_generic_element(
-                            element, url
-                        )
+                        parish_data = self._extract_parish_from_generic_element(element, url)
                         if parish_data:
                             parishes.append(parish_data)
 
@@ -1846,9 +1708,7 @@ class ImprovedGenericExtractor(BaseExtractor):
 
         return parishes
 
-    def _extract_parish_from_generic_element(
-        self, element, base_url: str
-    ) -> Optional[ParishData]:
+    def _extract_parish_from_generic_element(self, element, base_url: str) -> Optional[ParishData]:
         """Extract parish data from generic element"""
         try:
             name = self._extract_name_from_element(element)
@@ -1865,9 +1725,7 @@ class ImprovedGenericExtractor(BaseExtractor):
             phone = self.extract_phone(text_content)
             website = self._extract_website_from_element(element)
 
-            return self._create_parish_data_from_cleaned_info(
-                cleaned_data, phone, website
-            )
+            return self._create_parish_data_from_cleaned_info(cleaned_data, phone, website)
 
         except Exception:
             return None
@@ -1910,15 +1768,11 @@ class ImprovedGenericExtractor(BaseExtractor):
 
         for link in links:
             href = link.get("href")
-            if href.startswith("http") and not any(
-                skip in href.lower() for skip in social_sites
-            ):
+            if href.startswith("http") and not any(skip in href.lower() for skip in social_sites):
                 return href
         return None
 
-    def _create_parish_data_from_cleaned_info(
-        self, cleaned_data: dict, phone: str, website: str
-    ) -> ParishData:
+    def _create_parish_data_from_cleaned_info(self, cleaned_data: dict, phone: str, website: str) -> ParishData:
         """Create ParishData object from cleaned information."""
         return ParishData(
             name=cleaned_data["name"],
@@ -1975,9 +1829,7 @@ def _protected_load_diocese_page(driver, url: str):
     except TimeoutException:
         # Fallback: wait for body and give JS a moment
         logger.debug("⚠️ Parish content not detected, using fallback wait")
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.TAG_NAME, "body"))
-        )
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
         time.sleep(1)  # Minimal fallback delay
 
     return driver.page_source
@@ -2003,9 +1855,7 @@ def _protected_load_parish_detail(driver, parish_url: str, parish_name: str):
         raise Exception("Invalid driver provided")
 
     # Wait for page content
-    WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.TAG_NAME, "body"))
-    )
+    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
     return driver.page_source
 
 
@@ -2035,13 +1885,9 @@ def _setup_extractors(pattern) -> List:
     if pattern.listing_type == ParishListingType.IFRAME_EMBEDDED:
         extractors_to_try.append(("IframeExtractor", IframeExtractor(pattern)))
     elif pattern.listing_type == ParishListingType.PARISH_FINDER:
-        extractors_to_try.append(
-            ("ParishFinderExtractor", ParishFinderExtractor(pattern))
-        )
+        extractors_to_try.append(("ParishFinderExtractor", ParishFinderExtractor(pattern)))
     elif pattern.listing_type == ParishListingType.DIOCESE_CARD_LAYOUT:
-        extractors_to_try.append(
-            ("EnhancedDiocesesCardExtractor", EnhancedDiocesesCardExtractor(pattern))
-        )
+        extractors_to_try.append(("EnhancedDiocesesCardExtractor", EnhancedDiocesesCardExtractor(pattern)))
     elif pattern.listing_type == ParishListingType.STATIC_TABLE:
         extractors_to_try.append(("TableExtractor", TableExtractor(pattern)))
     elif pattern.listing_type == ParishListingType.INTERACTIVE_MAP:
@@ -2103,22 +1949,16 @@ def _extract_parishes_with_optimization(
             # Execute with circuit breaker protection
             def extraction_function():
                 if extractor_name == "EnhancedAIFallbackExtractor":
-                    return extractor.extract(
-                        driver, diocese_name, parish_directory_url, max_parishes
-                    )
+                    return extractor.extract(driver, diocese_name, parish_directory_url, max_parishes)
                 else:
                     return extractor.extract(driver, soup, parish_directory_url)
 
-            current_parishes = optimizer.execute_with_circuit_breaker(
-                extractor_name, extraction_function
-            )
+            current_parishes = optimizer.execute_with_circuit_breaker(extractor_name, extraction_function)
 
             if current_parishes:
                 parishes.extend(current_parishes)
                 extraction_methods_used.append(extractor_name)
-                print(
-                    f"    ✅ {extractor_name} found {len(current_parishes)} parishes"
-                )
+                print(f"    ✅ {extractor_name} found {len(current_parishes)} parishes")
 
                 # If we found parishes with a specialized extractor, prefer those results
                 if (
@@ -2146,9 +1986,7 @@ def _extract_parishes_with_optimization(
     return parishes, extraction_methods_used, errors
 
 
-def _process_and_validate_parishes(
-    parishes, diocese_url, parish_directory_url, max_parishes
-):
+def _process_and_validate_parishes(parishes, diocese_url, parish_directory_url, max_parishes):
     """Process, deduplicate and validate extracted parishes."""
     if not parishes:
         return [], {}
@@ -2178,8 +2016,7 @@ def _process_and_validate_parishes(
         parish_dict = {
             "name": parish.name,
             "url": getattr(parish, "website", None) or getattr(parish, "url", None),
-            "address": getattr(parish, "full_address", None)
-            or getattr(parish, "address", None),
+            "address": (getattr(parish, "full_address", None) or getattr(parish, "address", None)),
             "description": getattr(parish, "description", None),
         }
         parishes_to_validate.append(parish_dict)
@@ -2191,9 +2028,7 @@ def _process_and_validate_parishes(
     # Filter original parish objects based on validated names
     validated_parishes = [p for p in unique_parishes if p.name in validated_names]
 
-    print(
-        f"    ✅ Parish validation: {len(validated_parishes)}/{len(unique_parishes)} parishes validated as actual parishes"
-    )
+    print(f"    ✅ Parish validation: {len(validated_parishes)}/{len(unique_parishes)} parishes validated as actual parishes")
 
     # Apply max parishes limit after validation
     if max_parishes != 0 and len(validated_parishes) > max_parishes:
@@ -2209,30 +2044,20 @@ def _process_and_validate_parishes(
 def _calculate_extraction_stats(unique_parishes):
     """Calculate detailed extraction and field statistics."""
     total_parishes = len(unique_parishes)
-    detailed_successful = sum(
-        1 for p in unique_parishes if p.detail_extraction_success
-    )
+    detailed_successful = sum(1 for p in unique_parishes if p.detail_extraction_success)
     detailed_failed = sum(
-        1
-        for p in unique_parishes
-        if hasattr(p, "detail_extraction_success") and not p.detail_extraction_success
+        1 for p in unique_parishes if hasattr(p, "detail_extraction_success") and not p.detail_extraction_success
     )
 
     detail_extraction_stats = {
         "attempted": total_parishes,
         "successful": detailed_successful,
         "failed": detailed_failed,
-        "success_rate": (
-            (detailed_successful / total_parishes * 100) if total_parishes > 0 else 0
-        ),
+        "success_rate": ((detailed_successful / total_parishes * 100) if total_parishes > 0 else 0),
     }
 
     field_extraction_stats = {
-        "addresses_extracted": sum(
-            1
-            for p in unique_parishes
-            if p.street_address or p.full_address or p.address
-        ),
+        "addresses_extracted": sum(1 for p in unique_parishes if p.street_address or p.full_address or p.address),
         "phones_extracted": sum(1 for p in unique_parishes if p.phone),
         "websites_extracted": sum(1 for p in unique_parishes if p.website),
         "zip_codes_extracted": sum(1 for p in unique_parishes if p.zip_code),
@@ -2261,42 +2086,24 @@ def _print_results_summary(
 
     # Show field extraction summary
     print("  📋 Field extraction summary:")
-    print(
-        f"      📍 Addresses: {field_extraction_stats['addresses_extracted']}/{total_parishes}"
-    )
-    print(
-        f"      📞 Phones: {field_extraction_stats['phones_extracted']}/{total_parishes}"
-    )
-    print(
-        f"      🌐 Websites: {field_extraction_stats['websites_extracted']}/{total_parishes}"
-    )
-    print(
-        f"      📮 Zip Codes: {field_extraction_stats['zip_codes_extracted']}/{total_parishes}"
-    )
-    print(
-        f"      👥 Clergy Info: {field_extraction_stats['clergy_info_extracted']}/{total_parishes}"
-    )
-    print(
-        f"      ⏰ Service Times: {field_extraction_stats['service_times_extracted']}/{total_parishes}"
-    )
+    print(f"      📍 Addresses: {field_extraction_stats['addresses_extracted']}/{total_parishes}")
+    print(f"      📞 Phones: {field_extraction_stats['phones_extracted']}/{total_parishes}")
+    print(f"      🌐 Websites: {field_extraction_stats['websites_extracted']}/{total_parishes}")
+    print(f"      📮 Zip Codes: {field_extraction_stats['zip_codes_extracted']}/{total_parishes}")
+    print(f"      👥 Clergy Info: {field_extraction_stats['clergy_info_extracted']}/{total_parishes}")
+    print(f"      ⏰ Service Times: {field_extraction_stats['service_times_extracted']}/{total_parishes}")
 
     # Log optimization performance statistics
     opt_stats = optimizer.get_optimization_stats()
     print("  🚀 Optimization Performance:")
-    print(
-        f"      🔧 Extractors optimized: {len([name for name in optimized_extractors])}"
-    )
-    print(
-        f"      ⚡ Extractors skipped: {len(opt_stats.get('skipped_extractors', []))}"
-    )
+    print(f"      🔧 Extractors optimized: {len([name for name in optimized_extractors])}")
+    print(f"      ⚡ Extractors skipped: {len(opt_stats.get('skipped_extractors', []))}")
     print(
         f"      🔌 Circuit breakers active: {len([cb for cb in opt_stats['circuit_breakers'].values() if cb['state'] != 'CLOSED'])}"
     )
 
 
-def process_diocese_with_detailed_extraction(
-    diocese_info: Dict, driver, max_parishes: int = 0
-) -> Dict:
+def process_diocese_with_detailed_extraction(diocese_info: Dict, driver, max_parishes: int = 0) -> Dict:
     """Enhanced processing function that extracts detailed parish information."""
     diocese_url = diocese_info["url"]
     diocese_name = diocese_info["name"]
@@ -2340,9 +2147,7 @@ def process_diocese_with_detailed_extraction(
     try:
         # Step 1: Load the parish directory page and detect pattern
         print("  📥 Loading parish directory page and detecting pattern...")
-        html_content, soup, pattern, error = _load_and_detect_pattern(
-            driver, parish_directory_url
-        )
+        html_content, soup, pattern, error = _load_and_detect_pattern(driver, parish_directory_url)
 
         if error:
             logger.error(f"❌ {error}")
@@ -2370,9 +2175,7 @@ def process_diocese_with_detailed_extraction(
         page_analysis = optimizer.analyze_page_content(driver, html_content)
 
         extractors_to_try = _setup_extractors(pattern)
-        optimized_extractors = optimizer.optimize_extractor_sequence(
-            extractors_to_try, page_analysis
-        )
+        optimized_extractors = optimizer.optimize_extractor_sequence(extractors_to_try, page_analysis)
 
         # Step 3: Extract parishes with optimization
         parishes, extraction_methods, errors = _extract_parishes_with_optimization(
@@ -2432,9 +2235,7 @@ def process_diocese_with_detailed_extraction(
 
         collected = gc.collect()
         if collected > 0:
-            logger.debug(
-                f"  🧹 Freed {collected} objects during diocese processing cleanup"
-            )
+            logger.debug(f"  🧹 Freed {collected} objects during diocese processing cleanup")
 
         result["processing_time"] = time.time() - start_time
         print(f"  ⏱️ Completed in {result['processing_time']:.1f}s")
@@ -2516,9 +2317,7 @@ class IframeExtractor(BaseExtractor):
 
         return False
 
-    def _extract_from_direct_iframe_url(
-        self, driver, iframe_src: str
-    ) -> List[ParishData]:
+    def _extract_from_direct_iframe_url(self, driver, iframe_src: str) -> List[ParishData]:
         """Extract parishes by navigating directly to iframe URL"""
         parishes = []
 
@@ -2528,9 +2327,7 @@ class IframeExtractor(BaseExtractor):
             # Check if this is Diocese of Orange before any iframe loading
             original_url = getattr(self, "original_url", "")
             if "rcbo.org" in original_url:
-                print(
-                    "    🍊 Diocese of Orange detected early - using specialized fallback..."
-                )
+                print("    🍊 Diocese of Orange detected early - using specialized fallback...")
                 return self._extract_diocese_orange_fallback(driver)
 
             # Navigate directly to the iframe URL
@@ -2551,9 +2348,7 @@ class IframeExtractor(BaseExtractor):
 
         return parishes
 
-    def _extract_from_iframe_context(
-        self, driver, soup: BeautifulSoup
-    ) -> List[ParishData]:
+    def _extract_from_iframe_context(self, driver, soup: BeautifulSoup) -> List[ParishData]:
         """Extract parishes by switching to iframe context"""
         parishes = []
 
@@ -2612,9 +2407,7 @@ class IframeExtractor(BaseExtractor):
             from selenium.webdriver.common.action_chains import ActionChains
             from selenium.webdriver.common.keys import Keys
 
-            print(
-                "    🖱️ Attempting drag - to - select extraction (mimicking manual copy - paste)..."
-            )
+            print("    🖱️ Attempting drag - to - select extraction (mimicking manual copy - paste)...")
 
             # Wait for page to fully load
             time.sleep(5)
@@ -2622,9 +2415,7 @@ class IframeExtractor(BaseExtractor):
             # Method 1: Try Ctrl + A to select all content
             print("    📋 Trying Ctrl + A selection...")
             actions = ActionChains(driver)
-            actions.key_down(Keys.CONTROL).send_keys("a").key_up(
-                Keys.CONTROL
-            ).perform()
+            actions.key_down(Keys.CONTROL).send_keys("a").key_up(Keys.CONTROL).perform()
             time.sleep(1)
 
             # Get selected text using JavaScript
@@ -2639,9 +2430,7 @@ class IframeExtractor(BaseExtractor):
             )
 
             if selected_text and len(selected_text) > 1000:
-                print(
-                    f"    ✅ Ctrl + A extracted {len(selected_text)} characters of text"
-                )
+                print(f"    ✅ Ctrl + A extracted {len(selected_text)} characters of text")
                 parishes = self._parse_selected_text(selected_text)
                 if parishes:
                     return parishes
@@ -2656,9 +2445,7 @@ class IframeExtractor(BaseExtractor):
             actions = ActionChains(driver)
             actions.move_to_element_with_offset(body, 10, 10)  # Start at top - left
             actions.click_and_hold()
-            actions.move_to_element_with_offset(
-                body, 800, 600
-            )  # Drag to bottom - right
+            actions.move_to_element_with_offset(body, 800, 600)  # Drag to bottom - right
             actions.release()
             actions.perform()
 
@@ -2676,18 +2463,14 @@ class IframeExtractor(BaseExtractor):
             )
 
             if selected_text and len(selected_text) > 500:
-                print(
-                    f"    ✅ Drag selection extracted {len(selected_text)} characters of text"
-                )
+                print(f"    ✅ Drag selection extracted {len(selected_text)} characters of text")
                 parishes = self._parse_selected_text(selected_text)
                 if parishes:
                     return parishes
 
             # Method 3: Try getting all visible text content directly
             print("    📄 Trying direct text content extraction...")
-            all_text = driver.execute_script(
-                "return document.body.innerText || document.body.textContent || '';"
-            )
+            all_text = driver.execute_script("return document.body.innerText || document.body.textContent || '';")
 
             if all_text and len(all_text) > 1000:
                 print(f"    ✅ Direct text extraction got {len(all_text)} characters")
@@ -2747,9 +2530,7 @@ class IframeExtractor(BaseExtractor):
             if self._is_concatenated_parish_line(line):
                 split_parishes = self._split_concatenated_parishes(line)
                 processed_lines.extend(split_parishes)
-                print(
-                    f"    🔨 Split concatenated line into {len(split_parishes)} parishes"
-                )
+                print(f"    🔨 Split concatenated line into {len(split_parishes)} parishes")
             else:
                 processed_lines.append(line)
 
@@ -2789,9 +2570,7 @@ class IframeExtractor(BaseExtractor):
                 # Look for city, state, zip in the line after address
                 if j + 1 < len(processed_lines) - start_index:
                     city_line = processed_lines[start_index + j + 1].strip()
-                    city_match = re.match(
-                        r"([^,]+),?\s*([A - Z]{2})\s*(\d{5})", city_line
-                    )
+                    city_match = re.match(r"([^,]+),?\s*([A - Z]{2})\s*(\d{5})", city_line)
                     if city_match:
                         city = city_match.group(1).strip()
                         state = city_match.group(2).strip()
@@ -2831,23 +2610,17 @@ class IframeExtractor(BaseExtractor):
                     continue
 
                 # Clean up the parish name
-                name = re.sub(
-                    r"^[\d\.\s]*", "", line
-                ).strip()  # Remove leading numbers
+                name = re.sub(r"^[\d\.\s]*", "", line).strip()  # Remove leading numbers
 
                 # Filter out UI elements
                 if self._should_filter_ui_term(name):
                     continue
 
                 # Extract address information from subsequent lines
-                address, city, state, zip_code = self._extract_address_from_lines(
-                    processed_lines, i
-                )
+                address, city, state, zip_code = self._extract_address_from_lines(processed_lines, i)
 
                 if name and len(name) > 3:
-                    parish = self._create_parish_from_parsed_text(
-                        name, address, city, state, zip_code
-                    )
+                    parish = self._create_parish_from_parsed_text(name, address, city, state, zip_code)
                     parishes.append(parish)
 
                     if len(parishes) >= 200:  # Safety limit
@@ -3048,15 +2821,11 @@ class IframeExtractor(BaseExtractor):
 
                             if name and len(name.strip()) > 2:
                                 # Parse address components
-                                parsed = clean_parish_name_and_extract_address(
-                                    f"{name} {address}"
-                                )
+                                parsed = clean_parish_name_and_extract_address(f"{name} {address}")
 
                                 parish = ParishData(
                                     name=self.clean_text(name),
-                                    address=(
-                                        self.clean_text(address) if address else None
-                                    ),
+                                    address=(self.clean_text(address) if address else None),
                                     street_address=parsed.get("street_address"),
                                     city=parsed.get("city"),
                                     state=parsed.get("state"),
@@ -3098,9 +2867,7 @@ class IframeExtractor(BaseExtractor):
             for selector in selectors:
                 elements = soup.select(selector)
                 if elements:
-                    print(
-                        f"    📊 Found {len(elements)} elements with selector: {selector}"
-                    )
+                    print(f"    📊 Found {len(elements)} elements with selector: {selector}")
 
                     for element in elements[:50]:  # Limit to prevent timeout
                         parish_data = self._extract_parish_from_iframe_element(element)
@@ -3211,9 +2978,7 @@ class IframeExtractor(BaseExtractor):
         """Validate if name looks like a parish name"""
         name_lower = name.lower().strip()
         parish_indicators = self._get_parish_indicators()
-        has_parish_indicator = any(
-            indicator in name_lower for indicator in parish_indicators
-        )
+        has_parish_indicator = any(indicator in name_lower for indicator in parish_indicators)
 
         # Require parish indicators unless name is long and descriptive
         return has_parish_indicator or len(name) >= 15
@@ -3229,10 +2994,7 @@ class IframeExtractor(BaseExtractor):
         text_content = element.get_text()
         lines = [line.strip() for line in text_content.split("\n") if line.strip()]
         for line in lines[1:4]:  # Skip first line (likely name)
-            if any(
-                indicator in line.lower()
-                for indicator in ["st ", "ave", "rd ", "blvd", "street", "avenue"]
-            ):
+            if any(indicator in line.lower() for indicator in ["st ", "ave", "rd ", "blvd", "street", "avenue"]):
                 return line
 
         return ""
@@ -3286,9 +3048,7 @@ class IframeExtractor(BaseExtractor):
                 or "rcbo.org" in original_url
                 or "rcbo.org" in driver.execute_script("return window.location.href")
             ):
-                print(
-                    "    🍊 Diocese of Orange detected - using specialized fallback..."
-                )
+                print("    🍊 Diocese of Orange detected - using specialized fallback...")
                 return self._extract_diocese_orange_fallback(driver)
 
             # Try JavaScript extraction first
@@ -3307,9 +3067,7 @@ class IframeExtractor(BaseExtractor):
         """Wait for dynamic content to load in iframe"""
         try:
             # Wait for page to be ready
-            WebDriverWait(driver, timeout).until(
-                lambda d: d.execute_script("return document.readyState") == "complete"
-            )
+            WebDriverWait(driver, timeout).until(lambda d: d.execute_script("return document.readyState") == "complete")
 
             # Wait for common content indicators
             wait_selectors = [
@@ -3320,9 +3078,7 @@ class IframeExtractor(BaseExtractor):
 
             for selector in wait_selectors:
                 try:
-                    WebDriverWait(driver, 10).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, selector))
-                    )
+                    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
                     print(f"    ✅ Dynamic content loaded: {selector}")
                     break
                 except TimeoutException:
@@ -3416,9 +3172,7 @@ class IframeExtractor(BaseExtractor):
                 ("Saint Thomas More Catholic Church", "Irvine"),
             ]
 
-            print(
-                f"    📋 Loading {len(known_parishes_data)} known Diocese of Orange parishes..."
-            )
+            print(f"    📋 Loading {len(known_parishes_data)} known Diocese of Orange parishes...")
 
             for parish_name, city in known_parishes_data:
                 parish = ParishData(
@@ -3429,9 +3183,7 @@ class IframeExtractor(BaseExtractor):
                 )
                 parishes.append(parish)
 
-            print(
-                f"    ✅ Diocese of Orange fallback extracted {len(parishes)} parishes"
-            )
+            print(f"    ✅ Diocese of Orange fallback extracted {len(parishes)} parishes")
 
         except Exception as e:
             print(f"    ⚠️ Diocese Orange fallback error: {str(e)[:100]}...")
@@ -3514,13 +3266,8 @@ class NavigationExtractor(BaseExtractor):
                     nav_elements = driver.find_elements(By.CSS_SELECTOR, selector)
                     for nav_element in nav_elements:
                         nav_text = nav_element.text.lower()
-                        if any(
-                            term in nav_text
-                            for term in ["parish", "church", "directory", "find"]
-                        ):
-                            logger.info(
-                                f"    📋 Found navigation element with parish - related content: {selector}"
-                            )
+                        if any(term in nav_text for term in ["parish", "church", "directory", "find"]):
+                            logger.info(f"    📋 Found navigation element with parish - related content: {selector}")
                             return True
                 except Exception:
                     continue
@@ -3635,18 +3382,9 @@ class NavigationExtractor(BaseExtractor):
                         href = link.get_attribute("href")
                         text = link.text.strip()
 
-                        if (
-                            href
-                            and text
-                            and any(
-                                term in text.lower()
-                                for term in ["parish", "church", "directory"]
-                            )
-                        ):
+                        if href and text and any(term in text.lower() for term in ["parish", "church", "directory"]):
                             links.append(href)
-                            logger.info(
-                                f"    🔗 Found dropdown link: {text} -> {href}"
-                            )
+                            logger.info(f"    🔗 Found dropdown link: {text} -> {href}")
 
                 except Exception:
                     continue
@@ -3656,9 +3394,7 @@ class NavigationExtractor(BaseExtractor):
 
         return links
 
-    def _extract_via_directory_links(
-        self, driver, soup: BeautifulSoup
-    ) -> List[ParishData]:
+    def _extract_via_directory_links(self, driver, soup: BeautifulSoup) -> List[ParishData]:
         """Fallback method to find parish directory links directly in the page"""
         parishes = []
 
@@ -3678,14 +3414,9 @@ class NavigationExtractor(BaseExtractor):
                 href = link.get("href", "")
                 text = link.get_text().strip().lower()
 
-                if any(
-                    re.search(pattern, text) or re.search(pattern, href.lower())
-                    for pattern in directory_patterns
-                ):
+                if any(re.search(pattern, text) or re.search(pattern, href.lower()) for pattern in directory_patterns):
                     full_url = self._resolve_url(href, driver.current_url)
-                    logger.info(
-                        f"    🔗 Found potential parish directory link: {text} -> {full_url}"
-                    )
+                    logger.info(f"    🔗 Found potential parish directory link: {text} -> {full_url}")
 
                     parishes = self._follow_parish_directory_link(driver, full_url)
                     if parishes:
@@ -3721,9 +3452,7 @@ class NavigationExtractor(BaseExtractor):
                 try:
                     parishes = strategy()
                     if parishes:
-                        logger.info(
-                            f"    ✅ Extracted {len(parishes)} parishes from directory page"
-                        )
+                        logger.info(f"    ✅ Extracted {len(parishes)} parishes from directory page")
                         break
                 except Exception as e:
                     logger.error(f"    ⚠️ Strategy failed: {str(e)[:50]}...")
@@ -3774,9 +3503,7 @@ class NavigationExtractor(BaseExtractor):
             for selector in list_selectors:
                 items = soup.select(selector)
                 if items:
-                    logger.info(
-                        f"    📋 Found {len(items)} list items with selector: {selector}"
-                    )
+                    logger.info(f"    📋 Found {len(items)} list items with selector: {selector}")
 
                     for item in items[:100]:  # Limit for performance
                         parish_data = self._extract_parish_from_element(item)
@@ -3811,9 +3538,7 @@ class NavigationExtractor(BaseExtractor):
                 try:
                     cards = soup.select(selector)
                     if cards:
-                        logger.info(
-                            f"    🃏 Found {len(cards)} cards with selector: {selector}"
-                        )
+                        logger.info(f"    🃏 Found {len(cards)} cards with selector: {selector}")
 
                         for card in cards[:50]:  # Limit for performance
                             parish_data = self._extract_parish_from_element(card)
@@ -4004,27 +3729,19 @@ class NavigationExtractor(BaseExtractor):
 
 if __name__ == "__main__":
     print("Parish Extractor Module Loaded")
-    print(
-        "This module contains specialized extractors for different diocese website platforms."
-    )
+    print("This module contains specialized extractors for different diocese website platforms.")
     print("\nAvailable extractors:")
-    print(
-        "  - EnhancedDiocesesCardExtractor: For diocese card layouts with detail pages"
-    )
+    print("  - EnhancedDiocesesCardExtractor: For diocese card layouts with detail pages")
     print("  - ParishFinderExtractor: For eCatholic Parish Finder interfaces")
     print("  - TableExtractor: For HTML table - based listings")
     print("  - ImprovedInteractiveMapExtractor: For JavaScript - powered maps")
     print("  - NavigationExtractor: For hover - based navigation systems")
     print("  - ImprovedGenericExtractor: Generic fallback extractor")
     print("\nMain function:")
-    print(
-        "  - process_diocese_with_detailed_extraction(): Process a diocese and extract parish data"
-    )
+    print("  - process_diocese_with_detailed_extraction(): Process a diocese and extract parish data")
     print("\nTo use this module, import it and call the appropriate functions.")
     print("Example:")
-    print(
-        "  from parish_extractors import process_diocese_with_detailed_extraction, setup_enhanced_driver"
-    )
+    print("  from parish_extractors import process_diocese_with_detailed_extraction, setup_enhanced_driver")
     print("  driver = setup_enhanced_driver()")
     print("  result = process_diocese_with_detailed_extraction(diocese_info, driver)")
 """
@@ -4045,7 +3762,9 @@ class PDFParishExtractor:
         self.session = requests.Session()
         self.session.headers.update(
             {
-                "User - Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+                "User - Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+                )
             }
         )
 
@@ -4188,9 +3907,7 @@ class PDFParishExtractor:
                     location_or_phone = match[1].strip()
 
                     # Skip if name is too short or contains unwanted text
-                    if len(name) < 5 or any(
-                        skip in name.lower() for skip in ["page", "directory", "index"]
-                    ):
+                    if len(name) < 5 or any(skip in name.lower() for skip in ["page", "directory", "index"]):
                         continue
 
                     parish = ParishData(name=name)
@@ -4265,9 +3982,7 @@ class PDFParishExtractor:
                         pdf_parishes = self.parse_parishes_from_text(text)
                         parishes.extend(pdf_parishes)
 
-                        logger.info(
-                            f"✅ Extracted {len(pdf_parishes)} parishes from PDF"
-                        )
+                        logger.info(f"✅ Extracted {len(pdf_parishes)} parishes from PDF")
                     else:
                         logger.warning("⚠️ No text could be extracted from PDF")
 
@@ -4337,9 +4052,7 @@ class PDFDirectoryExtractor(BaseExtractor):
                 )
                 parishes.append(parish)
 
-            logger.info(
-                f"    📊 Successfully extracted {len(parishes)} parishes from PDF"
-            )
+            logger.info(f"    📊 Successfully extracted {len(parishes)} parishes from PDF")
             return parishes
 
         except Exception as e:
@@ -4353,7 +4066,9 @@ def test_pdf_extractor():
     extractor = PDFParishExtractor()
 
     # Test with San Francisco Archdiocese PDF (observed in pipeline output)
-    test_url = "https://www.sfarchdiocese.org/wp - content/uploads/2022/02/2020 - 2021 - PCL - DIRECTORY - almost - final.pub_.pdf"
+    test_url = (
+        "https://www.sfarchdiocese.org/wp - content/uploads/2022/02/2020 - 2021 - PCL - DIRECTORY - almost - final.pub_.pdf"
+    )
 
     parishes = extractor.extract_parishes(test_url)
 

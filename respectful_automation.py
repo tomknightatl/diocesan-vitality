@@ -28,9 +28,7 @@ class RespectfulAutomation:
 
     def __init__(self):
         self.session = requests.Session()
-        self.session.headers.update(
-            {"User - Agent": "Mozilla/5.0 (compatible; Parish Directory Research;)"}
-        )
+        self.session.headers.update({"User - Agent": "Mozilla/5.0 (compatible; Parish Directory Research;)"})
 
         # Rate limiting: minimum time between requests per domain
         self.domain_last_request = {}
@@ -111,17 +109,13 @@ class RespectfulAutomation:
             time_since_last = current_time - self.domain_last_request[domain]
             if time_since_last < total_delay:
                 sleep_time = total_delay - time_since_last
-                logger.debug(
-                    f"Respectful delay: sleeping {sleep_time:.1f}s for {domain}"
-                )
+                logger.debug(f"Respectful delay: sleeping {sleep_time:.1f}s for {domain}")
                 time.sleep(sleep_time)
 
         # Update last request time
         self.domain_last_request[domain] = time.time()
 
-    def detect_blocking_mechanisms(
-        self, response: requests.Response, url: str
-    ) -> Dict:
+    def detect_blocking_mechanisms(self, response: requests.Response, url: str) -> Dict:
         """Detect various blocking mechanisms from HTTP response."""
         blocking_info = self._initialize_blocking_info(response)
 
@@ -141,9 +135,7 @@ class RespectfulAutomation:
             "headers": dict(response.headers),
         }
 
-    def _check_status_code_blocking(
-        self, response: requests.Response, blocking_info: Dict
-    ):
+    def _check_status_code_blocking(self, response: requests.Response, blocking_info: Dict):
         """Check for blocking based on HTTP status codes."""
         status_blocking_map = {
             403: ("403_forbidden", "HTTP 403 Forbidden status"),
@@ -172,13 +164,9 @@ class RespectfulAutomation:
 
         for header, service in suspicious_headers.items():
             if header in response.headers:
-                blocking_info["evidence"].append(
-                    f"{service}: {response.headers[header]}"
-                )
+                blocking_info["evidence"].append(f"{service}: {response.headers[header]}")
 
-    def _check_content_blocking(
-        self, response: requests.Response, blocking_info: Dict
-    ):
+    def _check_content_blocking(self, response: requests.Response, blocking_info: Dict):
         """Check response content for blocking indicators."""
         try:
             content = response.text.lower()
@@ -187,9 +175,7 @@ class RespectfulAutomation:
             for pattern_type, pattern in blocking_patterns:
                 if pattern in content:
                     if not blocking_info["is_blocked"]:
-                        blocking_info.update(
-                            {"is_blocked": True, "blocking_type": pattern_type}
-                        )
+                        blocking_info.update({"is_blocked": True, "blocking_type": pattern_type})
                     blocking_info["evidence"].append(f"Content pattern: {pattern}")
 
         except Exception as e:
@@ -206,9 +192,7 @@ class RespectfulAutomation:
             ("ddos_protection", "ddos protection by"),
         ]
 
-    def respectful_get(
-        self, url: str, timeout: int = 30
-    ) -> Tuple[Optional[requests.Response], Dict]:
+    def respectful_get(self, url: str, timeout: int = 30) -> Tuple[Optional[requests.Response], Dict]:
         """Make a respectful HTTP GET request with blocking detection."""
         parsed_url = urlparse(url)
         domain = parsed_url.netloc
@@ -264,29 +248,17 @@ def create_blocking_report(blocking_info: Dict, url: str, diocese_name: str) -> 
     # Add human - readable status
     if report["is_blocked"]:
         if report["blocking_type"] == "403_forbidden":
-            report["status_description"] = (
-                "Diocese website actively blocking automated access (403 Forbidden)"
-            )
+            report["status_description"] = "Diocese website actively blocking automated access (403 Forbidden)"
         elif report["blocking_type"] == "rate_limited":
-            report["status_description"] = (
-                "Diocese website rate limiting requests (429 Too Many Requests)"
-            )
+            report["status_description"] = "Diocese website rate limiting requests (429 Too Many Requests)"
         elif report["blocking_type"] == "cloudflare_protection":
-            report["status_description"] = (
-                "Diocese website using Cloudflare bot protection"
-            )
+            report["status_description"] = "Diocese website using Cloudflare bot protection"
         elif report["blocking_type"] == "captcha":
-            report["status_description"] = (
-                "Diocese website requiring CAPTCHA verification"
-            )
+            report["status_description"] = "Diocese website requiring CAPTCHA verification"
         else:
-            report["status_description"] = (
-                f'Diocese website blocking access ({report["blocking_type"]})'
-            )
+            report["status_description"] = f'Diocese website blocking access ({report["blocking_type"]})'
     else:
-        report["status_description"] = (
-            "Diocese website accessible to automated requests"
-        )
+        report["status_description"] = "Diocese website accessible to automated requests"
 
     return report
 

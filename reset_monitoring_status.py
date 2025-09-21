@@ -73,9 +73,7 @@ def main():
         print("\nCurrent extraction status:")
         print(f"  Status: {extraction_status.get('status', 'unknown')}")
         print(f"  Diocese: {extraction_status.get('current_diocese', 'None')}")
-        print(
-            f"  Parishes processed: {extraction_status.get('parishes_processed', 0)}"
-        )
+        print(f"  Parishes processed: {extraction_status.get('parishes_processed', 0)}")
         print(f"  Started at: {extraction_status.get('started_at', 'None')}")
 
         if args.check_only:

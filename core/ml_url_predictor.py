@@ -69,9 +69,7 @@ class MLURLPredictor:
 
         # ML Models
         self.url_classifier = RandomForestClassifier(n_estimators=100, random_state=42)
-        self.vectorizer = TfidfVectorizer(
-            ngram_range=(1, 3), max_features=1000, analyzer="char_wb"
-        )
+        self.vectorizer = TfidfVectorizer(ngram_range=(1, 3), max_features=1000, analyzer="char_wb")
 
         # Pattern databases
         self.url_patterns: Dict[str, URLPattern] = {}
@@ -95,9 +93,7 @@ class MLURLPredictor:
             successful_urls, urls, labels, weights = self._load_successful_urls()
 
             if has_enhanced_schema:
-                self._process_enhanced_schema_data(
-                    successful_urls, urls, labels, weights
-                )
+                self._process_enhanced_schema_data(successful_urls, urls, labels, weights)
             else:
                 self._process_basic_schema_data(successful_urls, urls, labels, weights)
 
@@ -110,14 +106,8 @@ class MLURLPredictor:
 
     def _detect_enhanced_schema(self) -> bool:
         """Detect if enhanced visit tracking schema is available"""
-        test_response = (
-            self.supabase.table("DiscoveredUrls").select("*").limit(1).execute()
-        )
-        return (
-            test_response.data and "visited_at" in test_response.data[0]
-            if test_response.data
-            else False
-        )
+        test_response = self.supabase.table("DiscoveredUrls").select("*").limit(1).execute()
+        return test_response.data and "visited_at" in test_response.data[0] if test_response.data else False
 
     def _load_successful_urls(self) -> Tuple[set, List[str], List[int], List[float]]:
         """Load successful URLs from ParishData and initialize training arrays"""
@@ -169,9 +159,7 @@ class MLURLPredictor:
             if url in successful_urls or not self._is_schedule_relevant(url):
                 continue
 
-            self._classify_enhanced_url_record(
-                record, urls, labels, weights, successful_urls
-            )
+            self._classify_enhanced_url_record(record, urls, labels, weights, successful_urls)
 
     def _classify_enhanced_url_record(
         self,
@@ -227,22 +215,13 @@ class MLURLPredictor:
         """Process training data using basic schema fallback"""
         logger.info("🧠 Using basic schema for ML training (limited features)")
 
-        discovered_response = (
-            self.supabase.table("DiscoveredUrls")
-            .select("url, parish_id, visited")
-            .execute()
-        )
+        discovered_response = self.supabase.table("DiscoveredUrls").select("url, parish_id, visited").execute()
 
         for record in discovered_response.data:
             url = record["url"]
             visited = record.get("visited", False)
 
-            if (
-                url
-                and url not in successful_urls
-                and self._is_schedule_relevant(url)
-                and visited
-            ):
+            if url and url not in successful_urls and self._is_schedule_relevant(url) and visited:
                 # Assume visited but not successful URLs are negative examples
                 urls.append(url)
                 labels.append(0)
@@ -265,9 +244,7 @@ class MLURLPredictor:
         logger.info(f"🧠 Loaded {len(urls)} URLs for training:")
         logger.info(f"🧠   Positive samples (successful): {positive_samples}")
         logger.info(f"🧠   Negative samples (failed): {negative_samples}")
-        logger.info(
-            f"🧠   Enhanced tracking: {'Yes' if has_enhanced_schema else 'No'}"
-        )
+        logger.info(f"🧠   Enhanced tracking: {'Yes' if has_enhanced_schema else 'No'}")
 
     def extract_url_features(self, url: str) -> Dict[str, float]:
         """Extract features from URL for ML prediction."""
@@ -276,9 +253,7 @@ class MLURLPredictor:
 
         features = {
             # Path - based features
-            "has_reconciliation": float(
-                "reconciliation" in path or "confession" in path
-            ),
+            "has_reconciliation": float("reconciliation" in path or "confession" in path),
             "has_adoration": float("adoration" in path or "eucharist" in path),
             "has_mass": float("mass" in path),
             "has_schedule": float("schedule" in path or "times" in path),
@@ -294,19 +269,10 @@ class MLURLPredictor:
             "domain_length": float(len(parsed.netloc)),
             "has_subdomain": float(len(parsed.netloc.split(".")) > 2),
             # Pattern matching
-            "ends_with_schedule": float(
-                path.endswith("schedule") or path.endswith("schedules")
-            ),
-            "contains_time_words": float(
-                any(word in path for word in ["time", "hour", "when"])
-            ),
+            "ends_with_schedule": float(path.endswith("schedule") or path.endswith("schedules")),
+            "contains_time_words": float(any(word in path for word in ["time", "hour", "when"])),
             # Negative indicators
-            "has_negative_words": float(
-                any(
-                    word in path
-                    for word in ["donate", "giving", "about", "contact", "news"]
-                )
-            ),
+            "has_negative_words": float(any(word in path for word in ["donate", "giving", "about", "contact", "news"])),
         }
 
         return features
@@ -322,9 +288,7 @@ class MLURLPredictor:
 
             urls, labels = self.load_training_data()
             if len(urls) < 10:
-                logger.warning(
-                    "🧠 Insufficient training data, using pattern - based fallback"
-                )
+                logger.warning("🧠 Insufficient training data, using pattern - based fallback")
                 return False
 
             # Extract features
@@ -337,9 +301,7 @@ class MLURLPredictor:
             y = np.array(labels)
 
             # Split data
-            X_train, X_test, y_train, y_test = train_test_split(
-                X, y, test_size=0.2, random_state=42, stratify=y
-            )
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
             # Train model
             self.url_classifier.fit(X_train, y_train)
@@ -376,16 +338,12 @@ class MLURLPredictor:
             # Update pattern statistics
             pattern_key = f"{domain}:{pattern}"
             if pattern_key not in self.url_patterns:
-                self.url_patterns[pattern_key] = URLPattern(
-                    pattern=pattern, domain_pattern=domain
-                )
+                self.url_patterns[pattern_key] = URLPattern(pattern=pattern, domain_pattern=domain)
 
             self.url_patterns[pattern_key].attempt_count += 1
             if label == 1:
                 self.url_patterns[pattern_key].success_count += 1
-                self.url_patterns[pattern_key].last_success = (
-                    datetime.now().isoformat()
-                )
+                self.url_patterns[pattern_key].last_success = datetime.now().isoformat()
 
             # Update domain profile
             if domain not in self.domain_profiles:
@@ -408,9 +366,7 @@ class MLURLPredictor:
         pattern = re.sub(r"[a - f0 - 9]{8,}", "ID", pattern.lower())
         return pattern
 
-    def predict_successful_urls(
-        self, domain: str, base_patterns: List[str] = None
-    ) -> List[Tuple[str, float]]:
+    def predict_successful_urls(self, domain: str, base_patterns: List[str] = None) -> List[Tuple[str, float]]:
         """
         Predict URLs most likely to contain schedule information for a domain.
 
@@ -429,9 +385,7 @@ class MLURLPredictor:
             domain_profile = self.domain_profiles.get(domain)
 
             # Generate candidate URLs
-            candidates = self._generate_candidate_urls(
-                domain, domain_profile, base_patterns
-            )
+            candidates = self._generate_candidate_urls(domain, domain_profile, base_patterns)
 
             # Score each candidate
             for url in candidates:
@@ -466,9 +420,7 @@ class MLURLPredictor:
 
         # Domain - specific successful patterns
         if profile and profile.successful_patterns:
-            for pattern in profile.successful_patterns[
-                :20
-            ]:  # Top 20 successful patterns
+            for pattern in profile.successful_patterns[:20]:  # Top 20 successful patterns
                 candidates.add(f"https://{domain}{pattern}")
                 candidates.add(f"http://{domain}{pattern}")
 
@@ -494,9 +446,7 @@ class MLURLPredictor:
 
         return candidates
 
-    def _calculate_url_confidence(
-        self, url: str, profile: Optional[DomainProfile]
-    ) -> float:
+    def _calculate_url_confidence(self, url: str, profile: Optional[DomainProfile]) -> float:
         """Calculate confidence score for a URL."""
         try:
             # ML model prediction
@@ -505,9 +455,7 @@ class MLURLPredictor:
 
             if self.is_trained:
                 try:
-                    ml_confidence = self.url_classifier.predict_proba(feature_vector)[
-                        0
-                    ][1]
+                    ml_confidence = self.url_classifier.predict_proba(feature_vector)[0][1]
                 except (AttributeError, IndexError, ValueError):
                     ml_confidence = 0.5
             else:
@@ -533,9 +481,7 @@ class MLURLPredictor:
                     domain_boost = 0.3
 
             # Combine scores
-            final_confidence = (
-                ml_confidence * 0.6 + pattern_confidence * 0.4
-            ) * domain_boost
+            final_confidence = (ml_confidence * 0.6 + pattern_confidence * 0.4) * domain_boost
 
             return min(final_confidence, 1.0)
 
@@ -543,9 +489,7 @@ class MLURLPredictor:
             logger.debug(f"🧠 Error calculating confidence for {url}: {e}")
             return 0.5
 
-    def _fallback_url_prediction(
-        self, domain: str, base_patterns: List[str] = None
-    ) -> List[Tuple[str, float]]:
+    def _fallback_url_prediction(self, domain: str, base_patterns: List[str] = None) -> List[Tuple[str, float]]:
         """Fallback URL prediction using pattern - based approach."""
         predictions = []
 
@@ -561,9 +505,7 @@ class MLURLPredictor:
         for pattern in patterns:
             for scheme in ["https", "http"]:
                 url = f"{scheme}://{domain}{pattern}"
-                confidence = 0.5 + (
-                    0.3 if "reconciliation" in pattern or "adoration" in pattern else 0
-                )
+                confidence = 0.5 + (0.3 if "reconciliation" in pattern or "adoration" in pattern else 0)
                 predictions.append((url, confidence))
 
         return sorted(predictions, key=lambda x: x[1], reverse=True)
@@ -587,9 +529,7 @@ class MLURLPredictor:
         ]
         return any(term in url_lower for term in relevant_terms)
 
-    def update_prediction_feedback(
-        self, url: str, success: bool, schedule_found: bool = False
-    ):
+    def update_prediction_feedback(self, url: str, success: bool, schedule_found: bool = False):
         """Update model with feedback from extraction attempts."""
         try:
             domain = urlparse(url).netloc
@@ -599,16 +539,12 @@ class MLURLPredictor:
 
             # Update pattern statistics
             if pattern_key not in self.url_patterns:
-                self.url_patterns[pattern_key] = URLPattern(
-                    pattern=pattern, domain_pattern=domain
-                )
+                self.url_patterns[pattern_key] = URLPattern(pattern=pattern, domain_pattern=domain)
 
             self.url_patterns[pattern_key].attempt_count += 1
             if success and schedule_found:
                 self.url_patterns[pattern_key].success_count += 1
-                self.url_patterns[pattern_key].last_success = (
-                    datetime.now().isoformat()
-                )
+                self.url_patterns[pattern_key].last_success = datetime.now().isoformat()
 
             # Update domain profile
             if domain not in self.domain_profiles:

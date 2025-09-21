@@ -10,9 +10,7 @@ import os
 import sys
 
 # Add the project root to the path so we can import the existing scripts
-project_root = os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-)
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 sys.path.insert(0, project_root)
 
 

@@ -21,9 +21,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -40,9 +38,7 @@ def get_database_connection():
         return None
 
 
-def fetch_parishes_data(
-    limit: int = None, diocese_id: int = None
-) -> List[Dict[str, Any]]:
+def fetch_parishes_data(limit: int = None, diocese_id: int = None) -> List[Dict[str, Any]]:
     """Fetch parishes data from the database."""
     conn = get_database_connection()
     if not conn:
@@ -158,9 +154,7 @@ def export_to_excel(data: List[Dict[str, Any]], output_file: Path) -> bool:
         try:
             import pandas as pd
         except ImportError:
-            logger.error(
-                "pandas not installed. Install with: pip install pandas openpyxl"
-            )
+            logger.error("pandas not installed. Install with: pip install pandas openpyxl")
             return False
 
         if not data:
@@ -188,11 +182,7 @@ def export_to_excel(data: List[Dict[str, Any]], output_file: Path) -> bool:
                 "Value": [
                     len(df),
                     df["diocese_id"].nunique() if "diocese_id" in df.columns else 0,
-                    (
-                        df["website_url"].notna().sum()
-                        if "website_url" in df.columns
-                        else 0
-                    ),
+                    (df["website_url"].notna().sum() if "website_url" in df.columns else 0),
                     df["email"].notna().sum() if "email" in df.columns else 0,
                     df["phone"].notna().sum() if "phone" in df.columns else 0,
                     datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -247,9 +237,7 @@ Note: Excel format requires 'pandas' and 'openpyxl' packages:
 
     parser.add_argument("--limit", type=int, help="Limit number of records to export")
 
-    parser.add_argument(
-        "--diocese - id", type=int, help="Export data for specific diocese only"
-    )
+    parser.add_argument("--diocese - id", type=int, help="Export data for specific diocese only")
 
     args = parser.parse_args()
 
@@ -262,9 +250,7 @@ Note: Excel format requires 'pandas' and 'openpyxl' packages:
 
     if missing_vars:
         logger.error(f"Missing required environment variables: {missing_vars}")
-        logger.error(
-            "Please copy .env.example to .env and configure your database credentials"
-        )
+        logger.error("Please copy .env.example to .env and configure your database credentials")
         return 1
 
     # Fetch data
@@ -311,9 +297,7 @@ Note: Excel format requires 'pandas' and 'openpyxl' packages:
         logger.info("🎉 Data export completed successfully!")
         logger.info("📁 Output files created in current directory")
         if args.format == "excel":
-            logger.info(
-                "💡 Excel file includes both parish data and summary statistics"
-            )
+            logger.info("💡 Excel file includes both parish data and summary statistics")
         return 0
     else:
         logger.error("❌ Data export failed")

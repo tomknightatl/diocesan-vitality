@@ -154,9 +154,7 @@ class ResilientWebDriver:
         # All attempts failed
         raise last_error
 
-    def _execute_protected_operation(
-        self, operation: Callable, args: tuple, kwargs: dict
-    ) -> Any:
+    def _execute_protected_operation(self, operation: Callable, args: tuple, kwargs: dict) -> Any:
         """Execute operation with circuit breaker protection."""
 
         @circuit_breaker("webdriver_operation", self.circuit_config)
@@ -182,9 +180,7 @@ class ResilientWebDriver:
         """
         # Check if this is the last attempt
         if attempt == self.max_retries:
-            logger.error(
-                f"❌ Operation failed after {self.max_retries + 1} attempts: {error}"
-            )
+            logger.error(f"❌ Operation failed after {self.max_retries + 1} attempts: {error}")
             return True
 
         # Check if error is recoverable
@@ -287,9 +283,7 @@ class ResilientWebDriver:
 
         def _wait_for_load_operation(driver, timeout):
             wait = WebDriverWait(driver, timeout)
-            wait.until(
-                lambda d: d.execute_script("return document.readyState") == "complete"
-            )
+            wait.until(lambda d: d.execute_script("return document.readyState") == "complete")
             return True
 
         return self.robust_execute(_wait_for_load_operation, timeout)
@@ -314,9 +308,7 @@ class ResilientWebDriver:
         self.quit()
 
 
-def create_resilient_webdriver(
-    driver_factory: Callable, **kwargs
-) -> ResilientWebDriver:
+def create_resilient_webdriver(driver_factory: Callable, **kwargs) -> ResilientWebDriver:
     """
     Factory function to create a resilient WebDriver wrapper.
 

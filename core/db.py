@@ -31,15 +31,11 @@ def get_supabase_client() -> Client:
     if supabase_client is None:
         if config.SUPABASE_URL and config.SUPABASE_KEY:
             try:
-                supabase_client = _create_supabase_client_with_retry(
-                    config.SUPABASE_URL, config.SUPABASE_KEY
-                )
+                supabase_client = _create_supabase_client_with_retry(config.SUPABASE_URL, config.SUPABASE_KEY)
                 if supabase_client:
                     print("Supabase client initialized successfully.")
                 else:
-                    print(
-                        "Failed to initialize Supabase client after multiple retries."
-                    )
+                    print("Failed to initialize Supabase client after multiple retries.")
             except Exception as e:
                 print(f"Error initializing Supabase client: {e}")
                 supabase_client = None

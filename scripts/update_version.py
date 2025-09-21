@@ -23,9 +23,7 @@ def update_version_file(new_version: str) -> None:
     content = version_file.read_text(encoding="utf - 8")
 
     # Update version string
-    updated_content = re.sub(
-        r'__version__ = "[^"]*"', f'__version__ = "{new_version}"', content
-    )
+    updated_content = re.sub(r'__version__ = "[^"]*"', f'__version__ = "{new_version}"', content)
 
     # Update version_info tuple
     version_parts = new_version.split(".")
@@ -54,9 +52,7 @@ def update_docker_tags(new_version: str) -> None:
         "pipeline": "tomatl/diocesan - vitality:pipeline-{new_version}",
     }}"""
 
-    updated_content = re.sub(
-        docker_tags_pattern, new_docker_tags, content, flags=re.DOTALL
-    )
+    updated_content = re.sub(docker_tags_pattern, new_docker_tags, content, flags=re.DOTALL)
 
     # Update release notes URL
     updated_content = re.sub(

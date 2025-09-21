@@ -140,9 +140,7 @@ class URLVisitTracker:
         """Detect available columns in DiscoveredUrls table."""
         try:
             # Try to query with new columns to see what's available
-            test_result = (
-                self.supabase.table("DiscoveredUrls").select("*").limit(1).execute()
-            )
+            test_result = self.supabase.table("DiscoveredUrls").select("*").limit(1).execute()
             if test_result.data:
                 self.available_columns = set(test_result.data[0].keys())
             else:
@@ -161,13 +159,9 @@ class URLVisitTracker:
             self.has_enhanced_schema = "visited_at" in self.available_columns
 
             if self.has_enhanced_schema:
-                logger.info(
-                    "🔍 Enhanced schema detected - full visit tracking available"
-                )
+                logger.info("🔍 Enhanced schema detected - full visit tracking available")
             else:
-                logger.info(
-                    "🔍 Basic schema detected - limited visit tracking available"
-                )
+                logger.info("🔍 Basic schema detected - limited visit tracking available")
 
         except Exception as e:
             logger.warning(f"🔍 Schema detection failed: {e}, assuming basic schema")
@@ -217,9 +211,7 @@ class URLVisitTracker:
                 }
 
                 if visit_result.extraction_success:
-                    update_data["last_successful_visit"] = (
-                        visit_result.visited_at.isoformat()
-                    )
+                    update_data["last_successful_visit"] = visit_result.visited_at.isoformat()
 
             else:
                 # Basic schema tracking
@@ -239,9 +231,7 @@ class URLVisitTracker:
                 on_conflict="url,parish_id",
             ).execute()
 
-            logger.debug(
-                f"🔍 Recorded visit for {visit_result.url}: {visit_result.visit_status.value}"
-            )
+            logger.debug(f"🔍 Recorded visit for {visit_result.url}: {visit_result.visit_status.value}")
             return True
 
         except Exception as e:
@@ -277,14 +267,10 @@ class URLVisitTracker:
         visit_result.content_size_bytes = content_size
         visit_result.final_url = final_url
 
-    def record_extraction_attempt(
-        self, visit_result: VisitResult, success: bool, error: Exception = None
-    ):
+    def record_extraction_attempt(self, visit_result: VisitResult, success: bool, error: Exception = None):
         """Record extraction attempt results."""
         visit_result.extraction_success = success
-        visit_result.visit_status = (
-            VisitStatus.SUCCESS if success else VisitStatus.FAILED
-        )
+        visit_result.visit_status = VisitStatus.SUCCESS if success else VisitStatus.FAILED
 
         if error:
             visit_result.error_type = type(error).__name__
@@ -312,12 +298,8 @@ class URLVisitTracker:
             return visit_result.quality_score
 
         scoring_metrics = self._analyze_content_keywords(content.lower())
-        quality_score = self._calculate_quality_score(
-            scoring_metrics, schedule_data_found
-        )
-        self._update_visit_result_with_quality(
-            visit_result, quality_score, scoring_metrics, schedule_data_found
-        )
+        quality_score = self._calculate_quality_score(scoring_metrics, schedule_data_found)
+        self._update_visit_result_with_quality(visit_result, quality_score, scoring_metrics, schedule_data_found)
 
         return quality_score
 
@@ -380,9 +362,7 @@ class URLVisitTracker:
                 keyword_count += count
                 found_indicators.append(f"{category}:{keyword}({count})")
 
-    def _calculate_quality_score(
-        self, scoring_metrics: dict, schedule_data_found: bool
-    ) -> float:
+    def _calculate_quality_score(self, scoring_metrics: dict, schedule_data_found: bool) -> float:
         """Calculate quality score based on scoring metrics"""
         if schedule_data_found:
             return ContentQuality.EXCELLENT.value
@@ -412,9 +392,7 @@ class URLVisitTracker:
         visit_result.schedule_data_found = schedule_data_found
         visit_result.schedule_keywords_count = scoring_metrics["keyword_count"]
         visit_result.quality_score = quality_score
-        visit_result.relevance_indicators = scoring_metrics["found_indicators"][
-            :20
-        ]  # Limit stored indicators
+        visit_result.relevance_indicators = scoring_metrics["found_indicators"][:20]  # Limit stored indicators
 
     def get_visit_statistics(self, parish_id: int = None) -> Dict[str, Any]:
         """
@@ -441,33 +419,17 @@ class URLVisitTracker:
             }
 
             if self.has_enhanced_schema:
-                successful_visits = [
-                    u for u in urls if u.get("extraction_success", False)
-                ]
-                failed_visits = [
-                    u
-                    for u in urls
-                    if u.get("visited") and not u.get("extraction_success", False)
-                ]
+                successful_visits = [u for u in urls if u.get("extraction_success", False)]
+                failed_visits = [u for u in urls if u.get("visited") and not u.get("extraction_success", False)]
 
                 stats.update(
                     {
                         "successful_extractions": len(successful_visits),
                         "failed_extractions": len(failed_visits),
-                        "schedule_data_found": sum(
-                            1 for u in urls if u.get("schedule_data_found", False)
-                        ),
-                        "avg_quality_score": (
-                            sum(u.get("quality_score", 0) for u in urls) / len(urls)
-                            if urls
-                            else 0
-                        ),
+                        "schedule_data_found": sum(1 for u in urls if u.get("schedule_data_found", False)),
+                        "avg_quality_score": (sum(u.get("quality_score", 0) for u in urls) / len(urls) if urls else 0),
                         "avg_response_time": (
-                            sum(
-                                u.get("response_time_ms", 0)
-                                for u in urls
-                                if u.get("response_time_ms")
-                            )
+                            sum(u.get("response_time_ms", 0) for u in urls if u.get("response_time_ms"))
                             / len([u for u in urls if u.get("response_time_ms")])
                             if any(u.get("response_time_ms") for u in urls)
                             else 0
@@ -502,12 +464,7 @@ class URLVisitTracker:
                 )
             else:
                 # Fallback: use ParishData to identify successful URLs
-                result = (
-                    self.supabase.table("ParishData")
-                    .select("fact_source_url")
-                    .eq("parish_id", parish_id)
-                    .execute()
-                )
+                result = self.supabase.table("ParishData").select("fact_source_url").eq("parish_id", parish_id).execute()
 
                 successful_urls = []
                 for record in result.data:
@@ -519,14 +476,10 @@ class URLVisitTracker:
             return result.data
 
         except Exception as e:
-            logger.error(
-                f"🔍 Error getting successful URLs for parish {parish_id}: {e}"
-            )
+            logger.error(f"🔍 Error getting successful URLs for parish {parish_id}: {e}")
             return []
 
-    def mark_url_as_visited(
-        self, url: str, parish_id: int, visited_at: datetime = None
-    ):
+    def mark_url_as_visited(self, url: str, parish_id: int, visited_at: datetime = None):
         """
         Simple method to mark a URL as visited with timestamp.
 
@@ -577,9 +530,7 @@ class VisitTracker:
             # Record any exception that occurred
             if exc_type:
                 self.visit_result.error_type = exc_type.__name__
-                self.visit_result.error_message = (
-                    str(exc_val)[:500] if exc_val else None
-                )
+                self.visit_result.error_message = str(exc_val)[:500] if exc_val else None
                 self.visit_result.visit_status = VisitStatus.FAILED
 
             # Calculate total time if not already set

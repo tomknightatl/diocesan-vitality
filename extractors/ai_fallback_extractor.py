@@ -34,9 +34,7 @@ class AIFallbackExtractor(BaseExtractor):
             logger.info("🤖 AI Fallback Extractor initialized with GenAI")
         else:
             self.ai_analyzer = None
-            logger.warning(
-                "🤖 AI Fallback Extractor initialized without GenAI (API key missing)"
-            )
+            logger.warning("🤖 AI Fallback Extractor initialized without GenAI (API key missing)")
 
     def can_extract(self, driver: WebDriver, url: str) -> bool:
         """
@@ -48,14 +46,10 @@ class AIFallbackExtractor(BaseExtractor):
             return False
 
         # Always return True - this is the fallback of last resort
-        logger.info(
-            "🤖 AI Fallback Extractor: Ready to analyze failed extraction page"
-        )
+        logger.info("🤖 AI Fallback Extractor: Ready to analyze failed extraction page")
         return True
 
-    def extract(
-        self, driver: WebDriver, diocese_name: str, url: str, max_parishes: int = None
-    ) -> List[Dict[str, Any]]:
+    def extract(self, driver: WebDriver, diocese_name: str, url: str, max_parishes: int = None) -> List[Dict[str, Any]]:
         """
         Extract parishes using AI - powered content analysis.
 
@@ -73,9 +67,7 @@ class AIFallbackExtractor(BaseExtractor):
 
         try:
             analysis_result = self._perform_ai_analysis(driver, diocese_name, url)
-            validated_parishes = self._process_analysis_results(
-                analysis_result, driver, url
-            )
+            validated_parishes = self._process_analysis_results(analysis_result, driver, url)
             final_parishes = self._apply_parish_limit(validated_parishes, max_parishes)
             self._log_extraction_results(final_parishes, analysis_result)
             return final_parishes
@@ -90,14 +82,10 @@ class AIFallbackExtractor(BaseExtractor):
         logger.info(f"    📊 Target: up to {max_parishes or 'unlimited'} parishes")
         logger.info(f"    🌐 URL: {url}")
 
-    def _perform_ai_analysis(
-        self, driver: WebDriver, diocese_name: str, url: str
-    ) -> Dict[str, Any]:
+    def _perform_ai_analysis(self, driver: WebDriver, diocese_name: str, url: str) -> Dict[str, Any]:
         """Perform AI-powered content analysis."""
         logger.info("🤖 Step 1: Analyzing page content with AI...")
-        analysis_result = self.ai_analyzer.analyze_failed_extraction(
-            driver, diocese_name, url
-        )
+        analysis_result = self.ai_analyzer.analyze_failed_extraction(driver, diocese_name, url)
         self._log_analysis_results(analysis_result)
         return analysis_result
 
@@ -118,9 +106,7 @@ class AIFallbackExtractor(BaseExtractor):
             for insight in insights[:3]:  # Log top 3 insights
                 logger.info(f"      • {insight}")
 
-    def _process_analysis_results(
-        self, analysis_result: Dict[str, Any], driver: WebDriver, url: str
-    ) -> List[Dict[str, Any]]:
+    def _process_analysis_results(self, analysis_result: Dict[str, Any], driver: WebDriver, url: str) -> List[Dict[str, Any]]:
         """Process and validate AI analysis results."""
         parishes = analysis_result.get("parish_data", [])
         validated_parishes = []
@@ -132,18 +118,14 @@ class AIFallbackExtractor(BaseExtractor):
 
         return validated_parishes
 
-    def _apply_parish_limit(
-        self, parishes: List[Dict[str, Any]], max_parishes: int
-    ) -> List[Dict[str, Any]]:
+    def _apply_parish_limit(self, parishes: List[Dict[str, Any]], max_parishes: int) -> List[Dict[str, Any]]:
         """Apply max parishes limit if specified."""
         if max_parishes and len(parishes) > max_parishes:
             logger.info(f"🤖 Limited results to {max_parishes} parishes")
             return parishes[:max_parishes]
         return parishes
 
-    def _log_extraction_results(
-        self, validated_parishes: List[Dict[str, Any]], analysis_result: Dict[str, Any]
-    ):
+    def _log_extraction_results(self, validated_parishes: List[Dict[str, Any]], analysis_result: Dict[str, Any]):
         """Log final extraction results."""
         parishes = analysis_result.get("parish_data", [])
         strategy = analysis_result.get("extraction_strategy", "unknown")
@@ -152,11 +134,7 @@ class AIFallbackExtractor(BaseExtractor):
         if validated_parishes:
             logger.info("🤖 ✅ AI Fallback Extraction successful!")
             logger.info(f"    📊 Final count: {len(validated_parishes)} parishes")
-            logger.info(
-                f"    🎯 Success rate: {len(validated_parishes)/len(parishes)*100:.1f}%"
-                if parishes
-                else "N/A"
-            )
+            logger.info(f"    🎯 Success rate: {len(validated_parishes)/len(parishes)*100:.1f}%" if parishes else "N/A")
 
             # Log sample results
             for i, parish in enumerate(validated_parishes[:3], 1):
@@ -224,15 +202,11 @@ class AIFallbackExtractor(BaseExtractor):
         is_valid = has_indicator and not has_exclusion
 
         if not is_valid:
-            logger.debug(
-                f"🤖 Rejected parish candidate: '{name}' (indicator: {has_indicator}, exclusion: {has_exclusion})"
-            )
+            logger.debug(f"🤖 Rejected parish candidate: '{name}' (indicator: {has_indicator}, exclusion: {has_exclusion})")
 
         return is_valid
 
-    def _enrich_parish_data(
-        self, parish: Dict[str, Any], driver: WebDriver, base_url: str
-    ) -> Dict[str, Any]:
+    def _enrich_parish_data(self, parish: Dict[str, Any], driver: WebDriver, base_url: str) -> Dict[str, Any]:
         """Enrich AI - extracted parish data with additional information."""
         enriched = parish.copy()
 
@@ -304,7 +278,7 @@ class AIFallbackExtractor(BaseExtractor):
             "extractor_name": self.extractor_name,
             "type": "ai_fallback",
             "ai_enabled": self.ai_analyzer is not None,
-            "description": "AI - powered fallback extractor for failed standard extractions",
+            "description": ("AI - powered fallback extractor for failed standard extractions"),
             "capabilities": [
                 "DOM structure analysis",
                 "Custom selector generation",

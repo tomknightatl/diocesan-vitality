@@ -16,9 +16,7 @@ logger = get_logger(__name__)
 
 def load_keywords_from_database(
     supabase: Client,
-) -> Tuple[
-    Dict[str, int], List[str], Dict[str, int], List[str], Dict[str, int], List[str]
-]:
+) -> Tuple[Dict[str, int], List[str], Dict[str, int], List[str], Dict[str, int], List[str]]:
     """
     Loads reconciliation, adoration, and mass times keywords from the ScheduleKeywords database table.
 
@@ -34,9 +32,7 @@ def load_keywords_from_database(
     try:
         response = _fetch_keywords_from_database(supabase)
         if not response.data:
-            logger.warning(
-                "No schedule keywords found in database, using fallback defaults"
-            )
+            logger.warning("No schedule keywords found in database, using fallback defaults")
             return get_fallback_keywords()
 
         keyword_containers = _initialize_keyword_containers()
@@ -93,9 +89,7 @@ def _process_keyword_rows(rows: List[Dict], containers: Dict[str, any]):
             _add_all_keyword(keyword, weight, is_negative, containers)
 
 
-def _add_reconciliation_keyword(
-    keyword: str, weight: int, is_negative: bool, containers: Dict[str, any]
-):
+def _add_reconciliation_keyword(keyword: str, weight: int, is_negative: bool, containers: Dict[str, any]):
     """Add keyword to reconciliation category"""
     if is_negative:
         containers["reconciliation_negative"].append(keyword)
@@ -103,9 +97,7 @@ def _add_reconciliation_keyword(
         containers["reconciliation_keywords"][keyword] = weight
 
 
-def _add_adoration_keyword(
-    keyword: str, weight: int, is_negative: bool, containers: Dict[str, any]
-):
+def _add_adoration_keyword(keyword: str, weight: int, is_negative: bool, containers: Dict[str, any]):
     """Add keyword to adoration category"""
     if is_negative:
         containers["adoration_negative"].append(keyword)
@@ -113,9 +105,7 @@ def _add_adoration_keyword(
         containers["adoration_keywords"][keyword] = weight
 
 
-def _add_mass_keyword(
-    keyword: str, weight: int, is_negative: bool, containers: Dict[str, any]
-):
+def _add_mass_keyword(keyword: str, weight: int, is_negative: bool, containers: Dict[str, any]):
     """Add keyword to mass category"""
     if is_negative:
         containers["mass_negative"].append(keyword)
@@ -123,9 +113,7 @@ def _add_mass_keyword(
         containers["mass_keywords"][keyword] = weight
 
 
-def _add_both_keyword(
-    keyword: str, weight: int, is_negative: bool, containers: Dict[str, any]
-):
+def _add_both_keyword(keyword: str, weight: int, is_negative: bool, containers: Dict[str, any]):
     """Add keyword to both reconciliation and adoration categories"""
     if is_negative:
         containers["reconciliation_negative"].append(keyword)
@@ -135,9 +123,7 @@ def _add_both_keyword(
         containers["adoration_keywords"][keyword] = weight
 
 
-def _add_all_keyword(
-    keyword: str, weight: int, is_negative: bool, containers: Dict[str, any]
-):
+def _add_all_keyword(keyword: str, weight: int, is_negative: bool, containers: Dict[str, any]):
     """Add keyword to all categories (reconciliation, adoration, mass)"""
     if is_negative:
         containers["reconciliation_negative"].append(keyword)
@@ -163,9 +149,7 @@ def _log_keyword_statistics(containers: Dict[str, any]):
 
 def _build_keyword_tuple(
     containers: Dict[str, any],
-) -> Tuple[
-    Dict[str, int], List[str], Dict[str, int], List[str], Dict[str, int], List[str]
-]:
+) -> Tuple[Dict[str, int], List[str], Dict[str, int], List[str], Dict[str, int], List[str]]:
     """Build the final tuple return value from containers"""
     return (
         containers["reconciliation_keywords"],
@@ -177,11 +161,7 @@ def _build_keyword_tuple(
     )
 
 
-def get_fallback_keywords() -> (
-    Tuple[
-        Dict[str, int], List[str], Dict[str, int], List[str], Dict[str, int], List[str]
-    ]
-):
+def get_fallback_keywords() -> Tuple[Dict[str, int], List[str], Dict[str, int], List[str], Dict[str, int], List[str]]:
     """
     Returns hardcoded fallback keywords if database loading fails.
     """
@@ -311,9 +291,7 @@ def add_keyword(
         return False
 
 
-def update_keyword_weight(
-    supabase: Client, keyword: str, schedule_type: str, new_weight: int
-) -> bool:
+def update_keyword_weight(supabase: Client, keyword: str, schedule_type: str, new_weight: int) -> bool:
     """
     Updates the weight of an existing keyword.
 
@@ -336,9 +314,7 @@ def update_keyword_weight(
         )
 
         if response.data:
-            logger.info(
-                f"Updated weight for '{keyword}' ({schedule_type}) to {new_weight}"
-            )
+            logger.info(f"Updated weight for '{keyword}' ({schedule_type}) to {new_weight}")
             return True
         else:
             logger.error(f"Failed to update weight for '{keyword}'")

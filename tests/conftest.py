@@ -21,22 +21,12 @@ sys.path.insert(0, str(project_root))
 
 def pytest_configure(config):
     """Configure pytest with custom markers."""
-    config.addinivalue_line(
-        "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
-    )
-    config.addinivalue_line(
-        "markers", "database: marks tests that require database connection"
-    )
+    config.addinivalue_line("markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')")
+    config.addinivalue_line("markers", "database: marks tests that require database connection")
     config.addinivalue_line("markers", "api: marks tests that test API endpoints")
-    config.addinivalue_line(
-        "markers", "integration: marks tests that test component integration"
-    )
-    config.addinivalue_line(
-        "markers", "performance: marks tests that measure performance"
-    )
-    config.addinivalue_line(
-        "markers", "external: marks tests that require external services"
-    )
+    config.addinivalue_line("markers", "integration: marks tests that test component integration")
+    config.addinivalue_line("markers", "performance: marks tests that measure performance")
+    config.addinivalue_line("markers", "external: marks tests that require external services")
 
 
 @pytest.fixture(scope="session", autouse=True)

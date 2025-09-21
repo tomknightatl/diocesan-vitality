@@ -11,15 +11,11 @@ import os
 import sys
 from unittest.mock import Mock, patch
 
-# Add current directory to path
-sys.path.append(os.getcwd())
+# Add current directory to path before imports
+sys.path.insert(0, os.getcwd())
 
-# These imports must come after path manipulation  # noqa: E402
 from core.distributed_work_coordinator import DistributedWorkCoordinator  # noqa: E402
-from distributed_pipeline_runner import (
-    DistributedPipelineRunner,
-    WorkerType,
-)  # noqa: E402
+from distributed_pipeline_runner import DistributedPipelineRunner, WorkerType  # noqa: E402
 
 
 async def test_worker_types():
@@ -49,9 +45,7 @@ async def test_worker_types():
 
     for env_value, expected_type in test_cases:
         actual_type = WorkerType(env_value.lower())
-        assert (
-            actual_type == expected_type
-        ), f"Expected {expected_type}, got {actual_type}"
+        assert actual_type == expected_type, f"Expected {expected_type}, got {actual_type}"
         print(f"   ✅ Environment '{env_value}' -> {actual_type.value}")
 
 
@@ -60,17 +54,13 @@ async def test_worker_coordinator():
     print("\n🧪 Testing Work Coordinator...")
 
     # Mock supabase to avoid database calls during testing
-    with patch(
-        "core.distributed_work_coordinator.get_supabase_client"
-    ) as mock_supabase:
+    with patch("core.distributed_work_coordinator.get_supabase_client") as mock_supabase:
         mock_client = Mock()
         mock_supabase.return_value = mock_client
 
         # Test coordinator initialization with different worker types
         for worker_type in ["discovery", "extraction", "schedule", "reporting"]:
-            coordinator = DistributedWorkCoordinator(
-                worker_id=f"test-{worker_type}-worker", worker_type=worker_type
-            )
+            coordinator = DistributedWorkCoordinator(worker_id=f"test-{worker_type}-worker", worker_type=worker_type)
 
             assert coordinator.worker_type == worker_type
             assert coordinator.worker_id == f"test-{worker_type}-worker"
@@ -108,9 +98,7 @@ async def test_pipeline_runner_specialization():
 
             assert runner.worker_type == worker_type
             assert runner.coordinator.worker_type == expected_type_str
-            print(
-                f"   ✅ {worker_type.value} runner created with correct specialization"
-            )
+            print(f"   ✅ {worker_type.value} runner created with correct specialization")
 
 
 def test_environment_variable_detection():
@@ -195,9 +183,7 @@ async def main():
         test_environment_variable_detection()
         test_deployment_configurations()
 
-        print(
-            "\n✅ All tests passed! Worker specialization system is working correctly."
-        )
+        print("\n✅ All tests passed! Worker specialization system is working correctly.")
         print("\n📋 Summary:")
         print("   • Worker types are properly defined and recognized")
         print("   • Work coordinator supports worker type specialization")

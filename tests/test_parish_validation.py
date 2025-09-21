@@ -194,9 +194,7 @@ def main():
 
     if failed == 0:
         logger.info("🎉 All parish validation tests passed!")
-        logger.info(
-            "\n✨ Parish validation system is ready to filter diocesan departments!"
-        )
+        logger.info("\n✨ Parish validation system is ready to filter diocesan departments!")
     else:
         logger.error(f"❌ {failed} test(s) failed!")
         sys.exit(1)

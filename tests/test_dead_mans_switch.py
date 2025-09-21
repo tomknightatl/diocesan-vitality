@@ -27,9 +27,7 @@ def test_dead_mans_switch():
         "estimated_completion": None,
     }
 
-    response = requests.post(
-        f"{backend_url}/api/monitoring/extraction_status", json=running_status
-    )
+    response = requests.post(f"{backend_url}/api/monitoring/extraction_status", json=running_status)
     if response.status_code == 200:
         print("✅ Extraction status set to RUNNING")
     else:
@@ -50,9 +48,7 @@ def test_dead_mans_switch():
         }
     }
 
-    response = requests.post(
-        f"{backend_url}/api/monitoring/circuit_breakers", json=circuit_data
-    )
+    response = requests.post(f"{backend_url}/api/monitoring/circuit_breakers", json=circuit_data)
     if response.status_code == 200:
         print("✅ Circuit breaker data set")
     else:
@@ -82,9 +78,7 @@ def test_dead_mans_switch():
             extraction_status = status["extraction_status"]["status"]
             circuit_breaker_count = len(status["circuit_breakers"])
 
-            print(
-                f"   Check {i + 1}/15: Extraction={extraction_status}, CircuitBreakers={circuit_breaker_count}"
-            )
+            print(f"   Check {i + 1}/15: Extraction={extraction_status}, CircuitBreakers={circuit_breaker_count}")
 
             # Check if extraction status became stale (should happen around 5 minutes)
             if extraction_status == "stale" and i >= 8:  # After 4+ minutes

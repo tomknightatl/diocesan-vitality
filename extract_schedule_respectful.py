@@ -76,9 +76,7 @@ class MonitoringClient:
             elif hasattr(self, "_start_time"):
                 data["started_at"] = self._start_time
 
-            self.session.post(
-                f"{self.base_url}/api/monitoring/extraction_status", json=data
-            )
+            self.session.post(f"{self.base_url}/api/monitoring/extraction_status", json=data)
         except Exception:
             # Silently fail - don't let monitoring break the main process
             pass
@@ -100,9 +98,7 @@ class MonitoringClient:
                 "successful_requests": successful_requests,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
-            self.session.post(
-                f"{self.base_url}/api/monitoring/performance_metrics", json=data
-            )
+            self.session.post(f"{self.base_url}/api/monitoring/performance_metrics", json=data)
         except Exception:
             # Silently fail - don't let monitoring break the main process
             pass
@@ -123,35 +119,25 @@ class MonitoringClient:
                 "parish_id": parish_id,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
-            self.session.post(
-                f"{self.base_url}/api/monitoring/report_error", json=data
-            )
+            self.session.post(f"{self.base_url}/api/monitoring/report_error", json=data)
         except Exception:
             # Silently fail - don't let monitoring break the main process
             pass
 
 
-def update_parish_blocking_data(
-    supabase, parish_id: int, blocking_info: dict, robots_info: dict
-):
+def update_parish_blocking_data(supabase, parish_id: int, blocking_info: dict, robots_info: dict):
     """Update parish record with blocking detection data."""
     try:
         # Create human - readable status description
         if blocking_info.get("is_blocked"):
             if blocking_info.get("blocking_type") == "403_forbidden":
-                status_description = (
-                    "Parish website actively blocking automated access (403 Forbidden)"
-                )
+                status_description = "Parish website actively blocking automated access (403 Forbidden)"
             elif blocking_info.get("blocking_type") == "rate_limited":
-                status_description = (
-                    "Parish website rate limiting requests (429 Too Many Requests)"
-                )
+                status_description = "Parish website rate limiting requests (429 Too Many Requests)"
             elif blocking_info.get("blocking_type") == "cloudflare_protection":
                 status_description = "Parish website using Cloudflare bot protection"
             elif blocking_info.get("blocking_type") == "robots_txt_disallowed":
-                status_description = (
-                    "Parish website disallows automated access via robots.txt"
-                )
+                status_description = "Parish website disallows automated access via robots.txt"
             else:
                 status_description = f'Parish website blocking access ({blocking_info.get("blocking_type", "unknown")})'
         else:
@@ -173,17 +159,13 @@ def update_parish_blocking_data(
         }
 
         supabase.table("Parishes").update(update_data).eq("id", parish_id).execute()
-        logger.info(
-            f"✅ Updated parish {parish_id} blocking data: {status_description}"
-        )
+        logger.info(f"✅ Updated parish {parish_id} blocking data: {status_description}")
 
     except Exception as e:
         logger.error(f"❌ Failed to update parish {parish_id} blocking data: {e}")
 
 
-def extract_content_with_respectful_automation(
-    url: str, automation: RespectfulAutomation, suppression_urls: set
-) -> tuple:
+def extract_content_with_respectful_automation(url: str, automation: RespectfulAutomation, suppression_urls: set) -> tuple:
     """
     Extract content from a URL using respectful automation practices.
 
@@ -203,15 +185,11 @@ def extract_content_with_respectful_automation(
         response, info = automation.respectful_get(url, timeout=15)
 
         if not response:
-            logger.warning(
-                f"⚠️ Could not fetch {url}: {info.get('error', 'Unknown error')}"
-            )
+            logger.warning(f"⚠️ Could not fetch {url}: {info.get('error', 'Unknown error')}")
             return "", info
 
         if info["blocking_info"]["is_blocked"]:
-            logger.warning(
-                f"🚫 Website is blocking access: {url} - {info['blocking_info']['blocking_type']}"
-            )
+            logger.warning(f"🚫 Website is blocking access: {url} - {info['blocking_info']['blocking_type']}")
             return "", info
 
         # Parse content
@@ -238,13 +216,9 @@ def extract_content_with_respectful_automation(
         return "", {"success": False, "error": str(e)}
 
 
-def _test_parish_for_blocking(
-    parish_url: str, parish_id: int, automation: RespectfulAutomation, supabase
-):
+def _test_parish_for_blocking(parish_url: str, parish_id: int, automation: RespectfulAutomation, supabase):
     """Test parish URL for blocking and update database"""
-    logger.info(
-        f"  🤖 [{parish_id}] Testing for blocking with respectful automation..."
-    )
+    logger.info(f"  🤖 [{parish_id}] Testing for blocking with respectful automation...")
 
     response, info = automation.respectful_get(parish_url, timeout=10)
 
@@ -290,9 +264,7 @@ def _find_candidate_pages(
             break
 
         try:
-            content, url_info = extract_content_with_respectful_automation(
-                url, automation, suppression_urls
-            )
+            content, url_info = extract_content_with_respectful_automation(url, automation, suppression_urls)
 
             if not content:
                 continue
@@ -300,19 +272,12 @@ def _find_candidate_pages(
             page_text = content.lower()
 
             # Check for reconciliation keywords
-            if any(
-                kw in page_text for kw in ["reconciliation", "confession", "penance"]
-            ):
+            if any(kw in page_text for kw in ["reconciliation", "confession", "penance"]):
                 candidate_pages["reconciliation"].append(url)
-                logger.info(
-                    f"  📝 [{parish_id}] Found reconciliation candidate: {url}"
-                )
+                logger.info(f"  📝 [{parish_id}] Found reconciliation candidate: {url}")
 
             # Check for adoration keywords
-            if any(
-                kw in page_text
-                for kw in ["adoration", "exposition", "blessed sacrament"]
-            ):
+            if any(kw in page_text for kw in ["adoration", "exposition", "blessed sacrament"]):
                 candidate_pages["adoration"].append(url)
                 logger.info(f"  ⛪ [{parish_id}] Found adoration candidate: {url}")
 
@@ -346,17 +311,11 @@ def _process_reconciliation_pages(
         urlparse(parish_url).netloc,
     )
 
-    logger.info(
-        f"  🤖 [{parish_id}] Analyzing reconciliation page with AI: {best_recon_url}"
-    )
-    recon_content, _ = extract_content_with_respectful_automation(
-        best_recon_url, automation, suppression_urls
-    )
+    logger.info(f"  🤖 [{parish_id}] Analyzing reconciliation page with AI: {best_recon_url}")
+    recon_content, _ = extract_content_with_respectful_automation(best_recon_url, automation, suppression_urls)
 
     if recon_content:
-        recon_result = ai_extractor.extract_schedule_from_content(
-            recon_content, best_recon_url, "reconciliation"
-        )
+        recon_result = ai_extractor.extract_schedule_from_content(recon_content, best_recon_url, "reconciliation")
         recon_result["parish_id"] = parish_id
         return recon_result
 
@@ -377,30 +336,20 @@ def _process_adoration_pages(
     if not candidate_pages["adoration"]:
         return None
 
-    best_ador_url = choose_best_url(
-        candidate_pages["adoration"], ador_kw, ador_neg, urlparse(parish_url).netloc
-    )
+    best_ador_url = choose_best_url(candidate_pages["adoration"], ador_kw, ador_neg, urlparse(parish_url).netloc)
 
-    logger.info(
-        f"  🤖 [{parish_id}] Analyzing adoration page with AI: {best_ador_url}"
-    )
-    ador_content, _ = extract_content_with_respectful_automation(
-        best_ador_url, automation, suppression_urls
-    )
+    logger.info(f"  🤖 [{parish_id}] Analyzing adoration page with AI: {best_ador_url}")
+    ador_content, _ = extract_content_with_respectful_automation(best_ador_url, automation, suppression_urls)
 
     if ador_content:
-        ador_result = ai_extractor.extract_schedule_from_content(
-            ador_content, best_ador_url, "adoration"
-        )
+        ador_result = ai_extractor.extract_schedule_from_content(ador_content, best_ador_url, "adoration")
         ador_result["parish_id"] = parish_id
         return ador_result
 
     return None
 
 
-def _create_success_result(
-    parish_id: int, extraction_results: dict, blocking_info: dict, robots_info: dict
-):
+def _create_success_result(parish_id: int, extraction_results: dict, blocking_info: dict, robots_info: dict):
     """Create standardized success result dictionary"""
     return {
         "parish_id": parish_id,
@@ -437,47 +386,33 @@ def process_parish_with_blocking_detection(
     logger.info(f"🔄 [{parish_id}] Starting respectful processing for {parish_url}")
 
     # First, test the main parish URL for blocking
-    response, blocking_info, robots_info = _test_parish_for_blocking(
-        parish_url, parish_id, automation, supabase
-    )
+    response, blocking_info, robots_info = _test_parish_for_blocking(parish_url, parish_id, automation, supabase)
 
     # If blocked, return early
     if blocking_info.get("is_blocked"):
-        logger.warning(
-            f"  🚫 [{parish_id}] Website is blocking access: {blocking_info.get('blocking_type')}"
-        )
+        logger.warning(f"  🚫 [{parish_id}] Website is blocking access: {blocking_info.get('blocking_type')}")
         return _create_error_result(parish_id, "blocked", blocking_info, robots_info)
 
     # If request failed for other reasons
     if not response:
         logger.error(f"  ❌ [{parish_id}] Request failed: request_failed")
-        return _create_error_result(
-            parish_id, "request_failed", blocking_info, robots_info
-        )
+        return _create_error_result(parish_id, "request_failed", blocking_info, robots_info)
 
-    logger.info(
-        f"  ✅ [{parish_id}] No blocking detected (HTTP {response.status_code})"
-    )
+    logger.info(f"  ✅ [{parish_id}] No blocking detected (HTTP {response.status_code})")
 
     # Continue with schedule extraction if not blocked
     try:
         # Load keywords for schedule detection
-        recon_kw, recon_neg, ador_kw, ador_neg, mass_kw, mass_neg = (
-            load_keywords_from_database(supabase)
-        )
+        recon_kw, recon_neg, ador_kw, ador_neg, mass_kw, mass_neg = load_keywords_from_database(supabase)
 
         # Get sitemap URLs for better coverage
         sitemap_urls = get_sitemap_urls(parish_url)
         urls_to_check = [parish_url] + sitemap_urls[:max_pages]
 
-        logger.info(
-            f"  🔍 [{parish_id}] Found {len(urls_to_check)} URLs to check for schedule content"
-        )
+        logger.info(f"  🔍 [{parish_id}] Found {len(urls_to_check)} URLs to check for schedule content")
 
         # Find candidate pages
-        candidate_pages = _find_candidate_pages(
-            urls_to_check, parish_id, automation, suppression_urls, max_pages
-        )
+        candidate_pages = _find_candidate_pages(urls_to_check, parish_id, automation, suppression_urls, max_pages)
 
         # Process found pages with AI
         ai_extractor = ScheduleAIExtractor()
@@ -516,13 +451,9 @@ def process_parish_with_blocking_detection(
             results_list = [r for r in extraction_results.values() if r]
             save_ai_schedule_results(supabase, results_list)
 
-        logger.info(
-            f"  ✅ [{parish_id}] Completed processing - found {len(extraction_results)} schedule types"
-        )
+        logger.info(f"  ✅ [{parish_id}] Completed processing - found {len(extraction_results)} schedule types")
 
-        return _create_success_result(
-            parish_id, extraction_results, blocking_info, robots_info
-        )
+        return _create_success_result(parish_id, extraction_results, blocking_info, robots_info)
 
     except Exception as e:
         logger.error(f"  ❌ [{parish_id}] Error during schedule extraction: {e}")
@@ -537,9 +468,7 @@ def main(
 ):
     """Main function for respectful parish processing with blocking detection."""
 
-    logger.info(
-        "🚀 Starting respectful parish website analysis with blocking detection"
-    )
+    logger.info("🚀 Starting respectful parish website analysis with blocking detection")
     if diocese_id:
         logger.info(f"📍 Filtering to diocese ID: {diocese_id}")
 
@@ -554,17 +483,13 @@ def main(
 
     # Get parishes to process
     suppression_urls = get_suppression_urls(supabase)
-    parishes_to_process = get_parishes_to_process(
-        supabase, num_parishes, parish_id, diocese_id
-    )
+    parishes_to_process = get_parishes_to_process(supabase, num_parishes, parish_id, diocese_id)
 
     if not parishes_to_process:
         logger.info("No parishes to process")
         return
 
-    logger.info(
-        f"Processing {len(parishes_to_process)} parishes with respectful automation"
-    )
+    logger.info(f"Processing {len(parishes_to_process)} parishes with respectful automation")
 
     # Process statistics
     total_parishes = len(parishes_to_process)
@@ -575,9 +500,7 @@ def main(
 
     for parish_url, p_id in parishes_to_process:
         processed_count += 1
-        logger.info(
-            f"🔄 [{processed_count}/{total_parishes}] Processing parish {p_id}: {parish_url}"
-        )
+        logger.info(f"🔄 [{processed_count}/{total_parishes}] Processing parish {p_id}: {parish_url}")
 
         try:
             result = process_parish_with_blocking_detection(
@@ -598,38 +521,24 @@ def main(
             if result.get("schedules_found", 0) > 0:
                 schedule_found_count += 1
 
-            logger.info(
-                f"✅ [{processed_count}/{total_parishes}] Completed parish {p_id}"
-            )
+            logger.info(f"✅ [{processed_count}/{total_parishes}] Completed parish {p_id}")
 
         except Exception as e:
-            logger.error(
-                f"❌ [{processed_count}/{total_parishes}] Error processing parish {p_id}: {e}"
-            )
+            logger.error(f"❌ [{processed_count}/{total_parishes}] Error processing parish {p_id}: {e}")
             continue
 
     # Print final summary
     logger.info("🎉 Respectful parish analysis completed!")
     logger.info("=" * 50)
     logger.info(f"Total parishes processed: {processed_count}")
-    logger.info(
-        f"✅ Accessible: {accessible_count} ({accessible_count / processed_count * 100:.1f}%)"
-    )
-    logger.info(
-        f"🚫 Blocked: {blocked_count} ({blocked_count / processed_count * 100:.1f}%)"
-    )
-    logger.info(
-        f"📅 Schedules found: {schedule_found_count} ({schedule_found_count / processed_count * 100:.1f}%)"
-    )
+    logger.info(f"✅ Accessible: {accessible_count} ({accessible_count / processed_count * 100:.1f}%)")
+    logger.info(f"🚫 Blocked: {blocked_count} ({blocked_count / processed_count * 100:.1f}%)")
+    logger.info(f"📅 Schedules found: {schedule_found_count} ({schedule_found_count / processed_count * 100:.1f}%)")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Respectful parish website analysis with blocking detection"
-    )
-    parser.add_argument(
-        "--num_parishes", type=int, help="Number of parishes to process (default: all)"
-    )
+    parser = argparse.ArgumentParser(description="Respectful parish website analysis with blocking detection")
+    parser.add_argument("--num_parishes", type=int, help="Number of parishes to process (default: all)")
     parser.add_argument("--parish_id", type=int, help="Specific parish ID to process")
     parser.add_argument(
         "--max_pages_per_parish",
@@ -637,9 +546,7 @@ if __name__ == "__main__":
         default=10,
         help="Maximum pages to analyze per parish",
     )
-    parser.add_argument(
-        "--diocese_id", type=int, help="Filter parishes to specific diocese ID"
-    )
+    parser.add_argument("--diocese_id", type=int, help="Filter parishes to specific diocese ID")
 
     args = parser.parse_args()
 

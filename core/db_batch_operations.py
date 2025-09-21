@@ -45,13 +45,9 @@ class DatabaseBatchManager:
             conflict_columns: Columns to use for conflict resolution
         """
         self.batch_configs[table_name] = {"on_conflict": conflict_columns}
-        logger.debug(
-            f"📋 Configured table '{table_name}' with conflict columns: {conflict_columns}"
-        )
+        logger.debug(f"📋 Configured table '{table_name}' with conflict columns: {conflict_columns}")
 
-    def add_record(
-        self, table_name: str, record: Dict[str, Any], auto_flush: bool = True
-    ) -> bool:
+    def add_record(self, table_name: str, record: Dict[str, Any], auto_flush: bool = True) -> bool:
         """
         Add a record to the batch queue.
 
@@ -65,9 +61,7 @@ class DatabaseBatchManager:
         """
         # Ensure table is configured
         if table_name not in self.batch_configs:
-            logger.warning(
-                f"Table '{table_name}' not configured, using default settings"
-            )
+            logger.warning(f"Table '{table_name}' not configured, using default settings")
             self.configure_table(table_name, "id")
 
         # Add timestamp if not present
@@ -96,10 +90,7 @@ class DatabaseBatchManager:
         Returns:
             bool: True if successful, False otherwise
         """
-        if (
-            table_name not in self.pending_records
-            or not self.pending_records[table_name]
-        ):
+        if table_name not in self.pending_records or not self.pending_records[table_name]:
             logger.debug(f"No pending records for table '{table_name}'")
             return True
 
@@ -110,22 +101,12 @@ class DatabaseBatchManager:
             start_time = time.time()
             config = self.batch_configs.get(table_name, {"on_conflict": "id"})
 
-            logger.info(
-                f"📦 Batch upserting {record_count} records to '{table_name}'..."
-            )
+            logger.info(f"📦 Batch upserting {record_count} records to '{table_name}'...")
 
-            response = (
-                self.supabase.table(table_name)
-                .upsert(records, on_conflict=config["on_conflict"])
-                .execute()
-            )
+            response = self.supabase.table(table_name).upsert(records, on_conflict=config["on_conflict"]).execute()
 
             if hasattr(response, "error") and response.error:
-                error_msg = (
-                    response.error.message
-                    if hasattr(response.error, "message")
-                    else str(response.error)
-                )
+                error_msg = response.error.message if hasattr(response.error, "message") else str(response.error)
                 logger.error(f"❌ Batch upsert failed for '{table_name}': {error_msg}")
                 return False
 
@@ -189,9 +170,7 @@ class DatabaseBatchManager:
         """
         stats = self.stats.copy()
         stats["pending_records"] = self.get_pending_count()
-        stats["avg_batch_time"] = self.stats["total_time"] / max(
-            self.stats["total_batches"], 1
-        )
+        stats["avg_batch_time"] = self.stats["total_time"] / max(self.stats["total_batches"], 1)
         stats["avg_record_time"] = (
             self.stats["total_time"] / max(self.stats["total_records"], 1)
         ) * 1000  # Convert to milliseconds
@@ -208,9 +187,7 @@ class DatabaseBatchManager:
         # Log summary
         total_pending = sum(len(records) for records in self.pending_records.values())
         if total_pending > 0:
-            logger.info(
-                f"🔄 Context exit: flushed pending records for {len(results)} tables"
-            )
+            logger.info(f"🔄 Context exit: flushed pending records for {len(results)} tables")
 
         stats = self.get_stats()
         logger.info(
@@ -224,9 +201,7 @@ class DatabaseBatchManager:
 _batch_manager = None
 
 
-def get_batch_manager(
-    supabase_client=None, batch_size: int = 25
-) -> DatabaseBatchManager:
+def get_batch_manager(supabase_client=None, batch_size: int = 25) -> DatabaseBatchManager:
     """
     Get or create the global batch manager instance.
 
@@ -241,9 +216,7 @@ def get_batch_manager(
 
     if _batch_manager is None:
         if supabase_client is None:
-            raise ValueError(
-                "supabase_client is required for first call to get_batch_manager"
-            )
+            raise ValueError("supabase_client is required for first call to get_batch_manager")
         _batch_manager = DatabaseBatchManager(supabase_client, batch_size)
 
     return _batch_manager

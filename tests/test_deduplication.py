@@ -41,16 +41,12 @@ def test_basic_deduplication():
 
     print(f"   📊 Original: {metrics.original_count} parishes")
     print(f"   📊 After deduplication: {metrics.deduplicated_count} parishes")
-    print(
-        f"   📊 Duplicates removed: {metrics.duplicates_removed} ({metrics.deduplication_rate:.1f}%)"
-    )
+    print(f"   📊 Duplicates removed: {metrics.duplicates_removed} ({metrics.deduplication_rate:.1f}%)")
 
     for parish in unique_parishes:
         print(f"   ✅ Kept: {parish.name}")
 
-    assert (
-        metrics.duplicates_removed >= 2
-    ), f"Expected at least 2 duplicates, got {metrics.duplicates_removed}"
+    assert metrics.duplicates_removed >= 2, f"Expected at least 2 duplicates, got {metrics.duplicates_removed}"
     print("   ✅ Basic deduplication test passed\n")
 
 
@@ -59,35 +55,23 @@ def test_address_based_deduplication():
     print("🔍 Testing address - based deduplication...")
 
     parishes = [
-        MockParish(
-            "St. Michael Parish", street_address="123 Main Street, Anytown, CA"
-        ),
-        MockParish(
-            "Saint Michael Church", street_address="123 Main St, Anytown, CA"
-        ),  # Should be duplicate
+        MockParish("St. Michael Parish", street_address="123 Main Street, Anytown, CA"),
+        MockParish("Saint Michael Church", street_address="123 Main St, Anytown, CA"),  # Should be duplicate
         MockParish("St. Peter Parish", street_address="456 Oak Avenue, Anytown, CA"),
-        MockParish(
-            "Different Parish", street_address="123 Main Street, Anytown, CA"
-        ),  # Should be duplicate based on address
+        MockParish("Different Parish", street_address="123 Main Street, Anytown, CA"),  # Should be duplicate based on address
     ]
 
-    deduplicator = ParishDeduplicator(
-        name_similarity_threshold=0.80, address_similarity_threshold=0.80
-    )
+    deduplicator = ParishDeduplicator(name_similarity_threshold=0.80, address_similarity_threshold=0.80)
     unique_parishes, metrics = deduplicator.deduplicate_parishes(parishes)
 
     print(f"   📊 Original: {metrics.original_count} parishes")
     print(f"   📊 After deduplication: {metrics.deduplicated_count} parishes")
-    print(
-        f"   📊 Duplicates removed: {metrics.duplicates_removed} ({metrics.deduplication_rate:.1f}%)"
-    )
+    print(f"   📊 Duplicates removed: {metrics.duplicates_removed} ({metrics.deduplication_rate:.1f}%)")
 
     for parish in unique_parishes:
         print(f"   ✅ Kept: {parish.name} - {parish.street_address}")
 
-    assert (
-        metrics.duplicates_removed >= 1
-    ), f"Expected at least 1 duplicate, got {metrics.duplicates_removed}"
+    assert metrics.duplicates_removed >= 1, f"Expected at least 1 duplicate, got {metrics.duplicates_removed}"
     print("   ✅ Address - based deduplication test passed\n")
 
 
@@ -96,9 +80,7 @@ def test_phone_website_matching():
     print("🔍 Testing phone and website matching...")
 
     parishes = [
-        MockParish(
-            "Some Parish", phone="(555) 123 - 4567", website="https://someparish.org"
-        ),
+        MockParish("Some Parish", phone="(555) 123 - 4567", website="https://someparish.org"),
         MockParish(
             "Very Similar Parish",
             phone="555 - 123 - 4567",
@@ -109,31 +91,21 @@ def test_phone_website_matching():
             phone="(555) 987 - 6543",
             website="https://anotherparish.org",
         ),
-        MockParish(
-            "Similar Parish", phone="(555) 123 - 4567"
-        ),  # Should be duplicate based on phone
+        MockParish("Similar Parish", phone="(555) 123 - 4567"),  # Should be duplicate based on phone
     ]
 
-    deduplicator = ParishDeduplicator(
-        name_similarity_threshold=0.70
-    )  # Lower threshold for this test
+    deduplicator = ParishDeduplicator(name_similarity_threshold=0.70)  # Lower threshold for this test
     unique_parishes, metrics = deduplicator.deduplicate_parishes(parishes)
 
     print(f"   📊 Original: {metrics.original_count} parishes")
     print(f"   📊 After deduplication: {metrics.deduplicated_count} parishes")
-    print(
-        f"   📊 Duplicates removed: {metrics.duplicates_removed} ({metrics.deduplication_rate:.1f}%)"
-    )
+    print(f"   📊 Duplicates removed: {metrics.duplicates_removed} ({metrics.deduplication_rate:.1f}%)")
 
     for parish in unique_parishes:
-        print(
-            f"   ✅ Kept: {parish.name} - Phone: {parish.phone} - Website: {parish.website}"
-        )
+        print(f"   ✅ Kept: {parish.name} - Phone: {parish.phone} - Website: {parish.website}")
 
     # Adjust expectation based on actual deduplication behavior
-    assert (
-        metrics.duplicates_removed >= 1
-    ), f"Expected at least 1 duplicate, got {metrics.duplicates_removed}"
+    assert metrics.duplicates_removed >= 1, f"Expected at least 1 duplicate, got {metrics.duplicates_removed}"
     print("   ✅ Phone/website matching test passed\n")
 
 
@@ -178,12 +150,8 @@ def test_similarity_calculation():
 
     for name1, name2, expected_min in test_pairs:
         similarity = deduplicator.calculate_name_similarity(name1, name2)
-        print(
-            f"   📊 '{name1}' vs '{name2}': {similarity:.2f} (expected >= {expected_min})"
-        )
-        assert (
-            similarity >= expected_min
-        ), f"Expected similarity >= {expected_min}, got {similarity}"
+        print(f"   📊 '{name1}' vs '{name2}': {similarity:.2f} (expected >= {expected_min})")
+        assert similarity >= expected_min, f"Expected similarity >= {expected_min}, got {similarity}"
 
     print("   ✅ Similarity calculation test passed\n")
 

@@ -71,9 +71,7 @@ def _run_ai_analysis(analyzer, driver, test_diocese, test_url):
     """Run AI analysis and log timing."""
     logger.info("🤖 Running AI content analysis...")
     start_time = time.time()
-    analysis_result = analyzer.analyze_failed_extraction(
-        driver, test_diocese, test_url
-    )
+    analysis_result = analyzer.analyze_failed_extraction(driver, test_diocese, test_url)
     analysis_time = time.time() - start_time
     logger.info(f"⏱️ Analysis completed in {analysis_time:.2f} seconds")
     return analysis_result
@@ -90,9 +88,7 @@ def _process_analysis_results(analysis_result):
 def _log_analysis_summary(analysis_result):
     """Log analysis summary information."""
     logger.info(f"🎯 Confidence: {analysis_result.get('confidence', 0.0):.2f}")
-    logger.info(
-        f"📊 Strategy: {analysis_result.get('extraction_strategy', 'unknown')}"
-    )
+    logger.info(f"📊 Strategy: {analysis_result.get('extraction_strategy', 'unknown')}")
     logger.info(f"⛪ Parishes found: {len(analysis_result.get('parish_data', []))}")
 
 

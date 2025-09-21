@@ -139,11 +139,7 @@ def show_db_stats():
 
         # Show recent activity
         recent_parishes = (
-            supabase.table("Parishes")
-            .select("Name, created_at")
-            .order("created_at", desc=True)
-            .limit(3)
-            .execute()
+            supabase.table("Parishes").select("Name, created_at").order("created_at", desc=True).limit(3).execute()
         )
         if recent_parishes.data:
             print("\nRecent parishes:")
@@ -172,9 +168,7 @@ def check_ports():
 
     for port in ports:
         try:
-            result = subprocess.run(
-                ["lsof", "-ti", f":{port}"], capture_output=True, text=True
-            )
+            result = subprocess.run(["lsof", "-ti", f":{port}"], capture_output=True, text=True)
             if result.stdout.strip():
                 pid = result.stdout.strip()
                 print(f"Port {port}: In use (PID {pid})")
@@ -192,9 +186,7 @@ def restart_services():
     ports = [3000, 8000]
     for port in ports:
         try:
-            result = subprocess.run(
-                ["lsof", "-ti", f":{port}"], capture_output=True, text=True
-            )
+            result = subprocess.run(["lsof", "-ti", f":{port}"], capture_output=True, text=True)
             if result.stdout.strip():
                 pids = result.stdout.strip().split("\n")
                 for pid in pids:

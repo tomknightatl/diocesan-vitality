@@ -68,11 +68,7 @@ def extract_dioceses_data(soup, max_dioceses=None):
         logger.info(f"Diocese name: {diocese_name}")
 
         website_div = da_wrap.find("div", class_="site")
-        website_url = (
-            website_div.find("a")["href"]
-            if website_div and website_div.find("a")
-            else "N/A"
-        )
+        website_url = website_div.find("a")["href"] if website_div and website_div.find("a") else "N/A"
         logger.info(f"Website: {website_url}")
 
         address_div = da_wrap.find("div", class_="da - address")
@@ -132,11 +128,7 @@ def main(max_dioceses=config.DEFAULT_MAX_DIOCESES):
         data_to_insert = dioceses_df.to_dict("records")
         logger.info(f"\nAttempting to upsert {len(data_to_insert)} rows...")
 
-        result = (
-            supabase.table("Dioceses")
-            .upsert(data_to_insert, on_conflict="Name")
-            .execute()
-        )
+        result = supabase.table("Dioceses").upsert(data_to_insert, on_conflict="Name").execute()
 
         if result.data:
             logger.info(f"✅ Successfully upserted {len(result.data)} rows!")
@@ -148,9 +140,7 @@ def main(max_dioceses=config.DEFAULT_MAX_DIOCESES):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Extract dioceses information from the USCCB website."
-    )
+    parser = argparse.ArgumentParser(description="Extract dioceses information from the USCCB website.")
     parser.add_argument(
         "--max_dioceses",
         type=int,

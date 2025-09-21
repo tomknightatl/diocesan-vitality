@@ -50,10 +50,7 @@ def _find_chrome_binary():
                 # Absolute path - check if file exists
                 if (
                     shutil.which(binary_path)
-                    or subprocess.run(
-                        ["test", "-f", binary_path], capture_output=True
-                    ).returncode
-                    == 0
+                    or subprocess.run(["test", "-f", binary_path], capture_output=True).returncode == 0
                 ):
                     logger.debug(f"🔍 Found Chrome binary at: {binary_path}")
                     return binary_path
@@ -136,9 +133,7 @@ def _setup_chrome_driver():
     except Exception as e:
         global _system_chromedriver_warning_logged
         if not _system_chromedriver_warning_logged:
-            logger.warning(
-                f"System ChromeDriver failed: {e}, falling back to ChromeDriverManager"
-            )
+            logger.warning(f"System ChromeDriver failed: {e}, falling back to ChromeDriverManager")
             _system_chromedriver_warning_logged = True
         return webdriver.Chrome(
             service=ChromeService(ChromeDriverManager().install()),
@@ -166,9 +161,7 @@ def _setup_firefox_driver():
 
     os.environ["WDM_LOCAL_CACHE"] = "/tmp/webdriver - cache"
 
-    return webdriver.Firefox(
-        service=FirefoxService(GeckoDriverManager().install()), options=firefox_options
-    )
+    return webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()), options=firefox_options)
 
 
 @retry(
@@ -295,40 +288,24 @@ class ProtectedWebDriver:
         self.default_timeout = default_timeout
 
         # Use optimized circuit breaker configurations
-        self.page_load_cb_config = (
-            OptimizedCircuitBreakerConfigs.get_page_load_config()
-        )
-        self.element_cb_config = (
-            OptimizedCircuitBreakerConfigs.get_element_interaction_config()
-        )
-        self.javascript_cb_config = (
-            OptimizedCircuitBreakerConfigs.get_javascript_execution_config()
-        )
+        self.page_load_cb_config = OptimizedCircuitBreakerConfigs.get_page_load_config()
+        self.element_cb_config = OptimizedCircuitBreakerConfigs.get_element_interaction_config()
+        self.javascript_cb_config = OptimizedCircuitBreakerConfigs.get_javascript_execution_config()
 
         # Initialize enhanced element wait strategy
         self.element_wait_strategy = ElementWaitStrategy(driver, base_timeout=5.0)
 
-        logger.info(
-            f"🛡️ Protected WebDriver initialized with optimized configs (timeout: {default_timeout}s)"
-        )
-        logger.debug(
-            f"   • Element interaction threshold: {self.element_cb_config.failure_threshold}"
-        )
-        logger.debug(
-            f"   • Page load threshold: {self.page_load_cb_config.failure_threshold}"
-        )
-        logger.debug(
-            f"   • JavaScript threshold: {self.javascript_cb_config.failure_threshold}"
-        )
+        logger.info(f"🛡️ Protected WebDriver initialized with optimized configs (timeout: {default_timeout}s)")
+        logger.debug(f"   • Element interaction threshold: {self.element_cb_config.failure_threshold}")
+        logger.debug(f"   • Page load threshold: {self.page_load_cb_config.failure_threshold}")
+        logger.debug(f"   • JavaScript threshold: {self.javascript_cb_config.failure_threshold}")
 
     def get(self, url, timeout=None):
         """Load a web page with circuit breaker protection"""
         timeout = timeout or self.default_timeout
         logger.debug(f"🌐 Loading page: {url} (timeout: {timeout}s)")
 
-        cb = circuit_manager.get_circuit_breaker(
-            "webdriver_page_load", self.page_load_cb_config
-        )
+        cb = circuit_manager.get_circuit_breaker("webdriver_page_load", self.page_load_cb_config)
 
         def _load_page():
             # Set page load timeout
@@ -342,31 +319,23 @@ class ProtectedWebDriver:
                 return True
             except TimeoutException as e:
                 load_time = time.time() - start_time
-                logger.warning(
-                    f"⏰ Page load timeout after {load_time:.2f}s for {url}"
-                )
+                logger.warning(f"⏰ Page load timeout after {load_time:.2f}s for {url}")
                 raise TimeoutError(f"Page load timeout after {timeout}s") from e
             except WebDriverException as e:
                 load_time = time.time() - start_time
-                logger.error(
-                    f"❌ WebDriver error after {load_time:.2f}s for {url}: {str(e)}"
-                )
+                logger.error(f"❌ WebDriver error after {load_time:.2f}s for {url}: {str(e)}")
                 raise
 
         return cb.call(_load_page)
 
     def find_element(self, *args, **kwargs):
         """Find element with circuit breaker protection"""
-        cb = circuit_manager.get_circuit_breaker(
-            "webdriver_element_interaction", self.element_cb_config
-        )
+        cb = circuit_manager.get_circuit_breaker("webdriver_element_interaction", self.element_cb_config)
         return cb.call(self.driver.find_element, *args, **kwargs)
 
     def find_elements(self, *args, **kwargs):
         """Find elements with circuit breaker protection"""
-        cb = circuit_manager.get_circuit_breaker(
-            "webdriver_element_interaction", self.element_cb_config
-        )
+        cb = circuit_manager.get_circuit_breaker("webdriver_element_interaction", self.element_cb_config)
         return cb.call(self.driver.find_elements, *args, **kwargs)
 
     def execute_script(self, script, *args, timeout=None):
@@ -374,9 +343,7 @@ class ProtectedWebDriver:
         timeout = timeout or 15
         logger.debug(f"⚡ Executing JavaScript (timeout: {timeout}s)")
 
-        cb = circuit_manager.get_circuit_breaker(
-            "webdriver_javascript", self.javascript_cb_config
-        )
+        cb = circuit_manager.get_circuit_breaker("webdriver_javascript", self.javascript_cb_config)
 
         def _execute_js():
             # Set script timeout
@@ -386,9 +353,7 @@ class ProtectedWebDriver:
                 return self.driver.execute_script(script, *args)
             except TimeoutException as e:
                 logger.warning(f"⏰ JavaScript timeout after {timeout}s")
-                raise TimeoutError(
-                    f"JavaScript execution timeout after {timeout}s"
-                ) from e
+                raise TimeoutError(f"JavaScript execution timeout after {timeout}s") from e
             except Exception as e:
                 logger.error(f"❌ JavaScript error: {str(e)}")
                 raise
@@ -417,9 +382,7 @@ class ProtectedWebDriver:
 
     def wait_for_page_stable(self, stability_timeout=2.0, max_wait=10.0):
         """Wait for page to stabilize (useful for AJAX content)"""
-        return self.element_wait_strategy.wait_for_page_stable(
-            stability_timeout, max_wait
-        )
+        return self.element_wait_strategy.wait_for_page_stable(stability_timeout, max_wait)
 
     def smart_find_form(self, form_selectors, timeout=None):
         """Find form using intelligent form detection"""

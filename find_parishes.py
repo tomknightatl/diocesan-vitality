@@ -72,26 +72,14 @@ def batch_upsert_parish_directory(data_to_upsert, current_url):
             logger.info(f"    Added to batch queue for {current_url}")
     else:
         # Fallback to direct upsert if batch manager not available
-        logger.warning(
-            f"    Batch manager not available, using direct upsert for {current_url}"
-        )
+        logger.warning(f"    Batch manager not available, using direct upsert for {current_url}")
         try:
             supabase = get_supabase_client()
-            response = (
-                supabase.table("DiocesesParishDirectory")
-                .upsert(data_to_upsert, on_conflict="diocese_id")
-                .execute()
-            )
+            response = supabase.table("DiocesesParishDirectory").upsert(data_to_upsert, on_conflict="diocese_id").execute()
             if hasattr(response, "error") and response.error:
-                error_detail = (
-                    response.error.message
-                    if hasattr(response.error, "message")
-                    else str(response.error)
-                )
+                error_detail = response.error.message if hasattr(response.error, "message") else str(response.error)
                 raise Exception(f"Supabase upsert error: {error_detail}")
-            logger.info(
-                f"    Successfully upserted data for {current_url} to Supabase."
-            )
+            logger.info(f"    Successfully upserted data for {current_url} to Supabase.")
         except Exception as e:
             logger.info(f"    Error upserting data to Supabase for {current_url}: {e}")
 
@@ -106,9 +94,7 @@ def get_surrounding_text(element, max_length=200):
     """Extracts text from the parent element of a given link, limited in length."""
     if element and element.parent:
         parent_text = element.parent.get_text(separator=" ", strip=True)
-        return parent_text[:max_length] + (
-            "..." if len(parent_text) > max_length else ""
-        )
+        return parent_text[:max_length] + ("..." if len(parent_text) > max_length else "")
     return ""
 
 
@@ -159,12 +145,7 @@ def find_candidate_urls(soup, base_url):
     all_links_tags = soup.find_all("a", href=True)
     for link_tag in all_links_tags:
         href = link_tag["href"]
-        if (
-            not href
-            or href.startswith("#")
-            or href.lower().startswith("javascript:")
-            or href.lower().startswith("mailto:")
-        ):
+        if not href or href.startswith("#") or href.lower().startswith("javascript:") or href.lower().startswith("mailto:"):
             continue
         abs_href = normalize_url_join(base_url, href)
         if not abs_href.startswith("http"):
@@ -175,14 +156,10 @@ def find_candidate_urls(soup, base_url):
         surrounding_text = get_surrounding_text(link_tag)
         parsed_href_path = urlparse(abs_href).path.lower()
         text_match = any(
-            keyword.lower() in link_text.lower()
-            or keyword.lower() in surrounding_text.lower()
+            keyword.lower() in link_text.lower() or keyword.lower() in surrounding_text.lower()
             for keyword in parish_link_keywords
         )
-        pattern_match = any(
-            re.search(pattern, parsed_href_path, re.IGNORECASE)
-            for pattern in url_patterns
-        )
+        pattern_match = any(re.search(pattern, parsed_href_path, re.IGNORECASE) for pattern in url_patterns)
         if text_match or pattern_match:
             candidate_links.append(
                 {
@@ -221,9 +198,7 @@ async def _invoke_genai_model_async(prompt):
     loop = asyncio.get_event_loop()
     try:
         # Run the sync GenAI call in a thread pool to avoid blocking the event loop
-        response = await loop.run_in_executor(
-            None, _invoke_genai_model_with_retry, prompt
-        )
+        response = await loop.run_in_executor(None, _invoke_genai_model_with_retry, prompt)
         return response
     except Exception as e:
         # Re - raise the exception to maintain the same error handling
@@ -248,22 +223,16 @@ async def _analyze_single_link_async(link_info, diocese_name):
             score = int(score_match.group(1))
             return {"href": link_info["href"], "score": score}
     except RetryError as e:
-        logger.info(
-            f"    GenAI API call (Direct Link) failed after multiple retries for {link_info['href']}: {e}"
-        )
+        logger.info(f"    GenAI API call (Direct Link) failed after multiple retries for {link_info['href']}: {e}")
     except Exception as e:
-        logger.info(
-            f"    Error calling GenAI (Direct Link) for {link_info['href']}: {e}. No score assigned."
-        )
+        logger.info(f"    Error calling GenAI (Direct Link) for {link_info['href']}: {e}. No score assigned.")
 
     return {"href": link_info["href"], "score": 0}
 
 
 async def analyze_links_with_genai_async(candidate_links, diocese_name=None):
     """Analyzes candidate links using GenAI concurrently to find the best parish directory URL."""
-    current_use_mock_direct = (
-        use_mock_genai_direct_page if config.GENAI_API_KEY else True
-    )
+    current_use_mock_direct = use_mock_genai_direct_page if config.GENAI_API_KEY else True
 
     if not current_use_mock_direct:
         return await _analyze_links_with_live_genai(candidate_links, diocese_name)
@@ -277,10 +246,7 @@ async def _analyze_links_with_live_genai(candidate_links, diocese_name):
         f"Attempting LIVE GenAI analysis (CONCURRENT) for {len(candidate_links)} direct page links for {diocese_name or 'Unknown Diocese'}."
     )
 
-    tasks = [
-        _analyze_single_link_async(link_info, diocese_name)
-        for link_info in candidate_links
-    ]
+    tasks = [_analyze_single_link_async(link_info, diocese_name) for link_info in candidate_links]
     results = await _execute_concurrent_analysis(tasks)
     return _find_best_result_from_analysis(results)
 
@@ -293,9 +259,7 @@ async def _execute_concurrent_analysis(tasks):
         async with semaphore:
             return await task
 
-    return await asyncio.gather(
-        *[analyze_with_semaphore(task) for task in tasks], return_exceptions=True
-    )
+    return await asyncio.gather(*[analyze_with_semaphore(task) for task in tasks], return_exceptions=True)
 
 
 def _find_best_result_from_analysis(results):
@@ -343,13 +307,7 @@ def _analyze_links_with_mock_scoring(candidate_links, diocese_name):
 def _calculate_mock_score(link_info, mock_keywords, diocese_name):
     """Calculate mock score for a single link."""
     current_score = 0
-    text_to_check = (
-        link_info["text"]
-        + " "
-        + link_info["href"]
-        + " "
-        + link_info["surrounding_text"]
-    ).lower()
+    text_to_check = (link_info["text"] + " " + link_info["href"] + " " + link_info["surrounding_text"]).lower()
 
     for kw in mock_keywords:
         if kw in text_to_check:
@@ -375,9 +333,7 @@ def analyze_links_with_genai(candidate_links, diocese_name=None):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
-    return loop.run_until_complete(
-        analyze_links_with_genai_async(candidate_links, diocese_name)
-    )
+    return loop.run_until_complete(analyze_links_with_genai_async(candidate_links, diocese_name))
 
 
 def _analyze_links_with_genai_sequential(candidate_links, diocese_name=None):
@@ -439,9 +395,7 @@ async def _analyze_single_snippet_async(result, diocese_name):
             score = int(score_match.group(1))
             return {"link": link, "score": score}
     except RetryError as e:
-        logger.info(
-            f"    GenAI API call (Snippet) for {link} failed after multiple retries: {e}"
-        )
+        logger.info(f"    GenAI API call (Snippet) for {link} failed after multiple retries: {e}")
     except Exception as e:
         logger.info(f"    Error calling GenAI for snippet analysis of {link}: {e}")
 
@@ -460,14 +414,9 @@ async def analyze_search_snippet_with_genai_async(search_results, diocese_name):
 
 async def _analyze_snippets_with_live_genai(search_results, diocese_name):
     """Analyze search snippets using live GenAI with concurrent processing."""
-    logger.info(
-        f"Attempting LIVE GenAI analysis (CONCURRENT) for {len(search_results)} snippets for {diocese_name}."
-    )
+    logger.info(f"Attempting LIVE GenAI analysis (CONCURRENT) for {len(search_results)} snippets for {diocese_name}.")
 
-    tasks = [
-        _analyze_single_snippet_async(result, diocese_name)
-        for result in search_results
-    ]
+    tasks = [_analyze_single_snippet_async(result, diocese_name) for result in search_results]
     results = await _execute_concurrent_snippet_analysis(tasks)
     return _find_best_snippet_result(results)
 
@@ -480,9 +429,7 @@ async def _execute_concurrent_snippet_analysis(tasks):
         async with semaphore:
             return await task
 
-    return await asyncio.gather(
-        *[analyze_with_semaphore(task) for task in tasks], return_exceptions=True
-    )
+    return await asyncio.gather(*[analyze_with_semaphore(task) for task in tasks], return_exceptions=True)
 
 
 def _find_best_snippet_result(results):
@@ -528,13 +475,7 @@ def _analyze_snippets_with_mock_scoring(search_results, diocese_name):
 def _calculate_snippet_mock_score(result, mock_keywords, diocese_name):
     """Calculate mock score for a single search snippet."""
     current_score = 0
-    text_to_check = (
-        result.get("title", "")
-        + " "
-        + result.get("snippet", "")
-        + " "
-        + result.get("link", "")
-    ).lower()
+    text_to_check = (result.get("title", "") + " " + result.get("snippet", "") + " " + result.get("link", "")).lower()
 
     for kw in mock_keywords:
         if kw in text_to_check:
@@ -550,9 +491,7 @@ def analyze_search_snippet_with_genai(search_results, diocese_name):
     """Synchronous wrapper for backwards compatibility."""
     # If there are no results or only one, use the old sequential method
     if len(search_results) <= 1:
-        return _analyze_search_snippet_with_genai_sequential(
-            search_results, diocese_name
-        )
+        return _analyze_search_snippet_with_genai_sequential(search_results, diocese_name)
 
     # Use the async version for multiple results
     try:
@@ -562,9 +501,7 @@ def analyze_search_snippet_with_genai(search_results, diocese_name):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
-    return loop.run_until_complete(
-        analyze_search_snippet_with_genai_async(search_results, diocese_name)
-    )
+    return loop.run_until_complete(analyze_search_snippet_with_genai_async(search_results, diocese_name))
 
 
 def _analyze_search_snippet_with_genai_sequential(search_results, diocese_name):
@@ -572,9 +509,7 @@ def _analyze_search_snippet_with_genai_sequential(search_results, diocese_name):
     current_use_mock_snippet = _should_use_mock_snippet_analysis()
 
     if not current_use_mock_snippet:
-        logger.info(
-            f"Attempting LIVE GenAI analysis for {len(search_results)} snippets for {diocese_name}."
-        )
+        logger.info(f"Attempting LIVE GenAI analysis for {len(search_results)} snippets for {diocese_name}.")
 
     if current_use_mock_snippet:
         return _analyze_snippets_with_mock_scoring(search_results, diocese_name)
@@ -593,33 +528,29 @@ def search_and_extract_urls(search_query):
         # Extract domain from search query if it's a site search
         if search_query.startswith("site:"):
             domain = search_query.split()[0].replace("site:", "")
-            base_url = (
-                f"https://{domain}"
-                if not domain.startswith("http")
-                else domain.replace("site:", "")
-            )
+            base_url = f"https://{domain}" if not domain.startswith("http") else domain.replace("site:", "")
 
             # Return mock search results for the domain
             mock_results = [
                 {
                     "link": f"{base_url.rstrip('/')}/parishes",
                     "title": "Parishes Directory",
-                    "snippet": "Directory of parishes and churches in the diocese. Find mass times and locations.",
+                    "snippet": ("Directory of parishes and churches in the diocese. Find mass times and locations."),
                 },
                 {
                     "link": f"{base_url.rstrip('/')}/directory",
                     "title": "Parish Directory",
-                    "snippet": "Official directory of Catholic parishes, churches, and missions.",
+                    "snippet": ("Official directory of Catholic parishes, churches, and missions."),
                 },
                 {
                     "link": f"{base_url.rstrip('/')}/find - a-parish",
                     "title": "Find a Parish",
-                    "snippet": "Search for a Catholic parish or church near you. Mass schedules and contact information.",
+                    "snippet": ("Search for a Catholic parish or church near you. Mass schedules and contact information."),
                 },
                 {
                     "link": f"{base_url.rstrip('/')}/our - church",
                     "title": "Our Churches",
-                    "snippet": "List of churches and parishes in our diocese with mass times and directions.",
+                    "snippet": ("List of churches and parishes in our diocese with mass times and directions."),
                 },
             ]
             return mock_results
@@ -647,21 +578,13 @@ def search_for_directory_link(diocese_name, diocese_website_url):
 
 def _should_use_mock_search() -> bool:
     """Determine whether to use mock search or live Google Custom Search"""
-    return (
-        use_mock_search_engine
-        if (config.SEARCH_API_KEY and config.SEARCH_CX)
-        else True
-    )
+    return use_mock_search_engine if (config.SEARCH_API_KEY and config.SEARCH_CX) else True
 
 
 def _handle_mock_search(diocese_name: str, diocese_website_url: str):
     """Handle mock search for testing/development"""
     mock_results = _generate_mock_search_results(diocese_name, diocese_website_url)
-    filtered_mock_results = [
-        res
-        for res in mock_results
-        if res["link"].startswith(diocese_website_url.rstrip("/"))
-    ]
+    filtered_mock_results = [res for res in mock_results if res["link"].startswith(diocese_website_url.rstrip("/"))]
     return analyze_search_snippet_with_genai(filtered_mock_results, diocese_name)
 
 
@@ -671,17 +594,17 @@ def _generate_mock_search_results(diocese_name: str, diocese_website_url: str) -
         {
             "link": normalize_url_join(diocese_website_url, "/parishes"),
             "title": f"Parishes - {diocese_name}",
-            "snippet": f"List of parishes in the Diocese of {diocese_name}. Find a parish near you.",
+            "snippet": (f"List of parishes in the Diocese of {diocese_name}. Find a parish near you."),
         },
         {
             "link": normalize_url_join(diocese_website_url, "/directory"),
             "title": f"Directory - {diocese_name}",
-            "snippet": f"Official directory of churches and schools for {diocese_name}.",
+            "snippet": (f"Official directory of churches and schools for {diocese_name}."),
         },
         {
             "link": normalize_url_join(diocese_website_url, "/find - a-church"),
             "title": f"Find a Church - {diocese_name}",
-            "snippet": f"Search for a Catholic church in {diocese_name}. Mass times and locations.",
+            "snippet": (f"Search for a Catholic church in {diocese_name}. Mass times and locations."),
         },
     ]
 
@@ -690,9 +613,7 @@ def _handle_live_search(diocese_name: str, diocese_website_url: str):
     """Handle live Google Custom Search API calls"""
     try:
         service = build("customsearch", "v1", developerKey=config.SEARCH_API_KEY)
-        search_results_items = _execute_search_queries(
-            service, diocese_name, diocese_website_url
-        )
+        search_results_items = _execute_search_queries(service, diocese_name, diocese_website_url)
 
         if not search_results_items:
             logger.info(f"    Search engine returned no results for {diocese_name}.")
@@ -716,9 +637,7 @@ def _generate_search_queries(diocese_name: str, diocese_website_url: str) -> lis
     ]
 
 
-def _execute_search_queries(
-    service, diocese_name: str, diocese_website_url: str
-) -> list:
+def _execute_search_queries(service, diocese_name: str, diocese_website_url: str) -> list:
     """Execute search queries and collect results"""
     queries = _generate_search_queries(diocese_name, diocese_website_url)
     search_results_items = []
@@ -736,9 +655,7 @@ def _execute_search_queries(
             time.sleep(0.1)  # Brief pause between API calls to be respectful
 
         except RetryError as e:
-            logger.info(
-                f"    Search API call failed after retries for query '{q}': {e}"
-            )
+            logger.info(f"    Search API call failed after retries for query '{q}': {e}")
             continue
         except HttpError as e:
             if _handle_http_error(e, q):
@@ -751,9 +668,7 @@ def _execute_search_queries(
     return search_results_items
 
 
-def _process_search_response(
-    response: dict, search_results_items: list, unique_links: set
-):
+def _process_search_response(response: dict, search_results_items: list, unique_links: set):
     """Process search API response and add unique results"""
     res_items = response.get("items", [])
     for item in res_items:
@@ -767,9 +682,7 @@ def _handle_http_error(error: HttpError, query: str) -> bool:
     """Handle HTTP errors from search API. Returns True if should break from query loop."""
     if error.resp.status == 403:
         logger.info(f"    Access denied (403) for query '{query}': {error.reason}")
-        logger.info(
-            "    Check that Custom Search API is enabled and credentials are correct."
-        )
+        logger.info("    Check that Custom Search API is enabled and credentials are correct.")
         return True
     else:
         logger.info(f"    HTTP error for query '{query}': {error}")
@@ -819,12 +732,8 @@ def _test_url_for_blocking(current_url, diocese_name, respectful_automation):
     if not respectful_automation:
         return blocking_data
 
-    logger.info(
-        f"  🤖 [{diocese_name}] Testing for blocking with respectful automation..."
-    )
-    response, automation_info = respectful_automation.respectful_get(
-        current_url, timeout=30
-    )
+    logger.info(f"  🤖 [{diocese_name}] Testing for blocking with respectful automation...")
+    response, automation_info = respectful_automation.respectful_get(current_url, timeout=30)
 
     if response is None:
         # Request failed - could be blocking or other issue
@@ -834,25 +743,19 @@ def _test_url_for_blocking(current_url, diocese_name, respectful_automation):
                 {
                     "is_blocked": True,
                     "blocking_type": "robots_txt_disallowed",
-                    "status_description": "Diocese website disallows automated access via robots.txt",
+                    "status_description": ("Diocese website disallows automated access via robots.txt"),
                     "robots_txt_check": automation_info.get("robots_info", {}),
-                    "blocking_evidence": {
-                        "robots_txt": automation_info.get(
-                            "message", "Access disallowed"
-                        )
-                    },
+                    "blocking_evidence": {"robots_txt": automation_info.get("message", "Access disallowed")},
                 }
             )
         else:
-            logger.warning(
-                f"  ❌ [{diocese_name}] Request failed: {automation_info.get('message', 'Unknown error')}"
-            )
+            logger.warning(f"  ❌ [{diocese_name}] Request failed: {automation_info.get('message', 'Unknown error')}")
             blocking_data.update(
                 {
-                    "status_description": f'Diocese website request failed: {automation_info.get("message", "Unknown error")}',
-                    "blocking_evidence": {
-                        "error": automation_info.get("message", "Request failed")
-                    },
+                    "status_description": (
+                        f'Diocese website request failed: {automation_info.get("message", "Unknown error")}'
+                    ),
+                    "blocking_evidence": {"error": automation_info.get("message", "Request failed")},
                 }
             )
     else:
@@ -877,19 +780,13 @@ def _test_url_for_blocking(current_url, diocese_name, respectful_automation):
             logger.warning(
                 f"  🚫 [{diocese_name}] Blocking detected: {blocking_data['blocking_type']} (HTTP {blocking_data['status_code']})"
             )
-            blocking_report = create_blocking_report(
-                block_info, current_url, diocese_name
-            )
+            blocking_report = create_blocking_report(block_info, current_url, diocese_name)
             blocking_data["status_description"] = blocking_report.get(
                 "status_description", "Diocese website blocking automated access"
             )
         else:
-            logger.info(
-                f"  ✅ [{diocese_name}] No blocking detected (HTTP {blocking_data['status_code']})"
-            )
-            blocking_data["status_description"] = (
-                "Diocese website accessible to automated requests"
-            )
+            logger.info(f"  ✅ [{diocese_name}] No blocking detected (HTTP {blocking_data['status_code']})")
+            blocking_data["status_description"] = "Diocese website accessible to automated requests"
 
     return blocking_data
 
@@ -903,31 +800,21 @@ def _try_direct_page_analysis(worker_driver, current_url, diocese_name):
     try:
         get_page_with_retry(worker_driver, current_url)
         # Wait for page to fully load
-        WebDriverWait(worker_driver, 10).until(
-            EC.presence_of_element_located((By.TAG_NAME, "body"))
-        )
+        WebDriverWait(worker_driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
         page_source = worker_driver.page_source
         soup = BeautifulSoup(page_source, "html.parser")
         candidate_links = find_candidate_urls(soup, current_url)
 
         if candidate_links:
-            logger.info(
-                f"🔍 [{diocese_name}] Found {len(candidate_links)} candidates from direct page. Analyzing..."
-            )
-            parish_dir_url_found = analyze_links_with_genai(
-                candidate_links, diocese_name
-            )
+            logger.info(f"🔍 [{diocese_name}] Found {len(candidate_links)} candidates from direct page. Analyzing...")
+            parish_dir_url_found = analyze_links_with_genai(candidate_links, diocese_name)
             if parish_dir_url_found:
                 method = "genai_direct_page_analysis"
                 status_text = "Success"
             else:
-                logger.info(
-                    f"⚠️ [{diocese_name}] GenAI (direct page) did not find a suitable URL."
-                )
+                logger.info(f"⚠️ [{diocese_name}] GenAI (direct page) did not find a suitable URL.")
         else:
-            logger.info(
-                f"⚠️ [{diocese_name}] No candidate links found by direct page scan."
-            )
+            logger.info(f"⚠️ [{diocese_name}] No candidate links found by direct page scan.")
     except Exception as e:
         logger.error(f"❌ [{diocese_name}] Error in direct page analysis: {e}")
 
@@ -942,26 +829,18 @@ def _try_search_engine_analysis(current_url, diocese_name):
 
     try:
         search_query = (
-            "site:"
-            + current_url.replace("http://", "").replace("https://", "")
-            + " parish directory churches mass times"
+            "site:" + current_url.replace("http://", "").replace("https://", "") + " parish directory churches mass times"
         )
         search_snippets = search_and_extract_urls(search_query)
 
         if search_snippets:
-            logger.info(
-                f"🔍 [{diocese_name}] Found {len(search_snippets)} search results. Analyzing with AI..."
-            )
-            parish_dir_url_found = analyze_search_snippet_with_genai(
-                search_snippets, diocese_name
-            )
+            logger.info(f"🔍 [{diocese_name}] Found {len(search_snippets)} search results. Analyzing with AI...")
+            parish_dir_url_found = analyze_search_snippet_with_genai(search_snippets, diocese_name)
             if parish_dir_url_found:
                 method = "search_engine_snippet_genai"
                 status_text = "Success"
             else:
-                logger.info(
-                    f"⚠️ [{diocese_name}] GenAI (search snippets) did not find a suitable URL."
-                )
+                logger.info(f"⚠️ [{diocese_name}] GenAI (search snippets) did not find a suitable URL.")
         else:
             logger.info(f"⚠️ [{diocese_name}] No search results found.")
     except Exception as e:
@@ -997,9 +876,7 @@ def _create_upsert_data(
     }
 
 
-def _handle_retry_error(
-    e, diocese_name, current_diocese_id, current_url, blocking_data
-):
+def _handle_retry_error(e, diocese_name, current_diocese_id, current_url, blocking_data):
     """Handle RetryError exceptions during processing."""
     error_message = str(e).replace('"', "''")
     error_msg = f"Page load failed after multiple retries: {error_message[:100]}"
@@ -1007,16 +884,12 @@ def _handle_retry_error(
 
     status_text = f"Error: Page load failed - {error_message[:60]}"
     method = "error_page_load_failed"
-    data_to_upsert = _create_upsert_data(
-        current_diocese_id, current_url, None, status_text, method, blocking_data
-    )
+    data_to_upsert = _create_upsert_data(current_diocese_id, current_url, None, status_text, method, blocking_data)
     batch_upsert_parish_directory(data_to_upsert, current_url)
     return error_msg
 
 
-def _handle_general_error(
-    e, diocese_name, current_diocese_id, current_url, blocking_data
-):
+def _handle_general_error(e, diocese_name, current_diocese_id, current_url, blocking_data):
     """Handle general exceptions during processing."""
     error_message = str(e).replace('"', "''")
     error_msg = f"General error processing: {error_message[:100]}"
@@ -1024,9 +897,7 @@ def _handle_general_error(
 
     # Attempt WebDriver recovery if it's a connection issue
     if "HTTPConnectionPool" in error_message or "Connection refused" in error_message:
-        logger.warning(
-            f"🔄 [{diocese_name}] Attempting WebDriver recovery due to connection error..."
-        )
+        logger.warning(f"🔄 [{diocese_name}] Attempting WebDriver recovery due to connection error...")
         try:
             recovered_driver = recover_driver()
             if recovered_driver:
@@ -1035,15 +906,11 @@ def _handle_general_error(
             else:
                 logger.error(f"❌ [{diocese_name}] WebDriver recovery failed")
         except Exception as recovery_error:
-            logger.error(
-                f"❌ [{diocese_name}] WebDriver recovery error: {recovery_error}"
-            )
+            logger.error(f"❌ [{diocese_name}] WebDriver recovery error: {recovery_error}")
 
     status_text = f"Error: {error_message[:100]}"
     method = "error_processing_general"
-    data_to_upsert = _create_upsert_data(
-        current_diocese_id, current_url, None, status_text, method, blocking_data
-    )
+    data_to_upsert = _create_upsert_data(current_diocese_id, current_url, None, status_text, method, blocking_data)
     batch_upsert_parish_directory(data_to_upsert, current_url)
     return error_msg
 
@@ -1069,9 +936,7 @@ def process_single_diocese(diocese_info):
     logger.info(f"🔄 [{diocese_name}] Starting respectful processing...")
 
     # First, test the URL for blocking using respectful automation
-    blocking_data = _test_url_for_blocking(
-        current_url, diocese_name, respectful_automation
-    )
+    blocking_data = _test_url_for_blocking(current_url, diocese_name, respectful_automation)
 
     # Each worker gets its own WebDriver instance with recovery support
     worker_driver = ensure_driver_available()
@@ -1082,15 +947,11 @@ def process_single_diocese(diocese_info):
 
     try:
         # Try direct page analysis first
-        parish_dir_url_found, method, status_text = _try_direct_page_analysis(
-            worker_driver, current_url, diocese_name
-        )
+        parish_dir_url_found, method, status_text = _try_direct_page_analysis(worker_driver, current_url, diocese_name)
 
         # If direct page analysis fails, try search engine analysis
         if not parish_dir_url_found:
-            parish_dir_url_found, method, status_text = _try_search_engine_analysis(
-                current_url, diocese_name
-            )
+            parish_dir_url_found, method, status_text = _try_search_engine_analysis(current_url, diocese_name)
 
         # Log final result
         if parish_dir_url_found:
@@ -1114,14 +975,10 @@ def process_single_diocese(diocese_info):
         return result_msg
 
     except RetryError as e:
-        return _handle_retry_error(
-            e, diocese_name, current_diocese_id, current_url, blocking_data
-        )
+        return _handle_retry_error(e, diocese_name, current_diocese_id, current_url, blocking_data)
 
     except Exception as e:
-        return _handle_general_error(
-            e, diocese_name, current_diocese_id, current_url, blocking_data
-        )
+        return _handle_general_error(e, diocese_name, current_diocese_id, current_url, blocking_data)
 
     finally:
         # Always clean up the worker's WebDriver
@@ -1129,9 +986,7 @@ def process_single_diocese(diocese_info):
             try:
                 worker_driver.quit()
             except Exception as cleanup_error:
-                logger.warning(
-                    f"⚠️ [{diocese_name}] WebDriver cleanup error: {str(cleanup_error)}"
-                )
+                logger.warning(f"⚠️ [{diocese_name}] WebDriver cleanup error: {str(cleanup_error)}")
 
 
 def _configure_genai():
@@ -1141,13 +996,9 @@ def _configure_genai():
             genai.configure(api_key=config.GENAI_API_KEY)
             logger.info("GenAI configured successfully.")
         except Exception as e:
-            logger.info(
-                f"Error configuring GenAI with key: {e}. GenAI features will be mocked."
-            )
+            logger.info(f"Error configuring GenAI with key: {e}. GenAI features will be mocked.")
     else:
-        logger.info(
-            "GenAI API Key is not set. GenAI features will be mocked globally."
-        )
+        logger.info("GenAI API Key is not set. GenAI features will be mocked globally.")
 
 
 def _initialize_batch_manager(supabase):
@@ -1178,32 +1029,20 @@ def _fetch_all_dioceses(supabase, diocese_id):
     return all_dioceses_list
 
 
-def _get_unprocessed_dioceses_urls(
-    supabase, all_dioceses_list, max_dioceses_to_process
-):
+def _get_unprocessed_dioceses_urls(supabase, all_dioceses_list, max_dioceses_to_process):
     """Get URLs of unprocessed dioceses"""
     diocese_url_to_name = {d["Website"]: d["Name"] for d in all_dioceses_list}
-    response_processed_dioceses = (
-        supabase.table("DiocesesParishDirectory").select("diocese_url").execute()
-    )
+    response_processed_dioceses = supabase.table("DiocesesParishDirectory").select("diocese_url").execute()
     processed_diocese_urls = (
         {item["diocese_url"] for item in response_processed_dioceses.data}
         if response_processed_dioceses.data is not None
         else set()
     )
-    unprocessed_dioceses_urls = (
-        set(diocese_url_to_name.keys()) - processed_diocese_urls
-    )
+    unprocessed_dioceses_urls = set(diocese_url_to_name.keys()) - processed_diocese_urls
 
     if unprocessed_dioceses_urls:
-        logger.info(
-            f"Found {len(unprocessed_dioceses_urls)} dioceses needing parish directory URLs."
-        )
-        limit = (
-            max_dioceses_to_process
-            if max_dioceses_to_process != 0
-            else len(unprocessed_dioceses_urls)
-        )
+        logger.info(f"Found {len(unprocessed_dioceses_urls)} dioceses needing parish directory URLs.")
+        limit = max_dioceses_to_process if max_dioceses_to_process != 0 else len(unprocessed_dioceses_urls)
         actual_limit = min(limit, len(unprocessed_dioceses_urls))
         return random.sample(list(unprocessed_dioceses_urls), actual_limit)
 
@@ -1212,16 +1051,10 @@ def _get_unprocessed_dioceses_urls(
 
 def _get_oldest_scanned_dioceses_urls(supabase, max_dioceses_to_process):
     """Get URLs of oldest scanned dioceses for rescanning"""
-    logger.info(
-        "All dioceses have been scanned. Rescanning the oldest entries based on 'updated_at'."
-    )
+    logger.info("All dioceses have been scanned. Rescanning the oldest entries based on 'updated_at'.")
     limit = max_dioceses_to_process if max_dioceses_to_process != 0 else 5
     response_oldest_scanned = (
-        supabase.table("DiocesesParishDirectory")
-        .select("diocese_url")
-        .order("updated_at", desc=False)
-        .limit(limit)
-        .execute()
+        supabase.table("DiocesesParishDirectory").select("diocese_url").order("updated_at", desc=False).limit(limit).execute()
     )
 
     if response_oldest_scanned.data:
@@ -1233,18 +1066,14 @@ def _get_oldest_scanned_dioceses_urls(supabase, max_dioceses_to_process):
         return []
 
 
-def _determine_dioceses_to_scan_urls(
-    supabase, all_dioceses_list, diocese_id, max_dioceses_to_process
-):
+def _determine_dioceses_to_scan_urls(supabase, all_dioceses_list, diocese_id, max_dioceses_to_process):
     """Determine which diocese URLs need to be scanned"""
     if diocese_id:
         # If a specific diocese is provided, scan it regardless of previous processing
         return [d["Website"] for d in all_dioceses_list if d.get("Website")]
     else:
         # Logic to find unprocessed or outdated dioceses
-        unprocessed_urls = _get_unprocessed_dioceses_urls(
-            supabase, all_dioceses_list, max_dioceses_to_process
-        )
+        unprocessed_urls = _get_unprocessed_dioceses_urls(supabase, all_dioceses_list, max_dioceses_to_process)
         if unprocessed_urls:
             return unprocessed_urls
         else:
@@ -1273,8 +1102,7 @@ def _process_dioceses_parallel(dioceses_to_scan):
     with ThreadPoolExecutor(max_workers=num_workers) as executor:
         # Submit all diocese processing tasks
         future_to_diocese = {
-            executor.submit(process_single_diocese, diocese_info): diocese_info
-            for diocese_info in dioceses_to_scan
+            executor.submit(process_single_diocese, diocese_info): diocese_info for diocese_info in dioceses_to_scan
         }
 
         # Process completed tasks as they finish
@@ -1301,9 +1129,7 @@ def _finalize_batch_operations():
         logger.info(f"📊 Batch operations summary: {stats}")
 
 
-def find_parish_directories(
-    diocese_id=None, max_dioceses_to_process=config.DEFAULT_MAX_DIOCESES
-):
+def find_parish_directories(diocese_id=None, max_dioceses_to_process=config.DEFAULT_MAX_DIOCESES):
     """Main function to run the parish directory finder with parallel processing."""
 
     # Configure dependencies
@@ -1329,9 +1155,7 @@ def find_parish_directories(
             supabase, all_dioceses_list, diocese_id, max_dioceses_to_process
         )
 
-        dioceses_to_scan = _build_dioceses_to_scan_list(
-            all_dioceses_list, dioceses_to_scan_urls
-        )
+        dioceses_to_scan = _build_dioceses_to_scan_list(all_dioceses_list, dioceses_to_scan_urls)
 
     except Exception as e:
         logger.info(f"Error during Supabase data operations: {e}")
@@ -1342,9 +1166,7 @@ def find_parish_directories(
         return
 
     # Process dioceses in parallel
-    logger.info(
-        f"Processing {len(dioceses_to_scan)} dioceses with parallel Selenium instances..."
-    )
+    logger.info(f"Processing {len(dioceses_to_scan)} dioceses with parallel Selenium instances...")
     _process_dioceses_parallel(dioceses_to_scan)
 
     # Finalize operations
@@ -1352,9 +1174,7 @@ def find_parish_directories(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Find parish directory URLs on diocesan websites."
-    )
+    parser = argparse.ArgumentParser(description="Find parish directory URLs on diocesan websites.")
     parser.add_argument(
         "--diocese_id",
         type=int,

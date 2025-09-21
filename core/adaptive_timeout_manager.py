@@ -43,10 +43,7 @@ class ResponseMetrics:
         try:
             # Ensure all values are numeric
             numeric_times = [
-                float(t)
-                for t in self.response_times
-                if isinstance(t, (int, float, str))
-                and str(t).replace(".", "").isdigit()
+                float(t) for t in self.response_times if isinstance(t, (int, float, str)) and str(t).replace(".", "").isdigit()
             ]
             if not numeric_times:
                 return 10.0
@@ -62,10 +59,7 @@ class ResponseMetrics:
         try:
             # Ensure all values are numeric
             numeric_times = [
-                float(t)
-                for t in self.response_times
-                if isinstance(t, (int, float, str))
-                and str(t).replace(".", "").isdigit()
+                float(t) for t in self.response_times if isinstance(t, (int, float, str)) and str(t).replace(".", "").isdigit()
             ]
             if len(numeric_times) < 5:
                 return self.avg_response_time * 1.5
@@ -242,26 +236,19 @@ class AdaptiveTimeoutManager:
                 strategy = self._determine_strategy(domain, metrics, context)
 
                 # Calculate base timeout
-                base_timeout = self._calculate_base_timeout(
-                    strategy, metrics, operation_type
-                )
+                base_timeout = self._calculate_base_timeout(strategy, metrics, operation_type)
 
                 # Apply adaptive adjustments
-                adapted_timeout = self._apply_adaptive_adjustments(
-                    base_timeout, metrics, retry_count, strategy
-                )
+                adapted_timeout = self._apply_adaptive_adjustments(base_timeout, metrics, retry_count, strategy)
 
                 # Apply operation - specific modifiers
-                final_timeout = self._apply_operation_modifiers(
-                    adapted_timeout, operation_type, context
-                )
+                final_timeout = self._apply_operation_modifiers(adapted_timeout, operation_type, context)
 
                 # Ensure within bounds
                 final_timeout = max(3.0, min(final_timeout, strategy.max_timeout))
 
                 self.logger.debug(
-                    f"⏱️ Timeout for {domain}: {final_timeout:.1f}s "
-                    f"(strategy: {strategy.name}, retry: {retry_count})"
+                    f"⏱️ Timeout for {domain}: {final_timeout:.1f}s " f"(strategy: {strategy.name}, retry: {retry_count})"
                 )
 
                 return final_timeout
@@ -270,9 +257,7 @@ class AdaptiveTimeoutManager:
             self.logger.error(f"⏱️ Error calculating timeout for {url}: {e}")
             return 30.0  # Safe fallback
 
-    def _determine_strategy(
-        self, domain: str, metrics: ResponseMetrics, context: Dict = None
-    ) -> TimeoutStrategy:
+    def _determine_strategy(self, domain: str, metrics: ResponseMetrics, context: Dict = None) -> TimeoutStrategy:
         """Determine the best timeout strategy for a domain."""
         # Check explicit domain classifications first
         explicit_strategy = self._check_explicit_domain_classification(domain)
@@ -293,18 +278,14 @@ class AdaptiveTimeoutManager:
         # Default to moderate
         return self.strategies["moderate"]
 
-    def _check_explicit_domain_classification(
-        self, domain: str
-    ) -> Optional[TimeoutStrategy]:
+    def _check_explicit_domain_classification(self, domain: str) -> Optional[TimeoutStrategy]:
         """Check if domain matches explicit classification patterns."""
         for pattern, strategy_name in self.domain_classifications.items():
             if pattern in domain:
                 return self.strategies[strategy_name]
         return None
 
-    def _determine_strategy_from_metrics(
-        self, metrics: ResponseMetrics
-    ) -> Optional[TimeoutStrategy]:
+    def _determine_strategy_from_metrics(self, metrics: ResponseMetrics) -> Optional[TimeoutStrategy]:
         """Determine strategy based on performance metrics."""
         avg_time = metrics.avg_response_time
         complexity = metrics.complexity_score
@@ -324,9 +305,7 @@ class AdaptiveTimeoutManager:
 
         return None
 
-    def _is_lightning_fast_site(
-        self, avg_time: float, complexity: float, success_rate: float
-    ) -> bool:
+    def _is_lightning_fast_site(self, avg_time: float, complexity: float, success_rate: float) -> bool:
         """Check if site qualifies for lightning strategy."""
         return avg_time < 3.0 and complexity < 1.2 and success_rate > 0.9
 
@@ -334,9 +313,7 @@ class AdaptiveTimeoutManager:
         """Check if site qualifies for fast strategy."""
         return avg_time < 8.0 and complexity < 1.5
 
-    def _is_patient_site(
-        self, avg_time: float, complexity: float, success_rate: float
-    ) -> bool:
+    def _is_patient_site(self, avg_time: float, complexity: float, success_rate: float) -> bool:
         """Check if site requires patient strategy."""
         return avg_time > 25.0 or complexity > 2.5 or success_rate < 0.6
 
@@ -344,9 +321,7 @@ class AdaptiveTimeoutManager:
         """Check if site requires complex strategy."""
         return avg_time > 15.0 or complexity > 2.0
 
-    def _determine_strategy_from_context(
-        self, context: Dict
-    ) -> Optional[TimeoutStrategy]:
+    def _determine_strategy_from_context(self, context: Dict) -> Optional[TimeoutStrategy]:
         """Determine strategy based on context hints."""
         if not context:
             return None
@@ -358,9 +333,7 @@ class AdaptiveTimeoutManager:
 
         return None
 
-    def _calculate_base_timeout(
-        self, strategy: TimeoutStrategy, metrics: ResponseMetrics, operation_type: str
-    ) -> float:
+    def _calculate_base_timeout(self, strategy: TimeoutStrategy, metrics: ResponseMetrics, operation_type: str) -> float:
         """Calculate base timeout using strategy and historical data."""
 
         base = strategy.base_timeout
@@ -371,9 +344,7 @@ class AdaptiveTimeoutManager:
             historical_timeout = metrics.p95_response_time * 1.5
 
             # Weight historical data with strategy base
-            weight = min(
-                len(metrics.response_times) / 20.0, 0.7
-            )  # Max 70% weight on history
+            weight = min(len(metrics.response_times) / 20.0, 0.7)  # Max 70% weight on history
             base = base * (1 - weight) + historical_timeout * weight
 
         # Operation - specific base adjustments
@@ -427,9 +398,7 @@ class AdaptiveTimeoutManager:
 
         return timeout
 
-    def _apply_operation_modifiers(
-        self, timeout: float, operation_type: str, context: Dict = None
-    ) -> float:
+    def _apply_operation_modifiers(self, timeout: float, operation_type: str, context: Dict = None) -> float:
         """Apply final operation - specific modifiers."""
 
         if not context:
@@ -486,9 +455,7 @@ class AdaptiveTimeoutManager:
             self.domain_metrics[domain] = ResponseMetrics(domain=domain)
         return self.domain_metrics[domain]
 
-    def _validate_response_time(
-        self, response_time: float, url: str
-    ) -> Optional[float]:
+    def _validate_response_time(self, response_time: float, url: str) -> Optional[float]:
         """Validate and convert response time to float."""
         try:
             return float(response_time)
@@ -496,9 +463,7 @@ class AdaptiveTimeoutManager:
             self.logger.debug(f"⏱️ Invalid response time for {url}: {response_time}")
             return None
 
-    def _record_response_timing(
-        self, metrics: "ResponseMetrics", response_time: float, success: bool
-    ):
+    def _record_response_timing(self, metrics: "ResponseMetrics", response_time: float, success: bool):
         """Record response timing data."""
         metrics.response_times.append(response_time)
 
@@ -521,9 +486,7 @@ class AdaptiveTimeoutManager:
                 except (ValueError, TypeError):
                     self.logger.debug(f"⏱️ Invalid complexity indicator {key}: {value}")
         elif complexity_indicators:
-            self.logger.debug(
-                f"⏱️ Invalid complexity_indicators type for {url}: {type(complexity_indicators)}"
-            )
+            self.logger.debug(f"⏱️ Invalid complexity_indicators type for {url}: {type(complexity_indicators)}")
 
     def _update_global_statistics(self, response_time: float, timeout_occurred: bool):
         """Update global statistics."""
@@ -534,9 +497,7 @@ class AdaptiveTimeoutManager:
         # Update global average (rolling)
         old_avg = self.global_stats["avg_response_time"]
         count = self.global_stats["total_requests"]
-        self.global_stats["avg_response_time"] = (
-            old_avg * (count - 1) + response_time
-        ) / count
+        self.global_stats["avg_response_time"] = (old_avg * (count - 1) + response_time) / count
 
     def analyze_complexity_indicators(
         self,
@@ -558,9 +519,7 @@ class AdaptiveTimeoutManager:
 
                 # SPA detection
                 spa_indicators = ["angular", "react", "vue", "backbone", "ember"]
-                spa_score = sum(
-                    1 for indicator in spa_indicators if indicator in content
-                )
+                spa_score = sum(1 for indicator in spa_indicators if indicator in content)
                 indicators["spa_detected"] = min(spa_score, 1.0)
 
                 # Dynamic content indicators
@@ -598,22 +557,10 @@ class AdaptiveTimeoutManager:
 
             # Network logs analysis
             if network_logs:
-                ajax_requests = len(
-                    [
-                        log
-                        for log in network_logs
-                        if log.get("type") == "xhr" or log.get("type") == "fetch"
-                    ]
-                )
+                ajax_requests = len([log for log in network_logs if log.get("type") == "xhr" or log.get("type") == "fetch"])
                 indicators["ajax_requests"] = min(ajax_requests / 10.0, 2.0)
 
-                redirect_count = len(
-                    [
-                        log
-                        for log in network_logs
-                        if str(log.get("status", 0)).startswith("3")
-                    ]
-                )
+                redirect_count = len([log for log in network_logs if str(log.get("status", 0)).startswith("3")])
                 indicators["redirect_count"] = min(redirect_count / 3.0, 2.0)
 
         except Exception as e:
@@ -644,10 +591,7 @@ class AdaptiveTimeoutManager:
         with self._lock:
             timeout_rate = 0
             if self.global_stats["total_requests"] > 0:
-                timeout_rate = (
-                    self.global_stats["total_timeouts"]
-                    / self.global_stats["total_requests"]
-                )
+                timeout_rate = self.global_stats["total_timeouts"] / self.global_stats["total_requests"]
 
             return {
                 "total_requests": self.global_stats["total_requests"],
@@ -682,16 +626,11 @@ class AdaptiveTimeoutManager:
                 # Log current performance by strategy
                 for strategy_name, performances in strategy_performance.items():
                     if performances:
-                        avg_time = statistics.mean(
-                            [p["avg_time"] for p in performances]
-                        )
-                        avg_success = statistics.mean(
-                            [p["success_rate"] for p in performances]
-                        )
+                        avg_time = statistics.mean([p["avg_time"] for p in performances])
+                        avg_success = statistics.mean([p["success_rate"] for p in performances])
 
                         self.logger.info(
-                            f"⏱️ Strategy '{strategy_name}': "
-                            f"avg_time={avg_time:.1f}s, success_rate={avg_success:.2f}"
+                            f"⏱️ Strategy '{strategy_name}': " f"avg_time={avg_time:.1f}s, success_rate={avg_success:.2f}"
                         )
 
         except Exception as e:
@@ -708,9 +647,7 @@ class AdaptiveTimeoutManager:
                             "response_times": list(metrics.response_times),
                             "success_times": list(metrics.success_times),
                             "failure_times": list(metrics.failure_times),
-                            "complexity_indicators": dict(
-                                metrics.complexity_indicators
-                            ),
+                            "complexity_indicators": dict(metrics.complexity_indicators),
                             "last_updated": metrics.last_updated,
                         }
                         for domain, metrics in self.domain_metrics.items()
@@ -737,14 +674,10 @@ class AdaptiveTimeoutManager:
                 # Restore domain metrics
                 for domain, metric_data in data.get("domain_metrics", {}).items():
                     metrics = ResponseMetrics(domain=domain)
-                    metrics.response_times.extend(
-                        metric_data.get("response_times", [])
-                    )
+                    metrics.response_times.extend(metric_data.get("response_times", []))
                     metrics.success_times.extend(metric_data.get("success_times", []))
                     metrics.failure_times.extend(metric_data.get("failure_times", []))
-                    metrics.complexity_indicators.update(
-                        metric_data.get("complexity_indicators", {})
-                    )
+                    metrics.complexity_indicators.update(metric_data.get("complexity_indicators", {}))
                     metrics.last_updated = metric_data.get("last_updated", time.time())
 
                     self.domain_metrics[domain] = metrics

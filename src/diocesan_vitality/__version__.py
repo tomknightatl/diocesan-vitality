@@ -27,7 +27,7 @@ BUILD_INFO = {
         "pipeline": f"tomatl/diocesan - vitality:pipeline-{__version__}",
     },
     "registry_url": "https://hub.docker.com/r/tomatl/diocesan - vitality",
-    "release_notes_url": f"https://github.com/tomknightatl/diocesan - vitality/releases/tag/v{__version__}",
+    "release_notes_url": (f"https://github.com/tomknightatl/diocesan - vitality/releases/tag/v{__version__}"),
 }
 
 

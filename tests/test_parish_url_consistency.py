@@ -18,17 +18,10 @@ from supabase import Client
 def get_parishes_testset_urls(supabase: Client, diocese_id: int) -> Dict[str, str]:
     """Get Web URLs from ParishesTestSet table for given diocese"""
     try:
-        response = (
-            supabase.table("ParishesTestSet")
-            .select("Name, Web")
-            .eq("diocese_id", diocese_id)
-            .execute()
-        )
+        response = supabase.table("ParishesTestSet").select("Name, Web").eq("diocese_id", diocese_id).execute()
 
         if not response.data:
-            print(
-                f"⚠️  No records found in ParishesTestSet for diocese_id {diocese_id}"
-            )
+            print(f"⚠️  No records found in ParishesTestSet for diocese_id {diocese_id}")
             return {}
 
         # Create mapping of parish name to URL (handle None URLs)
@@ -49,12 +42,7 @@ def get_parishes_testset_urls(supabase: Client, diocese_id: int) -> Dict[str, st
 def get_parishes_urls(supabase: Client, diocese_id: int) -> Dict[str, str]:
     """Get Web URLs from Parishes table for given diocese"""
     try:
-        response = (
-            supabase.table("Parishes")
-            .select("Name, Web")
-            .eq("diocese_id", diocese_id)
-            .execute()
-        )
+        response = supabase.table("Parishes").select("Name, Web").eq("diocese_id", diocese_id).execute()
 
         if not response.data:
             print(f"⚠️  No records found in Parishes for diocese_id {diocese_id}")
@@ -97,18 +85,12 @@ def normalize_url(url: str) -> str:
     return url
 
 
-def compare_parish_urls(
-    testset_urls: Dict[str, str], parishes_urls: Dict[str, str]
-) -> Tuple[List, List, List, List]:
+def compare_parish_urls(testset_urls: Dict[str, str], parishes_urls: Dict[str, str]) -> Tuple[List, List, List, List]:
     """Compare URLs between testset and parishes tables"""
 
     # Normalize URLs for comparison
-    testset_normalized = {
-        name: normalize_url(url) for name, url in testset_urls.items()
-    }
-    parishes_normalized = {
-        name: normalize_url(url) for name, url in parishes_urls.items()
-    }
+    testset_normalized = {name: normalize_url(url) for name, url in testset_urls.items()}
+    parishes_normalized = {name: normalize_url(url) for name, url in parishes_urls.items()}
 
     testset_names = set(testset_normalized.keys())
     parishes_names = set(parishes_normalized.keys())
@@ -125,9 +107,7 @@ def compare_parish_urls(
         parishes_url = parishes_normalized[parish_name]
 
         if testset_url == parishes_url:
-            url_matches.append(
-                {"parish": parish_name, "url": testset_urls[parish_name]}
-            )  # Use original URL for display
+            url_matches.append({"parish": parish_name, "url": testset_urls[parish_name]})  # Use original URL for display
         else:
             url_mismatches.append(
                 {
@@ -140,14 +120,8 @@ def compare_parish_urls(
             )
 
     # Find parishes only in one table
-    only_in_testset = [
-        {"parish": name, "url": testset_urls[name]}
-        for name in testset_names - parishes_names
-    ]
-    only_in_parishes = [
-        {"parish": name, "url": parishes_urls[name]}
-        for name in parishes_names - testset_names
-    ]
+    only_in_testset = [{"parish": name, "url": testset_urls[name]} for name in testset_names - parishes_names]
+    only_in_parishes = [{"parish": name, "url": parishes_urls[name]} for name in parishes_names - testset_names]
 
     return url_matches, url_mismatches, only_in_testset, only_in_parishes
 
@@ -172,9 +146,7 @@ def run_url_consistency_test(diocese_id: int = 2024) -> bool:
 
 def _print_test_header(diocese_id: int):
     """Print test header information"""
-    print(
-        f"🔍 Testing URL consistency for diocese {diocese_id} (Archdiocese of Atlanta)"
-    )
+    print(f"🔍 Testing URL consistency for diocese {diocese_id} (Archdiocese of Atlanta)")
     print("=" * 70)
 
 
@@ -211,9 +183,7 @@ def _validate_data_exists(testset_urls: list, parishes_urls: list) -> bool:
 def _compare_and_analyze_urls(testset_urls: list, parishes_urls: list) -> dict:
     """Compare URLs and return analysis results"""
     print("\n🔗 Comparing URLs...")
-    url_matches, url_mismatches, only_in_testset, only_in_parishes = (
-        compare_parish_urls(testset_urls, parishes_urls)
-    )
+    url_matches, url_mismatches, only_in_testset, only_in_parishes = compare_parish_urls(testset_urls, parishes_urls)
 
     return {
         "url_matches": url_matches,
@@ -223,9 +193,7 @@ def _compare_and_analyze_urls(testset_urls: list, parishes_urls: list) -> dict:
     }
 
 
-def _report_test_results(
-    comparison_results: dict, testset_urls: list, parishes_urls: list
-):
+def _report_test_results(comparison_results: dict, testset_urls: list, parishes_urls: list):
     """Report detailed test results"""
     print("\n📋 RESULTS:")
     print("=" * 40)
@@ -271,24 +239,18 @@ def _report_unique_entries(entries: list, table_name: str):
             print(f"     ... and {len(entries) - 3} more")
 
 
-def _report_summary_statistics(
-    comparison_results: dict, testset_urls: list, parishes_urls: list
-):
+def _report_summary_statistics(comparison_results: dict, testset_urls: list, parishes_urls: list):
     """Report summary statistics"""
     url_matches = comparison_results["url_matches"]
     url_mismatches = comparison_results["url_mismatches"]
 
     total_common = len(url_matches) + len(url_mismatches)
-    match_percentage = (
-        (len(url_matches) / total_common * 100) if total_common > 0 else 0
-    )
+    match_percentage = (len(url_matches) / total_common * 100) if total_common > 0 else 0
 
     print("\n📊 SUMMARY:")
     print(f"   • Common parishes: {total_common}")
     print(f"   • URL match rate: {match_percentage:.1f}%")
-    print(
-        f"   • Data coverage: TestSet={len(testset_urls)}, Parishes={len(parishes_urls)}"
-    )
+    print(f"   • Data coverage: TestSet={len(testset_urls)}, Parishes={len(parishes_urls)}")
 
 
 def _determine_test_outcome(comparison_results: dict) -> bool:
@@ -310,9 +272,7 @@ def _determine_test_outcome(comparison_results: dict) -> bool:
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="Test parish URL consistency between tables"
-    )
+    parser = argparse.ArgumentParser(description="Test parish URL consistency between tables")
     parser.add_argument(
         "--diocese - id",
         type=int,

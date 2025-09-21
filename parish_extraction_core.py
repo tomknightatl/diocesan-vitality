@@ -206,9 +206,7 @@ def _build_street_address_from_components(parsed_components: dict) -> str:
     return street_address
 
 
-def _build_full_address_from_components(
-    street_address: str, city: str, state: str, zip_code: str
-) -> str:
+def _build_full_address_from_components(street_address: str, city: str, state: str, zip_code: str) -> str:
     """Build full address from individual components."""
     full_address_parts = [street_address]
 
@@ -233,9 +231,7 @@ def enhanced_address_parsing(raw_name: str) -> Dict:
         import usaddress
 
         # Extract address pattern from raw name
-        potential_address, parish_name = _extract_address_pattern_from_raw_name(
-            raw_name
-        )
+        potential_address, parish_name = _extract_address_pattern_from_raw_name(raw_name)
         if not potential_address:
             return {"success": False}
 
@@ -253,9 +249,7 @@ def enhanced_address_parsing(raw_name: str) -> Dict:
         zip_code = parsed_components.get("ZipCode", "")
 
         # Build full address
-        full_address = _build_full_address_from_components(
-            street_address, city, state, zip_code
-        )
+        full_address = _build_full_address_from_components(street_address, city, state, zip_code)
 
         return {
             "success": True,
@@ -303,25 +297,16 @@ def legacy_address_parsing(raw_name: str, cleaned_data: Dict) -> Dict:
             cleaned_data["state"] = city_state_zip_match.group(2).strip()
             cleaned_data["zip_code"] = city_state_zip_match.group(3).strip()
             # The street address is everything before the city, state, zip
-            street_address_raw = full_address.replace(
-                city_state_zip_match.group(0), ""
-            ).strip()
+            street_address_raw = full_address.replace(city_state_zip_match.group(0), "").strip()
             cleaned_data["street_address"] = street_address_raw.rstrip(",").strip()
         else:
             # Fallback for just street and zip if city/state not clearly parsed
             zip_match = re.search(r"(\d{5}(?:-\d{4})?)$", full_address)
             if zip_match:
                 cleaned_data["zip_code"] = zip_match.group(1)
-                cleaned_data["street_address"] = (
-                    full_address.replace(zip_match.group(0), "")
-                    .strip()
-                    .rstrip(",")
-                    .strip()
-                )
+                cleaned_data["street_address"] = full_address.replace(zip_match.group(0), "").strip().rstrip(",").strip()
             else:
-                cleaned_data["street_address"] = (
-                    full_address  # If no clear components, treat as street
-                )
+                cleaned_data["street_address"] = full_address  # If no clear components, treat as street
 
     # Final clean up of the name (remove trailing commas, extra spaces)
     cleaned_data["name"] = re.sub(r",\s*$", "", cleaned_data["name"]).strip()
@@ -353,10 +338,8 @@ class PatternDetector:
         js_required = self._requires_javascript(html_lower)
 
         # Determine extraction method and confidence
-        extraction_method, confidence, selectors, notes = (
-            self._determine_extraction_strategy(
-                platform, listing_type, soup, html_lower, url
-            )
+        extraction_method, confidence, selectors, notes = self._determine_extraction_strategy(
+            platform, listing_type, soup, html_lower, url
         )
 
         return DioceseSitePattern(
@@ -384,9 +367,7 @@ class PatternDetector:
         else:
             return DiocesePlatform.CUSTOM_CMS
 
-    def _detect_listing_type(
-        self, html_lower: str, soup: BeautifulSoup, url: str
-    ) -> ParishListingType:
+    def _detect_listing_type(self, html_lower: str, soup: BeautifulSoup, url: str) -> ParishListingType:
         """Detect how parishes are listed"""
 
         # Check for iframe - embedded parish directories (HIGHEST PRIORITY)
@@ -395,11 +376,7 @@ class PatternDetector:
             return ParishListingType.IFRAME_EMBEDDED
 
         # Check for Salt Lake City style card layout
-        if (
-            "col - lg location" in html_lower
-            and "card - title" in html_lower
-            and "dioslc.org" in url
-        ):
+        if "col - lg location" in html_lower and "card - title" in html_lower and "dioslc.org" in url:
             return ParishListingType.DIOCESE_CARD_LAYOUT
 
         # Enhanced Parish Finder detection for eCatholic sites
@@ -411,9 +388,7 @@ class PatternDetector:
             "parish finder" in html_lower,
             "li.site" in html_lower and "siteInfo" in html_lower,
             "finderBar" in html_lower,
-            "categories" in html_lower
-            and "sites" in html_lower
-            and "parishes" in html_lower,
+            "categories" in html_lower and "sites" in html_lower and "parishes" in html_lower,
             soup.find("ul", id="categories"),
             soup.find("div", id="finderCore"),
             soup.find("li", class_="site"),
@@ -435,17 +410,14 @@ class PatternDetector:
             # CSS indicators of hover - based menus
             ":hover" in html_lower and "menu" in html_lower,
             # JavaScript navigation systems
-            "hover" in html_lower
-            and ("parish" in html_lower or "directory" in html_lower),
+            "hover" in html_lower and ("parish" in html_lower or "directory" in html_lower),
         ]
 
         if any(hover_navigation_indicators):
             return ParishListingType.HOVER_NAVIGATION
 
         # Interactive map indicators (but exclude known hover navigation sites)
-        if (
-            "dwc.org" not in url.lower()
-        ):  # Don't override hover navigation for known sites
+        if "dwc.org" not in url.lower():  # Don't override hover navigation for known sites
             map_indicators = [
                 "leaflet",
                 "google.maps",
@@ -465,17 +437,12 @@ class PatternDetector:
             return ParishListingType.CARD_GRID
 
         # Pagination
-        if any(
-            word in html_lower
-            for word in ["pagination", "page - numbers", "next - page"]
-        ):
+        if any(word in html_lower for word in ["pagination", "page - numbers", "next - page"]):
             return ParishListingType.PAGINATED_LIST
 
         return ParishListingType.SIMPLE_LIST
 
-    def _check_for_iframe_content(
-        self, soup: BeautifulSoup, html_lower: str, url: str
-    ) -> bool:
+    def _check_for_iframe_content(self, soup: BeautifulSoup, html_lower: str, url: str) -> bool:
         """Check if parish directory content is loaded via iframe"""
         iframes = soup.find_all("iframe")
 
@@ -522,9 +489,7 @@ class PatternDetector:
         ]
         return any(indicator in html_lower for indicator in js_indicators)
 
-    def _determine_extraction_strategy(
-        self, platform, listing_type, soup, html_lower, url
-    ):
+    def _determine_extraction_strategy(self, platform, listing_type, soup, html_lower, url):
         """Determine the best extraction strategy"""
 
         if listing_type == ParishListingType.IFRAME_EMBEDDED:
@@ -532,7 +497,7 @@ class PatternDetector:
                 "iframe_extraction",
                 0.95,
                 {
-                    "iframe_selector": "iframe[src*='maptive'], iframe[src*='parish'], iframe[src*='church']",
+                    "iframe_selector": ("iframe[src*='maptive'], iframe[src*='parish'], iframe[src*='church']"),
                     "maptive_url": "fortress.maptive.com",
                     "wait_selectors": "[data - parish], .parish, .church, .marker",
                     "data_extractors": [
@@ -675,9 +640,7 @@ class BaseExtractor:
         if not text:
             return None
 
-        email_pattern = (
-            r"\b[A - Za - z0 - 9._%+-]+@[A - Za - z0 - 9.-]+\.[A - Z|a - z]{2,}\b"
-        )
+        email_pattern = r"\b[A - Za - z0 - 9._%+-]+@[A - Za - z0 - 9.-]+\.[A - Z|a - z]{2,}\b"
         match = re.search(email_pattern, text)
         if match:
             return match.group()
@@ -756,9 +719,7 @@ def prepare_parish_for_supabase(
     """Convert ParishData to format compatible with Supabase schema"""
 
     # Use street address if available, otherwise fall back to full address or address
-    street_address = (
-        parish_data.street_address or parish_data.full_address or parish_data.address
-    )
+    street_address = parish_data.street_address or parish_data.full_address or parish_data.address
 
     return {
         "Name": parish_data.name,
@@ -819,9 +780,7 @@ def _validate_upsert_prerequisites(supabase, parishes):
     return True, "Valid"
 
 
-def _filter_and_prepare_parishes(
-    parishes, diocese_id, diocese_name, diocese_url, parish_directory_url
-):
+def _filter_and_prepare_parishes(parishes, diocese_id, diocese_name, diocese_url, parish_directory_url):
     """Filter and prepare parishes for batch processing."""
     valid_parishes = []
     skipped_count = 0
@@ -832,9 +791,7 @@ def _filter_and_prepare_parishes(
     for parish in parishes:
         try:
             # Enhanced filtering for non - parish items
-            if any(
-                skip_word in parish.name.lower() for skip_word in PARISH_SKIP_TERMS
-            ):
+            if any(skip_word in parish.name.lower() for skip_word in PARISH_SKIP_TERMS):
                 logger.debug(f"    ⏭️ Skipped: {parish.name} (not a parish)")
                 skipped_count += 1
                 continue
@@ -846,9 +803,7 @@ def _filter_and_prepare_parishes(
                 continue
 
             # Convert to schema format
-            supabase_data = prepare_parish_for_supabase(
-                parish, diocese_id, diocese_name, diocese_url, parish_directory_url
-            )
+            supabase_data = prepare_parish_for_supabase(parish, diocese_id, diocese_name, diocese_url, parish_directory_url)
             clean_data = _clean_supabase_data(supabase_data)
 
             # Must have a name to proceed
@@ -883,21 +838,13 @@ def _prepare_batch_data_and_actions(batch, supabase, monitoring_client, diocese_
         if monitoring_client:
             try:
                 existing = (
-                    supabase.table("Parishes")
-                    .select("id")
-                    .eq("Name", parish.name)
-                    .eq("diocese_id", diocese_id)
-                    .execute()
+                    supabase.table("Parishes").select("id").eq("Name", parish.name).eq("diocese_id", diocese_id).execute()
                 )
                 is_new_parish = not existing.data
-                parish_actions[parish.name] = (
-                    "Parish added" if is_new_parish else "Parish updated"
-                )
+                parish_actions[parish.name] = "Parish added" if is_new_parish else "Parish updated"
             except Exception as e:
                 parish_actions[parish.name] = "Parish saved"
-                logger.debug(
-                    f"Could not determine insert/update status for {parish.name}: {e}"
-                )
+                logger.debug(f"Could not determine insert/update status for {parish.name}: {e}")
 
     return batch_data, parish_actions
 
@@ -909,11 +856,7 @@ def _log_successful_batch(batch, parish_actions, monitoring_client, diocese_name
         for item in batch:
             parish = item["original"]
             action = parish_actions.get(parish.name, "Parish saved")
-            website_link = (
-                f" → <a href='{parish.website}' target='_blank'>{parish.website}</a>"
-                if parish.website
-                else ""
-            )
+            website_link = f" → <a href='{parish.website}' target='_blank'>{parish.website}</a>" if parish.website else ""
             monitoring_client.send_log(
                 f"Step 3 │ ✅ {action}: {parish.name}, {diocese_name}{website_link}",
                 "INFO",
@@ -923,12 +866,8 @@ def _log_successful_batch(batch, parish_actions, monitoring_client, diocese_name
     for i, item in enumerate(batch[:3]):  # Show first 3 parishes in batch
         parish = item["original"]
         detail_indicator = "📍" if parish.detail_extraction_success else "📌"
-        method_short = parish.extraction_method.replace("_extraction", "").replace(
-            "_", " "
-        )
-        logger.info(
-            f"      {detail_indicator} {parish.name} ({method_short}, {parish.confidence_score:.2f})"
-        )
+        method_short = parish.extraction_method.replace("_extraction", "").replace("_", " ")
+        logger.info(f"      {detail_indicator} {parish.name} ({method_short}, {parish.confidence_score:.2f})")
 
     if len(batch) > 3:
         logger.info(f"      ... and {len(batch) - 3} more parishes")
@@ -945,52 +884,30 @@ def _process_single_batch(
 ):
     """Process a single batch of parishes."""
     # Prepare batch data and check existing parishes before upsert
-    batch_data, parish_actions = _prepare_batch_data_and_actions(
-        batch, supabase, monitoring_client, diocese_id
-    )
+    batch_data, parish_actions = _prepare_batch_data_and_actions(batch, supabase, monitoring_client, diocese_id)
 
     try:
         # Execute batch upsert
-        logger.info(
-            f"    📦 Batch {batch_num + 1}/{total_batches}: Upserting {len(batch_data)} parishes..."
-        )
-        response = (
-            supabase.table("Parishes")
-            .upsert(batch_data, on_conflict="Name,diocese_id")
-            .execute()
-        )
+        logger.info(f"    📦 Batch {batch_num + 1}/{total_batches}: Upserting {len(batch_data)} parishes...")
+        response = supabase.table("Parishes").upsert(batch_data, on_conflict="Name,diocese_id").execute()
 
         if hasattr(response, "error") and response.error:
-            logger.error(
-                f"    ❌ Batch {batch_num + 1} database error: {response.error}"
-            )
+            logger.error(f"    ❌ Batch {batch_num + 1} database error: {response.error}")
             # Try individual upserts as fallback for this batch
-            logger.info(
-                f"    🔄 Falling back to individual upserts for batch {batch_num + 1}..."
-            )
-            return _fallback_individual_upserts(
-                batch, supabase, monitoring_client, diocese_name, parish_actions
-            )
+            logger.info(f"    🔄 Falling back to individual upserts for batch {batch_num + 1}...")
+            return _fallback_individual_upserts(batch, supabase, monitoring_client, diocese_name, parish_actions)
         else:
             batch_success = len(batch_data)
-            logger.info(
-                f"    ✅ Batch {batch_num + 1}: Successfully saved {batch_success} parishes"
-            )
+            logger.info(f"    ✅ Batch {batch_num + 1}: Successfully saved {batch_success} parishes")
 
-            _log_successful_batch(
-                batch, parish_actions, monitoring_client, diocese_name
-            )
+            _log_successful_batch(batch, parish_actions, monitoring_client, diocese_name)
             return batch_success
 
     except Exception as e:
         logger.error(f"    ❌ Batch {batch_num + 1} failed: {e}")
         # Try individual upserts as fallback
-        logger.info(
-            f"    🔄 Falling back to individual upserts for batch {batch_num + 1}..."
-        )
-        return _fallback_individual_upserts(
-            batch, supabase, monitoring_client, diocese_name, parish_actions
-        )
+        logger.info(f"    🔄 Falling back to individual upserts for batch {batch_num + 1}...")
+        return _fallback_individual_upserts(batch, supabase, monitoring_client, diocese_name, parish_actions)
 
 
 def _log_final_summary(
@@ -1001,21 +918,15 @@ def _log_final_summary(
     valid_parishes_count,
 ):
     """Log final summary of the upsert operation."""
-    logger.info(
-        f"  📊 Results: {success_count} saved, {skipped_count} skipped, {detail_success_count} with detailed info"
-    )
+    logger.info(f"  📊 Results: {success_count} saved, {skipped_count} skipped, {detail_success_count} with detailed info")
     if success_count > 0:
         success_rate = (success_count / (success_count + skipped_count)) * 100
         logger.info(f"  📈 Success rate: {success_rate:.1f}%")
 
         # Performance improvement calculation
         individual_calls_would_be = success_count + skipped_count
-        actual_db_calls = total_batches + (
-            skipped_count if success_count < valid_parishes_count else 0
-        )
-        performance_improvement = (
-            (individual_calls_would_be - actual_db_calls) / individual_calls_would_be
-        ) * 100
+        actual_db_calls = total_batches + (skipped_count if success_count < valid_parishes_count else 0)
+        performance_improvement = ((individual_calls_would_be - actual_db_calls) / individual_calls_would_be) * 100
         logger.info(
             f"  ⚡ Performance: {actual_db_calls} DB calls vs {individual_calls_would_be} individual ({performance_improvement:.0f}% reduction)"
         )
@@ -1044,9 +955,7 @@ def enhanced_safe_upsert_to_supabase(
     )
 
     if not valid_parishes:
-        logger.info(
-            f"  📊 Results: 0 saved, {skipped_count} skipped, 0 with detailed info"
-        )
+        logger.info(f"  📊 Results: 0 saved, {skipped_count} skipped, 0 with detailed info")
         return False
 
     # Phase 3: Batch upsert with optimized batch size
@@ -1054,9 +963,7 @@ def enhanced_safe_upsert_to_supabase(
     success_count = 0
     total_batches = (len(valid_parishes) + batch_size - 1) // batch_size
 
-    logger.info(
-        f"  🚀 Processing {len(valid_parishes)} parishes in {total_batches} batch(es) of {batch_size}..."
-    )
+    logger.info(f"  🚀 Processing {len(valid_parishes)} parishes in {total_batches} batch(es) of {batch_size}...")
 
     for batch_num in range(total_batches):
         start_idx = batch_num * batch_size
@@ -1106,15 +1013,9 @@ def _fallback_individual_upserts(
 
                 # Send to monitoring if available
                 if monitoring_client and diocese_name:
-                    action = (
-                        parish_actions.get(parish.name, "Parish saved")
-                        if parish_actions
-                        else "Parish saved"
-                    )
+                    action = parish_actions.get(parish.name, "Parish saved") if parish_actions else "Parish saved"
                     website_link = (
-                        f" → <a href='{parish.website}' target='_blank'>{parish.website}</a>"
-                        if parish.website
-                        else ""
+                        f" → <a href='{parish.website}' target='_blank'>{parish.website}</a>" if parish.website else ""
                     )
                     monitoring_client.send_log(
                         f"Step 3 │ ✅ {action}: {parish.name}, {diocese_name}{website_link}",
@@ -1146,26 +1047,18 @@ def analyze_parish_finder_quality(parishes: List[ParishData]) -> Dict:
             "has_city": sum(1 for p in parishes if p.city),
             "has_site_info": sum(1 for p in parishes if p.detail_extraction_success),
             "confidence_distribution": {
-                "high_confidence": sum(
-                    1 for p in parishes if p.confidence_score >= 0.8
-                ),
-                "medium_confidence": sum(
-                    1 for p in parishes if 0.5 <= p.confidence_score < 0.8
-                ),
+                "high_confidence": sum(1 for p in parishes if p.confidence_score >= 0.8),
+                "medium_confidence": sum(1 for p in parishes if 0.5 <= p.confidence_score < 0.8),
                 "low_confidence": sum(1 for p in parishes if p.confidence_score < 0.5),
             },
         },
         "data_completeness": {
             "names_present": sum(1 for p in parishes if p.name and len(p.name) > 2),
             "cities_present": sum(1 for p in parishes if p.city),
-            "addresses_present": sum(
-                1 for p in parishes if p.street_address or p.full_address or p.address
-            ),
+            "addresses_present": sum(1 for p in parishes if p.street_address or p.full_address or p.address),
             "phones_present": sum(1 for p in parishes if p.phone),
             "websites_present": sum(1 for p in parishes if p.website),
-            "coordinates_present": sum(
-                1 for p in parishes if p.latitude and p.longitude
-            ),
+            "coordinates_present": sum(1 for p in parishes if p.latitude and p.longitude),
             "clergy_info_present": sum(1 for p in parishes if p.clergy_info),
         },
     }
@@ -1173,22 +1066,16 @@ def analyze_parish_finder_quality(parishes: List[ParishData]) -> Dict:
     # Track extraction methods used
     for parish in parishes:
         method = parish.extraction_method
-        analysis["extraction_methods"][method] = (
-            analysis["extraction_methods"].get(method, 0) + 1
-        )
+        analysis["extraction_methods"][method] = analysis["extraction_methods"].get(method, 0) + 1
 
     # Calculate percentages
     analysis["data_completeness_percentages"] = {
-        f"{key}_percentage": (value / total_parishes * 100)
-        for key, value in analysis["data_completeness"].items()
+        f"{key}_percentage": value / total_parishes * 100 for key, value in analysis["data_completeness"].items()
     }
 
     # Overall quality score
     basic_score = (
-        (
-            analysis["data_completeness"]["names_present"]
-            + analysis["data_completeness"]["cities_present"]
-        )
+        (analysis["data_completeness"]["names_present"] + analysis["data_completeness"]["cities_present"])
         / (total_parishes * 2)
         * 100
     )

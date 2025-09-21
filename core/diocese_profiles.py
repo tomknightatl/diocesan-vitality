@@ -160,9 +160,7 @@ class DiocesesProfileManager:
 
         return profiles
 
-    def get_profile(
-        self, url: str, diocese_name: str = None
-    ) -> Optional[DiocesesExtractionProfile]:
+    def get_profile(self, url: str, diocese_name: str = None) -> Optional[DiocesesExtractionProfile]:
         """Get the most appropriate profile for a diocese URL."""
         try:
             domain = urlparse(url).netloc.lower()
@@ -201,9 +199,7 @@ class DiocesesProfileManager:
         wordpress_indicators = ["wp - content", "wp - includes", "wp - admin"]
         return any(indicator in url.lower() for indicator in wordpress_indicators)
 
-    def create_custom_profile(
-        self, domain: str, analysis_results: Dict
-    ) -> DiocesesExtractionProfile:
+    def create_custom_profile(self, domain: str, analysis_results: Dict) -> DiocesesExtractionProfile:
         """Create a custom profile based on AI analysis results."""
         try:
             # Extract strategy from AI analysis
@@ -213,10 +209,7 @@ class DiocesesProfileManager:
             insights = analysis_results.get("ai_insights", [])
 
             # Determine if JavaScript is required
-            javascript_required = any(
-                "javascript" in insight.lower() or "dynamic" in insight.lower()
-                for insight in insights
-            )
+            javascript_required = any("javascript" in insight.lower() or "dynamic" in insight.lower() for insight in insights)
 
             # Determine loading indicators
             loading_indicators = []
@@ -236,9 +229,7 @@ class DiocesesProfileManager:
 
             # Cache the profile for future use
             self.profiles[domain] = profile
-            logger.info(
-                f"🎯 Created custom profile for {domain} with strategy {strategy}"
-            )
+            logger.info(f"🎯 Created custom profile for {domain} with strategy {strategy}")
 
             return profile
 
@@ -254,14 +245,10 @@ class DiocesesProfileManager:
 
                 # Track success/failure (could be enhanced with persistent storage)
                 if success:
-                    logger.info(
-                        f"🎯 Profile for {domain} succeeded with {method_used}"
-                    )
+                    logger.info(f"🎯 Profile for {domain} succeeded with {method_used}")
                     # Could reduce wait time or mark strategy as preferred
                 else:
-                    logger.warning(
-                        f"🎯 Profile for {domain} failed with {method_used}"
-                    )
+                    logger.warning(f"🎯 Profile for {domain} failed with {method_used}")
                     # Could increase wait time or try alternative strategy
 
         except Exception as e:
@@ -283,9 +270,7 @@ class DiocesesProfileManager:
 
         for profile in self.profiles.values():
             strategy = profile.strategy_type
-            stats["strategy_distribution"][strategy] = (
-                stats["strategy_distribution"].get(strategy, 0) + 1
-            )
+            stats["strategy_distribution"][strategy] = stats["strategy_distribution"].get(strategy, 0) + 1
 
             if profile.javascript_required:
                 stats["javascript_required"] += 1

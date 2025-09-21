@@ -102,12 +102,7 @@ def get_extracted_parishes():
     supabase = get_supabase_client()
 
     try:
-        response = (
-            supabase.table("Parishes")
-            .select('Name, City, "Street Address"')
-            .eq("diocese_id", 2002)
-            .execute()
-        )
+        response = supabase.table("Parishes").select('Name, City, "Street Address"').eq("diocese_id", 2002).execute()
 
         extracted_parishes = []
         for parish in response.data:
@@ -116,9 +111,7 @@ def get_extracted_parishes():
             address = parish["Street Address"] if parish["Street Address"] else ""
             extracted_parishes.append((name, city, address))
 
-        logger.info(
-            f"🔍 Found {len(extracted_parishes)} extracted parishes for Diocese ID 2002"
-        )
+        logger.info(f"🔍 Found {len(extracted_parishes)} extracted parishes for Diocese ID 2002")
         return extracted_parishes
 
     except Exception as e:
@@ -199,9 +192,7 @@ def calculate_accuracy():
     extracted_parishes = get_extracted_parishes()
 
     if not extracted_parishes:
-        logger.warning(
-            "⚠️ No extracted parishes found. The extraction may not have completed yet."
-        )
+        logger.warning("⚠️ No extracted parishes found. The extraction may not have completed yet.")
         return None
 
     total_expected = len(expected_parishes)
@@ -239,11 +230,7 @@ def calculate_accuracy():
 
     precision = true_positives / total_extracted if total_extracted > 0 else 0
     recall = true_positives / total_expected if total_expected > 0 else 0
-    f1_score = (
-        2 * (precision * recall) / (precision + recall)
-        if (precision + recall) > 0
-        else 0
-    )
+    f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
     accuracy = true_positives / total_expected if total_expected > 0 else 0
 
     return {
@@ -265,9 +252,7 @@ def calculate_accuracy():
 def generate_report(metrics):
     """Generate accuracy report"""
     if not metrics:
-        return (
-            "❌ No accuracy metrics available - extraction may not have completed yet."
-        )
+        return "❌ No accuracy metrics available - extraction may not have completed yet."
 
     report = []
     report.append("=" * 80)
@@ -293,17 +278,13 @@ def generate_report(metrics):
     if metrics["matches"]:
         report.append("✅ CORRECTLY FOUND PARISHES:")
         report.append("-" * 40)
-        for match in sorted(
-            metrics["matches"], key=lambda x: x["score"], reverse=True
-        ):
+        for match in sorted(metrics["matches"], key=lambda x: x["score"], reverse=True):
             expected_name, expected_city = match["expected"]
             found_name, found_city, found_address = match["found"]
             score = match["score"]
             report.append(f"• {expected_name} ({expected_city})")
             if score < 0.95:  # Show details for imperfect matches
-                report.append(
-                    f"  ↳ Found as: {found_name} ({found_city}) [Match: {score:.1%}]"
-                )
+                report.append(f"  ↳ Found as: {found_name} ({found_city}) [Match: {score:.1%}]")
         report.append("")
 
     if metrics["missing"]:

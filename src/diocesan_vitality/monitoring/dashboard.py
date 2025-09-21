@@ -11,9 +11,7 @@ import argparse
 
 def main():
     """Main dashboard entry point."""
-    parser = argparse.ArgumentParser(
-        description="Diocesan Vitality Monitoring Dashboard"
-    )
+    parser = argparse.ArgumentParser(description="Diocesan Vitality Monitoring Dashboard")
     parser.add_argument("--port", type=int, default=8000, help="Port to run on")
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
 

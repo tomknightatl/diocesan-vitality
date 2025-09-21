@@ -70,14 +70,10 @@ class DistributedPipelineRunner:
         self.disable_monitoring = disable_monitoring
 
         # Initialize coordinator with worker type information
-        self.coordinator = DistributedWorkCoordinator(
-            worker_id=worker_id, worker_type=worker_type.value
-        )
+        self.coordinator = DistributedWorkCoordinator(worker_id=worker_id, worker_type=worker_type.value)
 
         # Initialize monitoring with the actual worker_id from coordinator
-        self.monitoring_client = get_monitoring_client(
-            monitoring_url, self.coordinator.worker_id
-        )
+        self.monitoring_client = get_monitoring_client(monitoring_url, self.coordinator.worker_id)
         if disable_monitoring:
             self.monitoring_client.disable()
             logger.info("📊 Monitoring disabled")
@@ -89,9 +85,7 @@ class DistributedPipelineRunner:
         signal.signal(signal.SIGTERM, self._signal_handler)
         signal.signal(signal.SIGINT, self._signal_handler)
 
-        logger.info(
-            f"🚀 Distributed Pipeline Runner initialized (Worker Type: {worker_type.value})"
-        )
+        logger.info(f"🚀 Distributed Pipeline Runner initialized (Worker Type: {worker_type.value})")
 
     def _signal_handler(self, signum, frame):
         """Handle shutdown signals gracefully"""
@@ -174,25 +168,17 @@ class DistributedPipelineRunner:
 
         try:
             # Step 1: Extract Dioceses
-            self.monitoring_client.send_log(
-                "Step 1 │ Extract Dioceses: Discovering new dioceses", "INFO"
-            )
+            self.monitoring_client.send_log("Step 1 │ Extract Dioceses: Discovering new dioceses", "INFO")
             extract_dioceses_main(max_dioceses=0)  # No limit for discovery
-            self.monitoring_client.send_log(
-                "Step 1 │ ✅ Diocese extraction completed", "INFO"
-            )
+            self.monitoring_client.send_log("Step 1 │ ✅ Diocese extraction completed", "INFO")
 
             # Step 2: Find Parish Directories
             self.monitoring_client.send_log(
                 "Step 2 │ Find Parish Directories: AI - powered directory discovery",
                 "INFO",
             )
-            find_parish_directories(
-                diocese_id=None, max_dioceses_to_process=0
-            )  # Process all
-            self.monitoring_client.send_log(
-                "Step 2 │ ✅ Parish directory discovery completed", "INFO"
-            )
+            find_parish_directories(diocese_id=None, max_dioceses_to_process=0)  # Process all
+            self.monitoring_client.send_log("Step 2 │ ✅ Parish directory discovery completed", "INFO")
 
             # Discovery workers can sleep longer between cycles
             logger.info("⏸️ Discovery worker completed - sleeping for next cycle")
@@ -248,9 +234,7 @@ class DistributedPipelineRunner:
                     diocese_id=None,
                 )
 
-                self.monitoring_client.send_log(
-                    "Step 4 │ ✅ Schedule extraction batch completed", "INFO"
-                )
+                self.monitoring_client.send_log("Step 4 │ ✅ Schedule extraction batch completed", "INFO")
 
                 # Respectful delay between batches
                 await asyncio.sleep(30)
@@ -279,15 +263,11 @@ class DistributedPipelineRunner:
             while not self.shutdown_requested:
                 # Check if reports need to be generated
                 if await self.coordinator.should_generate_reports():
-                    self.monitoring_client.send_log(
-                        "Step 5 │ Generating reports and analytics", "INFO"
-                    )
+                    self.monitoring_client.send_log("Step 5 │ Generating reports and analytics", "INFO")
 
                     report_statistics_main()
 
-                    self.monitoring_client.send_log(
-                        "Step 5 │ ✅ Report generation completed", "INFO"
-                    )
+                    self.monitoring_client.send_log("Step 5 │ ✅ Report generation completed", "INFO")
                     await self.coordinator.mark_reports_generated()
 
                 # Reports don't need to run frequently
@@ -346,9 +326,7 @@ class DistributedPipelineRunner:
                 break
 
             try:
-                logger.info(
-                    f"🏢 Processing diocese: {diocese['name']} (ID: {diocese['id']})"
-                )
+                logger.info(f"🏢 Processing diocese: {diocese['name']} (ID: {diocese['id']})")
 
                 # Update monitoring
                 self.monitoring_client.update_extraction_status(
@@ -358,9 +336,7 @@ class DistributedPipelineRunner:
                 )
 
                 # Extract parishes for this diocese
-                with ExtractionMonitoring(
-                    diocese["name"], self.max_parishes_per_diocese
-                ) as monitor:
+                with ExtractionMonitoring(diocese["name"], self.max_parishes_per_diocese) as monitor:
                     self.monitoring_client.send_log(
                         f"Diocese │ {diocese['name']}: Starting parish extraction",
                         "INFO",
@@ -377,9 +353,7 @@ class DistributedPipelineRunner:
 
                     if results and results.get("successful_dioceses"):
                         parishes_extracted = results["total_parishes_extracted"]
-                        monitor.update_progress(
-                            self.max_parishes_per_diocese, parishes_extracted
-                        )
+                        monitor.update_progress(self.max_parishes_per_diocese, parishes_extracted)
 
                         self.monitoring_client.send_log(
                             f"Diocese │ {diocese['name']}: ✅ Extracted {parishes_extracted} parishes",
@@ -392,9 +366,7 @@ class DistributedPipelineRunner:
                         )
 
                 # Mark diocese as completed
-                await self.coordinator.mark_diocese_completed(
-                    diocese["id"], "completed"
-                )
+                await self.coordinator.mark_diocese_completed(diocese["id"], "completed")
 
                 # Respectful delay between dioceses
                 await asyncio.sleep(5)
@@ -423,15 +395,11 @@ class DistributedPipelineRunner:
 
                 logger.info("📊 Running report generation as lead worker")
 
-                self.monitoring_client.send_log(
-                    "Reports │ Generating statistical reports", "INFO"
-                )
+                self.monitoring_client.send_log("Reports │ Generating statistical reports", "INFO")
 
                 try:
                     report_statistics_main()
-                    self.monitoring_client.send_log(
-                        "Reports │ ✅ Report generation completed", "INFO"
-                    )
+                    self.monitoring_client.send_log("Reports │ ✅ Report generation completed", "INFO")
                 except Exception as e:
                     logger.error(f"❌ Report generation failed: {e}")
                     self.monitoring_client.report_error(
@@ -457,9 +425,7 @@ class DistributedPipelineRunner:
 
 async def main_async():
     """Main async function for distributed pipeline"""
-    parser = argparse.ArgumentParser(
-        description="Run distributed data extraction pipeline with worker specialization."
-    )
+    parser = argparse.ArgumentParser(description="Run distributed data extraction pipeline with worker specialization.")
 
     parser.add_argument(
         "--worker_type",

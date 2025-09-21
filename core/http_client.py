@@ -74,9 +74,7 @@ class HTTPClientPool:
             }
         )
 
-        logger.info(
-            f"🔗 HTTP client initialized with pool_size={pool_maxsize}, max_retries={max_retries}"
-        )
+        logger.info(f"🔗 HTTP client initialized with pool_size={pool_maxsize}, max_retries={max_retries}")
 
     def get(
         self,
@@ -108,9 +106,7 @@ class HTTPClientPool:
 
         try:
             logger.debug(f"🌐 GET request: {url}")
-            response = self.session.get(
-                url, headers=request_headers, timeout=request_timeout, **kwargs
-            )
+            response = self.session.get(url, headers=request_headers, timeout=request_timeout, **kwargs)
             response.raise_for_status()
             logger.debug(f"✅ GET success: {url} (status: {response.status_code})")
             return response

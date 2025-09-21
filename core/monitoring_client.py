@@ -20,9 +20,7 @@ class MonitoringClient:
     Provides easy integration for async extraction scripts.
     """
 
-    def __init__(
-        self, base_url: str = "http://localhost:8000", worker_id: Optional[str] = None
-    ):
+    def __init__(self, base_url: str = "http://localhost:8000", worker_id: Optional[str] = None):
         self.base_url = base_url.rstrip("/")
         self.session = requests.Session()
         self.session.timeout = 5  # 5 second timeout for monitoring calls
@@ -30,9 +28,7 @@ class MonitoringClient:
         self.worker_id = worker_id
 
         if worker_id:
-            logger.info(
-                f"🖥️ Monitoring client initialized for worker {worker_id}: {base_url}"
-            )
+            logger.info(f"🖥️ Monitoring client initialized for worker {worker_id}: {base_url}")
         else:
             logger.info(f"🖥️ Monitoring client initialized: {base_url}")
 
@@ -57,9 +53,7 @@ class MonitoringClient:
                 "/extraction_status",
                 "/circuit_breakers",
             ]:
-                url = (
-                    f"{self.base_url}/api/monitoring/worker/{self.worker_id}{endpoint}"
-                )
+                url = f"{self.base_url}/api/monitoring/worker/{self.worker_id}{endpoint}"
             else:
                 url = f"{self.base_url}/api/monitoring{endpoint}"
 
@@ -89,15 +83,11 @@ class MonitoringClient:
             "success_rate": success_rate,
             "progress_percentage": progress_percentage,
             "estimated_completion": estimated_completion,
-            "started_at": (
-                datetime.now(timezone.utc).isoformat() if status == "running" else None
-            ),
+            "started_at": (datetime.now(timezone.utc).isoformat() if status == "running" else None),
         }
         return self._make_request("/extraction_status", data)
 
-    def update_circuit_breakers(
-        self, circuit_breakers: Dict[str, Dict[str, Any]]
-    ) -> bool:
+    def update_circuit_breakers(self, circuit_breakers: Dict[str, Dict[str, Any]]) -> bool:
         """Update circuit breaker status"""
         return self._make_request("/circuit_breakers", circuit_breakers)
 
@@ -153,9 +143,7 @@ class MonitoringClient:
         }
         return self._make_request("/extraction_complete", data)
 
-    def send_log(
-        self, message: str, level: str = "INFO", module: Optional[str] = None
-    ) -> bool:
+    def send_log(self, message: str, level: str = "INFO", module: Optional[str] = None) -> bool:
         """Send live log entry"""
         data = {"message": message, "level": level, "module": module or "extraction"}
         return self._make_request("/log", data)
@@ -231,9 +219,7 @@ class MonitoringClient:
 
     def circuit_breaker_closed(self, circuit_name: str):
         """Convenience method for circuit breaker recovery"""
-        self.send_log(
-            f"🟢 Circuit breaker '{circuit_name}' CLOSED - service recovered", "INFO"
-        )
+        self.send_log(f"🟢 Circuit breaker '{circuit_name}' CLOSED - service recovered", "INFO")
 
     def performance_update(
         self,
@@ -261,11 +247,7 @@ class MonitoringClient:
                 monitoring_data = {}
                 for name, stats in circuit_data.items():
                     monitoring_data[name] = {
-                        "state": (
-                            stats["state"].upper()
-                            if hasattr(stats["state"], "upper")
-                            else stats["state"]
-                        ),
+                        "state": (stats["state"].upper() if hasattr(stats["state"], "upper") else stats["state"]),
                         "total_requests": stats["total_requests"],
                         "total_successes": stats["total_successes"],
                         "total_failures": stats["total_failures"],
@@ -288,9 +270,7 @@ class MonitoringClient:
 _monitoring_client = None
 
 
-def get_monitoring_client(
-    base_url: str = "http://localhost:8000", worker_id: Optional[str] = None
-) -> MonitoringClient:
+def get_monitoring_client(base_url: str = "http://localhost:8000", worker_id: Optional[str] = None) -> MonitoringClient:
     """Get or create the global monitoring client instance"""
     global _monitoring_client
 
@@ -341,9 +321,7 @@ class ExtractionMonitoring:
         import time
 
         duration = time.time() - self.start_time
-        success_rate = (
-            self.successful_parishes / max(self.parishes_processed, 1)
-        ) * 100
+        success_rate = (self.successful_parishes / max(self.parishes_processed, 1)) * 100
 
         if exc_type is not None:
             self.client.report_error(
@@ -354,9 +332,7 @@ class ExtractionMonitoring:
         else:
             pass
 
-        self.client.extraction_finished(
-            self.diocese_name, self.parishes_processed, success_rate, duration
-        )
+        self.client.extraction_finished(self.diocese_name, self.parishes_processed, success_rate, duration)
 
     def update_progress(self, parishes_processed: int, successful_parishes: int):
         """Update progress during extraction"""
@@ -364,6 +340,4 @@ class ExtractionMonitoring:
         self.successful_parishes = successful_parishes
         success_rate = (successful_parishes / max(parishes_processed, 1)) * 100
 
-        self.client.extraction_progress(
-            self.diocese_name, parishes_processed, self.total_parishes, success_rate
-        )
+        self.client.extraction_progress(self.diocese_name, parishes_processed, self.total_parishes, success_rate)

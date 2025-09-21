@@ -17,9 +17,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -33,9 +31,7 @@ def get_diocese_info(diocese_id: int) -> dict:
         123: {"name": "Example Diocese", "state": "Example State"},
     }
 
-    return sample_dioceses.get(
-        diocese_id, {"name": f"Diocese {diocese_id}", "state": "Unknown"}
-    )
+    return sample_dioceses.get(diocese_id, {"name": f"Diocese {diocese_id}", "state": "Unknown"})
 
 
 def extract_diocese(diocese_id: int, pool_size: int = 6, batch_size: int = 12):

@@ -20,17 +20,13 @@ def read_requirements(filename):
     """Read requirements from file."""
     requirements_path = os.path.join(this_directory, filename)
     with open(requirements_path, encoding="utf - 8") as f:
-        return [
-            line.strip() for line in f if line.strip() and not line.startswith("#")
-        ]
+        return [line.strip() for line in f if line.strip() and not line.startswith("#")]
 
 
 # Version management - use centralized version
 def get_version():
     """Get version from centralized version file."""
-    version_file = os.path.join(
-        this_directory, "src", "diocesan_vitality", "__version__.py"
-    )
+    version_file = os.path.join(this_directory, "src", "diocesan_vitality", "__version__.py")
 
     # Read version from __version__.py
     version_vars = {}
@@ -94,7 +90,7 @@ setup(
         "Documentation": "https://diocesanvitality.org/docs",
         "Repository": "https://github.com/tomknightatl/diocesan - vitality",
         "Bug Tracker": "https://github.com/tomknightatl/diocesan - vitality/issues",
-        "Changelog": "https://github.com/tomknightatl/diocesan - vitality/blob/main/CHANGELOG.md",
+        "Changelog": ("https://github.com/tomknightatl/diocesan - vitality/blob/main/CHANGELOG.md"),
         "Live System": "https://diocesanvitality.org/dashboard",
     },
     packages=find_packages(where="src"),
