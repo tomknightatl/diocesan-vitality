@@ -5,7 +5,6 @@ metadata:
 data:
   config.yaml: |
     tunnel: diocesan-vitality-tunnel
-    credentials-file: /etc/cloudflared/creds/credentials.json
     metrics: 0.0.0.0:2000
 
     ingress:
