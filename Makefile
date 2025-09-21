@@ -196,22 +196,32 @@ tunnel-create: ## Step 2: Create Cloudflare tunnel and DNS records (usage: make 
 		terraform apply -target=module.cloudflare_tunnel -auto-approve
 	@echo "✅ Step 2 Complete: Cloudflare tunnel created for $$CLUSTER_LABEL"
 
-argocd-install: ## Step 3: Install ArgoCD and configure repository (usage: make argocd-install CLUSTER_LABEL=dev)
+argocd-install: ## Step 3: Install ArgoCD via Helm with proper configuration (usage: make argocd-install CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
-	echo "🚀 Step 3: Installing ArgoCD for '$$CLUSTER_LABEL'..." && \
+	echo "🚀 Step 3: Installing ArgoCD via Helm for '$$CLUSTER_LABEL'..." && \
 	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
-		kubectl create namespace argocd && \
-		kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml && \
+		echo "🔧 Installing Helm if needed..." && \
+		$(MAKE) _install-helm && \
+		echo "📦 Adding ArgoCD Helm repository..." && \
+		helm repo add argo https://argoproj.github.io/argo-helm && \
+		helm repo update && \
+		kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f - && \
+		echo "🚀 Installing ArgoCD with values-$$CLUSTER_LABEL.yaml..." && \
+		helm upgrade --install argocd argo/argo-cd \
+			--namespace argocd \
+			--values k8s/infrastructure/argocd/values-$$CLUSTER_LABEL.yaml \
+			--wait --timeout=10m && \
+		echo "⏳ Waiting for ArgoCD server to be ready..." && \
 		kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=argocd-server -n argocd --timeout=300s && \
-		echo "⏳ Waiting for argocd-cm configmap to be ready..." && \
+		echo "🔧 Configuring repository access..." && \
 		while ! kubectl get configmap argocd-cm -n argocd >/dev/null 2>&1; do sleep 2; done && \
 		sleep 5 && \
-		kubectl patch configmap argocd-cm -n argocd --patch '{"data":{"repositories":"- url: https://github.com/t-k-/diocesan-vitality.git"}}'
+		kubectl patch configmap argocd-cm -n argocd --patch '{"data":{"repositories":"- url: https://github.com/tomknightatl/diocesan-vitality.git"}}'
 	@echo "🔧 Setting up custom ArgoCD password..."
 	@$(MAKE) _setup-argocd-password CLUSTER_LABEL=$$CLUSTER_LABEL
 	@echo "🏷️  Registering cluster with ArgoCD..."
 	@$(MAKE) _register-cluster-with-argocd CLUSTER_LABEL=$$CLUSTER_LABEL
-	@echo "✅ Step 3 Complete: ArgoCD installed with custom password for $$CLUSTER_LABEL"
+	@echo "✅ Step 3 Complete: ArgoCD installed via Helm with insecure mode for $$CLUSTER_LABEL"
 
 _register-cluster-with-argocd: ## Register current cluster with ArgoCD with proper labels
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
@@ -330,6 +340,18 @@ _install-kubeseal: ## Install kubeseal CLI if not present
 		echo "✅ kubeseal CLI installed successfully"; \
 	else \
 		echo "✅ kubeseal CLI already installed"; \
+	fi
+
+_install-helm: ## Install Helm CLI if not present
+	@if ! command -v helm >/dev/null 2>&1; then \
+		echo "📦 Installing Helm CLI..."; \
+		curl -fsSL -o /tmp/get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 && \
+		chmod 700 /tmp/get_helm.sh && \
+		/tmp/get_helm.sh && \
+		rm -f /tmp/get_helm.sh && \
+		echo "✅ Helm CLI installed successfully"; \
+	else \
+		echo "✅ Helm CLI already installed"; \
 	fi
 
 _update-kustomization-for-sealed-secret: ## Update kustomization to use sealed secret instead of plain secret

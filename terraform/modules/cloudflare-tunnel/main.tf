@@ -90,10 +90,9 @@ resource "cloudflare_tunnel_config" "diocesan_vitality" {
       for_each = var.create_argocd_record ? [1] : []
       content {
         hostname = "${var.argocd_subdomain}.${var.domain_name}"
-        service  = "https://argocd-server.argocd.svc.cluster.local:443"
+        service  = "http://argocd-server.argocd.svc.cluster.local:80"
         origin_request {
           http_host_header = "${var.argocd_subdomain}.${var.domain_name}"
-          no_tls_verify    = true
         }
       }
     }
