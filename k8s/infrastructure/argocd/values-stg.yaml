@@ -1,0 +1,91 @@
+# ArgoCD Helm values for staging environment
+global:
+  domain: stg.argocd.diocesanvitality.org
+
+server:
+  # Enable insecure mode for Cloudflare tunnel SSL termination
+  insecure: true
+
+  # Configure for external access via Cloudflare tunnel
+  extraArgs:
+    - --insecure
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    servicePortHttp: 80
+    servicePortHttps: 443
+
+  # Ingress disabled since we use Cloudflare tunnel
+  ingress:
+    enabled: false
+
+# Repository server configuration - higher resources for staging
+repoServer:
+  replicas: 2
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 512Mi
+
+# Application controller configuration - higher resources for staging
+controller:
+  replicas: 1
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
+# Dex server (SSO)
+dex:
+  enabled: true
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+# Redis configuration with higher resources
+redis:
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# Notifications controller
+notifications:
+  enabled: true
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# ApplicationSet controller
+applicationSet:
+  enabled: true
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# Common labels for all resources
+commonLabels:
+  environment: staging
+  cluster: do-nyc2-dv-stg

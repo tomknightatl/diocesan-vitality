@@ -1,0 +1,89 @@
+# ArgoCD Helm values for development environment
+global:
+  domain: dev.argocd.diocesanvitality.org
+
+server:
+  # Enable insecure mode for Cloudflare tunnel SSL termination
+  insecure: true
+
+  # Configure for external access via Cloudflare tunnel
+  extraArgs:
+    - --insecure
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    servicePortHttp: 80
+    servicePortHttps: 443
+
+  # Ingress disabled since we use Cloudflare tunnel
+  ingress:
+    enabled: false
+
+# Repository server configuration
+repoServer:
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+# Application controller configuration
+controller:
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+# Dex server (SSO) - minimal for dev
+dex:
+  enabled: true
+  resources:
+    limits:
+      cpu: 50m
+      memory: 64Mi
+    requests:
+      cpu: 10m
+      memory: 32Mi
+
+# Redis configuration
+redis:
+  resources:
+    limits:
+      cpu: 200m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+# Notifications controller
+notifications:
+  enabled: true
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+# ApplicationSet controller
+applicationSet:
+  enabled: true
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+# Common labels for all resources
+commonLabels:
+  environment: development
+  cluster: do-nyc2-dv-dev
