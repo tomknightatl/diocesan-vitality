@@ -174,8 +174,8 @@ cluster-create: ## Step 1: Create cluster and kubectl context (usage: make clust
 			fi; \
 		done && \
 		echo "🔗 Configuring kubectl access... ($$(date '+%H:%M:%S'))" && \
-		if [ "$$CLUSTER_LABEL" = "stg" ]; then CONTEXT_NAME="diocesan-vitality-staging"; else CONTEXT_NAME="diocesan-vitality-$$CLUSTER_LABEL"; fi && \
-		kubectl config use-context $$CONTEXT_NAME && \
+		doctl kubernetes cluster kubeconfig save dv-$$CLUSTER_LABEL && \
+		kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
 		echo "🔍 Verifying cluster nodes... ($$(date '+%H:%M:%S'))" && \
 		kubectl get nodes && \
 		echo "🏷️  Labeling cluster with environment label... ($$(date '+%H:%M:%S'))" && \
@@ -199,8 +199,7 @@ tunnel-create: ## Step 2: Create Cloudflare tunnel and DNS records (usage: make 
 argocd-install: ## Step 3: Install ArgoCD and configure repository (usage: make argocd-install CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	echo "🚀 Step 3: Installing ArgoCD for '$$CLUSTER_LABEL'..." && \
-	if [ "$$CLUSTER_LABEL" = "stg" ]; then CONTEXT_NAME="diocesan-vitality-staging"; else CONTEXT_NAME="diocesan-vitality-$$CLUSTER_LABEL"; fi && \
-	kubectl config use-context $$CONTEXT_NAME && \
+	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
 		kubectl create namespace argocd && \
 		kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml && \
 		kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=argocd-server -n argocd --timeout=300s && \
@@ -256,8 +255,7 @@ _setup-argocd-password: ## Setup custom ArgoCD password from .env using kubectl
 argocd-apps: ## Step 4: Install ArgoCD ApplicationSets (usage: make argocd-apps CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	echo "🚀 Step 4: Installing ArgoCD ApplicationSets for '$$CLUSTER_LABEL'..." && \
-	if [ "$$CLUSTER_LABEL" = "stg" ]; then CONTEXT_NAME="diocesan-vitality-staging"; else CONTEXT_NAME="diocesan-vitality-$$CLUSTER_LABEL"; fi && \
-	kubectl config use-context $$CONTEXT_NAME && \
+	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
 		kubectl apply -f k8s/argocd/sealed-secrets-$$CLUSTER_LABEL-applicationset.yaml && \
 		kubectl apply -f k8s/argocd/cloudflare-tunnel-$$CLUSTER_LABEL-applicationset.yaml && \
 		kubectl apply -f k8s/argocd/diocesan-vitality-$$CLUSTER_LABEL-applicationset.yaml
@@ -273,8 +271,7 @@ sealed-secrets-create: ## Step 5: Create tunnel token sealed secret (usage: make
 		echo "💡 Usage: make sealed-secrets-create CLUSTER_LABEL=$$CLUSTER_LABEL TUNNEL_TOKEN=<your_token>"; \
 		exit 1; \
 	fi && \
-	if [ "$$CLUSTER_LABEL" = "stg" ]; then CONTEXT_NAME="diocesan-vitality-staging"; else CONTEXT_NAME="diocesan-vitality-$$CLUSTER_LABEL"; fi && \
-	kubectl config use-context $$CONTEXT_NAME && \
+	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
 	echo "🔧 Installing kubeseal CLI if needed..." && \
 	$(MAKE) _install-kubeseal && \
 	echo "⏳ Waiting for sealed-secrets controller to be ready..." && \
@@ -337,7 +334,7 @@ infra-status: ## Check infrastructure status
 	@echo "🔍 Infrastructure Status:"
 	@echo "========================"
 	@echo "Kubectl contexts:"
-	@kubectl config get-contexts | grep -E "(CURRENT|diocesan-vitality)" || echo "  No diocesan-vitality contexts found"
+	@kubectl config get-contexts | grep -E "(CURRENT|do-nyc2)" || echo "  No dev contexts found"
 	@echo ""
 	@echo "ArgoCD status:"
 	@kubectl get pods -n argocd 2>/dev/null | grep -E "(NAME|argocd-server)" || echo "  ArgoCD not installed"
@@ -368,8 +365,7 @@ tunnel-destroy: ## Destroy Cloudflare tunnel (usage: make tunnel-destroy CLUSTER
 argocd-destroy: ## Destroy ArgoCD (usage: make argocd-destroy CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	echo "🧹 Destroying ArgoCD for '$$CLUSTER_LABEL'..." && \
-	if [ "$$CLUSTER_LABEL" = "stg" ]; then CONTEXT_NAME="diocesan-vitality-staging"; else CONTEXT_NAME="diocesan-vitality-$$CLUSTER_LABEL"; fi && \
-	kubectl config use-context $$CONTEXT_NAME && \
+	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
 	echo "🔧 Removing finalizers from ArgoCD applications..." && \
 	kubectl get applications -n argocd -o name 2>/dev/null | xargs -r -I {} kubectl patch {} -n argocd --type='merge' -p='{"metadata":{"finalizers":null}}' || true && \
 	echo "🗑️  Deleting ArgoCD namespace..." && \
