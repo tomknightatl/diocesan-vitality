@@ -1,18 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: backend-deployment
-  namespace: diocesan-vitality
+  name: frontend-deployment
 spec:
   replicas: 1
   revisionHistoryLimit: 1
   selector:
     matchLabels:
-      app: backend
+      app: frontend
   template:
     metadata:
       labels:
-        app: backend
+        app: frontend
     spec:
       serviceAccountName: default
       affinity:
@@ -26,28 +25,17 @@ spec:
                 values:
                 - slow-pool
       containers:
-      - name: backend
+      - name: frontend
         # IMPORTANT: Replace YOUR_DOCKERHUB_USERNAME with your actual Docker Hub username
-        # Using single repository with tags: diocesan-vitality:backend
-        image: tomatl/diocesan-vitality:backend-2025-09-15-20-27-14
+        # Using single repository with tags: diocesan-vitality:frontend
+        image: tomatl/diocesan-vitality:frontend-2025-09-15-22-17-53
         imagePullPolicy: Always
         ports:
-        - containerPort: 8000
+        - containerPort: 80
         resources:
           requests:
-            memory: "64Mi"
+            memory: "32Mi"
             cpu: "5m"
           limits:
-            memory: "128Mi"
-            cpu: "25m"
-        env:
-        - name: SUPABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: diocesan-vitality-secrets
-              key: supabase-url
-        - name: SUPABASE_KEY
-          valueFrom:
-            secretKeyRef:
-              name: diocesan-vitality-secrets
-              key: supabase-key
+            memory: "64Mi"
+            cpu: "10m"

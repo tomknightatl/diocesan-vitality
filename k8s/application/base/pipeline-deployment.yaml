@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: pipeline-deployment
-  namespace: diocesan-vitality
 spec:
   replicas: 1  # HPA will manage this
   revisionHistoryLimit: 1

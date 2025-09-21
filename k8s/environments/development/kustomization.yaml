@@ -4,28 +4,24 @@ kind: Kustomization
 namespace: diocesan-vitality-dev
 
 resources:
-- ../../backend-deployment.yaml
-- ../../frontend-deployment.yaml
-- ../../pipeline-deployment.yaml
-- ../../backend-service.yaml
-- ../../frontend-service.yaml
-- namespace.yaml
+  - ../../application/base
+  - namespace.yaml
 
 patches:
-- path: development-patches.yaml
+  - path: development-patches.yaml
 
 images:
-- name: tomatl/diocesan-vitality
-  newTag: develop-latest
+  - name: tomatl/diocesan-vitality
+    newTag: develop-latest
 
 commonLabels:
   environment: development
   cluster: do-nyc2-dv-dev
 
 replicas:
-- name: backend-deployment
-  count: 1
-- name: frontend-deployment
-  count: 1
-- name: pipeline-deployment
-  count: 1
+  - name: backend-deployment
+    count: 1
+  - name: frontend-deployment
+    count: 1
+  - name: pipeline-deployment
+    count: 1

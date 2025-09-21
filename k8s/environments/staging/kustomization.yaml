@@ -4,28 +4,24 @@ kind: Kustomization
 namespace: diocesan-vitality-staging
 
 resources:
-- ../../backend-deployment.yaml
-- ../../frontend-deployment.yaml
-- ../../pipeline-deployment.yaml
-- ../../backend-service.yaml
-- ../../frontend-service.yaml
-- namespace.yaml
+  - ../../application/base
+  - namespace.yaml
 
 patches:
-- path: staging-patches.yaml
+  - path: staging-patches.yaml
 
 images:
-- name: tomatl/diocesan-vitality
-  newTag: staging-latest
+  - name: tomatl/diocesan-vitality
+    newTag: staging-latest
 
 commonLabels:
   environment: staging
   cluster: do-nyc2-dv-stg
 
 replicas:
-- name: backend-deployment
-  count: 2
-- name: frontend-deployment
-  count: 2
-- name: pipeline-deployment
-  count: 1
+  - name: backend-deployment
+    count: 2
+  - name: frontend-deployment
+    count: 2
+  - name: pipeline-deployment
+    count: 1
