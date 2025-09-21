@@ -264,34 +264,47 @@ argocd-apps: ## Step 4: Install ArgoCD ApplicationSets (usage: make argocd-apps 
 		kubectl apply -f k8s/argocd/diocesan-vitality-$$CLUSTER_LABEL-applicationset.yaml
 	@echo "✅ Step 4 Complete: ApplicationSets installed for $$CLUSTER_LABEL"
 
-sealed-secrets-create: ## Step 5: Create tunnel token sealed secret (usage: make sealed-secrets-create CLUSTER_LABEL=dev TUNNEL_TOKEN=<token>)
+sealed-secrets-create: ## Step 5: Create tunnel token sealed secret (usage: make sealed-secrets-create CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	echo "🚀 Step 5: Creating tunnel token sealed secret for '$$CLUSTER_LABEL'..." && \
-	if [ -z "$$TUNNEL_TOKEN" ]; then \
-		echo "❌ TUNNEL_TOKEN environment variable is required"; \
-		echo "💡 Get token from Cloudflare Web UI: Zero Trust > Networks > Tunnels > [Your Tunnel] > Configure"; \
-		echo "💡 Copy the token from the Docker command shown"; \
-		echo "💡 Usage: make sealed-secrets-create CLUSTER_LABEL=$$CLUSTER_LABEL TUNNEL_TOKEN=<your_token>"; \
+	if [ "$$CLUSTER_LABEL" = "stg" ]; then ENV_DIR="staging"; else ENV_DIR="$$CLUSTER_LABEL"; fi && \
+	echo "🔍 Extracting tunnel token from Terraform state..." && \
+	cd terraform/environments/$$ENV_DIR && \
+	TUNNEL_TOKEN=$$(terraform show -json | jq -r '.values.outputs.tunnel_token.value') && \
+	TUNNEL_ID=$$(terraform show -json | jq -r '.values.outputs.tunnel_id.value') && \
+	cd - >/dev/null && \
+	if [ "$$TUNNEL_TOKEN" = "null" ] || [ -z "$$TUNNEL_TOKEN" ]; then \
+		echo "❌ Could not extract tunnel token from Terraform state"; \
+		echo "💡 Ensure tunnel has been created: make tunnel-create CLUSTER_LABEL=$$CLUSTER_LABEL"; \
 		exit 1; \
 	fi && \
+	if [ "$$TUNNEL_ID" = "null" ] || [ -z "$$TUNNEL_ID" ]; then \
+		echo "❌ Could not extract tunnel ID from Terraform state"; \
+		echo "💡 Ensure tunnel has been created: make tunnel-create CLUSTER_LABEL=$$CLUSTER_LABEL"; \
+		exit 1; \
+	fi && \
+	echo "✅ Extracted tunnel ID: $$TUNNEL_ID" && \
+	echo "✅ Extracted tunnel token: $${TUNNEL_TOKEN:0:20}..." && \
 	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
 	echo "🔧 Installing kubeseal CLI if needed..." && \
 	$(MAKE) _install-kubeseal && \
 	echo "⏳ Waiting for sealed-secrets controller to be ready..." && \
 	kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=sealed-secrets -n kube-system --timeout=300s && \
-	echo "🔐 Creating sealed secret from tunnel token..." && \
+	echo "🔐 Creating sealed secret from extracted tunnel token..." && \
 	echo -n "$$TUNNEL_TOKEN" | kubectl create secret generic cloudflared-token \
 		--dry-run=client --from-file=tunnel-token=/dev/stdin \
 		--namespace=cloudflare-tunnel-$$CLUSTER_LABEL -o yaml | \
 	kubeseal -o yaml --namespace=cloudflare-tunnel-$$CLUSTER_LABEL > \
 		k8s/infrastructure/cloudflare-tunnel/environments/$$CLUSTER_LABEL/cloudflared-token-sealedsecret.yaml && \
+	echo "🔧 Updating kustomization to include sealed secret..." && \
+	$(MAKE) _update-kustomization-for-sealed-secret CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	echo "💾 Committing sealed secret to repository..." && \
 	git add k8s/infrastructure/cloudflare-tunnel/environments/$$CLUSTER_LABEL/ && \
-	git commit -m "Add tunnel token sealed secret for cloudflare-tunnel-$$CLUSTER_LABEL" && \
+	git commit -m "Add tunnel token sealed secret for cloudflare-tunnel-$$CLUSTER_LABEL (tunnel: $$TUNNEL_ID)" && \
 	git push && \
 	echo "⏳ Waiting for tunnel application to sync and become healthy..." && \
 	sleep 30 && \
-	echo "✅ Step 5 Complete: Tunnel token sealed secret created for $$CLUSTER_LABEL"
+	echo "✅ Step 5 Complete: Tunnel token sealed secret created for $$CLUSTER_LABEL (tunnel: $$TUNNEL_ID)"
 
 _install-kubeseal: ## Install kubeseal CLI if not present
 	@if ! command -v kubeseal >/dev/null 2>&1; then \
@@ -316,14 +329,22 @@ _install-kubeseal: ## Install kubeseal CLI if not present
 _update-kustomization-for-sealed-secret: ## Update kustomization to use sealed secret instead of plain secret
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	KUSTOMIZATION_FILE="k8s/infrastructure/cloudflare-tunnel/environments/$$CLUSTER_LABEL/kustomization.yaml" && \
-	if ! grep -q "sealedsecret.yaml" $$KUSTOMIZATION_FILE; then \
-		echo "📝 Adding sealed secret to $$CLUSTER_LABEL kustomization..." && \
-		echo "" >> $$KUSTOMIZATION_FILE && \
-		echo "resources:" >> $$KUSTOMIZATION_FILE && \
-		echo "  - sealedsecret.yaml" >> $$KUSTOMIZATION_FILE; \
-	fi && \
-	echo "🔧 Removing plain secret from base kustomization..." && \
-	sed -i '/secret.yaml/d' k8s/infrastructure/cloudflare-tunnel/base/kustomization.yaml || true
+	echo "📝 Updating $$CLUSTER_LABEL kustomization to include sealed secret..." && \
+	if ! grep -q "cloudflared-token-sealedsecret.yaml" $$KUSTOMIZATION_FILE 2>/dev/null; then \
+		if [ ! -f $$KUSTOMIZATION_FILE ]; then \
+			echo "apiVersion: kustomize.config.k8s.io/v1beta1" > $$KUSTOMIZATION_FILE && \
+			echo "kind: Kustomization" >> $$KUSTOMIZATION_FILE && \
+			echo "" >> $$KUSTOMIZATION_FILE && \
+			echo "resources:" >> $$KUSTOMIZATION_FILE && \
+			echo "  - ../../base" >> $$KUSTOMIZATION_FILE; \
+		fi && \
+		if ! grep -q "resources:" $$KUSTOMIZATION_FILE; then \
+			echo "" >> $$KUSTOMIZATION_FILE && \
+			echo "resources:" >> $$KUSTOMIZATION_FILE && \
+			echo "  - ../../base" >> $$KUSTOMIZATION_FILE; \
+		fi && \
+		echo "  - cloudflared-token-sealedsecret.yaml" >> $$KUSTOMIZATION_FILE; \
+	fi
 
 argocd-password: ## Get ArgoCD admin password
 	@echo "🔑 ArgoCD Admin Password:"
