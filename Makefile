@@ -322,7 +322,8 @@ infra-destroy: ## Destroy complete infrastructure (usage: make infra-destroy CLU
 tunnel-destroy: ## Destroy Cloudflare tunnel (usage: make tunnel-destroy CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	echo "🧹 Destroying Cloudflare tunnel for '$$CLUSTER_LABEL'..." && \
-	cd terraform/environments/dev && \
+	if [ "$$CLUSTER_LABEL" = "stg" ]; then ENV_DIR="staging"; else ENV_DIR="$$CLUSTER_LABEL"; fi && \
+	cd terraform/environments/$$ENV_DIR && \
 		export CLOUDFLARE_API_TOKEN=$$(grep CLOUDFLARE_API_TOKEN ../../../.env | cut -d'=' -f2) && \
 		terraform destroy -target=module.cloudflare_tunnel -auto-approve || true && \
 		terraform state list | grep "module.cloudflare_tunnel" | xargs -r terraform state rm || true
@@ -339,6 +340,7 @@ argocd-destroy: ## Destroy ArgoCD (usage: make argocd-destroy CLUSTER_LABEL=dev)
 cluster-destroy: ## Destroy cluster (usage: make cluster-destroy CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	echo "🧹 Destroying cluster for '$$CLUSTER_LABEL'..." && \
-	cd terraform/environments/dev && \
+	if [ "$$CLUSTER_LABEL" = "stg" ]; then ENV_DIR="staging"; else ENV_DIR="$$CLUSTER_LABEL"; fi && \
+	cd terraform/environments/$$ENV_DIR && \
 		export DIGITALOCEAN_TOKEN=$$(grep DIGITALOCEAN_TOKEN ../../../.env | cut -d'=' -f2) && \
 		terraform destroy -target=module.k8s_cluster -auto-approve || true
