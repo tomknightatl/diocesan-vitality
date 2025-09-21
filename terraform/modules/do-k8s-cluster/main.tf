@@ -67,7 +67,7 @@ EOF
       kubectl --kubeconfig="$TEMP_KUBECONFIG" config rename-context "$ORIGINAL_CONTEXT" "${self.triggers.context_name}"
 
       # Backup existing kubeconfig
-      if [[ -f ~/.kube/config ]]; then
+      if [ -f ~/.kube/config ]; then
         cp ~/.kube/config ~/.kube/config.backup.$(date +%Y%m%d_%H%M%S)
       fi
 
@@ -91,10 +91,10 @@ EOF
       if kubectl config get-contexts -o name | grep -q "^${self.triggers.context_name}$"; then
         # Switch to a different context if this is the current one
         CURRENT_CONTEXT=$(kubectl config current-context 2>/dev/null || echo "")
-        if [[ "$CURRENT_CONTEXT" == "${self.triggers.context_name}" ]]; then
+        if [ "$CURRENT_CONTEXT" = "${self.triggers.context_name}" ]; then
           # Try to switch to another available context
           OTHER_CONTEXT=$(kubectl config get-contexts -o name | grep -v "^${self.triggers.context_name}$" | head -1)
-          if [[ -n "$OTHER_CONTEXT" ]]; then
+          if [ -n "$OTHER_CONTEXT" ]; then
             kubectl config use-context "$OTHER_CONTEXT"
             echo "🔄 Switched to context: $OTHER_CONTEXT"
           fi

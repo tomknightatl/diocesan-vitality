@@ -136,15 +136,49 @@ infra-setup: ## Set up complete infrastructure (all 5 steps, usage: make infra-s
 cluster-create: ## Step 1: Create cluster and kubectl context (usage: make cluster-create CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	echo "🚀 Step 1: Creating cluster and kubectl context for '$$CLUSTER_LABEL'..." && \
+	if ! command -v jq >/dev/null 2>&1; then \
+		echo "❌ jq is required for cluster monitoring. Install with: apt-get install jq" && \
+		exit 1; \
+	fi && \
+	START_TIME=$$(date +%s) && \
+	TIMEOUT_SECONDS=900 && \
 	if [ "$$CLUSTER_LABEL" = "stg" ]; then ENV_DIR="staging"; else ENV_DIR="$$CLUSTER_LABEL"; fi && \
 	cd terraform/environments/$$ENV_DIR && \
+		echo "⏳ Initializing Terraform... ($$(date '+%H:%M:%S'))" && \
 		export DIGITALOCEAN_TOKEN=$$(grep DIGITALOCEAN_TOKEN ../../../.env | cut -d'=' -f2) && \
 		terraform init && \
+		echo "🔧 Applying Terraform configuration... ($$(date '+%H:%M:%S'))" && \
 		terraform apply -target=module.k8s_cluster -auto-approve && \
+		echo "📋 Monitoring cluster provisioning status... ($$(date '+%H:%M:%S'))" && \
+		CLUSTER_NAME="dv-$$CLUSTER_LABEL" && \
+		while true; do \
+			CURRENT_TIME=$$(date +%s) && \
+			ELAPSED=$$((CURRENT_TIME - START_TIME)) && \
+			if [ $$ELAPSED -gt $$TIMEOUT_SECONDS ]; then \
+				echo "❌ Timeout: Cluster creation exceeded 15 minutes" && \
+				exit 1; \
+			fi && \
+			STATUS=$$(doctl kubernetes cluster get $$CLUSTER_NAME -o json 2>/dev/null | jq -r '.status // "not_found"') && \
+			if [ "$$STATUS" = "running" ]; then \
+				echo "✅ Cluster is running! (Total time: $$((ELAPSED/60))m $$((ELAPSED%60))s)" && \
+				break; \
+			elif [ "$$STATUS" = "provisioning" ]; then \
+				echo "⏳ Cluster still provisioning... ($$((ELAPSED/60))m $$((ELAPSED%60))s elapsed, $$(date '+%H:%M:%S'))" && \
+				sleep 30; \
+			elif [ "$$STATUS" = "not_found" ]; then \
+				echo "⏳ Waiting for cluster to appear in DigitalOcean... ($$((ELAPSED/60))m $$((ELAPSED%60))s elapsed)" && \
+				sleep 15; \
+			else \
+				echo "❌ Unexpected cluster status: $$STATUS" && \
+				exit 1; \
+			fi; \
+		done && \
+		echo "🔗 Configuring kubectl access... ($$(date '+%H:%M:%S'))" && \
 		doctl kubernetes cluster kubeconfig save dv-$$CLUSTER_LABEL && \
 		kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
+		echo "🔍 Verifying cluster nodes... ($$(date '+%H:%M:%S'))" && \
 		kubectl get nodes && \
-		echo "🏷️  Labeling cluster with environment label..." && \
+		echo "🏷️  Labeling cluster with environment label... ($$(date '+%H:%M:%S'))" && \
 		kubectl create secret generic cluster-info \
 			--from-literal=environment=$$CLUSTER_LABEL \
 			--from-literal=cluster-name=dv-$$CLUSTER_LABEL \
