@@ -30,16 +30,15 @@ import pdfplumber
 import PyPDF2
 import requests
 from bs4 import BeautifulSoup
-from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import (
     NoSuchElementException,
     TimeoutException,
     WebDriverException,
 )
-from selenium.webdriver.support.ui import Select
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import Select, WebDriverWait
 
 from core.circuit_breaker import (
     CircuitBreakerConfig,
@@ -1114,6 +1113,7 @@ class TableExtractor(BaseExtractor):
         """Handle dropdown pagination controls to maximize results"""
         try:
             import time
+
             from selenium.webdriver.common.by import By
 
             selects = driver.find_elements(By.TAG_NAME, "select")

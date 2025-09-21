@@ -14,8 +14,8 @@ import time
 from typing import Any, Dict, List, Optional
 from urllib.parse import urljoin, urlparse
 
-from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.common.exceptions import NoSuchElementException, WebDriverException
+from selenium.webdriver.remote.webdriver import WebDriver
 
 from config import get_genai_api_key
 from core.ai_content_analyzer import get_ai_content_analyzer

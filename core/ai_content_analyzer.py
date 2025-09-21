@@ -15,13 +15,13 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import urljoin
 
 import google.generativeai as genai
-from selenium.webdriver.common.by import By
-from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.common.exceptions import (
     NoSuchElementException,
     TimeoutException,
     WebDriverException,
 )
+from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webdriver import WebDriver
 
 from core.circuit_breaker import circuit_breaker
 from core.logger import get_logger
@@ -203,6 +203,7 @@ class AIContentAnalyzer:
 
         logger.info("🤖 Detected dynamic loading, waiting for content...")
         import time
+
         from selenium.webdriver.support.ui import WebDriverWait
 
         WebDriverWait(driver, 10)
