@@ -20,7 +20,7 @@ spec:
       source:
         repoURL: https://github.com/tomknightatl/diocesan-vitality
         targetRevision: "develop"
-        path: k8s/environments/development
+        path: k8s/overlays/dev
       destination:
         server: "{{server}}"
         namespace: "diocesan-vitality-dev"
