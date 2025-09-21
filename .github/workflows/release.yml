@@ -12,6 +12,8 @@ on:
       - 'setup.py'
       - 'requirements.txt'
       - 'package.json'
+      - '.releaserc.json'
+      - 'scripts/update_version.py'
   workflow_dispatch:
     inputs:
       dry_run:
