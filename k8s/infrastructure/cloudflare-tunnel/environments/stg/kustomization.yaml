@@ -17,3 +17,4 @@ patches:
 
 commonLabels:
   environment: staging
+  - cloudflared-token-sealedsecret.yaml
