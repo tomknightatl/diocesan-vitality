@@ -9,14 +9,14 @@ This document provides a comprehensive list of all service URLs across all envir
 |---------|-----|--------|-------|
 | **UI (Frontend)** | https://dev.ui.diocesanvitality.org | 🔧 Pending | Service deployed, container images needed |
 | **API (Backend)** | https://dev.api.diocesanvitality.org | 🔧 Pending | Service deployed, container images needed |
-| **ArgoCD** | https://dev.argocd.diocesanvitality.org | ✅ Active | GitOps management interface |
+| **ArgoCD** | https://dev.argocd.diocesanvitality.org | 🔧 SSL Issue | DNS resolves, tunnel/SSL troubleshooting needed |
 
 ### **Staging Environment**
 | Service | URL | Status | Notes |
 |---------|-----|--------|-------|
-| **UI (Frontend)** | https://stg.ui.diocesan-vitality.org | 🔧 Pending | Service deployment in progress |
-| **API (Backend)** | https://stg.api.diocesan-vitality.org | 🔧 Pending | Service deployment in progress |
-| **ArgoCD** | https://stg.argocd.diocesan-vitality.org | ✅ Active | GitOps management interface |
+| **UI (Frontend)** | https://stg.ui.diocesanvitality.org | 🔧 Pending | Service deployment in progress |
+| **API (Backend)** | https://stg.api.diocesanvitality.org | 🔧 Pending | Service deployment in progress |
+| **ArgoCD** | https://stg.argocd.diocesanvitality.org | 🔧 SSL Issue | DNS resolves, tunnel/SSL troubleshooting needed |
 
 ### **Production Environment**
 | Service | URL | Status | Notes |
