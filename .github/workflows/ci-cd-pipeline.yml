@@ -1,8 +1,8 @@
-name: CI/CD Pipeline
+name: CI/CD Pipeline (Legacy - Disabled)
 
 on:
-  push:
-    branches: [main, develop, staging]
+  # Disabled - Use full-ci.yml instead
+  workflow_dispatch:
     paths:
       - "backend/**"
       - "frontend/**"
