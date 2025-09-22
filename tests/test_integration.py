@@ -57,12 +57,13 @@ def test_database_connection():
 
 def test_web_scraping_dependencies():
     """Test that web scraping dependencies are available."""
-    required_packages = ["selenium", "beautifulsoup4", "requests"]
+    # Map package names to their import names
+    package_imports = {"selenium": "selenium", "beautifulsoup4": "bs4", "requests": "requests"}
 
     missing_packages = []
-    for package in required_packages:
+    for package, import_name in package_imports.items():
         try:
-            __import__(package.replace("-", "_"))
+            __import__(import_name)
         except ImportError:
             missing_packages.append(package)
 
@@ -116,9 +117,7 @@ def test_extraction_capabilities():
         pass
 
         # Test basic extractor imports
-        from extractors.enhanced_ai_fallback_extractor import (
-            EnhancedAIFallbackExtractor,
-        )
+        from extractors.enhanced_ai_fallback_extractor import EnhancedAIFallbackExtractor
 
         assert EnhancedAIFallbackExtractor is not None
 

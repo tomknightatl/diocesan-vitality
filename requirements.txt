@@ -11,6 +11,7 @@ python-dotenv
 jupyter
 matplotlib
 pytest
+pytest-asyncio
 pytest-mock
 fastapi
 uvicorn

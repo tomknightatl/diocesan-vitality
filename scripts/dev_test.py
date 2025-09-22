@@ -10,7 +10,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-from dotenv import load_dotenv
+# Add project root to Python path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+from dotenv import load_dotenv  # noqa: E402
 
 
 def test_database_connection():
@@ -28,10 +32,14 @@ def test_database_connection():
 
         # Test specific query
         if count > 0:
-            sample = supabase.table("Dioceses").select("id, Name, State").limit(1).execute()
+            sample = supabase.table("Dioceses").select("*").limit(1).execute()
             if sample.data:
                 diocese = sample.data[0]
-                print(f"   Sample: {diocese['Name']}, {diocese['State']} (ID: {diocese['id']})")
+                print(f"   Sample diocese found with columns: {list(diocese.keys())}")
+                # Try to display name and location safely
+                name = diocese.get("name") or diocese.get("Name") or "Unknown"
+                id_val = diocese.get("id") or diocese.get("ID") or "Unknown"
+                print(f"   Diocese: {name} (ID: {id_val})")
 
         return True
     except Exception as e:

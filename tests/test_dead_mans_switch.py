@@ -6,11 +6,18 @@ This script simulates an extraction that starts but never finishes to test the s
 
 import time
 
+import pytest
 import requests
 
 
 def test_dead_mans_switch():
     backend_url = "http://localhost:8000"
+
+    # Check if backend is running
+    try:
+        requests.get(f"{backend_url}/health", timeout=2)
+    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+        pytest.skip("Backend server not running - skipping dead man's switch test")
 
     print("🧪 Testing Dead Man's Switch functionality...")
 
