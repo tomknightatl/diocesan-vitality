@@ -141,7 +141,7 @@ cluster-create: ## Step 1: Create cluster and kubectl context (usage: make clust
 		exit 1; \
 	fi && \
 	START_TIME=$$(date +%s) && \
-	TIMEOUT_SECONDS=900 && \
+	TIMEOUT_SECONDS=1800 && \
 	if [ "$$CLUSTER_LABEL" = "stg" ]; then ENV_DIR="staging"; else ENV_DIR="$$CLUSTER_LABEL"; fi && \
 	cd terraform/environments/$$ENV_DIR && \
 		echo "⏳ Initializing Terraform... ($$(date '+%H:%M:%S'))" && \
@@ -155,7 +155,7 @@ cluster-create: ## Step 1: Create cluster and kubectl context (usage: make clust
 			CURRENT_TIME=$$(date +%s) && \
 			ELAPSED=$$((CURRENT_TIME - START_TIME)) && \
 			if [ $$ELAPSED -gt $$TIMEOUT_SECONDS ]; then \
-				echo "❌ Timeout: Cluster creation exceeded 15 minutes" && \
+				echo "❌ Timeout: Cluster creation exceeded 30 minutes" && \
 				exit 1; \
 			fi && \
 			STATUS=$$(doctl kubernetes cluster get $$CLUSTER_NAME -o json 2>/dev/null | jq -r '.[0].status.state // "not_found"') && \
@@ -192,6 +192,8 @@ tunnel-create: ## Step 2: Create Cloudflare tunnel and DNS records (usage: make 
 	if [ "$$CLUSTER_LABEL" = "stg" ]; then ENV_DIR="staging"; else ENV_DIR="$$CLUSTER_LABEL"; fi && \
 	cd terraform/environments/$$ENV_DIR && \
 		export CLOUDFLARE_API_TOKEN=$$(grep CLOUDFLARE_API_TOKEN ../../../.env | cut -d'=' -f2) && \
+		export TF_VAR_cloudflare_account_id=$$(grep CLOUDFLARE_ACCOUNT_ID ../../../.env | cut -d'=' -f2) && \
+		export TF_VAR_cloudflare_zone_id=$$(grep CLOUDFLARE_ZONE_ID ../../../.env | cut -d'=' -f2) && \
 		terraform state list | grep "module.cloudflare_tunnel" | xargs -r terraform state rm || true && \
 		terraform apply -target=module.cloudflare_tunnel -auto-approve
 	@echo "✅ Step 2 Complete: Cloudflare tunnel created for $$CLUSTER_LABEL"
@@ -210,9 +212,9 @@ argocd-install: ## Step 3: Install ArgoCD via Helm with proper configuration (us
 		helm upgrade --install argocd argo/argo-cd \
 			--namespace argocd \
 			--values k8s/infrastructure/argocd/values-$$CLUSTER_LABEL.yaml \
-			--wait --timeout=10m && \
+			--wait --timeout=20m && \
 		echo "⏳ Waiting for ArgoCD server to be ready..." && \
-		kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=argocd-server -n argocd --timeout=300s && \
+		kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=argocd-server -n argocd --timeout=600s && \
 		echo "🔧 Configuring repository access..." && \
 		while ! kubectl get configmap argocd-cm -n argocd >/dev/null 2>&1; do sleep 2; done && \
 		sleep 5 && \
