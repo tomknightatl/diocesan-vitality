@@ -1,4 +1,5 @@
 name: Full CI/CD Pipeline
+# Comprehensive CI/CD pipeline with all tests and validations
 
 on:
   push:
