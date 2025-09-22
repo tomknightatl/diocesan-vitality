@@ -611,7 +611,7 @@ jobs:
   deploy-production:
     name: Deploy to Production (Legacy)
     runs-on: ubuntu-latest
-    needs: [integration-tests]
+    needs: [integration-tests, build-images]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip-legacy-deploy]')
     environment: production
     steps:
@@ -644,17 +644,17 @@ jobs:
           TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)
 
           # Pull staging images and retag as production
-          docker pull ${{ needs.build-staging.outputs.backend-tag }}
-          docker pull ${{ needs.build-staging.outputs.frontend-tag }}
-          docker pull ${{ needs.build-staging.outputs.pipeline-tag }}
+          docker pull ${{ needs.build-images.outputs.backend-tag }}
+          docker pull ${{ needs.build-images.outputs.frontend-tag }}
+          docker pull ${{ needs.build-images.outputs.pipeline-tag }}
 
-          docker tag ${{ needs.build-staging.outputs.backend-tag }} ${{ env.IMAGE_NAMESPACE }}:backend-${TIMESTAMP}
-          docker tag ${{ needs.build-staging.outputs.frontend-tag }} ${{ env.IMAGE_NAMESPACE }}:frontend-${TIMESTAMP}
-          docker tag ${{ needs.build-staging.outputs.pipeline-tag }} ${{ env.IMAGE_NAMESPACE }}:pipeline-${TIMESTAMP}
+          docker tag ${{ needs.build-images.outputs.backend-tag }} ${{ env.IMAGE_NAMESPACE }}:backend-${TIMESTAMP}
+          docker tag ${{ needs.build-images.outputs.frontend-tag }} ${{ env.IMAGE_NAMESPACE }}:frontend-${TIMESTAMP}
+          docker tag ${{ needs.build-images.outputs.pipeline-tag }} ${{ env.IMAGE_NAMESPACE }}:pipeline-${TIMESTAMP}
 
-          docker tag ${{ needs.build-staging.outputs.backend-tag }} ${{ env.IMAGE_NAMESPACE }}:backend-latest
-          docker tag ${{ needs.build-staging.outputs.frontend-tag }} ${{ env.IMAGE_NAMESPACE }}:frontend-latest
-          docker tag ${{ needs.build-staging.outputs.pipeline-tag }} ${{ env.IMAGE_NAMESPACE }}:pipeline-latest
+          docker tag ${{ needs.build-images.outputs.backend-tag }} ${{ env.IMAGE_NAMESPACE }}:backend-latest
+          docker tag ${{ needs.build-images.outputs.frontend-tag }} ${{ env.IMAGE_NAMESPACE }}:frontend-latest
+          docker tag ${{ needs.build-images.outputs.pipeline-tag }} ${{ env.IMAGE_NAMESPACE }}:pipeline-latest
 
           # Push production tags
           docker push ${{ env.IMAGE_NAMESPACE }}:backend-${TIMESTAMP}
