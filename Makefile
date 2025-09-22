@@ -102,7 +102,7 @@ format: ## Format code with black
 
 lint: ## Run linting
 	@echo "🔍 Running linting..."
-	@flake8 . --exclude=venv,node_modules --max-line-length=88 --extend-ignore=E203,W503
+	@flake8 . --exclude=venv,node_modules,frontend/node_modules
 	@echo "✅ Linting complete"
 
 env-check: ## Check environment configuration

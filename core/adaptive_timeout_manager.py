@@ -13,8 +13,7 @@ import threading
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from urllib.parse import urlparse
 
 try:
@@ -131,7 +130,11 @@ class AdaptiveTimeoutManager:
 
         # Response tracking
         self.domain_metrics: Dict[str, ResponseMetrics] = {}
-        self.global_stats = {"total_requests": 0, "total_timeouts": 0, "avg_response_time": 10.0}
+        self.global_stats = {
+            "total_requests": 0,
+            "total_timeouts": 0,
+            "avg_response_time": 10.0,
+        }
 
         # Thread safety
         self._lock = threading.RLock()
@@ -144,7 +147,7 @@ class AdaptiveTimeoutManager:
                 max_timeout=15.0,
                 retry_multiplier=1.2,
                 adaptive_factor=1.1,
-                description="Ultra-fast sites with CDN/caching",
+                description="Ultra - fast sites with CDN/caching",
             ),
             "fast": TimeoutStrategy(
                 name="fast",
@@ -201,7 +204,11 @@ class AdaptiveTimeoutManager:
         logger.info("⏱️ Adaptive Timeout Manager initialized")
 
     def get_optimal_timeout(
-        self, url: str, operation_type: str = "page_load", retry_count: int = 0, context: Dict = None
+        self,
+        url: str,
+        operation_type: str = "page_load",
+        retry_count: int = 0,
+        context: Dict = None,
     ) -> float:
         """
         Calculate optimal timeout for a URL based on historical data and complexity.
@@ -234,7 +241,7 @@ class AdaptiveTimeoutManager:
                 # Apply adaptive adjustments
                 adapted_timeout = self._apply_adaptive_adjustments(base_timeout, metrics, retry_count, strategy)
 
-                # Apply operation-specific modifiers
+                # Apply operation - specific modifiers
                 final_timeout = self._apply_operation_modifiers(adapted_timeout, operation_type, context)
 
                 # Ensure within bounds
@@ -252,39 +259,79 @@ class AdaptiveTimeoutManager:
 
     def _determine_strategy(self, domain: str, metrics: ResponseMetrics, context: Dict = None) -> TimeoutStrategy:
         """Determine the best timeout strategy for a domain."""
+        # Check explicit domain classifications first
+        explicit_strategy = self._check_explicit_domain_classification(domain)
+        if explicit_strategy:
+            return explicit_strategy
 
-        # Check explicit domain classifications
-        for pattern, strategy_name in self.domain_classifications.items():
-            if pattern in domain:
-                return self.strategies[strategy_name]
-
-        # Use metrics-based classification
+        # Use metrics-based classification if available
         if metrics.response_times:
-            avg_time = metrics.avg_response_time
-            complexity = metrics.complexity_score
-            success_rate = metrics.success_rate
-
-            # Fast sites
-            if avg_time < 3.0 and complexity < 1.2 and success_rate > 0.9:
-                return self.strategies["lightning"]
-            elif avg_time < 8.0 and complexity < 1.5:
-                return self.strategies["fast"]
-
-            # Slow or complex sites
-            elif avg_time > 25.0 or complexity > 2.5 or success_rate < 0.6:
-                return self.strategies["patient"]
-            elif avg_time > 15.0 or complexity > 2.0:
-                return self.strategies["complex"]
+            metrics_strategy = self._determine_strategy_from_metrics(metrics)
+            if metrics_strategy:
+                return metrics_strategy
 
         # Check context hints
-        if context:
-            if context.get("detected_spa", False) or context.get("js_heavy", False):
-                return self.strategies["complex"]
-            if context.get("cdn_detected", False):
-                return self.strategies["fast"]
+        context_strategy = self._determine_strategy_from_context(context)
+        if context_strategy:
+            return context_strategy
 
         # Default to moderate
         return self.strategies["moderate"]
+
+    def _check_explicit_domain_classification(self, domain: str) -> Optional[TimeoutStrategy]:
+        """Check if domain matches explicit classification patterns."""
+        for pattern, strategy_name in self.domain_classifications.items():
+            if pattern in domain:
+                return self.strategies[strategy_name]
+        return None
+
+    def _determine_strategy_from_metrics(self, metrics: ResponseMetrics) -> Optional[TimeoutStrategy]:
+        """Determine strategy based on performance metrics."""
+        avg_time = metrics.avg_response_time
+        complexity = metrics.complexity_score
+        success_rate = metrics.success_rate
+
+        # Fast sites
+        if self._is_lightning_fast_site(avg_time, complexity, success_rate):
+            return self.strategies["lightning"]
+        elif self._is_fast_site(avg_time, complexity):
+            return self.strategies["fast"]
+
+        # Slow or complex sites
+        elif self._is_patient_site(avg_time, complexity, success_rate):
+            return self.strategies["patient"]
+        elif self._is_complex_site(avg_time, complexity):
+            return self.strategies["complex"]
+
+        return None
+
+    def _is_lightning_fast_site(self, avg_time: float, complexity: float, success_rate: float) -> bool:
+        """Check if site qualifies for lightning strategy."""
+        return avg_time < 3.0 and complexity < 1.2 and success_rate > 0.9
+
+    def _is_fast_site(self, avg_time: float, complexity: float) -> bool:
+        """Check if site qualifies for fast strategy."""
+        return avg_time < 8.0 and complexity < 1.5
+
+    def _is_patient_site(self, avg_time: float, complexity: float, success_rate: float) -> bool:
+        """Check if site requires patient strategy."""
+        return avg_time > 25.0 or complexity > 2.5 or success_rate < 0.6
+
+    def _is_complex_site(self, avg_time: float, complexity: float) -> bool:
+        """Check if site requires complex strategy."""
+        return avg_time > 15.0 or complexity > 2.0
+
+    def _determine_strategy_from_context(self, context: Dict) -> Optional[TimeoutStrategy]:
+        """Determine strategy based on context hints."""
+        if not context:
+            return None
+
+        if context.get("detected_spa", False) or context.get("js_heavy", False):
+            return self.strategies["complex"]
+        if context.get("cdn_detected", False):
+            return self.strategies["fast"]
+
+        return None
 
     def _calculate_base_timeout(self, strategy: TimeoutStrategy, metrics: ResponseMetrics, operation_type: str) -> float:
         """Calculate base timeout using strategy and historical data."""
@@ -300,7 +347,7 @@ class AdaptiveTimeoutManager:
             weight = min(len(metrics.response_times) / 20.0, 0.7)  # Max 70% weight on history
             base = base * (1 - weight) + historical_timeout * weight
 
-        # Operation-specific base adjustments
+        # Operation - specific base adjustments
         operation_multipliers = {
             "page_load": 1.0,
             "element_wait": 0.7,
@@ -314,7 +361,11 @@ class AdaptiveTimeoutManager:
         return base * multiplier
 
     def _apply_adaptive_adjustments(
-        self, base_timeout: float, metrics: ResponseMetrics, retry_count: int, strategy: TimeoutStrategy
+        self,
+        base_timeout: float,
+        metrics: ResponseMetrics,
+        retry_count: int,
+        strategy: TimeoutStrategy,
     ) -> float:
         """Apply adaptive adjustments based on recent performance."""
 
@@ -348,17 +399,17 @@ class AdaptiveTimeoutManager:
         return timeout
 
     def _apply_operation_modifiers(self, timeout: float, operation_type: str, context: Dict = None) -> float:
-        """Apply final operation-specific modifiers."""
+        """Apply final operation - specific modifiers."""
 
         if not context:
             return timeout
 
-        # Content-based modifiers
+        # Content - based modifiers
         if context.get("content_size_mb", 0) > 5:
             timeout *= 1.3  # Larger content needs more time
 
         if context.get("image_count", 0) > 20:
-            timeout *= 1.2  # Image-heavy pages
+            timeout *= 1.2  # Image - heavy pages
 
         if context.get("external_resources", 0) > 10:
             timeout *= 1.15  # Many external dependencies
@@ -383,55 +434,76 @@ class AdaptiveTimeoutManager:
         try:
             with self._lock:
                 domain = urlparse(url).netloc.lower()
+                metrics = self._get_or_create_domain_metrics(domain)
 
-                if domain not in self.domain_metrics:
-                    self.domain_metrics[domain] = ResponseMetrics(domain=domain)
-
-                metrics = self.domain_metrics[domain]
-
-                # Ensure response_time is numeric
-                try:
-                    response_time = float(response_time)
-                except (ValueError, TypeError):
-                    self.logger.debug(f"⏱️ Invalid response time for {url}: {response_time}")
+                response_time = self._validate_response_time(response_time, url)
+                if response_time is None:
                     return
 
-                # Record response time
-                metrics.response_times.append(response_time)
-
-                # Record success/failure timing
-                if success:
-                    metrics.success_times.append(response_time)
-                else:
-                    metrics.failure_times.append(response_time)
-
-                # Update complexity indicators
-                if complexity_indicators and isinstance(complexity_indicators, dict):
-                    for key, value in complexity_indicators.items():
-                        try:
-                            metrics.complexity_indicators[key] = float(value)
-                        except (ValueError, TypeError):
-                            self.logger.debug(f"⏱️ Invalid complexity indicator {key}: {value}")
-                elif complexity_indicators:
-                    self.logger.debug(f"⏱️ Invalid complexity_indicators type for {url}: {type(complexity_indicators)}")
+                self._record_response_timing(metrics, response_time, success)
+                self._update_complexity_indicators(metrics, complexity_indicators, url)
+                self._update_global_statistics(response_time, timeout_occurred)
 
                 metrics.last_updated = time.time()
-
-                # Update global stats
-                self.global_stats["total_requests"] += 1
-                if timeout_occurred:
-                    self.global_stats["total_timeouts"] += 1
-
-                # Update global average (rolling)
-                old_avg = self.global_stats["avg_response_time"]
-                count = self.global_stats["total_requests"]
-                self.global_stats["avg_response_time"] = (old_avg * (count - 1) + response_time) / count
 
         except Exception as e:
             self.logger.error(f"⏱️ Error recording response for {url}: {e}")
 
+    def _get_or_create_domain_metrics(self, domain: str) -> "ResponseMetrics":
+        """Get existing domain metrics or create new ones."""
+        if domain not in self.domain_metrics:
+            self.domain_metrics[domain] = ResponseMetrics(domain=domain)
+        return self.domain_metrics[domain]
+
+    def _validate_response_time(self, response_time: float, url: str) -> Optional[float]:
+        """Validate and convert response time to float."""
+        try:
+            return float(response_time)
+        except (ValueError, TypeError):
+            self.logger.debug(f"⏱️ Invalid response time for {url}: {response_time}")
+            return None
+
+    def _record_response_timing(self, metrics: "ResponseMetrics", response_time: float, success: bool):
+        """Record response timing data."""
+        metrics.response_times.append(response_time)
+
+        if success:
+            metrics.success_times.append(response_time)
+        else:
+            metrics.failure_times.append(response_time)
+
+    def _update_complexity_indicators(
+        self,
+        metrics: "ResponseMetrics",
+        complexity_indicators: Dict[str, float],
+        url: str,
+    ):
+        """Update complexity indicators for the domain."""
+        if complexity_indicators and isinstance(complexity_indicators, dict):
+            for key, value in complexity_indicators.items():
+                try:
+                    metrics.complexity_indicators[key] = float(value)
+                except (ValueError, TypeError):
+                    self.logger.debug(f"⏱️ Invalid complexity indicator {key}: {value}")
+        elif complexity_indicators:
+            self.logger.debug(f"⏱️ Invalid complexity_indicators type for {url}: {type(complexity_indicators)}")
+
+    def _update_global_statistics(self, response_time: float, timeout_occurred: bool):
+        """Update global statistics."""
+        self.global_stats["total_requests"] += 1
+        if timeout_occurred:
+            self.global_stats["total_timeouts"] += 1
+
+        # Update global average (rolling)
+        old_avg = self.global_stats["avg_response_time"]
+        count = self.global_stats["total_requests"]
+        self.global_stats["avg_response_time"] = (old_avg * (count - 1) + response_time) / count
+
     def analyze_complexity_indicators(
-        self, page_content: str = None, response_headers: Dict = None, network_logs: List = None
+        self,
+        page_content: str = None,
+        response_headers: Dict = None,
+        network_logs: List = None,
     ) -> Dict[str, float]:
         """Analyze page complexity indicators for timeout optimization."""
         indicators = {}
@@ -468,12 +540,17 @@ class AdaptiveTimeoutManager:
                 headers = {k.lower(): v for k, v in response_headers.items()}
 
                 # CDN detection
-                cdn_headers = ["cf-ray", "x-amz-cf-id", "x-cache", "x-served-by"]
+                cdn_headers = [
+                    "cf - ray",
+                    "x - amz - cf - id",
+                    "x - cache",
+                    "x - served - by",
+                ]
                 if any(header in headers for header in cdn_headers):
                     indicators["cdn_usage"] = 0.5  # CDNs typically speed things up
 
                 # Content size
-                content_length = headers.get("content-length")
+                content_length = headers.get("content - length")
                 if content_length and content_length.isdigit():
                     size_mb = int(content_length) / (1024 * 1024)
                     indicators["content_size"] = min(size_mb / 5.0, 2.0)

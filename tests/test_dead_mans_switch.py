@@ -4,7 +4,6 @@ Test script for the dead man's switch functionality.
 This script simulates an extraction that starts but never finishes to test the staleness detection.
 """
 
-import json
 import time
 
 import requests
@@ -64,7 +63,7 @@ def test_dead_mans_switch():
         print(f"   Circuit Breakers: {len(status['circuit_breakers'])} active")
 
     # Step 4: Wait for dead man's switch to trigger (5+ minutes for extraction, 10+ minutes for circuit breakers)
-    print(f"\n4. Waiting for dead man's switch to trigger...")
+    print("\n4. Waiting for dead man's switch to trigger...")
     print("   ⏳ This test will take about 6 minutes to complete...")
     print("   📊 You can monitor the dashboard at http://localhost:5173/dashboard")
     print("   🔄 The system checks for stale data every 10 seconds")
@@ -79,7 +78,7 @@ def test_dead_mans_switch():
             extraction_status = status["extraction_status"]["status"]
             circuit_breaker_count = len(status["circuit_breakers"])
 
-            print(f"   Check {i+1}/15: Extraction={extraction_status}, CircuitBreakers={circuit_breaker_count}")
+            print(f"   Check {i + 1}/15: Extraction={extraction_status}, CircuitBreakers={circuit_breaker_count}")
 
             # Check if extraction status became stale (should happen around 5 minutes)
             if extraction_status == "stale" and i >= 8:  # After 4+ minutes
@@ -92,8 +91,8 @@ def test_dead_mans_switch():
         else:
             print(f"   ❌ Failed to check status: {response.status_code}")
 
-    print(f"\n🎉 Dead man's switch test completed!")
-    print(f"   Visit http://localhost:5173/dashboard to see the 'STALE' status")
+    print("\n🎉 Dead man's switch test completed!")
+    print("   Visit http://localhost:5173/dashboard to see the 'STALE' status")
 
     return True
 

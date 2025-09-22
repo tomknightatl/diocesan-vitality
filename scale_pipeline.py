@@ -21,9 +21,9 @@ logger = get_logger(__name__)
 class PipelineScaler:
     """Utility for scaling pipeline deployment"""
 
-    def __init__(self, namespace: str = "diocesan-vitality"):
+    def __init__(self, namespace: str = "diocesan - vitality"):
         self.namespace = namespace
-        self.deployment_name = "pipeline-deployment"
+        self.deployment_name = "pipeline - deployment"
         self.monitor = PipelineMonitor()
 
     def get_current_replicas(self) -> Optional[int]:
@@ -60,7 +60,15 @@ class PipelineScaler:
             logger.info(f"🔧 Scaling {self.deployment_name} to {replicas} replicas...")
 
             result = subprocess.run(
-                ["kubectl", "scale", "deployment", self.deployment_name, f"--replicas={replicas}", "-n", self.namespace],
+                [
+                    "kubectl",
+                    "scale",
+                    "deployment",
+                    self.deployment_name,
+                    f"--replicas={replicas}",
+                    "-n",
+                    self.namespace,
+                ],
                 capture_output=True,
                 text=True,
                 check=True,
@@ -159,17 +167,23 @@ async def main():
 
     parser.add_argument("replicas", type=int, help="Target number of replicas")
     parser.add_argument(
-        "--namespace", "-n", default="diocesan-vitality", help="Kubernetes namespace (default: diocesan-vitality)"
+        "--namespace",
+        "-n",
+        default="diocesan - vitality",
+        help="Kubernetes namespace (default: diocesan - vitality)",
     )
     parser.add_argument(
-        "--monitor-duration", type=int, default=120, help="How long to monitor after scaling (seconds, default: 120)"
+        "--monitor - duration",
+        type=int,
+        default=120,
+        help="How long to monitor after scaling (seconds, default: 120)",
     )
-    parser.add_argument("--no-monitor", action="store_true", help="Don't monitor after scaling")
+    parser.add_argument("--no - monitor", action="store_true", help="Don't monitor after scaling")
 
     args = parser.parse_args()
 
     if args.replicas < 0:
-        logger.error("❌ Replica count must be non-negative")
+        logger.error("❌ Replica count must be non - negative")
         return
 
     scaler = PipelineScaler(namespace=args.namespace)

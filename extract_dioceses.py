@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# coding: utf-8
+# coding: utf - 8
 
 import argparse
 import re  # Added this line
@@ -47,7 +47,7 @@ def extract_dioceses_data(soup, max_dioceses=None):
     Returns a list of dictionaries with diocese details.
     """
     dioceses = []
-    diocese_containers = soup.find_all("div", class_="views-row")
+    diocese_containers = soup.find_all("div", class_="views - row")
 
     logger.info(f"Found {len(diocese_containers)} potential diocese containers")
 
@@ -56,14 +56,14 @@ def extract_dioceses_data(soup, max_dioceses=None):
         diocese_containers = diocese_containers[:max_dioceses]
 
     for i, container in enumerate(diocese_containers):
-        logger.info(f"Processing container {i+1}")
+        logger.info(f"Processing container {i + 1}")
 
-        da_wrap = container.find("div", class_="da-wrap")
+        da_wrap = container.find("div", class_="da - wrap")
         if not da_wrap:
-            logger.warning(f"No da-wrap found in container {i+1}")
+            logger.warning(f"No da - wrap found in container {i + 1}")
             continue
 
-        name_div = da_wrap.find("div", class_="da-title")
+        name_div = da_wrap.find("div", class_="da - title")
         diocese_name = name_div.get_text(strip=True) if name_div else "N/A"
         logger.info(f"Diocese name: {diocese_name}")
 
@@ -71,7 +71,7 @@ def extract_dioceses_data(soup, max_dioceses=None):
         website_url = website_div.find("a")["href"] if website_div and website_div.find("a") else "N/A"
         logger.info(f"Website: {website_url}")
 
-        address_div = da_wrap.find("div", class_="da-address")
+        address_div = da_wrap.find("div", class_="da - address")
         address = ""
         if address_div:
             full_address_text = address_div.get_text(separator=" ", strip=True)
@@ -100,7 +100,7 @@ def extract_dioceses_data(soup, max_dioceses=None):
 
 def main(max_dioceses=config.DEFAULT_MAX_DIOCESES):
     """Main function to extract and store dioceses information."""
-    url = "https://www.usccb.org/about/bishops-and-dioceses/all-dioceses"
+    url = "https://www.usccb.org/about/bishops - and - dioceses/all - dioceses"
     soup = get_soup(url)
 
     if not soup:
@@ -142,7 +142,10 @@ def main(max_dioceses=config.DEFAULT_MAX_DIOCESES):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Extract dioceses information from the USCCB website.")
     parser.add_argument(
-        "--max_dioceses", type=int, default=5, help="Maximum number of dioceses to extract. Set to 0 or None for no limit."
+        "--max_dioceses",
+        type=int,
+        default=5,
+        help="Maximum number of dioceses to extract. Set to 0 or None for no limit.",
     )
     args = parser.parse_args()
 

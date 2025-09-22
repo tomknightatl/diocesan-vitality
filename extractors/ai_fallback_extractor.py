@@ -3,10 +3,10 @@
 AI Fallback Extractor - The Last Resort for Failed Parish Extractions.
 
 This extractor is called when all standard extraction methods fail.
-It uses AI-powered content analysis to understand page structure and extract parishes.
+It uses AI - powered content analysis to understand page structure and extract parishes.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 from urllib.parse import urljoin
 
 from selenium.webdriver.remote.webdriver import WebDriver
@@ -20,7 +20,7 @@ logger = get_logger(__name__)
 
 
 class AIFallbackExtractor(BaseExtractor):
-    """AI-powered fallback extractor for when all other methods fail."""
+    """AI - powered fallback extractor for when all other methods fail."""
 
     def __init__(self):
         """Initialize the AI fallback extractor."""
@@ -51,7 +51,7 @@ class AIFallbackExtractor(BaseExtractor):
 
     def extract(self, driver: WebDriver, diocese_name: str, url: str, max_parishes: int = None) -> List[Dict[str, Any]]:
         """
-        Extract parishes using AI-powered content analysis.
+        Extract parishes using AI - powered content analysis.
 
         This method:
         1. Analyzes the page structure using AI
@@ -59,70 +59,95 @@ class AIFallbackExtractor(BaseExtractor):
         3. Applies those selectors to extract parish data
         4. Validates and returns results
         """
-        logger.info(f"🤖 AI Fallback Extraction starting for {diocese_name}")
-        logger.info(f"    📊 Target: up to {max_parishes or 'unlimited'} parishes")
-        logger.info(f"    🌐 URL: {url}")
+        self._log_extraction_start(diocese_name, url, max_parishes)
 
         if not self.ai_analyzer:
             logger.error("🤖 AI Fallback Extractor not properly initialized")
             return []
 
         try:
-            # Step 1: AI-powered content analysis
-            logger.info("🤖 Step 1: Analyzing page content with AI...")
-            analysis_result = self.ai_analyzer.analyze_failed_extraction(driver, diocese_name, url)
-
-            confidence = analysis_result.get("confidence", 0.0)
-            strategy = analysis_result.get("extraction_strategy", "unknown")
-            parishes = analysis_result.get("parish_data", [])
-            insights = analysis_result.get("ai_insights", [])
-
-            logger.info(f"🤖 AI Analysis Results:")
-            logger.info(f"    📊 Confidence: {confidence:.2f}")
-            logger.info(f"    🔧 Strategy: {strategy}")
-            logger.info(f"    ⛪ Parishes found: {len(parishes)}")
-
-            if insights:
-                logger.info(f"    💡 AI Insights:")
-                for insight in insights[:3]:  # Log top 3 insights
-                    logger.info(f"      • {insight}")
-
-            # Step 2: Validate and enrich parish data
-            validated_parishes = []
-            for parish in parishes:
-                if self._validate_ai_parish(parish):
-                    enriched_parish = self._enrich_parish_data(parish, driver, url)
-                    validated_parishes.append(enriched_parish)
-
-            # Step 3: Apply max_parishes limit
-            if max_parishes and len(validated_parishes) > max_parishes:
-                validated_parishes = validated_parishes[:max_parishes]
-                logger.info(f"🤖 Limited results to {max_parishes} parishes")
-
-            # Step 4: Log extraction results
-            if validated_parishes:
-                logger.info(f"🤖 ✅ AI Fallback Extraction successful!")
-                logger.info(f"    📊 Final count: {len(validated_parishes)} parishes")
-                logger.info(f"    🎯 Success rate: {len(validated_parishes)/len(parishes)*100:.1f}%" if parishes else "N/A")
-
-                # Log sample results
-                for i, parish in enumerate(validated_parishes[:3], 1):
-                    logger.info(f"    {i}. {parish.get('name', 'N/A')}")
-                    if parish.get("url"):
-                        logger.info(f"       🔗 {parish['url']}")
-            else:
-                logger.warning("🤖 ❌ AI Fallback Extraction found no valid parishes")
-                logger.warning(f"    💭 AI suggested strategy: {strategy}")
-                logger.warning(f"    📊 AI confidence was: {confidence:.2f}")
-
-            return validated_parishes
+            analysis_result = self._perform_ai_analysis(driver, diocese_name, url)
+            validated_parishes = self._process_analysis_results(analysis_result, driver, url)
+            final_parishes = self._apply_parish_limit(validated_parishes, max_parishes)
+            self._log_extraction_results(final_parishes, analysis_result)
+            return final_parishes
 
         except Exception as e:
             logger.error(f"🤖 AI Fallback Extraction failed: {e}", exc_info=True)
             return []
 
+    def _log_extraction_start(self, diocese_name: str, url: str, max_parishes: int):
+        """Log the start of AI extraction process."""
+        logger.info(f"🤖 AI Fallback Extraction starting for {diocese_name}")
+        logger.info(f"    📊 Target: up to {max_parishes or 'unlimited'} parishes")
+        logger.info(f"    🌐 URL: {url}")
+
+    def _perform_ai_analysis(self, driver: WebDriver, diocese_name: str, url: str) -> Dict[str, Any]:
+        """Perform AI-powered content analysis."""
+        logger.info("🤖 Step 1: Analyzing page content with AI...")
+        analysis_result = self.ai_analyzer.analyze_failed_extraction(driver, diocese_name, url)
+        self._log_analysis_results(analysis_result)
+        return analysis_result
+
+    def _log_analysis_results(self, analysis_result: Dict[str, Any]):
+        """Log AI analysis results."""
+        confidence = analysis_result.get("confidence", 0.0)
+        strategy = analysis_result.get("extraction_strategy", "unknown")
+        parishes = analysis_result.get("parish_data", [])
+        insights = analysis_result.get("ai_insights", [])
+
+        logger.info("🤖 AI Analysis Results:")
+        logger.info(f"    📊 Confidence: {confidence:.2f}")
+        logger.info(f"    🔧 Strategy: {strategy}")
+        logger.info(f"    ⛪ Parishes found: {len(parishes)}")
+
+        if insights:
+            logger.info("    💡 AI Insights:")
+            for insight in insights[:3]:  # Log top 3 insights
+                logger.info(f"      • {insight}")
+
+    def _process_analysis_results(self, analysis_result: Dict[str, Any], driver: WebDriver, url: str) -> List[Dict[str, Any]]:
+        """Process and validate AI analysis results."""
+        parishes = analysis_result.get("parish_data", [])
+        validated_parishes = []
+
+        for parish in parishes:
+            if self._validate_ai_parish(parish):
+                enriched_parish = self._enrich_parish_data(parish, driver, url)
+                validated_parishes.append(enriched_parish)
+
+        return validated_parishes
+
+    def _apply_parish_limit(self, parishes: List[Dict[str, Any]], max_parishes: int) -> List[Dict[str, Any]]:
+        """Apply max parishes limit if specified."""
+        if max_parishes and len(parishes) > max_parishes:
+            logger.info(f"🤖 Limited results to {max_parishes} parishes")
+            return parishes[:max_parishes]
+        return parishes
+
+    def _log_extraction_results(self, validated_parishes: List[Dict[str, Any]], analysis_result: Dict[str, Any]):
+        """Log final extraction results."""
+        parishes = analysis_result.get("parish_data", [])
+        strategy = analysis_result.get("extraction_strategy", "unknown")
+        confidence = analysis_result.get("confidence", 0.0)
+
+        if validated_parishes:
+            logger.info("🤖 ✅ AI Fallback Extraction successful!")
+            logger.info(f"    📊 Final count: {len(validated_parishes)} parishes")
+            logger.info(f"    🎯 Success rate: {len(validated_parishes)/len(parishes)*100:.1f}%" if parishes else "N/A")
+
+            # Log sample results
+            for i, parish in enumerate(validated_parishes[:3], 1):
+                logger.info(f"    {i}. {parish.get('name', 'N/A')}")
+                if parish.get("url"):
+                    logger.info(f"       🔗 {parish['url']}")
+        else:
+            logger.warning("🤖 ❌ AI Fallback Extraction found no valid parishes")
+            logger.warning(f"    💭 AI suggested strategy: {strategy}")
+            logger.warning(f"    📊 AI confidence was: {confidence:.2f}")
+
     def _validate_ai_parish(self, parish: Dict[str, Any]) -> bool:
-        """Validate an AI-extracted parish data structure."""
+        """Validate an AI - extracted parish data structure."""
         # Must have a name
         name = parish.get("name", "").strip()
         if not name or len(name) < 3:
@@ -182,7 +207,7 @@ class AIFallbackExtractor(BaseExtractor):
         return is_valid
 
     def _enrich_parish_data(self, parish: Dict[str, Any], driver: WebDriver, base_url: str) -> Dict[str, Any]:
-        """Enrich AI-extracted parish data with additional information."""
+        """Enrich AI - extracted parish data with additional information."""
         enriched = parish.copy()
 
         # Ensure URL is absolute
@@ -253,7 +278,7 @@ class AIFallbackExtractor(BaseExtractor):
             "extractor_name": self.extractor_name,
             "type": "ai_fallback",
             "ai_enabled": self.ai_analyzer is not None,
-            "description": "AI-powered fallback extractor for failed standard extractions",
+            "description": ("AI - powered fallback extractor for failed standard extractions"),
             "capabilities": [
                 "DOM structure analysis",
                 "Custom selector generation",

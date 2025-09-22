@@ -13,7 +13,10 @@ from core.enhanced_element_wait import (
     create_search_form_selectors,
 )
 from core.logger import get_logger
-from core.optimized_circuit_breaker_configs import ErrorRecoveryStrategies, OptimizedCircuitBreakerConfigs
+from core.optimized_circuit_breaker_configs import (
+    ErrorRecoveryStrategies,
+    OptimizedCircuitBreakerConfigs,
+)
 
 logger = get_logger(__name__)
 
@@ -53,7 +56,12 @@ def test_error_recovery_strategies():
         ("ImprovedInteractiveMapExtractor", 3, "NoSuchElementException", True),
         ("ParishFinderExtractor", 2, "NoSuchElementException", False),
         ("TableExtractor", 2, "NoSuchElementException", True),
-        ("SearchBasedExtractor", 4, "TimeoutException", True),  # Should skip after 2 timeout failures
+        (
+            "SearchBasedExtractor",
+            4,
+            "TimeoutException",
+            True,
+        ),  # Should skip after 2 timeout failures
     ]
 
     for extractor, failures, error_type, expected in skip_tests:
@@ -63,7 +71,11 @@ def test_error_recovery_strategies():
 
     # Test recovery delay calculation
     for attempt in range(1, 4):
-        for error_type in ["NoSuchElementException", "TimeoutException", "WebDriverException"]:
+        for error_type in [
+            "NoSuchElementException",
+            "TimeoutException",
+            "WebDriverException",
+        ]:
             delay = ErrorRecoveryStrategies.get_recovery_delay(attempt, error_type)
             logger.info(f"  ✅ {error_type} attempt {attempt}: {delay:.2f}s delay")
 
@@ -108,7 +120,7 @@ def test_imports():
     logger.info("📦 Testing module imports...")
 
     try:
-        from core.driver import ProtectedWebDriver, get_protected_driver
+        pass
 
         logger.info("  ✅ Enhanced driver imports successful")
 

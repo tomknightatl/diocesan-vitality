@@ -8,15 +8,12 @@ individual components fail.
 """
 
 import functools
-import json
 import re
 import time
-import traceback
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Type, Union
+from typing import Any, Callable, Dict, List, Optional
 
 from core.logger import get_logger
 
@@ -95,7 +92,11 @@ class RobustErrorHandler:
             "ai_analysis": FallbackConfig(
                 max_retries=2,
                 retry_delay=0.5,
-                fallback_methods=["regex_analysis", "keyword_search", "structure_analysis"],
+                fallback_methods=[
+                    "regex_analysis",
+                    "keyword_search",
+                    "structure_analysis",
+                ],
                 default_value={"parishes": [], "confidence": 0.1},
                 severity_threshold=ErrorSeverity.MEDIUM,
             ),
@@ -103,7 +104,11 @@ class RobustErrorHandler:
                 max_retries=3,
                 retry_delay=2.0,
                 retry_backoff=1.5,
-                fallback_methods=["requests_fallback", "selenium_fallback", "cached_content"],
+                fallback_methods=[
+                    "requests_fallback",
+                    "selenium_fallback",
+                    "cached_content",
+                ],
                 default_value=None,
                 severity_threshold=ErrorSeverity.HIGH,
             ),
@@ -111,7 +116,10 @@ class RobustErrorHandler:
                 max_retries=5,
                 retry_delay=0.5,
                 retry_backoff=1.2,
-                fallback_methods=["retry_with_exponential_backoff", "read_only_fallback"],
+                fallback_methods=[
+                    "retry_with_exponential_backoff",
+                    "read_only_fallback",
+                ],
                 severity_threshold=ErrorSeverity.CRITICAL,
             ),
             "url_prediction": FallbackConfig(
@@ -122,7 +130,11 @@ class RobustErrorHandler:
             ),
             "content_parsing": FallbackConfig(
                 max_retries=2,
-                fallback_methods=["alternative_parser", "regex_extraction", "manual_patterns"],
+                fallback_methods=[
+                    "alternative_parser",
+                    "regex_extraction",
+                    "manual_patterns",
+                ],
                 default_value={},
                 severity_threshold=ErrorSeverity.MEDIUM,
             ),
@@ -144,7 +156,13 @@ class RobustErrorHandler:
                 r"name.*not.*resolved",
                 r"no route to host",
             ],
-            "http_client_error": [r"404", r"not found", r"forbidden", r"unauthorized", r"bad request"],
+            "http_client_error": [
+                r"404",
+                r"not found",
+                r"forbidden",
+                r"unauthorized",
+                r"bad request",
+            ],
             "http_server_error": [
                 r"500",
                 r"502",
@@ -154,8 +172,20 @@ class RobustErrorHandler:
                 r"bad gateway",
                 r"service unavailable",
             ],
-            "parsing_error": [r"json.*decode", r"xml.*parse", r"html.*parse", r"invalid.*syntax", r"malformed.*data"],
-            "ai_service_error": [r"ai.*error", r"model.*error", r"api.*quota", r"rate.*limit", r"service.*unavailable"],
+            "parsing_error": [
+                r"json.*decode",
+                r"xml.*parse",
+                r"html.*parse",
+                r"invalid.*syntax",
+                r"malformed.*data",
+            ],
+            "ai_service_error": [
+                r"ai.*error",
+                r"model.*error",
+                r"api.*quota",
+                r"rate.*limit",
+                r"service.*unavailable",
+            ],
             "database_error": [
                 r"database.*error",
                 r"connection.*pool",
@@ -174,7 +204,13 @@ class RobustErrorHandler:
 
         logger.info("🛡️ Robust Error Handler initialized")
 
-    def handle_with_fallback(self, operation: str, primary_func: Callable, context: ErrorContext = None, **kwargs) -> Any:
+    def handle_with_fallback(
+        self,
+        operation: str,
+        primary_func: Callable,
+        context: ErrorContext = None,
+        **kwargs,
+    ) -> Any:
         """
         Execute function with comprehensive error handling and fallback.
 
@@ -229,7 +265,12 @@ class RobustErrorHandler:
         return self._execute_fallback_methods(operation, config, context, last_exception, **kwargs)
 
     def _execute_fallback_methods(
-        self, operation: str, config: FallbackConfig, context: ErrorContext, primary_exception: Exception, **kwargs
+        self,
+        operation: str,
+        config: FallbackConfig,
+        context: ErrorContext,
+        primary_exception: Exception,
+        **kwargs,
     ) -> Any:
         """Execute fallback methods in sequence."""
 
@@ -251,7 +292,7 @@ class RobustErrorHandler:
         # All fallback methods failed
         self.metrics.failed_recoveries += 1
 
-        # Return default value or re-raise exception based on configuration
+        # Return default value or re - raise exception based on configuration
         if config.default_value is not None:
             logger.warning(f"🛡️ Using default value for {operation}")
             return config.default_value
@@ -261,57 +302,78 @@ class RobustErrorHandler:
         else:
             severity = self._determine_error_severity(str(primary_exception), config)
             if severity == ErrorSeverity.CRITICAL:
-                logger.error(f"🛡️ Critical error in {operation}, re-raising")
+                logger.error(f"🛡️ Critical error in {operation}, re - raising")
                 raise primary_exception
             else:
-                logger.warning(f"🛡️ Non-critical error in {operation}, continuing with default")
+                logger.warning(f"🛡️ Non - critical error in {operation}, continuing with default")
                 return config.default_value
+
+    def _execute_ai_analysis_fallback(self, method_name: str, context: ErrorContext, **kwargs) -> Any:
+        """Execute AI analysis fallback methods."""
+        if method_name == "regex_analysis":
+            return self._regex_analysis_fallback(context, **kwargs)
+        elif method_name == "keyword_search":
+            return self._keyword_search_fallback(context, **kwargs)
+        elif method_name == "structure_analysis":
+            return self._structure_analysis_fallback(context, **kwargs)
+        else:
+            raise NotImplementedError(f"AI analysis fallback method '{method_name}' not implemented")
+
+    def _execute_web_scraping_fallback(self, method_name: str, context: ErrorContext, **kwargs) -> Any:
+        """Execute web scraping fallback methods."""
+        if method_name == "requests_fallback":
+            return self._requests_fallback(context, **kwargs)
+        elif method_name == "selenium_fallback":
+            return self._selenium_fallback(context, **kwargs)
+        elif method_name == "cached_content":
+            return self._cached_content_fallback(context, **kwargs)
+        else:
+            raise NotImplementedError(f"Web scraping fallback method '{method_name}' not implemented")
+
+    def _execute_url_prediction_fallback(self, method_name: str, context: ErrorContext, **kwargs) -> Any:
+        """Execute URL prediction fallback methods."""
+        if method_name == "pattern_based_prediction":
+            return self._pattern_based_prediction_fallback(context, **kwargs)
+        elif method_name == "static_patterns":
+            return self._static_patterns_fallback(context, **kwargs)
+        else:
+            raise NotImplementedError(f"URL prediction fallback method '{method_name}' not implemented")
+
+    def _execute_content_parsing_fallback(self, method_name: str, context: ErrorContext, **kwargs) -> Any:
+        """Execute content parsing fallback methods."""
+        if method_name == "alternative_parser":
+            return self._alternative_parser_fallback(context, **kwargs)
+        elif method_name == "regex_extraction":
+            return self._regex_extraction_fallback(context, **kwargs)
+        elif method_name == "manual_patterns":
+            return self._manual_patterns_fallback(context, **kwargs)
+        else:
+            raise NotImplementedError(f"Content parsing fallback method '{method_name}' not implemented")
+
+    def _execute_database_operation_fallback(self, method_name: str, context: ErrorContext, **kwargs) -> Any:
+        """Execute database operation fallback methods."""
+        if method_name == "retry_with_exponential_backoff":
+            return self._database_retry_fallback(context, **kwargs)
+        elif method_name == "read_only_fallback":
+            return self._read_only_database_fallback(context, **kwargs)
+        else:
+            raise NotImplementedError(f"Database operation fallback method '{method_name}' not implemented")
 
     def _execute_fallback_method(self, operation: str, method_name: str, context: ErrorContext, **kwargs) -> Any:
         """Execute a specific fallback method."""
-
-        # AI Analysis fallbacks
+        # Route to operation - specific fallback executors
         if operation == "ai_analysis":
-            if method_name == "regex_analysis":
-                return self._regex_analysis_fallback(context, **kwargs)
-            elif method_name == "keyword_search":
-                return self._keyword_search_fallback(context, **kwargs)
-            elif method_name == "structure_analysis":
-                return self._structure_analysis_fallback(context, **kwargs)
-
-        # Web scraping fallbacks
+            return self._execute_ai_analysis_fallback(method_name, context, **kwargs)
         elif operation == "web_scraping":
-            if method_name == "requests_fallback":
-                return self._requests_fallback(context, **kwargs)
-            elif method_name == "selenium_fallback":
-                return self._selenium_fallback(context, **kwargs)
-            elif method_name == "cached_content":
-                return self._cached_content_fallback(context, **kwargs)
-
-        # URL prediction fallbacks
+            return self._execute_web_scraping_fallback(method_name, context, **kwargs)
         elif operation == "url_prediction":
-            if method_name == "pattern_based_prediction":
-                return self._pattern_based_prediction_fallback(context, **kwargs)
-            elif method_name == "static_patterns":
-                return self._static_patterns_fallback(context, **kwargs)
-
-        # Content parsing fallbacks
+            return self._execute_url_prediction_fallback(method_name, context, **kwargs)
         elif operation == "content_parsing":
-            if method_name == "alternative_parser":
-                return self._alternative_parser_fallback(context, **kwargs)
-            elif method_name == "regex_extraction":
-                return self._regex_extraction_fallback(context, **kwargs)
-            elif method_name == "manual_patterns":
-                return self._manual_patterns_fallback(context, **kwargs)
-
-        # Database operation fallbacks
+            return self._execute_content_parsing_fallback(method_name, context, **kwargs)
         elif operation == "database_operation":
-            if method_name == "retry_with_exponential_backoff":
-                return self._database_retry_fallback(context, **kwargs)
-            elif method_name == "read_only_fallback":
-                return self._read_only_database_fallback(context, **kwargs)
-
-        raise NotImplementedError(f"Fallback method '{method_name}' not implemented for '{operation}'")
+            return self._execute_database_operation_fallback(method_name, context, **kwargs)
+        else:
+            raise NotImplementedError(f"Fallback operation '{operation}' not implemented")
 
     def _regex_analysis_fallback(self, context: ErrorContext, content: str = "", **kwargs) -> Dict:
         """Fallback AI analysis using regex patterns."""
@@ -320,16 +382,16 @@ class RobustErrorHandler:
 
             # Basic parish name extraction patterns
             name_patterns = [
-                r"<h[1-6][^>]*>([^<]*(?:church|parish|cathedral|basilica)[^<]*)</h[1-6]>",
+                r"<h[1 - 6][^>]*>([^<]*(?:church|parish|cathedral|basilica)[^<]*)</h[1 - 6]>",
                 r'class=["\'][^"\']*name[^"\']*["\'][^>]*>([^<]+)</[^>]+>',
                 r"<title>([^<]*(?:church|parish|cathedral)[^<]*)</title>",
             ]
 
             # Basic address extraction patterns
-            address_patterns = [
-                r"\b\d+\s+[A-Za-z\s]+(?:St|Street|Ave|Avenue|Rd|Road|Dr|Drive|Blvd|Boulevard)\b[^<]*",
-                r"\b[A-Z][a-z]+,\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?\b",
-            ]
+            # address_patterns = [  # Currently unused
+            #     r"\b\d+\s+[A - Za - z\s]+(?:St|Street|Ave|Avenue|Rd|Road|Dr|Drive|Blvd|Boulevard)\b[^<]*",
+            #     r"\b[A - Z][a - z]+,\s*[A - Z]{2}\s+\d{5}(?:-\d{4})?\b",
+            # ]
 
             for pattern in name_patterns:
                 matches = re.finditer(pattern, content, re.IGNORECASE | re.DOTALL)
@@ -338,18 +400,26 @@ class RobustErrorHandler:
                     if len(name) > 5 and len(name) < 100:  # Reasonable name length
                         parishes.append({"name": name, "confidence": 0.3})
 
-            return {"parishes": parishes[:10], "confidence": 0.3, "method": "regex_analysis"}  # Limit to 10 results
+            return {
+                "parishes": parishes[:10],
+                "confidence": 0.3,
+                "method": "regex_analysis",
+            }  # Limit to 10 results
 
         except Exception as e:
             logger.debug(f"🛡️ Regex analysis fallback failed: {e}")
-            return {"parishes": [], "confidence": 0.1, "method": "regex_analysis_failed"}
+            return {
+                "parishes": [],
+                "confidence": 0.1,
+                "method": "regex_analysis_failed",
+            }
 
     def _keyword_search_fallback(self, context: ErrorContext, content: str = "", **kwargs) -> Dict:
         """Fallback using simple keyword search."""
         try:
             content_lower = content.lower()
 
-            # Schedule-related keywords with weights
+            # Schedule - related keywords with weights
             schedule_keywords = {
                 "reconciliation": 5,
                 "confession": 5,
@@ -369,13 +439,27 @@ class RobustErrorHandler:
                     end = min(len(content), content_lower.find(keyword) + 100)
                     context_text = content[start:end]
 
-                    found_schedules.append({"type": keyword, "context": context_text.strip(), "confidence": weight / 10.0})
+                    found_schedules.append(
+                        {
+                            "type": keyword,
+                            "context": context_text.strip(),
+                            "confidence": weight / 10.0,
+                        }
+                    )
 
-            return {"schedules": found_schedules, "confidence": 0.4 if found_schedules else 0.1, "method": "keyword_search"}
+            return {
+                "schedules": found_schedules,
+                "confidence": 0.4 if found_schedules else 0.1,
+                "method": "keyword_search",
+            }
 
         except Exception as e:
             logger.debug(f"🛡️ Keyword search fallback failed: {e}")
-            return {"schedules": [], "confidence": 0.1, "method": "keyword_search_failed"}
+            return {
+                "schedules": [],
+                "confidence": 0.1,
+                "method": "keyword_search_failed",
+            }
 
     def _structure_analysis_fallback(self, context: ErrorContext, content: str = "", **kwargs) -> Dict:
         """Fallback using HTML structure analysis."""
@@ -415,14 +499,18 @@ class RobustErrorHandler:
 
         except Exception as e:
             logger.debug(f"🛡️ Structure analysis fallback failed: {e}")
-            return {"structure_analysis": {}, "confidence": 0.1, "method": "structure_analysis_failed"}
+            return {
+                "structure_analysis": {},
+                "confidence": 0.1,
+                "method": "structure_analysis_failed",
+            }
 
     def _requests_fallback(self, context: ErrorContext, url: str = "", **kwargs) -> str:
         """Fallback web scraping using requests library."""
         import requests
 
         try:
-            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+            headers = {"User - Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")}
             response = requests.get(url, headers=headers, timeout=15)
             response.raise_for_status()
             return response.text
@@ -437,9 +525,9 @@ class RobustErrorHandler:
             "/confession",
             "/confessions",
             "/adoration",
-            "/eucharistic-adoration",
-            "/mass-times",
-            "/mass-schedule",
+            "/eucharistic - adoration",
+            "/mass - times",
+            "/mass - schedule",
             "/schedule",
             "/worship",
             "/liturgy",
@@ -456,7 +544,11 @@ class RobustErrorHandler:
     def _static_patterns_fallback(self, context: ErrorContext, **kwargs) -> List:
         """Final fallback with minimal static patterns."""
         domain = kwargs.get("domain", "example.com")
-        return [f"https://{domain}/reconciliation", f"https://{domain}/adoration", f"https://{domain}/mass-times"]
+        return [
+            f"https://{domain}/reconciliation",
+            f"https://{domain}/adoration",
+            f"https://{domain}/mass - times",
+        ]
 
     def _alternative_parser_fallback(self, context: ErrorContext, content: str = "", **kwargs) -> Dict:
         """Alternative content parsing method."""
@@ -488,12 +580,12 @@ class RobustErrorHandler:
             return {"method": "alternative_parser_failed"}
 
     def _regex_extraction_fallback(self, context: ErrorContext, content: str = "", **kwargs) -> Dict:
-        """Regex-based content extraction fallback."""
+        """Regex - based content extraction fallback."""
         try:
             # Time patterns for schedule extraction
             time_patterns = [
-                r"\b(?:1[0-2]|[1-9]):(?:[0-5][0-9])\s*(?:AM|PM|am|pm)\b",
-                r"\b(?:1[0-2]|[1-9])\s*(?:AM|PM|am|pm)\b",
+                r"\b(?:1[0 - 2]|[1 - 9]):(?:[0 - 5][0 - 9])\s*(?:AM|PM|am|pm)\b",
+                r"\b(?:1[0 - 2]|[1 - 9])\s*(?:AM|PM|am|pm)\b",
                 r"\b(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b",
             ]
 
@@ -513,7 +605,7 @@ class RobustErrorHandler:
             return {"method": "regex_extraction_failed"}
 
     def _manual_patterns_fallback(self, context: ErrorContext, **kwargs) -> Dict:
-        """Manual pattern-based extraction fallback."""
+        """Manual pattern - based extraction fallback."""
         return {
             "manual_patterns": [
                 "Saturday evening Mass",
@@ -551,9 +643,9 @@ class RobustErrorHandler:
         return None  # Would return cached content if available
 
     def _read_only_database_fallback(self, context: ErrorContext, **kwargs):
-        """Read-only database fallback for critical operations."""
-        logger.warning("🛡️ Using read-only database fallback")
-        return None  # Would implement read-only operations
+        """Read - only database fallback for critical operations."""
+        logger.warning("🛡️ Using read - only database fallback")
+        return None  # Would implement read - only operations
 
     def _classify_error(self, error_message: str) -> str:
         """Classify error type based on message patterns."""
@@ -595,7 +687,13 @@ class RobustErrorHandler:
         else:
             return ErrorSeverity.LOW
 
-    def _record_error(self, operation: str, error_type: str, error_message: str, context: ErrorContext):
+    def _record_error(
+        self,
+        operation: str,
+        error_type: str,
+        error_message: str,
+        context: ErrorContext,
+    ):
         """Record error metrics for analysis."""
         self.metrics.total_errors += 1
         self.metrics.errors_by_type[error_type] += 1
@@ -607,7 +705,11 @@ class RobustErrorHandler:
             "operation": operation,
             "error_type": error_type,
             "error_message": error_message[:500],  # Truncate long messages
-            "context": {"url": context.url, "parish_id": context.parish_id, "attempt_number": context.attempt_number},
+            "context": {
+                "url": context.url,
+                "parish_id": context.parish_id,
+                "attempt_number": context.attempt_number,
+            },
         }
 
         self.metrics.recent_errors.append(error_record)
@@ -640,7 +742,12 @@ class RobustErrorHandler:
                 if fallback_config:
                     self.fallback_configs[operation] = fallback_config
 
-                return self.handle_with_fallback(operation, lambda ctx, **kw: func(*args, **kwargs), context, **kwargs)
+                return self.handle_with_fallback(
+                    operation,
+                    lambda ctx, **kw: func(*args, **kwargs),
+                    context,
+                    **kwargs,
+                )
 
             return wrapper
 

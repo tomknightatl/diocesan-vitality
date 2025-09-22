@@ -45,7 +45,13 @@ def main():
 
     # Test adding a new keyword
     print("\n3. Testing keyword addition...")
-    success = add_keyword(supabase, "communion", "adoration", weight=3, description="Related to eucharistic communion")
+    success = add_keyword(
+        supabase,
+        "communion",
+        "adoration",
+        weight=3,
+        description="Related to eucharistic communion",
+    )
     print(f"Add keyword result: {success}")
 
     # Test updating keyword weight

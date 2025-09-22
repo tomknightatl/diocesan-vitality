@@ -8,12 +8,10 @@ showing active workers, work assignments, and cluster health.
 
 import argparse
 import asyncio
-import time
 from datetime import datetime, timedelta
 from typing import Any, Dict
 
 from core.db import get_supabase_client
-from core.distributed_work_coordinator import DistributedWorkCoordinator
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -80,7 +78,10 @@ class PipelineMonitor:
 
                     assignment_info = {
                         **assignment,
-                        "diocese_name": diocese_names.get(assignment["diocese_id"], f"Unknown ({assignment['diocese_id']})"),
+                        "diocese_name": diocese_names.get(
+                            assignment["diocese_id"],
+                            f"Unknown ({assignment['diocese_id']})",
+                        ),
                     }
                     assignments_by_status[status].append(assignment_info)
 
@@ -88,11 +89,11 @@ class PipelineMonitor:
                 "timestamp": now.isoformat(),
                 "active_workers": active_workers,
                 "inactive_workers": inactive_workers,
-                "total_workers": len(workers_response.data) if workers_response.data else 0,
+                "total_workers": (len(workers_response.data) if workers_response.data else 0),
                 "assignments_by_status": assignments_by_status,
                 "cluster_health": {
                     "healthy_workers": len(active_workers),
-                    "total_workers": len(workers_response.data) if workers_response.data else 0,
+                    "total_workers": (len(workers_response.data) if workers_response.data else 0),
                     "processing_dioceses": len(assignments_by_status.get("processing", [])),
                     "completed_dioceses": len(assignments_by_status.get("completed", [])),
                     "failed_dioceses": len(assignments_by_status.get("failed", [])),
@@ -109,13 +110,21 @@ class PipelineMonitor:
             print(f"❌ Error: {overview['error']}")
             return
 
+        self._print_status_header(overview)
+        self._print_cluster_health(overview["cluster_health"])
+        self._print_active_workers(overview["active_workers"])
+        self._print_inactive_workers(overview["inactive_workers"])
+        self._print_work_assignments(overview["assignments_by_status"])
+
+    def _print_status_header(self, overview: Dict[str, Any]):
+        """Print status header."""
         print("🏗️  Distributed Pipeline Cluster Status")
         print("=" * 50)
         print(f"📅 Timestamp: {overview['timestamp']}")
         print()
 
-        # Cluster health summary
-        health = overview["cluster_health"]
+    def _print_cluster_health(self, health: Dict[str, Any]):
+        """Print cluster health summary."""
         print("🩺 Cluster Health:")
         print(f"   • Healthy workers: {health['healthy_workers']}/{health['total_workers']}")
         print(f"   • Processing dioceses: {health['processing_dioceses']}")
@@ -123,44 +132,52 @@ class PipelineMonitor:
         print(f"   • Failed dioceses: {health['failed_dioceses']}")
         print()
 
-        # Active workers
+    def _print_active_workers(self, active_workers: list):
+        """Print active workers."""
         print("👥 Active Workers:")
-        if overview["active_workers"]:
-            for worker in overview["active_workers"]:
-                heartbeat_age = int(worker["time_since_heartbeat"])
-                health_indicator = "💚" if worker["is_healthy"] else "💛"
-                print(f"   {health_indicator} {worker['worker_id']}")
-                print(f"      Pod: {worker['pod_name']}")
-                print(f"      Last heartbeat: {heartbeat_age}s ago")
-                print()
+        if active_workers:
+            for worker in active_workers:
+                self._print_worker_info(worker)
         else:
             print("   No active workers")
         print()
 
-        # Inactive workers
-        if overview["inactive_workers"]:
+    def _print_worker_info(self, worker: Dict[str, Any]):
+        """Print individual worker info."""
+        heartbeat_age = int(worker["time_since_heartbeat"])
+        health_indicator = "💚" if worker["is_healthy"] else "💛"
+        print(f"   {health_indicator} {worker['worker_id']}")
+        print(f"      Pod: {worker['pod_name']}")
+        print(f"      Last heartbeat: {heartbeat_age}s ago")
+        print()
+
+    def _print_inactive_workers(self, inactive_workers: list):
+        """Print inactive workers."""
+        if inactive_workers:
             print("💀 Inactive Workers:")
-            for worker in overview["inactive_workers"]:
+            for worker in inactive_workers:
                 heartbeat_age = int(worker["time_since_heartbeat"])
                 print(f"   ❌ {worker['worker_id']} ({worker['status']})")
                 print(f"      Last heartbeat: {heartbeat_age}s ago")
             print()
 
-        # Work assignments
-        assignments = overview["assignments_by_status"]
+    def _print_work_assignments(self, assignments: Dict[str, list]):
+        """Print work assignments."""
         if assignments:
             print("📋 Work Assignments:")
-
             for status, assignment_list in assignments.items():
                 if assignment_list:
-                    status_icon = {"processing": "🔄", "completed": "✅", "failed": "❌"}.get(status, "❓")
+                    self._print_assignment_status(status, assignment_list)
 
-                    print(f"   {status_icon} {status.upper()} ({len(assignment_list)}):")
-                    for assignment in assignment_list[:5]:  # Show first 5
-                        print(f"      • {assignment['diocese_name']} (Worker: {assignment['worker_id'][:12]}...)")
-                    if len(assignment_list) > 5:
-                        print(f"      ... and {len(assignment_list) - 5} more")
-                    print()
+    def _print_assignment_status(self, status: str, assignment_list: list):
+        """Print assignments for status."""
+        status_icon = {"processing": "🔄", "completed": "✅", "failed": "❌"}.get(status, "❓")
+        print(f"   {status_icon} {status.upper()} ({len(assignment_list)}):")
+        for assignment in assignment_list[:5]:  # Show first 5
+            print(f"      • {assignment['diocese_name']} (Worker: {assignment['worker_id'][:12]}...)")
+        if len(assignment_list) > 5:
+            print(f"      ... and {len(assignment_list) - 5} more")
+        print()
 
     async def cleanup_stale_assignments(self, dry_run: bool = True):
         """Clean up stale work assignments"""
@@ -183,7 +200,10 @@ class PipelineMonitor:
                     # Mark as failed
                     stale_ids = [a["id"] for a in stale_response.data]
                     self.supabase.table("diocese_work_assignments").update(
-                        {"status": "failed", "completed_at": datetime.utcnow().isoformat()}
+                        {
+                            "status": "failed",
+                            "completed_at": datetime.utcnow().isoformat(),
+                        }
                     ).in_("id", stale_ids).execute()
 
                     print(f"✅ Marked {len(stale_ids)} stale assignments as failed")
@@ -203,7 +223,11 @@ async def main():
     parser = argparse.ArgumentParser(description="Monitor distributed pipeline cluster")
     parser.add_argument("--watch", action="store_true", help="Watch mode - refresh every 30 seconds")
     parser.add_argument("--cleanup", action="store_true", help="Clean up stale assignments")
-    parser.add_argument("--no-dry-run", action="store_true", help="Actually perform cleanup (not just dry run)")
+    parser.add_argument(
+        "--no - dry - run",
+        action="store_true",
+        help="Actually perform cleanup (not just dry run)",
+    )
 
     args = parser.parse_args()
 
@@ -214,7 +238,7 @@ async def main():
         return
 
     if args.watch:
-        print("👀 Watching cluster status (Ctrl+C to exit)...")
+        print("👀 Watching cluster status (Ctrl + C to exit)...")
         try:
             while True:
                 overview = await monitor.get_cluster_overview()
@@ -223,7 +247,7 @@ async def main():
                 print("\033[2J\033[H", end="")
 
                 monitor.print_cluster_status(overview)
-                print("Refreshing in 30 seconds... (Ctrl+C to exit)")
+                print("Refreshing in 30 seconds... (Ctrl + C to exit)")
 
                 await asyncio.sleep(30)
         except KeyboardInterrupt:

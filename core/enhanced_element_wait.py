@@ -5,9 +5,13 @@ Provides smart element detection with multiple selector strategies and adaptive 
 """
 
 import time
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple
 
-from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
+from selenium.common.exceptions import (
+    NoSuchElementException,
+    TimeoutException,
+    WebDriverException,
+)
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -28,7 +32,11 @@ class ElementWaitStrategy:
         self.base_timeout = base_timeout
 
     def smart_element_wait(
-        self, selectors: List[str], timeout: float = None, condition: str = "presence", log_attempts: bool = True
+        self,
+        selectors: List[str],
+        timeout: float = None,
+        condition: str = "presence",
+        log_attempts: bool = True,
     ) -> Optional[Any]:
         """
         Try multiple selectors with progressive timeouts and different conditions.
@@ -43,32 +51,53 @@ class ElementWaitStrategy:
             WebElement if found, None otherwise
         """
         timeout = timeout or self.base_timeout
-
-        # Progressive timeout strategy: start short, increase for complex selectors
         timeout_progression = self._calculate_progressive_timeouts(selectors, timeout)
 
         for i, (selector, selector_timeout) in enumerate(zip(selectors, timeout_progression)):
-            try:
-                if log_attempts:
-                    logger.debug(f"🔍 Attempting selector {i+1}/{len(selectors)}: '{selector}' (timeout: {selector_timeout}s)")
-
-                element = self._wait_for_element(selector, selector_timeout, condition)
-                if element:
-                    if log_attempts:
-                        logger.debug(f"✅ Found element with selector: '{selector}'")
-                    return element
-
-            except TimeoutException:
-                if log_attempts:
-                    logger.debug(f"⏰ Timeout for selector: '{selector}'")
-                continue
-            except (NoSuchElementException, WebDriverException) as e:
-                if log_attempts:
-                    logger.debug(f"❌ Error with selector '{selector}': {str(e)[:50]}...")
-                continue
+            element = self._try_single_selector(
+                selector,
+                selector_timeout,
+                condition,
+                i + 1,
+                len(selectors),
+                log_attempts,
+            )
+            if element:
+                return element
 
         if log_attempts:
             logger.debug(f"❌ No elements found with any of {len(selectors)} selectors")
+        return None
+
+    def _try_single_selector(
+        self,
+        selector: str,
+        selector_timeout: float,
+        condition: str,
+        selector_index: int,
+        total_selectors: int,
+        log_attempts: bool,
+    ) -> Optional[Any]:
+        """Try a single selector with error handling and logging."""
+        try:
+            if log_attempts:
+                logger.debug(
+                    f"🔍 Attempting selector {selector_index}/{total_selectors}: '{selector}' (timeout: {selector_timeout}s)"
+                )
+
+            element = self._wait_for_element(selector, selector_timeout, condition)
+            if element:
+                if log_attempts:
+                    logger.debug(f"✅ Found element with selector: '{selector}'")
+                return element
+
+        except TimeoutException:
+            if log_attempts:
+                logger.debug(f"⏰ Timeout for selector: '{selector}'")
+        except (NoSuchElementException, WebDriverException) as e:
+            if log_attempts:
+                logger.debug(f"❌ Error with selector '{selector}': {str(e)[:50]}...")
+
         return None
 
     def _calculate_progressive_timeouts(self, selectors: List[str], max_timeout: float) -> List[float]:
@@ -104,7 +133,11 @@ class ElementWaitStrategy:
             raise ValueError(f"Unknown condition: {condition}")
 
     def smart_elements_wait(
-        self, selectors: List[str], timeout: float = None, min_count: int = 1, log_attempts: bool = True
+        self,
+        selectors: List[str],
+        timeout: float = None,
+        min_count: int = 1,
+        log_attempts: bool = True,
     ) -> List[Any]:
         """
         Find multiple elements with smart waiting and fallback strategies.
@@ -122,36 +155,57 @@ class ElementWaitStrategy:
         timeout_progression = self._calculate_progressive_timeouts(selectors, timeout)
 
         for i, (selector, selector_timeout) in enumerate(zip(selectors, timeout_progression)):
-            try:
-                if log_attempts:
-                    logger.debug(
-                        f"🔍 Searching for elements {i+1}/{len(selectors)}: '{selector}' (timeout: {selector_timeout}s)"
-                    )
-
-                # Wait for at least one element to be present
-                WebDriverWait(self.driver, selector_timeout).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
-
-                # Get all matching elements
-                elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
-
-                if len(elements) >= min_count:
-                    if log_attempts:
-                        logger.debug(f"✅ Found {len(elements)} elements with selector: '{selector}'")
-                    return elements
-                elif log_attempts:
-                    logger.debug(f"⚠️ Found {len(elements)} elements, need at least {min_count}")
-
-            except TimeoutException:
-                if log_attempts:
-                    logger.debug(f"⏰ No elements found for selector: '{selector}'")
-                continue
-            except (NoSuchElementException, WebDriverException) as e:
-                if log_attempts:
-                    logger.debug(f"❌ Error with selector '{selector}': {str(e)[:50]}...")
-                continue
+            elements = self._try_find_elements_with_selector(
+                selector,
+                selector_timeout,
+                min_count,
+                i + 1,
+                len(selectors),
+                log_attempts,
+            )
+            if elements:
+                return elements
 
         if log_attempts:
             logger.debug(f"❌ No elements found with any of {len(selectors)} selectors")
+        return []
+
+    def _try_find_elements_with_selector(
+        self,
+        selector: str,
+        selector_timeout: float,
+        min_count: int,
+        selector_index: int,
+        total_selectors: int,
+        log_attempts: bool,
+    ) -> List[Any]:
+        """Try to find elements with a specific selector."""
+        try:
+            if log_attempts:
+                logger.debug(
+                    f"🔍 Searching for elements {selector_index}/{total_selectors}: '{selector}' (timeout: {selector_timeout}s)"
+                )
+
+            # Wait for at least one element to be present
+            WebDriverWait(self.driver, selector_timeout).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
+
+            # Get all matching elements
+            elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+
+            if len(elements) >= min_count:
+                if log_attempts:
+                    logger.debug(f"✅ Found {len(elements)} elements with selector: '{selector}'")
+                return elements
+            elif log_attempts:
+                logger.debug(f"⚠️ Found {len(elements)} elements, need at least {min_count}")
+
+        except TimeoutException:
+            if log_attempts:
+                logger.debug(f"⏰ No elements found for selector: '{selector}'")
+        except (NoSuchElementException, WebDriverException) as e:
+            if log_attempts:
+                logger.debug(f"❌ Error with selector '{selector}': {str(e)[:50]}...")
+
         return []
 
     def wait_for_page_stable(self, stability_timeout: float = 2.0, max_wait: float = 10.0):
@@ -201,7 +255,12 @@ class ElementWaitStrategy:
         enhanced_selectors = []
         for selector in form_selectors:
             enhanced_selectors.extend(
-                [selector, f"{selector} form", f"form {selector}", f"[action*='{selector.replace('.', '').replace('#', '')}']"]
+                [
+                    selector,
+                    f"{selector} form",
+                    f"form {selector}",
+                    f"[action*='{selector.replace('.', '').replace('#', '')}']",
+                ]
             )
 
         # Remove duplicates while preserving order
@@ -217,7 +276,7 @@ class ElementWaitStrategy:
                 try:
                     if self.driver.find_element(By.CSS_SELECTOR, selector) == form_element:
                         return form_element, selector
-                except:
+                except (NoSuchElementException, WebDriverException):
                     continue
 
         return None, None
@@ -229,29 +288,29 @@ def create_parish_extraction_selectors() -> List[str]:
     Based on common diocese website patterns observed.
     """
     return [
-        # High-probability selectors (specific parish patterns)
-        ".parish-card",
-        ".parish-item",
-        ".parish-entry",
-        ".church-card",
-        ".church-item",
-        ".church-entry",
-        ".location-card",
-        ".location-item",
-        # Medium-probability selectors (general content patterns)
+        # High - probability selectors (specific parish patterns)
+        ".parish - card",
+        ".parish - item",
+        ".parish - entry",
+        ".church - card",
+        ".church - item",
+        ".church - entry",
+        ".location - card",
+        ".location - item",
+        # Medium - probability selectors (general content patterns)
         "[class*='parish']",
         "[class*='church']",
         "[class*='location']",
-        ".directory-item",
-        ".listing-item",
-        ".result-item",
+        ".directory - item",
+        ".listing - item",
+        ".result - item",
         # Navigation and link patterns
         "a[href*='parish']",
         "a[href*='church']",
         "a[href*='location']",
         "li a[href*='/']",
-        ".menu-item a",
-        ".nav-item a",
+        ".menu - item a",
+        ".nav - item a",
         # Table and list patterns
         "table tr",
         "ul li",
@@ -259,7 +318,7 @@ def create_parish_extraction_selectors() -> List[str]:
         ".row",
         ".item",
         ".entry",
-        # Low-probability selectors (very general)
+        # Low - probability selectors (very general)
         "div[class]",
         "article",
         "section",
@@ -273,27 +332,27 @@ def create_map_interaction_selectors() -> List[str]:
         # Specific map selectors
         "#map",
         ".map",
-        ".parish-map",
-        ".church-map",
+        ".parish - map",
+        ".church - map",
         "[id*='map']",
         "[class*='map']",
         # Google Maps patterns
-        ".gm-style",
-        ".google-map",
-        "[id*='google-map']",
+        ".gm - style",
+        ".google - map",
+        "[id*='google - map']",
         # Interactive elements within maps
         ".marker",
         ".pin",
         ".point",
-        ".location-marker",
+        ".location - marker",
         "[class*='marker']",
         "[class*='pin']",
         # Map containers and wrappers
-        ".map-container",
-        ".map-wrapper",
-        ".interactive-map",
-        "[data-map]",
-        "[data-location]",
+        ".map - container",
+        ".map - wrapper",
+        ".interactive - map",
+        "[data - map]",
+        "[data - location]",
     ]
 
 
@@ -301,13 +360,13 @@ def create_search_form_selectors() -> List[str]:
     """Create selectors for search forms with progressive complexity."""
     return [
         # Specific search forms
-        "#search-form",
-        ".search-form",
-        ".parish-search",
-        ".church-search",
+        "#search - form",
+        ".search - form",
+        ".parish - search",
+        ".church - search",
         "form[action*='search']",
         "form[action*='parish']",
-        # Input-based detection
+        # Input - based detection
         "input[type='search']",
         "input[placeholder*='search']",
         "input[name*='search']",

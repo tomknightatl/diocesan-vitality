@@ -19,7 +19,9 @@ exclude =
     *.egg-info,
     .mypy_cache,
     .pytest_cache,
-    migrations
+    migrations,
+    frontend/node_modules,
+    node_modules
 per-file-ignores =
     # Ignore specific rules in test files
     tests/*: F401, F811

@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """
-Monitoring Client for Real-time Dashboard Integration.
+Monitoring Client for Real - time Dashboard Integration.
 Provides easy integration for async extraction scripts to send updates to the monitoring dashboard.
 """
 
-import json
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
@@ -49,8 +48,11 @@ class MonitoringClient:
             return True
 
         try:
-            # Use worker-specific endpoint if worker_id is set
-            if self.worker_id and endpoint in ["/extraction_status", "/circuit_breakers"]:
+            # Use worker - specific endpoint if worker_id is set
+            if self.worker_id and endpoint in [
+                "/extraction_status",
+                "/circuit_breakers",
+            ]:
                 url = f"{self.base_url}/api/monitoring/worker/{self.worker_id}{endpoint}"
             else:
                 url = f"{self.base_url}/api/monitoring{endpoint}"
@@ -81,7 +83,7 @@ class MonitoringClient:
             "success_rate": success_rate,
             "progress_percentage": progress_percentage,
             "estimated_completion": estimated_completion,
-            "started_at": datetime.now(timezone.utc).isoformat() if status == "running" else None,
+            "started_at": (datetime.now(timezone.utc).isoformat() if status == "running" else None),
         }
         return self._make_request("/extraction_status", data)
 
@@ -107,13 +109,29 @@ class MonitoringClient:
         }
         return self._make_request("/performance", data)
 
-    def report_error(self, error_type: str, message: str, diocese: Optional[str] = None, severity: str = "error") -> bool:
+    def report_error(
+        self,
+        error_type: str,
+        message: str,
+        diocese: Optional[str] = None,
+        severity: str = "error",
+    ) -> bool:
         """Report an error"""
-        data = {"type": error_type, "message": message, "diocese": diocese, "severity": severity}
+        data = {
+            "type": error_type,
+            "message": message,
+            "diocese": diocese,
+            "severity": severity,
+        }
         return self._make_request("/error", data)
 
     def report_extraction_complete(
-        self, diocese_name: str, parishes_extracted: int, success_rate: float, duration: float, status: str = "completed"
+        self,
+        diocese_name: str,
+        parishes_extracted: int,
+        success_rate: float,
+        duration: float,
+        status: str = "completed",
     ) -> bool:
         """Report completed extraction"""
         data = {
@@ -140,9 +158,18 @@ class MonitoringClient:
             parishes_processed=0,
             progress_percentage=0.0,
         )
-        self.send_log(f"Started extraction for {diocese_name} ({total_parishes} parishes)", "INFO")
+        self.send_log(
+            f"Started extraction for {diocese_name} ({total_parishes} parishes)",
+            "INFO",
+        )
 
-    def extraction_progress(self, diocese_name: str, parishes_processed: int, total_parishes: int, success_rate: float):
+    def extraction_progress(
+        self,
+        diocese_name: str,
+        parishes_processed: int,
+        total_parishes: int,
+        success_rate: float,
+    ):
         """Convenience method for extraction progress"""
         progress_percentage = (parishes_processed / max(total_parishes, 1)) * 100
 
@@ -156,20 +183,37 @@ class MonitoringClient:
         )
 
         if parishes_processed % 5 == 0:  # Log every 5 parishes
-            self.send_log(f"📊 Progress: {parishes_processed}/{total_parishes} parishes ({progress_percentage:.1f}%)", "INFO")
+            self.send_log(
+                f"📊 Progress: {parishes_processed}/{total_parishes} parishes ({progress_percentage:.1f}%)",
+                "INFO",
+            )
 
-    def extraction_finished(self, diocese_name: str, parishes_extracted: int, success_rate: float, duration: float):
+    def extraction_finished(
+        self,
+        diocese_name: str,
+        parishes_extracted: int,
+        success_rate: float,
+        duration: float,
+    ):
         """Convenience method for extraction completion"""
         self.update_extraction_status(status="idle")
         self.report_extraction_complete(
-            diocese_name=diocese_name, parishes_extracted=parishes_extracted, success_rate=success_rate, duration=duration
+            diocese_name=diocese_name,
+            parishes_extracted=parishes_extracted,
+            success_rate=success_rate,
+            duration=duration,
         )
-        self.send_log(f"✅ Completed {diocese_name}: {parishes_extracted} parishes, {success_rate:.1f}% success", "INFO")
+        self.send_log(
+            f"✅ Completed {diocese_name}: {parishes_extracted} parishes, {success_rate:.1f}% success",
+            "INFO",
+        )
 
     def circuit_breaker_opened(self, circuit_name: str, reason: str):
         """Convenience method for circuit breaker opening"""
         self.report_error(
-            error_type="CircuitBreakerOpen", message=f"Circuit breaker '{circuit_name}' opened: {reason}", severity="warning"
+            error_type="CircuitBreakerOpen",
+            message=f"Circuit breaker '{circuit_name}' opened: {reason}",
+            severity="warning",
         )
         self.send_log(f"🚫 Circuit breaker '{circuit_name}' OPEN: {reason}", "WARNING")
 
@@ -177,10 +221,17 @@ class MonitoringClient:
         """Convenience method for circuit breaker recovery"""
         self.send_log(f"🟢 Circuit breaker '{circuit_name}' CLOSED - service recovered", "INFO")
 
-    def performance_update(self, parishes_per_minute: float, queue_size: int = 0, pool_utilization: float = 0.0):
+    def performance_update(
+        self,
+        parishes_per_minute: float,
+        queue_size: int = 0,
+        pool_utilization: float = 0.0,
+    ):
         """Convenience method for performance updates"""
         self.update_performance_metrics(
-            parishes_per_minute=parishes_per_minute, queue_size=queue_size, pool_utilization=pool_utilization
+            parishes_per_minute=parishes_per_minute,
+            queue_size=queue_size,
+            pool_utilization=pool_utilization,
         )
 
     def report_circuit_breaker_status(self) -> bool:
@@ -196,7 +247,7 @@ class MonitoringClient:
                 monitoring_data = {}
                 for name, stats in circuit_data.items():
                     monitoring_data[name] = {
-                        "state": stats["state"].upper() if hasattr(stats["state"], "upper") else stats["state"],
+                        "state": (stats["state"].upper() if hasattr(stats["state"], "upper") else stats["state"]),
                         "total_requests": stats["total_requests"],
                         "total_successes": stats["total_successes"],
                         "total_failures": stats["total_failures"],
@@ -274,11 +325,12 @@ class ExtractionMonitoring:
 
         if exc_type is not None:
             self.client.report_error(
-                error_type="ExtractionError", message=f"Extraction failed: {str(exc_val)}", diocese=self.diocese_name
+                error_type="ExtractionError",
+                message=f"Extraction failed: {str(exc_val)}",
+                diocese=self.diocese_name,
             )
-            status = "error"
         else:
-            status = "completed"
+            pass
 
         self.client.extraction_finished(self.diocese_name, self.parishes_processed, success_rate, duration)
 

@@ -7,7 +7,6 @@ Currently serves as a placeholder for future dashboard implementation.
 """
 
 import argparse
-import sys
 
 
 def main():
@@ -18,12 +17,12 @@ def main():
 
     args = parser.parse_args()
 
-    print(f"🚀 Starting Diocesan Vitality Monitoring Dashboard")
+    print("🚀 Starting Diocesan Vitality Monitoring Dashboard")
     print(f"📊 Dashboard would run on http://{args.host}:{args.port}")
-    print(f"💡 Currently monitoring is available via:")
-    print(f"   - Frontend dashboard: http://localhost:3000")
-    print(f"   - Backend API: http://localhost:8000")
-    print(f"   - Live system: https://diocesanvitality.org/dashboard")
+    print("💡 Currently monitoring is available via:")
+    print("   - Frontend dashboard: http://localhost:3000")
+    print("   - Backend API: http://localhost:8000")
+    print("   - Live system: https://diocesanvitality.org/dashboard")
     print()
     print("This command is a placeholder for future integrated monitoring.")
 

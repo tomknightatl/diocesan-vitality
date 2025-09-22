@@ -1,4 +1,9 @@
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 import config
 from supabase import Client, create_client
@@ -13,7 +18,7 @@ RETRYABLE_SUPABASE_EXCEPTIONS = (Exception,)  # Broad exception for now, can be 
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
     retry=retry_if_exception_type(RETRYABLE_SUPABASE_EXCEPTIONS),
-    reraise=False,  # Do not re-raise after retries, let the function return None
+    reraise=False,  # Do not re - raise after retries, let the function return None
 )
 def _create_supabase_client_with_retry(url, key):
     """Internal helper to create Supabase client with retry logic."""

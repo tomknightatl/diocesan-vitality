@@ -6,6 +6,7 @@ Quick tests and diagnostics for local development.
 
 import argparse
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -91,6 +92,25 @@ def test_individual_script(script_name):
     """Test individual extraction script"""
     print(f"🧪 Testing {script_name}...")
 
+    script_file = _validate_and_get_script_file(script_name)
+    if not script_file:
+        return False
+
+    try:
+        cmd = _build_test_command(script_name, script_file)
+        result = _execute_script_test(cmd)
+        return _process_test_result(result, script_name)
+
+    except subprocess.TimeoutExpired:
+        print(f"⏰ {script_name} script test timed out")
+        return False
+    except Exception as e:
+        print(f"❌ Error testing {script_name}: {e}")
+        return False
+
+
+def _validate_and_get_script_file(script_name):
+    """Validate script name and return corresponding file path."""
     scripts_map = {
         "dioceses": "extract_dioceses.py",
         "parishes": "find_parishes.py",
@@ -101,43 +121,48 @@ def test_individual_script(script_name):
     if script_name not in scripts_map:
         print(f"❌ Unknown script: {script_name}")
         print(f"Available scripts: {', '.join(scripts_map.keys())}")
-        return False
+        return None
 
     script_file = scripts_map[script_name]
     if not Path(script_file).exists():
         print(f"❌ Script not found: {script_file}")
-        return False
+        return None
 
-    try:
-        import subprocess
+    return script_file
 
-        if script_name == "dioceses":
-            cmd = ["python", script_file, "--max_dioceses", "1"]
-        elif script_name == "parishes":
-            cmd = ["python", script_file, "--diocese_id", "1", "--max_dioceses_to_process", "1"]
-        elif script_name == "extract":
-            cmd = ["python", script_file, "--diocese_id", "1", "--max_parishes", "1"]
-        elif script_name == "schedules":
-            cmd = ["python", script_file, "--num_parishes", "1"]
 
-        result = subprocess.run(cmd, timeout=120, capture_output=True, text=True)
+def _build_test_command(script_name, script_file):
+    """Build test command based on script type."""
+    base_cmd = ["python", script_file]
 
-        if result.returncode == 0:
-            print(f"✅ {script_name} script test passed")
-            if result.stdout:
-                print(f"   Output: {result.stdout[-100:]}...")  # Last 100 chars
-            return True
-        else:
-            print(f"❌ {script_name} script test failed")
-            if result.stderr:
-                print(f"   Error: {result.stderr[-200:]}...")  # Last 200 chars
-            return False
+    if script_name == "dioceses":
+        return base_cmd + ["--max_dioceses", "1"]
+    elif script_name == "parishes":
+        return base_cmd + ["--diocese_id", "1", "--max_dioceses_to_process", "1"]
+    elif script_name == "extract":
+        return base_cmd + ["--diocese_id", "1", "--max_parishes", "1"]
+    elif script_name == "schedules":
+        return base_cmd + ["--num_parishes", "1"]
 
-    except subprocess.TimeoutExpired:
-        print(f"⏰ {script_name} script test timed out")
-        return False
-    except Exception as e:
-        print(f"❌ Error testing {script_name}: {e}")
+    return base_cmd
+
+
+def _execute_script_test(cmd):
+    """Execute the script test command."""
+    return subprocess.run(cmd, timeout=120, capture_output=True, text=True)
+
+
+def _process_test_result(result, script_name):
+    """Process and display test results."""
+    if result.returncode == 0:
+        print(f"✅ {script_name} script test passed")
+        if result.stdout:
+            print(f"   Output: {result.stdout[-100:]}...")  # Last 100 chars
+        return True
+    else:
+        print(f"❌ {script_name} script test failed")
+        if result.stderr:
+            print(f"   Error: {result.stderr[-200:]}...")  # Last 200 chars
         return False
 
 
@@ -181,7 +206,7 @@ def quick_data_check():
         data_resp = supabase.table("ParishData").select("count").execute()
         data_count = len(data_resp.data) if data_resp.data else 0
 
-        print(f"📊 Current database contents:")
+        print("📊 Current database contents:")
         print(f"   Dioceses: {dioceses_count}")
         print(f"   Parishes: {parishes_count}")
         print(f"   Parish Data Entries: {data_count}")
@@ -207,7 +232,13 @@ def run_environment_check():
         print("✅ .env file found")
         load_dotenv()
 
-        required_vars = ["SUPABASE_URL", "SUPABASE_KEY", "GENAI_API_KEY", "SEARCH_API_KEY", "SEARCH_CX"]
+        required_vars = [
+            "SUPABASE_URL",
+            "SUPABASE_KEY",
+            "GENAI_API_KEY",
+            "SEARCH_API_KEY",
+            "SEARCH_CX",
+        ]
 
         for var in required_vars:
             if os.getenv(var):
@@ -231,6 +262,23 @@ def run_environment_check():
 
 
 def main():
+    parser = _create_argument_parser()
+    args = parser.parse_args()
+
+    if not any(vars(args).values()):
+        parser.print_help()
+        return
+
+    print("🧪 Development Testing Suite")
+    print("=" * 40)
+
+    tests_to_run = _build_test_list(args)
+    success_count, total_tests = _execute_tests(tests_to_run)
+    _print_test_summary(success_count, total_tests)
+
+
+def _create_argument_parser():
+    """Create and configure the argument parser"""
     parser = argparse.ArgumentParser(description="Development Testing Suite")
     parser.add_argument("--all", action="store_true", help="Run all tests")
     parser.add_argument("--db", action="store_true", help="Test database connection")
@@ -239,21 +287,16 @@ def main():
     parser.add_argument("--monitoring", action="store_true", help="Test monitoring integration")
     parser.add_argument("--data", action="store_true", help="Show current data overview")
     parser.add_argument("--env", action="store_true", help="Check environment configuration")
-    parser.add_argument("--script", type=str, help="Test specific script (dioceses/parishes/extract/schedules)")
+    parser.add_argument(
+        "--script",
+        type=str,
+        help="Test specific script (dioceses/parishes/extract/schedules)",
+    )
+    return parser
 
-    args = parser.parse_args()
 
-    if not any(vars(args).values()):
-        # No arguments provided, show help
-        parser.print_help()
-        return
-
-    print("🧪 Development Testing Suite")
-    print("=" * 40)
-
-    success_count = 0
-    total_tests = 0
-
+def _build_test_list(args):
+    """Build the list of tests to run based on arguments"""
     tests_to_run = []
 
     if args.all or args.env:
@@ -275,9 +318,21 @@ def main():
         tests_to_run.append(("Data Overview", quick_data_check))
 
     if args.script:
-        tests_to_run.append((f"Script Test ({args.script})", lambda: test_individual_script(args.script)))
+        tests_to_run.append(
+            (
+                f"Script Test ({args.script})",
+                lambda: test_individual_script(args.script),
+            )
+        )
 
-    # Run tests
+    return tests_to_run
+
+
+def _execute_tests(tests_to_run):
+    """Execute all tests and return success counts"""
+    success_count = 0
+    total_tests = 0
+
     for test_name, test_func in tests_to_run:
         print(f"\n--- {test_name} ---")
         try:
@@ -289,7 +344,11 @@ def main():
             print(f"❌ Test failed with exception: {e}")
             total_tests += 1
 
-    # Summary
+    return success_count, total_tests
+
+
+def _print_test_summary(success_count, total_tests):
+    """Print the final test summary"""
     if total_tests > 0:
         print(f"\n📋 Test Summary: {success_count}/{total_tests} passed")
         if success_count == total_tests:

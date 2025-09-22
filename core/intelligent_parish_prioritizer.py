@@ -5,14 +5,13 @@ Simplified Parish Prioritization System for Schedule Extraction.
 This module implements straightforward parish selection for Step 4 (Schedule Extraction)
 based on simple, clear prioritization rules:
 
-1. First Priority: Never-tested parishes (respectful_automation_used = false/null)
+1. First Priority: Never - tested parishes (respectful_automation_used = false/null)
    - Newer parishes (higher id) visited first
 2. Second Priority: Previously tested parishes
    - Most recently tested parishes visited last (older extracted_at first)
 """
 
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 from core.db import get_supabase_client
 from core.logger import get_logger
@@ -76,7 +75,7 @@ class IntelligentParishPrioritizer:
     def _get_simple_prioritized_parishes(self, num_parishes: int, diocese_id: int = None) -> List[Dict]:
         """
         Get prioritized parishes using simplified logic:
-        1. Never-tested parishes first (newer parishes first by ID)
+        1. Never - tested parishes first (newer parishes first by ID)
         2. Previously tested parishes second (older tests first by extracted_at)
         """
         try:
@@ -99,7 +98,7 @@ class IntelligentParishPrioritizer:
 
             parishes = parishes_response.data
 
-            # Split into never-tested and previously-tested
+            # Split into never - tested and previously - tested
             never_tested = []
             previously_tested = []
 
@@ -115,17 +114,20 @@ class IntelligentParishPrioritizer:
                 else:
                     never_tested.append(parish)
 
-            # Sort never-tested parishes: Newer parishes first (higher ID = more recently created)
+            # Sort never - tested parishes: Newer parishes first (higher ID = more recently created)
             never_tested.sort(key=lambda p: p["id"], reverse=True)
 
-            # Sort previously-tested parishes: Older tests first (earlier extracted_at = test longer ago)
-            previously_tested.sort(key=lambda p: p.get("extracted_at") or "1900-01-01T00:00:00", reverse=False)
+            # Sort previously - tested parishes: Older tests first (earlier extracted_at = test longer ago)
+            previously_tested.sort(
+                key=lambda p: p.get("extracted_at") or "1900 - 01 - 01T00:00:00",
+                reverse=False,
+            )
 
-            # Combine: never-tested first, then previously-tested
+            # Combine: never - tested first, then previously - tested
             all_prioritized = never_tested + previously_tested
 
             logger.info(
-                f"🎯 Found {len(never_tested)} never-tested parishes, {len(previously_tested)} previously-tested parishes"
+                f"🎯 Found {len(never_tested)} never - tested parishes, {len(previously_tested)} previously - tested parishes"
             )
             logger.info(f"🎯 Total candidate pool: {len(all_prioritized)} parishes")
 
@@ -145,24 +147,24 @@ class IntelligentParishPrioritizer:
             logger.warning("🎯 No parishes selected")
             return
 
-        # Count never-tested vs previously-tested
+        # Count never - tested vs previously - tested
         never_tested_count = sum(1 for p in selected_parishes if not p.get("respectful_automation_used"))
         previously_tested_count = len(selected_parishes) - never_tested_count
 
         logger.info("🎯 Prioritization Summary:")
         logger.info(f"    📊 Total selected: {len(selected_parishes)}")
-        logger.info(f"    🆕 Never-tested: {never_tested_count}")
-        logger.info(f"    🔄 Previously-tested: {previously_tested_count}")
+        logger.info(f"    🆕 Never - tested: {never_tested_count}")
+        logger.info(f"    🔄 Previously - tested: {previously_tested_count}")
 
         # Log top parish details
         if selected_parishes:
             top_parish = selected_parishes[0]
-            is_tested = "Previously-tested" if top_parish.get("respectful_automation_used") else "Never-tested"
+            is_tested = "Previously - tested" if top_parish.get("respectful_automation_used") else "Never - tested"
             logger.info(f"    🥇 Top parish: {top_parish.get('Name', 'Unknown')} (ID: {top_parish['id']}) - {is_tested}")
 
         # Log first few parishes for debugging
         for i, parish in enumerate(selected_parishes[:3], 1):
-            status = "Previously-tested" if parish.get("respectful_automation_used") else "Never-tested"
+            status = "Previously - tested" if parish.get("respectful_automation_used") else "Never - tested"
             extracted_at = parish.get("extracted_at", "Never")
             logger.info(
                 f"    {i}. {parish.get('Name', 'Unknown')} | ID: {parish['id']} | "
@@ -177,6 +179,8 @@ class IntelligentParishPrioritizer:
             logger.warning(f"🎯 Error updating extraction result for parish {parish_id}: {e}")
 
 
-def get_intelligent_parish_prioritizer(supabase: Client = None) -> IntelligentParishPrioritizer:
+def get_intelligent_parish_prioritizer(
+    supabase: Client = None,
+) -> IntelligentParishPrioritizer:
     """Factory function to create intelligent parish prioritizer."""
     return IntelligentParishPrioritizer(supabase)

@@ -6,11 +6,10 @@ Implements respectful web scraping practices including:
 - Bot detection and tracking
 - Rate limiting
 - Robots.txt compliance
-- User-Agent identification
+- User - Agent identification
 - Blocking detection and reporting
 """
 
-import json
 import random
 import time
 from typing import Dict, Optional, Tuple
@@ -29,7 +28,7 @@ class RespectfulAutomation:
 
     def __init__(self):
         self.session = requests.Session()
-        self.session.headers.update({"User-Agent": "Mozilla/5.0 (compatible; Parish Directory Research;)"})
+        self.session.headers.update({"User - Agent": "Mozilla/5.0 (compatible; Parish Directory Research;)"})
 
         # Rate limiting: minimum time between requests per domain
         self.domain_last_request = {}
@@ -68,7 +67,12 @@ class RespectfulAutomation:
             if rp:
                 can_fetch = rp.can_fetch(user_agent, url)
                 crawl_delay = rp.crawl_delay(user_agent)
-                return {"allowed": can_fetch, "crawl_delay": crawl_delay, "robots_url": robots_url, "has_robots_txt": True}
+                return {
+                    "allowed": can_fetch,
+                    "crawl_delay": crawl_delay,
+                    "robots_url": robots_url,
+                    "has_robots_txt": True,
+                }
             else:
                 return {
                     "allowed": True,  # Assume allowed if no robots.txt
@@ -113,7 +117,17 @@ class RespectfulAutomation:
 
     def detect_blocking_mechanisms(self, response: requests.Response, url: str) -> Dict:
         """Detect various blocking mechanisms from HTTP response."""
-        blocking_info = {
+        blocking_info = self._initialize_blocking_info(response)
+
+        self._check_status_code_blocking(response, blocking_info)
+        self._check_header_blocking(response, blocking_info)
+        self._check_content_blocking(response, blocking_info)
+
+        return blocking_info
+
+    def _initialize_blocking_info(self, response: requests.Response) -> Dict:
+        """Initialize blocking info structure."""
+        return {
             "is_blocked": False,
             "blocking_type": None,
             "evidence": [],
@@ -121,43 +135,42 @@ class RespectfulAutomation:
             "headers": dict(response.headers),
         }
 
-        # Check status codes that indicate blocking
-        if response.status_code == 403:
+    def _check_status_code_blocking(self, response: requests.Response, blocking_info: Dict):
+        """Check for blocking based on HTTP status codes."""
+        status_blocking_map = {
+            403: ("403_forbidden", "HTTP 403 Forbidden status"),
+            429: ("rate_limited", "HTTP 429 Too Many Requests"),
+            503: ("service_unavailable", "HTTP 503 Service Unavailable"),
+        }
+
+        if response.status_code in status_blocking_map:
+            blocking_type, evidence = status_blocking_map[response.status_code]
             blocking_info.update(
-                {"is_blocked": True, "blocking_type": "403_forbidden", "evidence": ["HTTP 403 Forbidden status"]}
-            )
-        elif response.status_code == 429:
-            blocking_info.update(
-                {"is_blocked": True, "blocking_type": "rate_limited", "evidence": ["HTTP 429 Too Many Requests"]}
-            )
-        elif response.status_code == 503:
-            blocking_info.update(
-                {"is_blocked": True, "blocking_type": "service_unavailable", "evidence": ["HTTP 503 Service Unavailable"]}
+                {
+                    "is_blocked": True,
+                    "blocking_type": blocking_type,
+                    "evidence": [evidence],
+                }
             )
 
-        # Check headers for bot detection services
+    def _check_header_blocking(self, response: requests.Response, blocking_info: Dict):
+        """Check headers for bot detection services."""
         suspicious_headers = {
-            "cf-ray": "cloudflare_protection",
+            "cf - ray": "cloudflare_protection",
             "server": "cloudflare",
-            "x-sucuri-id": "sucuri_firewall",
-            "x-served-by": "cdn_blocking",
+            "x - sucuri - id": "sucuri_firewall",
+            "x - served - by": "cdn_blocking",
         }
 
         for header, service in suspicious_headers.items():
             if header in response.headers:
                 blocking_info["evidence"].append(f"{service}: {response.headers[header]}")
 
-        # Check response content for blocking indicators
+    def _check_content_blocking(self, response: requests.Response, blocking_info: Dict):
+        """Check response content for blocking indicators."""
         try:
             content = response.text.lower()
-            blocking_patterns = [
-                ("cloudflare", "attention required"),
-                ("cloudflare", "checking your browser"),
-                ("bot_detection", "access denied"),
-                ("captcha", "prove you are human"),
-                ("firewall", "blocked by security policy"),
-                ("ddos_protection", "ddos protection by"),
-            ]
+            blocking_patterns = self._get_blocking_patterns()
 
             for pattern_type, pattern in blocking_patterns:
                 if pattern in content:
@@ -168,7 +181,16 @@ class RespectfulAutomation:
         except Exception as e:
             logger.debug(f"Error analyzing content for blocking patterns: {e}")
 
-        return blocking_info
+    def _get_blocking_patterns(self) -> list:
+        """Get list of blocking patterns to check for."""
+        return [
+            ("cloudflare", "attention required"),
+            ("cloudflare", "checking your browser"),
+            ("bot_detection", "access denied"),
+            ("captcha", "prove you are human"),
+            ("firewall", "blocked by security policy"),
+            ("ddos_protection", "ddos protection by"),
+        ]
 
     def respectful_get(self, url: str, timeout: int = 30) -> Tuple[Optional[requests.Response], Dict]:
         """Make a respectful HTTP GET request with blocking detection."""
@@ -180,7 +202,7 @@ class RespectfulAutomation:
         if not robots_check["allowed"]:
             return None, {
                 "error": "robots_txt_disallowed",
-                "message": f"Access disallowed by robots.txt",
+                "message": "Access disallowed by robots.txt",
                 "robots_info": robots_check,
             }
 
@@ -194,10 +216,20 @@ class RespectfulAutomation:
             # Detect blocking mechanisms
             blocking_info = self.detect_blocking_mechanisms(response, url)
 
-            return response, {"success": True, "blocking_info": blocking_info, "robots_info": robots_check, "domain": domain}
+            return response, {
+                "success": True,
+                "blocking_info": blocking_info,
+                "robots_info": robots_check,
+                "domain": domain,
+            }
 
         except requests.exceptions.RequestException as e:
-            return None, {"error": "request_failed", "message": str(e), "robots_info": robots_check, "domain": domain}
+            return None, {
+                "error": "request_failed",
+                "message": str(e),
+                "robots_info": robots_check,
+                "domain": domain,
+            }
 
 
 def create_blocking_report(blocking_info: Dict, url: str, diocese_name: str) -> Dict:
@@ -213,7 +245,7 @@ def create_blocking_report(blocking_info: Dict, url: str, diocese_name: str) -> 
         "user_agent": "USCCB Parish Directory Research",
     }
 
-    # Add human-readable status
+    # Add human - readable status
     if report["is_blocked"]:
         if report["blocking_type"] == "403_forbidden":
             report["status_description"] = "Diocese website actively blocking automated access (403 Forbidden)"
@@ -238,7 +270,7 @@ def test_respectful_automation():
     test_urls = [
         "https://usccb.org/",  # Should be accessible
         "https://dioceseoflaredo.org/",  # Known to block
-        "https://nonexistent-diocese-test.org/",  # Should fail
+        "https://nonexistent - diocese - test.org/",  # Should fail
     ]
 
     print("🔍 Testing Respectful Automation:")

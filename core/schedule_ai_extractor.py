@@ -1,31 +1,30 @@
 #!/usr/bin/env python3
 """
-AI-powered schedule extraction for accurate parish schedule parsing.
+AI - powered schedule extraction for accurate parish schedule parsing.
 Uses Google Gemini AI to extract structured schedule information.
 """
 
 import json
 import re
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 import google.generativeai as genai
 
 import config
-from core.db import get_supabase_client
 from core.logger import get_logger
 
 logger = get_logger(__name__)
 
 
 class ScheduleAIExtractor:
-    """AI-powered extractor for parish schedules using Google Gemini."""
+    """AI - powered extractor for parish schedules using Google Gemini."""
 
     def __init__(self):
         """Initialize the AI extractor with Gemini API."""
         try:
             genai.configure(api_key=config.GENAI_API_KEY)
-            self.model = genai.GenerativeModel("gemini-1.5-flash")
+            self.model = genai.GenerativeModel("gemini - 1.5 - flash")
             logger.info("AI Schedule Extractor initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize AI Schedule Extractor: {e}")
@@ -45,28 +44,44 @@ class ScheduleAIExtractor:
         base_threshold = 15  # Lowered from 20 to be more permissive
         adjustments = 0
 
-        # URL-based adjustments
+        # URL - based adjustments
         url_lower = url.lower()
 
         # Major parishes/cathedrals should have lower thresholds
         if any(keyword in url_lower for keyword in ["cathedral", "basilica", "shrine"]):
             adjustments -= 10
-            logger.debug(f"Major parish detected, lowering threshold by 10")
+            logger.debug("Major parish detected, lowering threshold by 10")
 
         # Dedicated schedule pages should have lower thresholds
         if any(
             keyword in url_lower
-            for keyword in ["schedule", "hours", "mass-times", "adoration", "confession", "reconciliation"]
+            for keyword in [
+                "schedule",
+                "hours",
+                "mass - times",
+                "adoration",
+                "confession",
+                "reconciliation",
+            ]
         ):
             adjustments -= 7  # Increased from 5 to be more permissive
-            logger.debug(f"Dedicated schedule page detected, lowering threshold by 7")
+            logger.debug("Dedicated schedule page detected, lowering threshold by 7")
 
         # Parish life/ministry pages often contain schedule info
-        if any(keyword in url_lower for keyword in ["parish-life", "ministry", "ministries", "worship", "sacrament"]):
+        if any(
+            keyword in url_lower
+            for keyword in [
+                "parish - life",
+                "ministry",
+                "ministries",
+                "worship",
+                "sacrament",
+            ]
+        ):
             adjustments -= 5
-            logger.debug(f"Parish life/ministry page detected, lowering threshold by 5")
+            logger.debug("Parish life/ministry page detected, lowering threshold by 5")
 
-        # Content-based adjustments
+        # Content - based adjustments
         content_length = len(content.split()) if content else 0
 
         # Large pages with lots of content should be more permissive
@@ -80,12 +95,12 @@ class ScheduleAIExtractor:
         # Sitemap pages should have higher thresholds but not too high
         if "sitemap" in url_lower:
             adjustments += 10  # Reduced from 15
-            logger.debug(f"Sitemap page detected, raising threshold by 10")
+            logger.debug("Sitemap page detected, raising threshold by 10")
 
         # Generic 'about' pages might contain schedules
         if any(keyword in url_lower for keyword in ["about", "contact", "home", "welcome"]):
             adjustments -= 2
-            logger.debug(f"Generic page that might contain schedule info, lowering threshold by 2")
+            logger.debug("Generic page that might contain schedule info, lowering threshold by 2")
 
         final_threshold = max(3, base_threshold + adjustments)  # Minimum threshold lowered to 3
 
@@ -109,7 +124,7 @@ class ScheduleAIExtractor:
             Dict with structured schedule information
         """
         if not self.model:
-            return self._get_empty_result(f"AI model not available")
+            return self._get_empty_result("AI model not available")
 
         try:
             # Create targeted prompt for schedule extraction
@@ -168,7 +183,7 @@ Analyze the following webpage content and extract ONLY Eucharistic Adoration sch
 Look for:
 - Adoration, Exposition, Blessed Sacrament, Holy Hour schedules
 - Perpetual Adoration availability
-- Weekly recurring schedules (e.g., "Wednesdays 6-7 PM")
+- Weekly recurring schedules (e.g., "Wednesdays 6 - 7 PM")
 - Daily schedules if offered
 - Special adoration events
 
@@ -184,7 +199,7 @@ Please respond ONLY in this JSON format:
     "frequency": "weekly" | "daily" | "monthly" | "special_events" | "unknown",
     "schedule_details": "Full text description of the schedule",
     "is_perpetual": true/false,
-    "confidence_score": 0-100,
+    "confidence_score": 0 - 100,
     "notes": "Any additional relevant information"
 }}
 
@@ -199,7 +214,7 @@ Look for:
 - Confession times and schedules
 - Reconciliation service schedules
 - Sacrament of Penance availability
-- Weekly recurring schedules (e.g., "Saturdays 3:30-4:30 PM")
+- Weekly recurring schedules (e.g., "Saturdays 3:30 - 4:30 PM")
 - "By appointment" availability
 - Before/after Mass schedules
 
@@ -215,7 +230,7 @@ Please respond ONLY in this JSON format:
     "frequency": "weekly" | "daily" | "by_appointment" | "before_mass" | "unknown",
     "schedule_details": "Full text description of the schedule",
     "by_appointment": true/false,
-    "confidence_score": 0-100,
+    "confidence_score": 0 - 100,
     "notes": "Any additional relevant information"
 }}
 
@@ -250,7 +265,7 @@ Please respond ONLY in this JSON format:
     "schedule_details": "Full text description of the Mass schedule",
     "has_vigil_mass": true/false,
     "has_daily_mass": true/false,
-    "confidence_score": 0-100,
+    "confidence_score": 0 - 100,
     "notes": "Any additional relevant information"
 }}
 
@@ -269,7 +284,7 @@ If no Mass schedule is found, return has_weekly_schedule: false and schedule_fou
         max_chars = 32000  # Increased from 8000 to handle large sitemaps
 
         if len(content) > max_chars:
-            # For large content, try to find schedule-relevant sections first
+            # For large content, try to find schedule - relevant sections first
             schedule_keywords = [
                 "mass",
                 "schedule",
@@ -296,9 +311,8 @@ If no Mass schedule is found, return has_weekly_schedule: false and schedule_fou
                 "hour",
             ]
 
-            # Split content into chunks and prioritize schedule-relevant sections
+            # Split content into chunks and prioritize schedule - relevant sections
             words = content.split()
-            relevant_chunks = []
             current_chunk = []
             current_size = 0
 
@@ -440,12 +454,12 @@ def save_ai_schedule_results(supabase, results: List[Dict]):
             facts_to_save.append(
                 {
                     "parish_id": parish_id,
-                    "fact_type": f"{schedule_type.title()}Schedule",  # Use existing enum values
+                    "fact_type": (f"{schedule_type.title()}Schedule"),  # Use existing enum values
                     "fact_value": json.dumps(fact_value),
                     "fact_source_url": result.get("source_url"),
                     "fact_string": result.get("schedule_details", ""),
                     "confidence_score": result.get("confidence_score", 0),
-                    "extraction_method": "ai_gemini",  # This field distinguishes AI vs keyword extraction
+                    "extraction_method": ("ai_gemini"),  # This field distinguishes AI vs keyword extraction
                 }
             )
 
@@ -456,7 +470,7 @@ def save_ai_schedule_results(supabase, results: List[Dict]):
         except Exception as e:
             logger.error(f"Error saving AI schedule facts: {e}")
     else:
-        logger.info("No high-confidence AI schedule results to save")
+        logger.info("No high - confidence AI schedule results to save")
 
 
 # Test function
@@ -468,7 +482,7 @@ def test_ai_extraction():
     <h3>Mass Schedule</h3>
     <p>Sunday Masses: 8:00 AM, 10:30 AM, 12:00 PM</p>
     <p>Saturday Vigil: 5:00 PM</p>
-    <p>Weekday Masses: Monday-Friday 8:00 AM, Wednesday 6:00 PM</p>
+    <p>Weekday Masses: Monday - Friday 8:00 AM, Wednesday 6:00 PM</p>
 
     <h3>Adoration Schedule</h3>
     <p>Eucharistic Adoration is held every Wednesday from 6:00 PM to 7:00 PM in the church.</p>

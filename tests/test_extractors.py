@@ -1,4 +1,3 @@
-import pytest
 from bs4 import BeautifulSoup
 
 from find_parishes import find_candidate_urls

@@ -9,7 +9,7 @@ identifying information.
 import re
 from dataclasses import dataclass
 from difflib import SequenceMatcher
-from typing import List, Optional, Set, Tuple
+from typing import List, Set, Tuple
 
 
 @dataclass
@@ -41,13 +41,17 @@ class ParishDeduplicator:
     - Normalized name patterns
     """
 
-    def __init__(self, name_similarity_threshold: float = 0.85, address_similarity_threshold: float = 0.80):
+    def __init__(
+        self,
+        name_similarity_threshold: float = 0.85,
+        address_similarity_threshold: float = 0.80,
+    ):
         """
         Initialize the deduplicator.
 
         Args:
-            name_similarity_threshold: Threshold for name similarity (0.0-1.0)
-            address_similarity_threshold: Threshold for address similarity (0.0-1.0)
+            name_similarity_threshold: Threshold for name similarity (0.0 - 1.0)
+            address_similarity_threshold: Threshold for address similarity (0.0 - 1.0)
         """
         self.name_similarity_threshold = name_similarity_threshold
         self.address_similarity_threshold = address_similarity_threshold
@@ -58,14 +62,14 @@ class ParishDeduplicator:
             r"\bst\.?\s+": "saint ",
             r"\bsts\.?\s+": "saints ",
             # Common abbreviations
-            r"\bblessed\s+virgin\s+mary\b": "bvm",
-            r"\bour\s+lady\s+of\b": "ol of",
-            r"\bimmaculate\s+heart\s+of\s+mary\b": "ihm",
-            r"\bsacred\s+heart\s+of\s+jesus\b": "shj",
+            r"\bblessed\s + virgin\s + mary\b": "bvm",
+            r"\bour\s + lady\s + of\b": "ol of",
+            r"\bimmaculate\s + heart\s + of\s + mary\b": "ihm",
+            r"\bsacred\s + heart\s + of\s + jesus\b": "shj",
             # Church type variations
-            r"\bcatholic\s+church\b": "church",
-            r"\bparish\s+church\b": "church",
-            r"\bchurch\s+of\b": "",
+            r"\bcatholic\s + church\b": "church",
+            r"\bparish\s + church\b": "church",
+            r"\bchurch\s + of\b": "",
             # Remove extra whitespace
             r"\s+": " ",
         }
@@ -107,7 +111,7 @@ class ParishDeduplicator:
             name2: Second parish name
 
         Returns:
-            Similarity score (0.0-1.0)
+            Similarity score (0.0 - 1.0)
         """
         if not name1 or not name2:
             return 0.0
@@ -132,7 +136,7 @@ class ParishDeduplicator:
             addr2: Second address
 
         Returns:
-            Similarity score (0.0-1.0)
+            Similarity score (0.0 - 1.0)
         """
         if not addr1 or not addr2:
             return 0.0
@@ -225,7 +229,7 @@ class ParishDeduplicator:
         phone1 = getattr(parish1, "phone", None)
         phone2 = getattr(parish2, "phone", None)
         if phone1 and phone2:
-            # Normalize phones (remove non-digits)
+            # Normalize phones (remove non - digits)
             norm_phone1 = re.sub(r"\D", "", phone1)
             norm_phone2 = re.sub(r"\D", "", phone2)
             metrics["phone_match"] = norm_phone1 == norm_phone2 and len(norm_phone1) >= 10
@@ -329,7 +333,16 @@ class ParishDeduplicator:
         extracted differently between the two parishes.
         """
         # Merge missing fields from duplicate to primary
-        fields_to_merge = ["phone", "website", "street_address", "full_address", "address", "city", "state", "zip_code"]
+        fields_to_merge = [
+            "phone",
+            "website",
+            "street_address",
+            "full_address",
+            "address",
+            "city",
+            "state",
+            "zip_code",
+        ]
 
         for field in fields_to_merge:
             primary_value = getattr(primary_parish, field, None)

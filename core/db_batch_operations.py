@@ -7,7 +7,7 @@ Provides batch upsert functionality to reduce database round trips.
 import time
 from collections import defaultdict
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional
 
 from core.logger import get_logger
 
@@ -38,7 +38,7 @@ class DatabaseBatchManager:
 
     def configure_table(self, table_name: str, conflict_columns: str):
         """
-        Configure table-specific batch settings.
+        Configure table - specific batch settings.
 
         Args:
             table_name: Name of the database table
@@ -54,7 +54,7 @@ class DatabaseBatchManager:
         Args:
             table_name: Target table name
             record: Record data to insert/update
-            auto_flush: Whether to auto-flush when batch size reached
+            auto_flush: Whether to auto - flush when batch size reached
 
         Returns:
             bool: True if batch was flushed, False otherwise
@@ -74,7 +74,7 @@ class DatabaseBatchManager:
             f"({len(self.pending_records[table_name])}/{self.batch_size})"
         )
 
-        # Auto-flush if batch size reached
+        # Auto - flush if batch size reached
         if auto_flush and len(self.pending_records[table_name]) >= self.batch_size:
             return self.flush_table(table_name)
 
@@ -181,7 +181,7 @@ class DatabaseBatchManager:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Auto-flush all pending records when exiting context."""
+        """Auto - flush all pending records when exiting context."""
         results = self.flush_all()
 
         # Log summary

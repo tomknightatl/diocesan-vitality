@@ -5,7 +5,7 @@ Distributed Work Coordinator for Horizontal Pipeline Scaling.
 This module provides coordination mechanisms to ensure multiple pipeline pods
 can work together without conflicts when scraping diocese websites.
 
-Strategy: Diocese-based work partitioning with database-backed coordination.
+Strategy: Diocese - based work partitioning with database - backed coordination.
 """
 
 import os
@@ -14,7 +14,7 @@ import time
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from core.db import get_supabase_client
 from core.logger import get_logger
@@ -38,7 +38,7 @@ class DistributedWorkCoordinator:
     """
     Coordinates work distribution across multiple pipeline pods.
 
-    Uses database-backed coordination to ensure:
+    Uses database - backed coordination to ensure:
     1. No two pods scrape the same diocese simultaneously
     2. Respectful rate limiting across all pods
     3. Automatic failover if a pod becomes unresponsive
@@ -59,7 +59,7 @@ class DistributedWorkCoordinator:
         self.pod_name = os.environ.get("HOSTNAME", socket.gethostname())
         self.supabase = get_supabase_client()
 
-        logger.info(f"🤝 Distributed Work Coordinator initialized")
+        logger.info("🤝 Distributed Work Coordinator initialized")
         logger.info(f"   • Worker ID: {self.worker_id}")
         logger.info(f"   • Worker Type: {self.worker_type}")
         logger.info(f"   • Pod Name: {self.pod_name}")
@@ -235,7 +235,7 @@ class DistributedWorkCoordinator:
                     "worker_id": self.worker_id,
                     "status": "processing",
                     "assigned_at": datetime.utcnow().isoformat(),
-                    "estimated_completion": (datetime.utcnow() + timedelta(hours=1)).isoformat(),
+                    "estimated_completion": ((datetime.utcnow() + timedelta(hours=1)).isoformat()),
                 }
                 assignments.append(assignment)
 
@@ -252,7 +252,10 @@ class DistributedWorkCoordinator:
     async def mark_diocese_completed(self, diocese_id: int, status: str = "completed"):
         """Mark a diocese as completed by this worker"""
         try:
-            update_data = {"status": status, "completed_at": datetime.utcnow().isoformat()}
+            update_data = {
+                "status": status,
+                "completed_at": datetime.utcnow().isoformat(),
+            }
 
             response = (
                 self.supabase.table("diocese_work_assignments")
@@ -273,7 +276,10 @@ class DistributedWorkCoordinator:
     async def send_heartbeat(self):
         """Send heartbeat to indicate this worker is still active"""
         try:
-            update_data = {"last_heartbeat": datetime.utcnow().isoformat(), "status": "active"}
+            update_data = {
+                "last_heartbeat": datetime.utcnow().isoformat(),
+                "status": "active",
+            }
 
             response = self.supabase.table("pipeline_workers").update(update_data).eq("worker_id", self.worker_id).execute()
 
@@ -349,7 +355,12 @@ class DistributedWorkCoordinator:
 
         except Exception as e:
             logger.error(f"❌ Error getting cluster status: {e}")
-            return {"active_workers": 0, "total_active_assignments": 0, "workers": [], "assignments": []}
+            return {
+                "active_workers": 0,
+                "total_active_assignments": 0,
+                "workers": [],
+                "assignments": [],
+            }
 
     async def shutdown(self):
         """Gracefully shutdown this worker"""
@@ -406,7 +417,7 @@ class DistributedWorkCoordinator:
         try:
             # Check for recent report generation activity
             # This could be enhanced with a proper report tracking table
-            cutoff_time = datetime.utcnow() - timedelta(hours=1)
+            # cutoff_time = datetime.utcnow() - timedelta(hours=1)  # Currently unused
 
             # For now, always return True (reports can run)
             # In production, you'd track last report generation time

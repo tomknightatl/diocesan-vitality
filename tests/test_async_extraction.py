@@ -7,7 +7,7 @@ Validates performance improvements and functionality of the async implementation
 import asyncio
 import random
 import time
-from typing import Any, Dict, List
+from typing import Dict, List
 
 from core.async_driver import get_async_driver_pool, shutdown_async_driver_pool
 from core.async_parish_extractor import get_async_parish_extractor
@@ -31,12 +31,12 @@ def create_test_parishes(count: int) -> List[ParishData]:
 
     for i in range(count):
         parish = MockParishData(
-            name=f"Test Parish {i+1}",
+            name=f"Test Parish {i + 1}",
             address=f"{100 + i} Test Street",
             phone="" if random.random() < 0.3 else f"555-{1000 + i:04d}",
-            website="" if random.random() < 0.4 else f"https://parish{i+1}.example.com",
+            website=("" if random.random() < 0.4 else f"https://parish{i + 1}.example.com"),
             zip_code="" if random.random() < 0.2 else f"{10001 + i:05d}",
-            full_address="" if random.random() < 0.3 else f"{100 + i} Test Street, Test City, TS {10001 + i:05d}",
+            full_address=("" if random.random() < 0.3 else f"{100 + i} Test Street, Test City, TS {10001 + i:05d}"),
         )
         parishes.append(parish)
 
@@ -128,7 +128,7 @@ async def test_async_parish_extractor():
     parishes_per_second = len(test_parishes) / total_time
 
     logger.info(f"✅ Parish extraction test completed in {total_time:.2f}s")
-    logger.info(f"📊 Results:")
+    logger.info("📊 Results:")
     logger.info(f"   • Total parishes: {len(test_parishes)}")
     logger.info(f"   • Enhanced parishes: {enhanced_count}")
     logger.info(f"   • Success rate: {success_rate:.1f}%")
@@ -159,9 +159,13 @@ async def test_concurrent_vs_sequential():
         try:
             # Simulate sequential extraction
             time.sleep(random.uniform(0.5, 1.5))  # Mock extraction time
-            enhanced_parish = MockParishData(name=parish.name + " (Sequential)", phone="555-0000", enhanced_extraction=True)
+            enhanced_parish = MockParishData(
+                name=parish.name + " (Sequential)",
+                phone="555 - 0000",
+                enhanced_extraction=True,
+            )
             sequential_results.append(enhanced_parish)
-        except:
+        except Exception:
             sequential_results.append(parish)
 
     sequential_time = time.time() - start_time
@@ -172,16 +176,15 @@ async def test_concurrent_vs_sequential():
     extractor._extract_parish_detail_sync = mock_parish_detail_extraction
 
     start_time = time.time()
-    concurrent_results = await extractor.extract_parish_details_concurrent(
-        test_parishes, "Performance Test Diocese", max_concurrent=8
-    )
+    # Perform concurrent extraction for timing comparison
+    await extractor.extract_parish_details_concurrent(test_parishes, "Performance Test Diocese", max_concurrent=8)
     concurrent_time = time.time() - start_time
 
     # Performance analysis
     speedup = sequential_time / concurrent_time
-    efficiency = speedup / 4  # Assuming 4-core processing
+    efficiency = speedup / 4  # Assuming 4 - core processing
 
-    logger.info(f"🏁 Performance Comparison Results:")
+    logger.info("🏁 Performance Comparison Results:")
     logger.info(f"   • Sequential time: {sequential_time:.2f}s")
     logger.info(f"   • Concurrent time: {concurrent_time:.2f}s")
     logger.info(f"   • Speedup: {speedup:.1f}x")
@@ -225,7 +228,7 @@ async def test_error_handling():
     failed = len(results) - successful
 
     logger.info(f"🛡️ Error handling test completed in {total_time:.2f}s")
-    logger.info(f"📊 Results with high failure rate:")
+    logger.info("📊 Results with high failure rate:")
     logger.info(f"   • Total parishes: {len(test_parishes)}")
     logger.info(f"   • Successful: {successful}")
     logger.info(f"   • Failed gracefully: {failed}")

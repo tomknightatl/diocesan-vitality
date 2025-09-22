@@ -7,7 +7,7 @@ Demonstrates best practices for using the new optimization features.
 import time
 from typing import Any, Dict, List, Optional
 
-from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
+from selenium.common.exceptions import TimeoutException
 
 from core.enhanced_element_wait import (
     create_map_interaction_selectors,
@@ -15,7 +15,7 @@ from core.enhanced_element_wait import (
     create_search_form_selectors,
 )
 from core.logger import get_logger
-from core.optimized_circuit_breaker_configs import ErrorRecoveryStrategies, OptimizedCircuitBreakerConfigs
+from core.optimized_circuit_breaker_configs import ErrorRecoveryStrategies
 from core.parish_validation import filter_valid_parishes
 
 logger = get_logger(__name__)
@@ -56,7 +56,7 @@ class EnhancedBaseExtractor:
 
             # Step 2: Wait for page stability (important for AJAX sites)
             if not driver.wait_for_page_stable(stability_timeout=2.0, max_wait=8.0):
-                logger.warning(f"⚠️ Page may not be fully stable, proceeding anyway")
+                logger.warning("⚠️ Page may not be fully stable, proceeding anyway")
 
             # Step 3: Attempt extraction with progressive selector complexity
             parishes = self._extract_with_progressive_selectors(driver, operation_type)
@@ -86,7 +86,7 @@ class EnhancedBaseExtractor:
                 logger.debug(f"✅ Page loaded successfully on attempt {attempt + 1}")
                 return
 
-            except TimeoutException as e:
+            except TimeoutException:
                 delay = ErrorRecoveryStrategies.get_recovery_delay(attempt, "TimeoutException")
                 logger.warning(f"⏰ Page load timeout (attempt {attempt + 1}/3), retrying in {delay:.1f}s")
 
@@ -148,10 +148,10 @@ class EnhancedBaseExtractor:
 
     def _group_selectors_by_complexity(self, selectors: List[str]) -> List[List[str]]:
         """Group selectors by complexity for progressive extraction."""
-        # Simple selectors (class-based, high probability)
+        # Simple selectors (class - based, high probability)
         simple = [s for s in selectors if s.startswith(".") and len(s.split()) == 1]
 
-        # Medium selectors (id-based, multi-class, attribute-based)
+        # Medium selectors (id - based, multi - class, attribute - based)
         medium = [
             s
             for s in selectors
@@ -196,7 +196,12 @@ class EnhancedBaseExtractor:
             href = element.get_attribute("href") if element.tag_name == "a" else None
 
             if name and len(name) > 3:  # Basic validation
-                return {"name": name, "url": href, "extraction_method": self.name, "element_tag": element.tag_name}
+                return {
+                    "name": name,
+                    "url": href,
+                    "extraction_method": self.name,
+                    "element_tag": element.tag_name,
+                }
 
         except Exception as e:
             logger.debug(f"❌ Error extracting from element: {str(e)}")
@@ -253,7 +258,14 @@ class EnhancedBaseExtractor:
         error_msg = str(error)[:200]
 
         # Track error history for pattern analysis
-        self.error_history.append({"type": error_type, "message": error_msg, "timestamp": time.time(), "url": url})
+        self.error_history.append(
+            {
+                "type": error_type,
+                "message": error_msg,
+                "timestamp": time.time(),
+                "url": url,
+            }
+        )
 
         # Keep only recent errors (last 20)
         if len(self.error_history) > 20:

@@ -59,7 +59,7 @@ function Parish() {
   const parseScheduleData = (factValue) => {
     try {
       return JSON.parse(factValue);
-    } catch (e) {
+    } catch {
       return null;
     }
   };

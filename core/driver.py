@@ -3,16 +3,25 @@ import subprocess
 import time
 
 from selenium import webdriver
-from selenium.common.exceptions import SessionNotCreatedException, TimeoutException, WebDriverException
+from selenium.common.exceptions import (
+    SessionNotCreatedException,
+    TimeoutException,
+    WebDriverException,
+)
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from selenium.webdriver.firefox.service import Service as FirefoxService
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.firefox import GeckoDriverManager
 
-from core.circuit_breaker import CircuitBreakerConfig, circuit_breaker, circuit_manager
+from core.circuit_breaker import circuit_manager
 from core.enhanced_element_wait import ElementWaitStrategy
 from core.logger import get_logger
 from core.optimized_circuit_breaker_configs import OptimizedCircuitBreakerConfigs
@@ -26,12 +35,12 @@ def _find_chrome_binary():
     """Find the Chrome binary path dynamically based on what's available."""
     # List of possible Chrome binary locations in order of preference
     chrome_binaries = [
-        "/usr/bin/google-chrome",  # Standard Google Chrome on Linux
-        "/usr/bin/chromium-browser",  # Chromium on Raspberry Pi/ARM64
+        "/usr/bin/google - chrome",  # Standard Google Chrome on Linux
+        "/usr/bin/chromium - browser",  # Chromium on Raspberry Pi/ARM64
         "/usr/bin/chromium",  # Alternative Chromium path
         "/opt/google/chrome/chrome",  # Alternative Google Chrome path
-        "google-chrome",  # System PATH fallback
-        "chromium-browser",  # System PATH fallback
+        "google - chrome",  # System PATH fallback
+        "chromium - browser",  # System PATH fallback
         "chromium",  # System PATH fallback
     ]
 
@@ -73,42 +82,42 @@ def _setup_chrome_driver():
 
     # Essential headless options
     chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_argument("--no - sandbox")
+    chrome_options.add_argument("--disable - dev - shm - usage")
+    chrome_options.add_argument("--disable - gpu")
+    chrome_options.add_argument("--window - size=1920,1080")
 
     # Enhanced stability options
-    chrome_options.add_argument("--disable-web-security")
-    chrome_options.add_argument("--disable-features=VizDisplayCompositor")
-    chrome_options.add_argument("--disable-extensions")
-    chrome_options.add_argument("--disable-plugins")
-    chrome_options.add_argument("--disable-background-timer-throttling")
-    chrome_options.add_argument("--disable-backgrounding-occluded-windows")
-    chrome_options.add_argument("--disable-renderer-backgrounding")
-    chrome_options.add_argument("--disable-logging")
-    chrome_options.add_argument("--disable-default-apps")
-    chrome_options.add_argument("--disable-sync")
+    chrome_options.add_argument("--disable - web - security")
+    chrome_options.add_argument("--disable - features=VizDisplayCompositor")
+    chrome_options.add_argument("--disable - extensions")
+    chrome_options.add_argument("--disable - plugins")
+    chrome_options.add_argument("--disable - background - timer - throttling")
+    chrome_options.add_argument("--disable - backgrounding - occluded - windows")
+    chrome_options.add_argument("--disable - renderer - backgrounding")
+    chrome_options.add_argument("--disable - logging")
+    chrome_options.add_argument("--disable - default - apps")
+    chrome_options.add_argument("--disable - sync")
 
     # Use unique session ID to avoid conflicts
     session_id = str(uuid.uuid4())[:8]
 
     # Create unique temp directories for this session
     temp_base = tempfile.gettempdir()
-    user_data_dir = os.path.join(temp_base, f"chrome-user-data-{session_id}")
-    cache_dir = os.path.join(temp_base, f"chrome-cache-{session_id}")
-    webdriver_cache = os.path.join(temp_base, f"webdriver-cache-{session_id}")
+    user_data_dir = os.path.join(temp_base, f"chrome - user - data-{session_id}")
+    cache_dir = os.path.join(temp_base, f"chrome - cache-{session_id}")
+    webdriver_cache = os.path.join(temp_base, f"webdriver - cache-{session_id}")
 
     # Create directories
     for tmp_dir in [user_data_dir, cache_dir, webdriver_cache]:
         os.makedirs(tmp_dir, mode=0o777, exist_ok=True)
 
     # Use unique directories to avoid conflicts
-    chrome_options.add_argument(f"--user-data-dir={user_data_dir}")
-    chrome_options.add_argument(f"--disk-cache-dir={cache_dir}")
-    chrome_options.add_argument("--disable-background-networking")
+    chrome_options.add_argument(f"--user - data - dir={user_data_dir}")
+    chrome_options.add_argument(f"--disk - cache - dir={cache_dir}")
+    chrome_options.add_argument("--disable - background - networking")
 
-    # Use cache directory that webdriver-manager can access
+    # Use cache directory that webdriver - manager can access
     os.environ["WDM_LOCAL_CACHE"] = webdriver_cache
 
     logger.info(f"🔧 Creating Chrome session with ID: {session_id}")
@@ -126,7 +135,10 @@ def _setup_chrome_driver():
         if not _system_chromedriver_warning_logged:
             logger.warning(f"System ChromeDriver failed: {e}, falling back to ChromeDriverManager")
             _system_chromedriver_warning_logged = True
-        return webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
+        return webdriver.Chrome(
+            service=ChromeService(ChromeDriverManager().install()),
+            options=chrome_options,
+        )
 
 
 def _setup_firefox_driver():
@@ -144,10 +156,10 @@ def _setup_firefox_driver():
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
     )
 
-    # Use cache directory that webdriver-manager can access
+    # Use cache directory that webdriver - manager can access
     import os
 
-    os.environ["WDM_LOCAL_CACHE"] = "/tmp/webdriver-cache"
+    os.environ["WDM_LOCAL_CACHE"] = "/tmp/webdriver - cache"
 
     return webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()), options=firefox_options)
 
@@ -156,7 +168,7 @@ def _setup_firefox_driver():
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
     retry=retry_if_exception_type(RETRYABLE_WEBDRIVER_EXCEPTIONS),
-    reraise=False,  # Do not re-raise after retries, let the function return None
+    reraise=False,  # Do not re - raise after retries, let the function return None
 )
 def _setup_driver_with_retry():
     """Internal helper to set up WebDriver with retry logic and fallback support."""
@@ -174,7 +186,7 @@ def _setup_driver_with_retry():
             # Check if Firefox is available
             import shutil
 
-            if shutil.which("firefox") or shutil.which("firefox-esr"):
+            if shutil.which("firefox") or shutil.which("firefox - esr"):
                 logger.info("🔧 Falling back to Firefox WebDriver...")
                 driver = _setup_firefox_driver()
                 logger.info("✅ Firefox WebDriver setup successful")
@@ -252,8 +264,6 @@ def recover_driver():
 
 def ensure_driver_available():
     """Ensures WebDriver is available, recovers if necessary."""
-    global driver
-
     if driver is None:
         logger.info("Driver is None, setting up new driver...")
         return setup_driver()
@@ -356,14 +366,18 @@ class ProtectedWebDriver:
         """Find element using enhanced waiting strategy with multiple selectors"""
         timeout = timeout or self.default_timeout
         return self.element_wait_strategy.smart_element_wait(
-            selectors if isinstance(selectors, list) else [selectors], timeout=timeout, condition=condition
+            selectors if isinstance(selectors, list) else [selectors],
+            timeout=timeout,
+            condition=condition,
         )
 
     def smart_find_elements(self, selectors, timeout=None, min_count=1):
         """Find multiple elements using enhanced waiting strategy"""
         timeout = timeout or self.default_timeout
         return self.element_wait_strategy.smart_elements_wait(
-            selectors if isinstance(selectors, list) else [selectors], timeout=timeout, min_count=min_count
+            selectors if isinstance(selectors, list) else [selectors],
+            timeout=timeout,
+            min_count=min_count,
         )
 
     def wait_for_page_stable(self, stability_timeout=2.0, max_wait=10.0):
@@ -374,7 +388,8 @@ class ProtectedWebDriver:
         """Find form using intelligent form detection"""
         timeout = timeout or self.default_timeout
         return self.element_wait_strategy.smart_form_wait(
-            form_selectors if isinstance(form_selectors, list) else [form_selectors], timeout=timeout
+            form_selectors if isinstance(form_selectors, list) else [form_selectors],
+            timeout=timeout,
         )
 
     def close(self):

@@ -13,8 +13,9 @@ from difflib import SequenceMatcher
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(project_root)
 
-from core.db import get_supabase_client
-from core.logger import get_logger
+# These imports must come after path manipulation  # noqa: E402
+from core.db import get_supabase_client  # noqa: E402
+from core.logger import get_logger  # noqa: E402
 
 logger = get_logger(__name__)
 
@@ -22,7 +23,7 @@ logger = get_logger(__name__)
 def get_expected_parishes():
     """Hardcoded list of expected parishes for Diocese 2002"""
     return [
-        ("Saint Thomas Syro-Malabar Forane Catholic Church", "Orange"),
+        ("Saint Thomas Syro - Malabar Forane Catholic Church", "Orange"),
         ("Saint John Maron Catholic Church", "Orange"),
         ("Saint John Henry Newman Catholic Church", "Irvine"),
         ("Saint George Chaldean Catholic Church", "Santa Ana"),
@@ -173,7 +174,12 @@ def find_best_match(target_name, target_city, extracted_list):
 
         if combined_score > best_score and combined_score > 0.6:  # Minimum threshold
             best_score = combined_score
-            best_match = (extracted_name, extracted_city, extracted_address, combined_score)
+            best_match = (
+                extracted_name,
+                extracted_city,
+                extracted_address,
+                combined_score,
+            )
 
     return best_match
 
@@ -201,7 +207,11 @@ def calculate_accuracy():
         match = find_best_match(expected_name, expected_city, extracted_parishes)
         if match:
             matches.append(
-                {"expected": (expected_name, expected_city), "found": (match[0], match[1], match[2]), "score": match[3]}
+                {
+                    "expected": (expected_name, expected_city),
+                    "found": (match[0], match[1], match[2]),
+                    "score": match[3],
+                }
             )
             used_extracted.add((match[0], match[1], match[2]))
         else:
@@ -262,7 +272,7 @@ def generate_report(metrics):
     report.append(f"🎯 Accuracy: {metrics['accuracy']:.1%}")
     report.append(f"🎯 Precision: {metrics['precision']:.1%}")
     report.append(f"🎯 Recall: {metrics['recall']:.1%}")
-    report.append(f"🎯 F1-Score: {metrics['f1_score']:.1%}")
+    report.append(f"🎯 F1 - Score: {metrics['f1_score']:.1%}")
     report.append("")
 
     if metrics["matches"]:
@@ -315,7 +325,8 @@ def main():
         # Save report
         project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
         report_file = os.path.join(
-            project_root, f"diocese_2002_accuracy_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+            project_root,
+            f"diocese_2002_accuracy_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
         )
         with open(report_file, "w") as f:
             f.write(report)

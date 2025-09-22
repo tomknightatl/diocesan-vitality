@@ -10,16 +10,17 @@ This module provides sophisticated capabilities to handle dynamic diocese websit
 """
 
 import json
-import re
 import time
-from typing import Any, Dict, List, Optional, Set
-from urllib.parse import urljoin, urlparse
+from typing import Any, Dict, List, Set
 
-from selenium.common.exceptions import TimeoutException, WebDriverException
+from selenium.common.exceptions import (
+    NoSuchElementException,
+    TimeoutException,
+    WebDriverException,
+)
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from core.circuit_breaker import circuit_breaker
@@ -142,7 +143,7 @@ class NetworkTrafficAnalyzer:
             url = request.get("url", "")
             response = request.get("response", "")
 
-            # Check URL for parish-related keywords
+            # Check URL for parish - related keywords
             if any(keyword in url.lower() for keyword in parish_keywords):
                 self.api_endpoints.add(url)
 
@@ -156,7 +157,7 @@ class NetworkTrafficAnalyzer:
         return self.parish_data_urls
 
     def _contains_parish_data(self, response: str) -> bool:
-        """Check if response contains parish-like data."""
+        """Check if response contains parish - like data."""
         if not response or len(response) < 50:
             return False
 
@@ -174,14 +175,14 @@ class NetworkTrafficAnalyzer:
             "pastor",
         ]
 
-        # Look for JSON-like structures with parish data
+        # Look for JSON - like structures with parish data
         try:
             if response.startswith("{") or response.startswith("["):
                 # Likely JSON response
                 response_lower = response.lower()
                 match_count = sum(1 for indicator in parish_indicators if indicator in response_lower)
                 return match_count >= 3
-        except:
+        except (json.JSONDecodeError, Exception):
             pass
 
         return False
@@ -189,7 +190,10 @@ class NetworkTrafficAnalyzer:
     def _process_performance_log(self, log_entry: Dict):
         """Process a performance log entry."""
         message = json.loads(log_entry["message"])
-        if message["message"]["method"] in ["Network.responseReceived", "Network.requestWillBeSent"]:
+        if message["message"]["method"] in [
+            "Network.responseReceived",
+            "Network.requestWillBeSent",
+        ]:
             self.captured_requests.append(message["message"])
 
 
@@ -204,7 +208,7 @@ class JavaScriptExecutionEngine:
     @circuit_breaker("javascript_execution")
     def wait_for_dynamic_content(self, diocese_name: str, timeout: int = 20) -> Dict[str, Any]:
         """
-        Advanced waiting strategy for JavaScript-heavy diocese sites.
+        Advanced waiting strategy for JavaScript - heavy diocese sites.
 
         Returns:
             - content_loaded: Whether dynamic content was successfully loaded
@@ -242,7 +246,7 @@ class JavaScriptExecutionEngine:
                 (self._poll_for_content_appearance, 6),  # Slightly longer for polling
             ]
 
-            total_strategy_time = sum(timeout for _, timeout in strategies)
+            sum(timeout for _, timeout in strategies)
             max_allowed_time = min(timeout, 15)  # Cap total time at 15 seconds
 
             for i, (strategy, strategy_timeout) in enumerate(strategies, 1):
@@ -265,7 +269,7 @@ class JavaScriptExecutionEngine:
                     continue
 
             # Step 4: Collect network requests
-            requests = self.network_analyzer.collect_requests(2)  # Reduced from 3
+            # requests = self.network_analyzer.collect_requests(2)  # Currently unused
             result["api_endpoints"] = self.network_analyzer.analyze_parish_endpoints()
 
             # Step 4: Extract any parish elements found
@@ -344,10 +348,10 @@ class JavaScriptExecutionEngine:
             # Look for common interactive elements
             selectors = [
                 "button[onclick]",
-                ".load-more",
-                ".show-all",
-                "#load-parishes",
-                "[data-load]",
+                ".load - more",
+                ".show - all",
+                "#load - parishes",
+                "[data - load]",
                 ".expand",
                 ".toggle",
                 'input[type="search"]',
@@ -409,7 +413,7 @@ class JavaScriptExecutionEngine:
             return False
 
     def _poll_for_content_appearance(self, timeout: int = 15) -> bool:
-        """Poll for specific parish-related content to appear."""
+        """Poll for specific parish - related content to appear."""
         try:
             parish_selectors = [
                 '[class*="parish"]',
@@ -417,9 +421,9 @@ class JavaScriptExecutionEngine:
                 '[class*="church"]',
                 '[id*="church"]',
                 ".directory a",
-                ".location-list a",
+                ".location - list a",
                 "article a",
-                ".entry-title a",
+                ".entry - title a",
             ]
 
             end_time = time.time() + timeout
@@ -428,11 +432,20 @@ class JavaScriptExecutionEngine:
                 for selector in parish_selectors:
                     elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
                     if len(elements) > 0:
-                        # Verify elements contain parish-like content
+                        # Verify elements contain parish - like content
                         valid_elements = []
                         for elem in elements[:10]:  # Check first 10
                             text = elem.text.strip().lower()
-                            if any(keyword in text for keyword in ["parish", "church", "saint", "st.", "holy"]):
+                            if any(
+                                keyword in text
+                                for keyword in [
+                                    "parish",
+                                    "church",
+                                    "saint",
+                                    "st.",
+                                    "holy",
+                                ]
+                            ):
                                 valid_elements.append(elem)
 
                         if len(valid_elements) >= 2:
@@ -465,7 +478,7 @@ class JavaScriptExecutionEngine:
         parish_elements = []
 
         try:
-            # Look for links with parish-related content
+            # Look for links with parish - related content
             selectors = [
                 'a[href*="parish"]',
                 'a[href*="church"]',
@@ -473,7 +486,7 @@ class JavaScriptExecutionEngine:
                 ".church a",
                 ".location a",
                 "article a",
-                ".entry-title a",
+                ".entry - title a",
                 ".directory a",
             ]
 
@@ -486,7 +499,7 @@ class JavaScriptExecutionEngine:
 
                         if text and href and self._is_parish_like(text):
                             parish_elements.append({"name": text, "url": href, "selector": selector})
-                    except:
+                    except (NoSuchElementException, WebDriverException):
                         continue
 
             # Remove duplicates
@@ -508,8 +521,26 @@ class JavaScriptExecutionEngine:
     def _is_parish_like(self, text: str) -> bool:
         """Check if text looks like a parish name."""
         text_lower = text.lower()
-        parish_indicators = ["parish", "church", "cathedral", "saint", "st.", "holy", "blessed", "our lady"]
-        exclusions = ["home", "about", "contact", "news", "events", "calendar", "office", "staff"]
+        parish_indicators = [
+            "parish",
+            "church",
+            "cathedral",
+            "saint",
+            "st.",
+            "holy",
+            "blessed",
+            "our lady",
+        ]
+        exclusions = [
+            "home",
+            "about",
+            "contact",
+            "news",
+            "events",
+            "calendar",
+            "office",
+            "staff",
+        ]
 
         has_indicator = any(indicator in text_lower for indicator in parish_indicators)
         has_exclusion = any(exclusion in text_lower for exclusion in exclusions)
@@ -534,22 +565,36 @@ class JavaScriptExecutionEngine:
                 "angular",
                 "jquery",
                 "bootstrap",
-                "data-load",
-                "lazy-load",
-                "infinite-scroll",
+                "data - load",
+                "lazy - load",
+                "infinite - scroll",
                 "just a moment",
                 "please wait",
                 "loading content",
             ]
 
             # Check for JavaScript frameworks and AJAX indicators
-            script_indicators = ["$.ajax", "$.get", "$.post", "XMLHttpRequest", "fetch("]
+            script_indicators = [
+                "$.ajax",
+                "$.get",
+                "$.post",
+                "XMLHttpRequest",
+                "fetch(",
+            ]
 
             has_dynamic_text = any(indicator in page_source for indicator in dynamic_indicators)
             has_script_activity = any(indicator in page_source for indicator in script_indicators)
 
             # Check for loading elements in DOM
-            loading_selectors = [".loading", ".spinner", ".progress", ".loader", "[data-loading]", "[data-load]", "#loading"]
+            loading_selectors = [
+                ".loading",
+                ".spinner",
+                ".progress",
+                ".loader",
+                "[data - loading]",
+                "[data - load]",
+                "#loading",
+            ]
 
             has_loading_elements = False
             for selector in loading_selectors:
@@ -558,7 +603,7 @@ class JavaScriptExecutionEngine:
                     if elements:
                         has_loading_elements = True
                         break
-                except:
+                except (NoSuchElementException, WebDriverException):
                     continue
 
             result = has_dynamic_text or has_script_activity or has_loading_elements

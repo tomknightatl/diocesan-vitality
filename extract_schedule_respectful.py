@@ -7,21 +7,23 @@ including robots.txt compliance, rate limiting, and blocking detection.
 """
 
 import argparse
-import json
-import time
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
 
-import config
 from core.db import get_supabase_client
 from core.logger import get_logger
 from core.schedule_ai_extractor import ScheduleAIExtractor, save_ai_schedule_results
 from core.schedule_keywords import load_keywords_from_database
-from extract_schedule import choose_best_url, get_parishes_to_process, get_sitemap_urls, get_suppression_urls
-from respectful_automation import RespectfulAutomation, create_blocking_report
+from extract_schedule import (
+    choose_best_url,
+    get_parishes_to_process,
+    get_sitemap_urls,
+    get_suppression_urls,
+)
+from respectful_automation import RespectfulAutomation
 
 logger = get_logger(__name__)
 
@@ -44,7 +46,7 @@ class MonitoringClient:
                 "parish_id": parish_id,
             }
             self.session.post(f"{self.base_url}/api/monitoring/log", json=data)
-        except Exception as e:
+        except Exception:
             # Silently fail - don't let monitoring break the main process
             pass
 
@@ -75,12 +77,16 @@ class MonitoringClient:
                 data["started_at"] = self._start_time
 
             self.session.post(f"{self.base_url}/api/monitoring/extraction_status", json=data)
-        except Exception as e:
+        except Exception:
             # Silently fail - don't let monitoring break the main process
             pass
 
     def update_performance_metrics(
-        self, parishes_per_minute: float = 0.0, queue_size: int = 0, total_requests: int = 0, successful_requests: int = 0
+        self,
+        parishes_per_minute: float = 0.0,
+        queue_size: int = 0,
+        total_requests: int = 0,
+        successful_requests: int = 0,
     ):
         """Update performance metrics in the monitoring API."""
         try:
@@ -93,12 +99,16 @@ class MonitoringClient:
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
             self.session.post(f"{self.base_url}/api/monitoring/performance_metrics", json=data)
-        except Exception as e:
+        except Exception:
             # Silently fail - don't let monitoring break the main process
             pass
 
     def report_error(
-        self, error_message: str, error_type: str = "extraction_error", diocese: str = None, parish_id: int = None
+        self,
+        error_message: str,
+        error_type: str = "extraction_error",
+        diocese: str = None,
+        parish_id: int = None,
     ):
         """Report an error to the monitoring API."""
         try:
@@ -110,7 +120,7 @@ class MonitoringClient:
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
             self.session.post(f"{self.base_url}/api/monitoring/report_error", json=data)
-        except Exception as e:
+        except Exception:
             # Silently fail - don't let monitoring break the main process
             pass
 
@@ -118,7 +128,7 @@ class MonitoringClient:
 def update_parish_blocking_data(supabase, parish_id: int, blocking_info: dict, robots_info: dict):
     """Update parish record with blocking detection data."""
     try:
-        # Create human-readable status description
+        # Create human - readable status description
         if blocking_info.get("is_blocked"):
             if blocking_info.get("blocking_type") == "403_forbidden":
                 status_description = "Parish website actively blocking automated access (403 Forbidden)"
@@ -206,8 +216,158 @@ def extract_content_with_respectful_automation(url: str, automation: RespectfulA
         return "", {"success": False, "error": str(e)}
 
 
+def _test_parish_for_blocking(parish_url: str, parish_id: int, automation: RespectfulAutomation, supabase):
+    """Test parish URL for blocking and update database"""
+    logger.info(f"  🤖 [{parish_id}] Testing for blocking with respectful automation...")
+
+    response, info = automation.respectful_get(parish_url, timeout=10)
+
+    # Update parish blocking data regardless of success/failure
+    blocking_info = info.get("blocking_info", {})
+    robots_info = info.get("robots_info", {})
+
+    update_parish_blocking_data(supabase, parish_id, blocking_info, robots_info)
+
+    return response, blocking_info, robots_info
+
+
+def _create_error_result(
+    parish_id: int,
+    error_type: str,
+    blocking_info: dict,
+    robots_info: dict,
+    error_message: str = None,
+):
+    """Create standardized error result dictionary"""
+    return {
+        "parish_id": parish_id,
+        "success": False,
+        "error": error_message or error_type,
+        "blocking_info": blocking_info,
+        "robots_info": robots_info,
+    }
+
+
+def _find_candidate_pages(
+    urls_to_check: list,
+    parish_id: int,
+    automation: RespectfulAutomation,
+    suppression_urls: set,
+    max_pages: int,
+):
+    """Find candidate pages for reconciliation and adoration schedules"""
+    candidate_pages = {"reconciliation": [], "adoration": []}
+    pages_checked = 0
+
+    for url in urls_to_check:
+        if pages_checked >= max_pages:
+            break
+
+        try:
+            content, url_info = extract_content_with_respectful_automation(url, automation, suppression_urls)
+
+            if not content:
+                continue
+
+            page_text = content.lower()
+
+            # Check for reconciliation keywords
+            if any(kw in page_text for kw in ["reconciliation", "confession", "penance"]):
+                candidate_pages["reconciliation"].append(url)
+                logger.info(f"  📝 [{parish_id}] Found reconciliation candidate: {url}")
+
+            # Check for adoration keywords
+            if any(kw in page_text for kw in ["adoration", "exposition", "blessed sacrament"]):
+                candidate_pages["adoration"].append(url)
+                logger.info(f"  ⛪ [{parish_id}] Found adoration candidate: {url}")
+
+            pages_checked += 1
+
+        except Exception as e:
+            logger.warning(f"  ⚠️ [{parish_id}] Could not check {url}: {e}")
+            continue
+
+    return candidate_pages
+
+
+def _process_reconciliation_pages(
+    candidate_pages: dict,
+    parish_id: int,
+    automation: RespectfulAutomation,
+    suppression_urls: set,
+    recon_kw: list,
+    recon_neg: list,
+    parish_url: str,
+    ai_extractor,
+):
+    """Process reconciliation pages and extract schedule data"""
+    if not candidate_pages["reconciliation"]:
+        return None
+
+    best_recon_url = choose_best_url(
+        candidate_pages["reconciliation"],
+        recon_kw,
+        recon_neg,
+        urlparse(parish_url).netloc,
+    )
+
+    logger.info(f"  🤖 [{parish_id}] Analyzing reconciliation page with AI: {best_recon_url}")
+    recon_content, _ = extract_content_with_respectful_automation(best_recon_url, automation, suppression_urls)
+
+    if recon_content:
+        recon_result = ai_extractor.extract_schedule_from_content(recon_content, best_recon_url, "reconciliation")
+        recon_result["parish_id"] = parish_id
+        return recon_result
+
+    return None
+
+
+def _process_adoration_pages(
+    candidate_pages: dict,
+    parish_id: int,
+    automation: RespectfulAutomation,
+    suppression_urls: set,
+    ador_kw: list,
+    ador_neg: list,
+    parish_url: str,
+    ai_extractor,
+):
+    """Process adoration pages and extract schedule data"""
+    if not candidate_pages["adoration"]:
+        return None
+
+    best_ador_url = choose_best_url(candidate_pages["adoration"], ador_kw, ador_neg, urlparse(parish_url).netloc)
+
+    logger.info(f"  🤖 [{parish_id}] Analyzing adoration page with AI: {best_ador_url}")
+    ador_content, _ = extract_content_with_respectful_automation(best_ador_url, automation, suppression_urls)
+
+    if ador_content:
+        ador_result = ai_extractor.extract_schedule_from_content(ador_content, best_ador_url, "adoration")
+        ador_result["parish_id"] = parish_id
+        return ador_result
+
+    return None
+
+
+def _create_success_result(parish_id: int, extraction_results: dict, blocking_info: dict, robots_info: dict):
+    """Create standardized success result dictionary"""
+    return {
+        "parish_id": parish_id,
+        "success": True,
+        "schedules_found": len(extraction_results),
+        "extraction_results": extraction_results,
+        "blocking_info": blocking_info,
+        "robots_info": robots_info,
+    }
+
+
 def process_parish_with_blocking_detection(
-    parish_url: str, parish_id: int, supabase, automation: RespectfulAutomation, suppression_urls: set, max_pages: int = 10
+    parish_url: str,
+    parish_id: int,
+    supabase,
+    automation: RespectfulAutomation,
+    suppression_urls: set,
+    max_pages: int = 10,
 ) -> dict:
     """
     Process a parish website with respectful automation and blocking detection.
@@ -226,37 +386,17 @@ def process_parish_with_blocking_detection(
     logger.info(f"🔄 [{parish_id}] Starting respectful processing for {parish_url}")
 
     # First, test the main parish URL for blocking
-    logger.info(f"  🤖 [{parish_id}] Testing for blocking with respectful automation...")
-
-    response, info = automation.respectful_get(parish_url, timeout=10)
-
-    # Update parish blocking data regardless of success/failure
-    blocking_info = info.get("blocking_info", {})
-    robots_info = info.get("robots_info", {})
-
-    update_parish_blocking_data(supabase, parish_id, blocking_info, robots_info)
+    response, blocking_info, robots_info = _test_parish_for_blocking(parish_url, parish_id, automation, supabase)
 
     # If blocked, return early
     if blocking_info.get("is_blocked"):
         logger.warning(f"  🚫 [{parish_id}] Website is blocking access: {blocking_info.get('blocking_type')}")
-        return {
-            "parish_id": parish_id,
-            "success": False,
-            "error": "blocked",
-            "blocking_info": blocking_info,
-            "robots_info": robots_info,
-        }
+        return _create_error_result(parish_id, "blocked", blocking_info, robots_info)
 
     # If request failed for other reasons
     if not response:
-        logger.error(f"  ❌ [{parish_id}] Request failed: {info.get('error', 'Unknown error')}")
-        return {
-            "parish_id": parish_id,
-            "success": False,
-            "error": info.get("error", "request_failed"),
-            "blocking_info": blocking_info,
-            "robots_info": robots_info,
-        }
+        logger.error(f"  ❌ [{parish_id}] Request failed: request_failed")
+        return _create_error_result(parish_id, "request_failed", blocking_info, robots_info)
 
     logger.info(f"  ✅ [{parish_id}] No blocking detected (HTTP {response.status_code})")
 
@@ -272,66 +412,39 @@ def process_parish_with_blocking_detection(
         logger.info(f"  🔍 [{parish_id}] Found {len(urls_to_check)} URLs to check for schedule content")
 
         # Find candidate pages
-        candidate_pages = {"reconciliation": [], "adoration": []}
-        pages_checked = 0
-
-        for url in urls_to_check:
-            if pages_checked >= max_pages:
-                break
-
-            try:
-                content, url_info = extract_content_with_respectful_automation(url, automation, suppression_urls)
-
-                if not content:
-                    continue
-
-                page_text = content.lower()
-
-                # Check for reconciliation keywords
-                if any(kw in page_text for kw in ["reconciliation", "confession", "penance"]):
-                    candidate_pages["reconciliation"].append(url)
-                    logger.info(f"  📝 [{parish_id}] Found reconciliation candidate: {url}")
-
-                # Check for adoration keywords
-                if any(kw in page_text for kw in ["adoration", "exposition", "blessed sacrament"]):
-                    candidate_pages["adoration"].append(url)
-                    logger.info(f"  ⛪ [{parish_id}] Found adoration candidate: {url}")
-
-                pages_checked += 1
-
-            except Exception as e:
-                logger.warning(f"  ⚠️ [{parish_id}] Could not check {url}: {e}")
-                continue
+        candidate_pages = _find_candidate_pages(urls_to_check, parish_id, automation, suppression_urls, max_pages)
 
         # Process found pages with AI
         ai_extractor = ScheduleAIExtractor()
         extraction_results = {}
 
         # Process reconciliation pages
-        if candidate_pages["reconciliation"]:
-            best_recon_url = choose_best_url(
-                candidate_pages["reconciliation"], recon_kw, recon_neg, urlparse(parish_url).netloc
-            )
-
-            logger.info(f"  🤖 [{parish_id}] Analyzing reconciliation page with AI: {best_recon_url}")
-            recon_content, _ = extract_content_with_respectful_automation(best_recon_url, automation, suppression_urls)
-
-            if recon_content:
-                recon_result = ai_extractor.extract_schedule_from_content(recon_content, best_recon_url, "reconciliation")
-                recon_result["parish_id"] = parish_id
-                extraction_results["reconciliation"] = recon_result
+        recon_result = _process_reconciliation_pages(
+            candidate_pages,
+            parish_id,
+            automation,
+            suppression_urls,
+            recon_kw,
+            recon_neg,
+            parish_url,
+            ai_extractor,
+        )
+        if recon_result:
+            extraction_results["reconciliation"] = recon_result
 
         # Process adoration pages
-        if candidate_pages["adoration"]:
-            best_ador_url = choose_best_url(candidate_pages["adoration"], ador_kw, ador_neg, urlparse(parish_url).netloc)
-
-            logger.info(f"  🤖 [{parish_id}] Analyzing adoration page with AI: {best_ador_url}")
-            ador_content, _ = extract_content_with_respectful_automation(best_ador_url, automation, suppression_urls)
-
-            if ador_content:
-                ador_result = ai_extractor.extract_schedule_from_content(ador_content, best_ador_url, "adoration")
-                ador_result["parish_id"] = parish_id
-                extraction_results["adoration"] = ador_result
+        ador_result = _process_adoration_pages(
+            candidate_pages,
+            parish_id,
+            automation,
+            suppression_urls,
+            ador_kw,
+            ador_neg,
+            parish_url,
+            ai_extractor,
+        )
+        if ador_result:
+            extraction_results["adoration"] = ador_result
 
         # Save AI results if any found
         if extraction_results:
@@ -340,27 +453,19 @@ def process_parish_with_blocking_detection(
 
         logger.info(f"  ✅ [{parish_id}] Completed processing - found {len(extraction_results)} schedule types")
 
-        return {
-            "parish_id": parish_id,
-            "success": True,
-            "schedules_found": len(extraction_results),
-            "extraction_results": extraction_results,
-            "blocking_info": blocking_info,
-            "robots_info": robots_info,
-        }
+        return _create_success_result(parish_id, extraction_results, blocking_info, robots_info)
 
     except Exception as e:
         logger.error(f"  ❌ [{parish_id}] Error during schedule extraction: {e}")
-        return {
-            "parish_id": parish_id,
-            "success": False,
-            "error": str(e),
-            "blocking_info": blocking_info,
-            "robots_info": robots_info,
-        }
+        return _create_error_result(parish_id, str(e), blocking_info, robots_info)
 
 
-def main(num_parishes: int = None, parish_id: int = None, max_pages_per_parish: int = 10, diocese_id: int = None):
+def main(
+    num_parishes: int = None,
+    parish_id: int = None,
+    max_pages_per_parish: int = 10,
+    diocese_id: int = None,
+):
     """Main function for respectful parish processing with blocking detection."""
 
     logger.info("🚀 Starting respectful parish website analysis with blocking detection")
@@ -399,7 +504,12 @@ def main(num_parishes: int = None, parish_id: int = None, max_pages_per_parish: 
 
         try:
             result = process_parish_with_blocking_detection(
-                parish_url, p_id, supabase, automation, suppression_urls, max_pages_per_parish
+                parish_url,
+                p_id,
+                supabase,
+                automation,
+                suppression_urls,
+                max_pages_per_parish,
             )
 
             # Update statistics
@@ -421,16 +531,21 @@ def main(num_parishes: int = None, parish_id: int = None, max_pages_per_parish: 
     logger.info("🎉 Respectful parish analysis completed!")
     logger.info("=" * 50)
     logger.info(f"Total parishes processed: {processed_count}")
-    logger.info(f"✅ Accessible: {accessible_count} ({accessible_count/processed_count*100:.1f}%)")
-    logger.info(f"🚫 Blocked: {blocked_count} ({blocked_count/processed_count*100:.1f}%)")
-    logger.info(f"📅 Schedules found: {schedule_found_count} ({schedule_found_count/processed_count*100:.1f}%)")
+    logger.info(f"✅ Accessible: {accessible_count} ({accessible_count / processed_count * 100:.1f}%)")
+    logger.info(f"🚫 Blocked: {blocked_count} ({blocked_count / processed_count * 100:.1f}%)")
+    logger.info(f"📅 Schedules found: {schedule_found_count} ({schedule_found_count / processed_count * 100:.1f}%)")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Respectful parish website analysis with blocking detection")
     parser.add_argument("--num_parishes", type=int, help="Number of parishes to process (default: all)")
     parser.add_argument("--parish_id", type=int, help="Specific parish ID to process")
-    parser.add_argument("--max_pages_per_parish", type=int, default=10, help="Maximum pages to analyze per parish")
+    parser.add_argument(
+        "--max_pages_per_parish",
+        type=int,
+        default=10,
+        help="Maximum pages to analyze per parish",
+    )
     parser.add_argument("--diocese_id", type=int, help="Filter parishes to specific diocese ID")
 
     args = parser.parse_args()

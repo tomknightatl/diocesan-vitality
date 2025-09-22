@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Diocese-Specific Extraction Example
+Diocese - Specific Extraction Example
 
 This example demonstrates how to extract data for a specific diocese
 using the async extraction capabilities.
@@ -36,13 +36,13 @@ def get_diocese_info(diocese_id: int) -> dict:
 
 def extract_diocese(diocese_id: int, pool_size: int = 6, batch_size: int = 12):
     """Extract data for a specific diocese."""
-    logger.info("🏛️ Diocese-Specific Extraction Example")
+    logger.info("🏛️ Diocese - Specific Extraction Example")
     logger.info("=" * 50)
 
     # Get diocese information
     diocese_info = get_diocese_info(diocese_id)
     logger.info(f"📍 Target Diocese: {diocese_info['name']} ({diocese_info['state']})")
-    logger.info(f"🔧 Configuration:")
+    logger.info("🔧 Configuration:")
     logger.info(f"   - Diocese ID: {diocese_id}")
     logger.info(f"   - Pool Size: {pool_size} concurrent workers")
     logger.info(f"   - Batch Size: {batch_size} parishes per batch")
@@ -98,9 +98,9 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python diocese_extraction.py --diocese-id 1                    # Extract Archdiocese of Atlanta
-  python diocese_extraction.py --diocese-id 2 --pool-size 4      # Extract with 4 workers
-  python diocese_extraction.py --diocese-id 123 --batch-size 8   # Extract with smaller batches
+  python diocese_extraction.py --diocese - id 1                    # Extract Archdiocese of Atlanta
+  python diocese_extraction.py --diocese - id 2 --pool - size 4      # Extract with 4 workers
+  python diocese_extraction.py --diocese - id 123 --batch - size 8   # Extract with smaller batches
 
 Available Diocese IDs (examples):
   1   - Archdiocese of Atlanta, Georgia
@@ -111,11 +111,26 @@ Note: Check your database for the complete list of available dioceses.
         """,
     )
 
-    parser.add_argument("--diocese-id", type=int, required=True, help="Diocese ID to extract (required)")
+    parser.add_argument(
+        "--diocese - id",
+        type=int,
+        required=True,
+        help="Diocese ID to extract (required)",
+    )
 
-    parser.add_argument("--pool-size", type=int, default=6, help="Number of concurrent workers (default: 6)")
+    parser.add_argument(
+        "--pool - size",
+        type=int,
+        default=6,
+        help="Number of concurrent workers (default: 6)",
+    )
 
-    parser.add_argument("--batch-size", type=int, default=12, help="Number of parishes to process per batch (default: 12)")
+    parser.add_argument(
+        "--batch - size",
+        type=int,
+        default=12,
+        help="Number of parishes to process per batch (default: 12)",
+    )
 
     args = parser.parse_args()
 

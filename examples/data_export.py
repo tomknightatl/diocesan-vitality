@@ -111,7 +111,7 @@ def export_to_csv(data: List[Dict[str, Any]], output_file: Path) -> bool:
             logger.warning("No data to export")
             return False
 
-        with open(output_file, "w", newline="", encoding="utf-8") as csvfile:
+        with open(output_file, "w", newline="", encoding="utf - 8") as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=data[0].keys())
             writer.writeheader()
             writer.writerows(data)
@@ -136,7 +136,7 @@ def export_to_json(data: List[Dict[str, Any]], output_file: Path) -> bool:
             "parishes": data,
         }
 
-        with open(output_file, "w", encoding="utf-8") as jsonfile:
+        with open(output_file, "w", encoding="utf - 8") as jsonfile:
             json.dump(export_data, jsonfile, indent=2, ensure_ascii=False)
 
         logger.info(f"✅ JSON export completed: {output_file}")
@@ -182,7 +182,7 @@ def export_to_excel(data: List[Dict[str, Any]], output_file: Path) -> bool:
                 "Value": [
                     len(df),
                     df["diocese_id"].nunique() if "diocese_id" in df.columns else 0,
-                    df["website_url"].notna().sum() if "website_url" in df.columns else 0,
+                    (df["website_url"].notna().sum() if "website_url" in df.columns else 0),
                     df["email"].notna().sum() if "email" in df.columns else 0,
                     df["phone"].notna().sum() if "phone" in df.columns else 0,
                     datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -208,11 +208,11 @@ def main():
 Examples:
   python data_export.py --format csv --output parishes.csv
   python data_export.py --format json --output parishes.json --limit 100
-  python data_export.py --format excel --output parishes.xlsx --diocese-id 1
+  python data_export.py --format excel --output parishes.xlsx --diocese - id 1
   python data_export.py --format all --output parishes_export
 
 Supported Formats:
-  csv    - Comma-separated values (simple, widely compatible)
+  csv    - Comma - separated values (simple, widely compatible)
   json   - JavaScript Object Notation (structured, with metadata)
   excel  - Excel workbook with multiple sheets (requires pandas)
   all    - Export to all formats with appropriate extensions
@@ -223,14 +223,21 @@ Note: Excel format requires 'pandas' and 'openpyxl' packages:
     )
 
     parser.add_argument(
-        "--format", choices=["csv", "json", "excel", "all"], default="csv", help="Export format (default: csv)"
+        "--format",
+        choices=["csv", "json", "excel", "all"],
+        default="csv",
+        help="Export format (default: csv)",
     )
 
-    parser.add_argument("--output", required=True, help="Output file path (without extension for 'all' format)")
+    parser.add_argument(
+        "--output",
+        required=True,
+        help="Output file path (without extension for 'all' format)",
+    )
 
     parser.add_argument("--limit", type=int, help="Limit number of records to export")
 
-    parser.add_argument("--diocese-id", type=int, help="Export data for specific diocese only")
+    parser.add_argument("--diocese - id", type=int, help="Export data for specific diocese only")
 
     args = parser.parse_args()
 
@@ -275,7 +282,11 @@ Note: Excel format requires 'pandas' and 'openpyxl' packages:
 
     elif args.format == "all":
         # Export to all formats
-        formats = [(".csv", export_to_csv), (".json", export_to_json), (".xlsx", export_to_excel)]
+        formats = [
+            (".csv", export_to_csv),
+            (".json", export_to_json),
+            (".xlsx", export_to_excel),
+        ]
 
         for ext, export_func in formats:
             output_file = output_path.with_suffix(ext)

@@ -2,7 +2,6 @@
 """
 Test script to verify monitoring API integration
 """
-import json
 import time
 from datetime import datetime, timezone
 
@@ -86,7 +85,7 @@ def main():
         time.sleep(1)
 
         # Send progress log
-        monitor.send_log(f"🔄 Processing parish {i}/5: test-parish-{i}.org", parish_id=3000 + i)
+        monitor.send_log(f"🔄 Processing parish {i}/5: test - parish-{i}.org", parish_id=3000 + i)
 
         # Update status
         monitor.update_extraction_status(

@@ -11,11 +11,11 @@ import os
 import sys
 from unittest.mock import Mock, patch
 
-# Add current directory to path
-sys.path.append(os.getcwd())
+# Add current directory to path before imports
+sys.path.insert(0, os.getcwd())
 
-from core.distributed_work_coordinator import DistributedWorkCoordinator
-from distributed_pipeline_runner import DistributedPipelineRunner, WorkerType
+from core.distributed_work_coordinator import DistributedWorkCoordinator  # noqa: E402
+from distributed_pipeline_runner import DistributedPipelineRunner, WorkerType  # noqa: E402
 
 
 async def test_worker_types():
@@ -23,7 +23,13 @@ async def test_worker_types():
     print("🧪 Testing Worker Type Enum...")
 
     # Test all worker types
-    worker_types = [WorkerType.DISCOVERY, WorkerType.EXTRACTION, WorkerType.SCHEDULE, WorkerType.REPORTING, WorkerType.ALL]
+    worker_types = [
+        WorkerType.DISCOVERY,
+        WorkerType.EXTRACTION,
+        WorkerType.SCHEDULE,
+        WorkerType.REPORTING,
+        WorkerType.ALL,
+    ]
 
     for worker_type in worker_types:
         print(f"   ✅ {worker_type.name}: {worker_type.value}")
@@ -85,7 +91,9 @@ async def test_pipeline_runner_specialization():
 
         for worker_type, expected_type_str in test_cases:
             runner = DistributedPipelineRunner(
-                worker_type=worker_type, disable_monitoring=True, worker_id=f"test-{expected_type_str}-runner"
+                worker_type=worker_type,
+                disable_monitoring=True,
+                worker_id=f"test-{expected_type_str}-runner",
             )
 
             assert runner.worker_type == worker_type
@@ -134,17 +142,17 @@ def test_deployment_configurations():
     print("\n🧪 Testing Deployment Configurations...")
 
     deployment_files = [
-        "k8s/discovery-deployment.yaml",
-        "k8s/extraction-deployment.yaml",
-        "k8s/schedule-deployment.yaml",
-        "k8s/reporting-deployment.yaml",
+        "k8s/discovery - deployment.yaml",
+        "k8s/extraction - deployment.yaml",
+        "k8s/schedule - deployment.yaml",
+        "k8s/reporting - deployment.yaml",
     ]
 
     expected_worker_types = {
-        "discovery-deployment.yaml": "discovery",
-        "extraction-deployment.yaml": "extraction",
-        "schedule-deployment.yaml": "schedule",
-        "reporting-deployment.yaml": "reporting",
+        "discovery - deployment.yaml": "discovery",
+        "extraction - deployment.yaml": "extraction",
+        "schedule - deployment.yaml": "schedule",
+        "reporting - deployment.yaml": "reporting",
     }
 
     for deployment_file in deployment_files:

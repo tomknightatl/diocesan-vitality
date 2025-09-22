@@ -28,8 +28,8 @@ class CircuitBreakerConfig:
     """Configuration for circuit breaker behavior"""
 
     failure_threshold: int = 5  # Failures before opening circuit
-    recovery_timeout: int = 60  # Seconds before trying half-open
-    success_threshold: int = 3  # Successes needed to close from half-open
+    recovery_timeout: int = 60  # Seconds before trying half - open
+    success_threshold: int = 3  # Successes needed to close from half - open
     request_timeout: int = 30  # Seconds before timing out requests
     max_retries: int = 3  # Maximum retry attempts
     retry_delay: float = 1.0  # Base delay between retries (exponential backoff)
@@ -37,8 +37,6 @@ class CircuitBreakerConfig:
 
 class CircuitBreakerOpenError(Exception):
     """Raised when circuit breaker is open and blocks requests"""
-
-    pass
 
 
 class CircuitBreaker:
@@ -48,8 +46,8 @@ class CircuitBreaker:
     Features:
     - Automatic failure detection and circuit opening
     - Exponential backoff for retries
-    - Half-open state for gradual recovery
-    - Thread-safe operation
+    - Half - open state for gradual recovery
+    - Thread - safe operation
     - Detailed logging and monitoring
     """
 
@@ -106,14 +104,14 @@ class CircuitBreaker:
                     logger.warning(f"🚫 Circuit breaker '{self.name}' OPEN - blocking request")
                     raise CircuitBreakerOpenError(f"Circuit breaker '{self.name}' is OPEN")
                 else:
-                    # Time to try half-open
-                    logger.info(f"🔄 Circuit breaker '{self.name}' transitioning to HALF-OPEN")
+                    # Time to try half - open
+                    logger.info(f"🔄 Circuit breaker '{self.name}' transitioning to HALF - OPEN")
                     self.state = CircuitState.HALF_OPEN
                     self.success_count = 0
 
             # In HALF_OPEN state, limit concurrent requests
             if self.state == CircuitState.HALF_OPEN:
-                logger.debug(f"🟡 Circuit breaker '{self.name}' in HALF-OPEN state - testing request")
+                logger.debug(f"🟡 Circuit breaker '{self.name}' in HALF - OPEN state - testing request")
 
         # Execute the function with retry logic
         last_exception = None
@@ -178,7 +176,7 @@ class CircuitBreaker:
 
             if self.state == CircuitState.HALF_OPEN:
                 self.success_count += 1
-                logger.debug(f"✅ Success in HALF-OPEN state ({self.success_count}/{self.config.success_threshold})")
+                logger.debug(f"✅ Success in HALF - OPEN state ({self.success_count}/{self.config.success_threshold})")
 
                 if self.success_count >= self.config.success_threshold:
                     logger.info(f"🟢 Circuit breaker '{self.name}' CLOSED - service recovered")

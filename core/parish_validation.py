@@ -6,7 +6,7 @@ Provides intelligent classification of extracted entities as actual parishes vs 
 
 import re
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional
 
 from core.logger import get_logger
 
@@ -31,7 +31,7 @@ class ParishValidator:
     """
 
     def __init__(self):
-        # High-confidence parish indicators
+        # High - confidence parish indicators
         self.PARISH_KEYWORDS = {
             # Direct parish identifiers
             "parish",
@@ -56,7 +56,7 @@ class ParishValidator:
             "assumption",
             "annunciation",
             "nativity",
-            # Catholic-specific terms
+            # Catholic - specific terms
             "catholic",
             "roman catholic",
             "byzantine",
@@ -106,7 +106,7 @@ class ParishValidator:
             "development",
         }
 
-        # Medium-confidence parish indicators
+        # Medium - confidence parish indicators
         self.WEAK_PARISH_KEYWORDS = {
             "community",
             "congregation",
@@ -119,7 +119,7 @@ class ParishValidator:
             "eucharist",
         }
 
-        # Location-based indicators (suggest parish presence)
+        # Location - based indicators (suggest parish presence)
         self.LOCATION_KEYWORDS = {
             "avenue",
             "street",
@@ -142,18 +142,23 @@ class ParishValidator:
         """Compile regex patterns for efficient matching"""
 
         # Saint name patterns - common variations
-        self.saint_pattern = re.compile(r"\b(?:saint|st\.?|san|santa|santo)\s+[a-z]+", re.IGNORECASE)
+        self.saint_pattern = re.compile(r"\b(?:saint|st\.?|san|santa|santo)\s+[a - z]+", re.IGNORECASE)
 
         # Address patterns
         self.address_pattern = re.compile(
-            r"\b\d+\s+[a-z\s]+(?:street|st|avenue|ave|road|rd|drive|dr|boulevard|blvd|lane|ln)\b", re.IGNORECASE
+            r"\b\d+\s+[a - z\s]+(?:street|st|avenue|ave|road|rd|drive|dr|boulevard|blvd|lane|ln)\b",
+            re.IGNORECASE,
         )
 
         # Phone number patterns
         self.phone_pattern = re.compile(r"\b(?:\(\d{3}\)|\d{3}[-.]?)\s*\d{3}[-.]?\d{4}\b")
 
     def validate_parish(
-        self, name: str, url: Optional[str] = None, address: Optional[str] = None, additional_text: Optional[str] = None
+        self,
+        name: str,
+        url: Optional[str] = None,
+        address: Optional[str] = None,
+        additional_text: Optional[str] = None,
     ) -> ValidationResult:
         """
         Comprehensive parish validation using multiple signals.
@@ -167,66 +172,12 @@ class ParishValidator:
         Returns:
             ValidationResult with confidence score and reasoning
         """
-
-        # Combine all available text for analysis
-        full_text = self._prepare_text(name, url, address, additional_text)
+        self._prepare_text(name, url, address, additional_text)
         name_lower = name.lower().strip()
 
-        # Initialize scoring
-        parish_score = 0.0
-        exclude_score = 0.0
-        matched_parish = []
-        matched_exclude = []
-
-        # 1. Check for strong parish indicators
-        for keyword in self.PARISH_KEYWORDS:
-            if keyword in name_lower:
-                parish_score += 2.0
-                matched_parish.append(keyword)
-
-        # 2. Check for strong exclusion indicators
-        for keyword in self.EXCLUDE_KEYWORDS:
-            if keyword in name_lower:
-                exclude_score += 2.5  # Slightly stronger weight for exclusions
-                matched_exclude.append(keyword)
-
-        # 3. Check for weak parish indicators
-        for keyword in self.WEAK_PARISH_KEYWORDS:
-            if keyword in name_lower:
-                parish_score += 0.5
-                matched_parish.append(keyword)
-
-        # 4. Saint name pattern matching
-        if self.saint_pattern.search(name):
-            parish_score += 1.5
-            matched_parish.append("saint_pattern")
-
-        # 5. Address/location context (if available)
-        if address and self.address_pattern.search(address):
-            parish_score += 1.0
-            matched_parish.append("address_pattern")
-
-        # 6. URL context analysis
-        if url:
-            url_lower = url.lower()
-            if any(term in url_lower for term in ["parish", "church", "catholic"]):
-                parish_score += 0.5
-                matched_parish.append("url_context")
-
-        # 7. Length and format heuristics
-        if len(name.strip()) < 3:
-            exclude_score += 1.0  # Too short to be a parish name
-            matched_exclude.append("too_short")
-
-        if name.isupper() and len(name) > 20:
-            exclude_score += 0.5  # ALL CAPS long text often administrative
-            matched_exclude.append("all_caps_long")
-
-        # 8. Common navigation/generic terms
-        navigation_terms = {"home", "contact", "about", "contact us", "about us"}
-        if name_lower in navigation_terms:
-            exclude_score += 2.0
-            matched_exclude.append("navigation_term")
+        parish_score, exclude_score, matched_parish, matched_exclude = self._calculate_validation_scores(
+            name, name_lower, url, address
+        )
 
         # Calculate final confidence and decision
         confidence = self._calculate_confidence(parish_score, exclude_score)
@@ -241,12 +192,100 @@ class ParishValidator:
             excluded_keywords=matched_exclude,
         )
 
-        # Log detailed analysis for debugging
+        self._log_validation_result(name, result)
+        return result
+
+    def _calculate_validation_scores(self, name: str, name_lower: str, url: str, address: str) -> tuple:
+        """Calculate parish and exclusion scores from various validation signals"""
+        parish_score = 0.0
+        exclude_score = 0.0
+        matched_parish = []
+        matched_exclude = []
+
+        # Apply all validation checks
+        self._check_strong_parish_indicators(name_lower, parish_score, matched_parish)
+        self._check_exclusion_indicators(name_lower, exclude_score, matched_exclude)
+        self._check_weak_parish_indicators(name_lower, parish_score, matched_parish)
+        self._check_saint_pattern(name, parish_score, matched_parish)
+        self._check_address_context(address, parish_score, matched_parish)
+        self._check_url_context(url, parish_score, matched_parish)
+        self._check_format_heuristics(name, name_lower, exclude_score, matched_exclude)
+        self._check_navigation_terms(name_lower, exclude_score, matched_exclude)
+
+        return parish_score, exclude_score, matched_parish, matched_exclude
+
+    def _check_strong_parish_indicators(self, name_lower: str, parish_score: float, matched_parish: list):
+        """Check for strong parish indicator keywords"""
+        for keyword in self.PARISH_KEYWORDS:
+            if keyword in name_lower:
+                parish_score += 2.0
+                matched_parish.append(keyword)
+        return parish_score
+
+    def _check_exclusion_indicators(self, name_lower: str, exclude_score: float, matched_exclude: list):
+        """Check for strong exclusion indicator keywords"""
+        for keyword in self.EXCLUDE_KEYWORDS:
+            if keyword in name_lower:
+                exclude_score += 2.5  # Slightly stronger weight for exclusions
+                matched_exclude.append(keyword)
+        return exclude_score
+
+    def _check_weak_parish_indicators(self, name_lower: str, parish_score: float, matched_parish: list):
+        """Check for weak parish indicator keywords"""
+        for keyword in self.WEAK_PARISH_KEYWORDS:
+            if keyword in name_lower:
+                parish_score += 0.5
+                matched_parish.append(keyword)
+        return parish_score
+
+    def _check_saint_pattern(self, name: str, parish_score: float, matched_parish: list):
+        """Check for saint name patterns"""
+        if self.saint_pattern.search(name):
+            parish_score += 1.5
+            matched_parish.append("saint_pattern")
+        return parish_score
+
+    def _check_address_context(self, address: str, parish_score: float, matched_parish: list):
+        """Check address context for validation signals"""
+        if address and self.address_pattern.search(address):
+            parish_score += 1.0
+            matched_parish.append("address_pattern")
+        return parish_score
+
+    def _check_url_context(self, url: str, parish_score: float, matched_parish: list):
+        """Check URL context for validation signals"""
+        if url:
+            url_lower = url.lower()
+            if any(term in url_lower for term in ["parish", "church", "catholic"]):
+                parish_score += 0.5
+                matched_parish.append("url_context")
+        return parish_score
+
+    def _check_format_heuristics(self, name: str, name_lower: str, exclude_score: float, matched_exclude: list):
+        """Check format-based heuristics for exclusion"""
+        if len(name.strip()) < 3:
+            exclude_score += 1.0  # Too short to be a parish name
+            matched_exclude.append("too_short")
+
+        if name.isupper() and len(name) > 20:
+            exclude_score += 0.5  # ALL CAPS long text often administrative
+            matched_exclude.append("all_caps_long")
+
+        return exclude_score
+
+    def _check_navigation_terms(self, name_lower: str, exclude_score: float, matched_exclude: list):
+        """Check for common navigation/generic terms"""
+        navigation_terms = {"home", "contact", "about", "contact us", "about us"}
+        if name_lower in navigation_terms:
+            exclude_score += 2.0
+            matched_exclude.append("navigation_term")
+        return exclude_score
+
+    def _log_validation_result(self, name: str, result: ValidationResult):
+        """Log detailed validation analysis for debugging"""
         logger.debug(
             f"Parish validation: '{name}' -> {result.is_valid} " f"(confidence: {result.confidence:.2f}) - {result.reason}"
         )
-
-        return result
 
     def _prepare_text(self, name: str, url: str, address: str, additional: str) -> str:
         """Combine all available text for analysis"""
@@ -259,7 +298,7 @@ class ParishValidator:
         if total_score == 0:
             return 0.5  # Neutral confidence when no signals
 
-        # Normalize to 0-1 range, with bias toward higher scores
+        # Normalize to 0 - 1 range, with bias toward higher scores
         confidence = min(max(abs(parish_score - exclude_score) / (total_score + 1), 0.1), 0.95)
         return confidence
 
@@ -279,13 +318,17 @@ class ParishValidator:
         if exclude_score >= 2.0 and parish_score <= 4.0:
             return False
 
-        # Tie-breaker: favor parish if scores are close
+        # Tie - breaker: favor parish if scores are close
         return parish_score > exclude_score
 
     def _generate_reason(
-        self, parish_score: float, exclude_score: float, matched_parish: List[str], matched_exclude: List[str]
+        self,
+        parish_score: float,
+        exclude_score: float,
+        matched_parish: List[str],
+        matched_exclude: List[str],
     ) -> str:
-        """Generate human-readable reason for the decision"""
+        """Generate human - readable reason for the decision"""
 
         if parish_score > exclude_score:
             reason = f"Parish indicators (score: {parish_score:.1f}): {', '.join(matched_parish[:3])}"
@@ -318,7 +361,10 @@ class ParishValidator:
                 continue
 
             result = self.validate_parish(
-                name=name, url=entity.get("url"), address=entity.get("address"), additional_text=entity.get("description")
+                name=name,
+                url=entity.get("url"),
+                address=entity.get("address"),
+                additional_text=entity.get("description"),
             )
 
             if result.is_valid:

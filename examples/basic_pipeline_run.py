@@ -63,7 +63,7 @@ def run_basic_pipeline():
         logger.info("📊 Running pipeline with conservative settings:")
         logger.info("   - Max parishes per diocese: 5")
         logger.info("   - Skipping reporting phase")
-        logger.info("   - This may take 5-10 minutes depending on your internet connection")
+        logger.info("   - This may take 5 - 10 minutes depending on your internet connection")
 
         # Run the pipeline
         pipeline_main()
@@ -72,7 +72,7 @@ def run_basic_pipeline():
         logger.info("📖 Next steps:")
         logger.info("   - Check your database for extracted data")
         logger.info("   - View the dashboard at http://localhost:3000")
-        logger.info("   - Try running with more parishes: diocesan-vitality pipeline --max-parishes-per-diocese 25")
+        logger.info("   - Try running with more parishes: diocesan - vitality pipeline --max - parishes - per - diocese 25")
 
         return True
 

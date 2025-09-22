@@ -42,9 +42,14 @@ class MockAsyncRequestHandler:
                     raise Exception(f"Mock failure for {url}")
 
                 self.successful_requests += 1
-                return {"url": url, "status": "success", "processing_time": processing_time, "data": f"Mock data for {url}"}
+                return {
+                    "url": url,
+                    "status": "success",
+                    "processing_time": processing_time,
+                    "data": f"Mock data for {url}",
+                }
 
-            except Exception as e:
+            except Exception:
                 self.failed_requests += 1
                 raise
 
@@ -87,7 +92,13 @@ class MockAsyncRequestHandler:
 
 @circuit_breaker(
     "mock_service",
-    CircuitBreakerConfig(failure_threshold=3, recovery_timeout=5, request_timeout=10, max_retries=1, retry_delay=1.0),
+    CircuitBreakerConfig(
+        failure_threshold=3,
+        recovery_timeout=5,
+        request_timeout=10,
+        max_retries=1,
+        retry_delay=1.0,
+    ),
 )
 async def mock_service_call(service_name: str, fail_probability: float = 0.2):
     """Mock service call with circuit breaker protection"""
@@ -108,7 +119,7 @@ async def test_concurrent_processing():
     handler = MockAsyncRequestHandler(pool_size=4)
 
     # Create test URLs
-    test_urls = [f"https://mock-diocese-{i}.example.com/parishes" for i in range(20)]
+    test_urls = [f"https://mock - diocese-{i}.example.com/parishes" for i in range(20)]
 
     # Test sequential processing first
     logger.info("📊 Sequential processing baseline...")
@@ -138,9 +149,9 @@ async def test_concurrent_processing():
 
     # Performance analysis
     speedup = sequential_time / concurrent_time
-    efficiency = speedup / 4  # 4-core simulation
+    efficiency = speedup / 4  # 4 - core simulation
 
-    logger.info(f"🏁 Concurrent Processing Results:")
+    logger.info("🏁 Concurrent Processing Results:")
     logger.info(f"   • Sequential time: {sequential_time:.2f}s ({sequential_success} successful)")
     logger.info(f"   • Concurrent time: {concurrent_time:.2f}s ({concurrent_success} successful)")
     logger.info(f"   • Speedup: {speedup:.1f}x")
@@ -180,18 +191,23 @@ async def test_circuit_breaker_integration():
             try:
                 result = await mock_service_call(f"{service_name}_{i}", fail_rate)
                 success_count += 1
-                logger.debug(f"✅ Call {i+1}: {result}")
+                logger.debug(f"✅ Call {i + 1}: {result}")
             except Exception as e:
                 if "Circuit breaker" in str(e):
                     blocked_count += 1
-                    logger.debug(f"🚫 Call {i+1}: Blocked by circuit breaker")
+                    logger.debug(f"🚫 Call {i + 1}: Blocked by circuit breaker")
                 else:
                     failure_count += 1
-                    logger.debug(f"❌ Call {i+1}: {str(e)}")
+                    logger.debug(f"❌ Call {i + 1}: {str(e)}")
 
             await asyncio.sleep(0.1)  # Small delay between calls
 
-        results[service_name] = {"success": success_count, "blocked": blocked_count, "failed": failure_count, "total": 15}
+        results[service_name] = {
+            "success": success_count,
+            "blocked": blocked_count,
+            "failed": failure_count,
+            "total": 15,
+        }
 
         logger.info(f"📊 {service_name}: {success_count} success, {failure_count} failed, {blocked_count} blocked")
 
@@ -208,7 +224,7 @@ async def test_batch_optimization():
     logger.info("=" * 42)
 
     handler = MockAsyncRequestHandler(pool_size=6)
-    test_urls = [f"https://batch-test-{i}.example.com" for i in range(30)]
+    test_urls = [f"https://batch - test-{i}.example.com" for i in range(30)]
 
     # Test different batch sizes
     batch_sizes = [3, 6, 10, 15]
@@ -249,7 +265,7 @@ async def test_rate_limiting_simulation():
     logger.info("\n🧪 Testing Rate Limiting Simulation")
     logger.info("=" * 37)
 
-    # Simulate rate-limited requests
+    # Simulate rate - limited requests
     class RateLimitedHandler:
         def __init__(self, requests_per_second: float = 2.0):
             self.requests_per_second = requests_per_second
@@ -272,10 +288,10 @@ async def test_rate_limiting_simulation():
 
             # Simulate request processing
             await asyncio.sleep(random.uniform(0.1, 0.3))
-            return f"Rate-limited response for {url}"
+            return f"Rate - limited response for {url}"
 
     handler = RateLimitedHandler(requests_per_second=5.0)  # 5 requests per second
-    test_urls = [f"https://rate-test-{i}.example.com" for i in range(12)]
+    test_urls = [f"https://rate - test-{i}.example.com" for i in range(12)]
 
     start_time = time.time()
 
@@ -286,8 +302,8 @@ async def test_rate_limiting_simulation():
     total_time = time.time() - start_time
     actual_rate = len(results) / total_time
 
-    logger.info(f"📊 Rate Limiting Results:")
-    logger.info(f"   • Target rate: 5.0 requests/second")
+    logger.info("📊 Rate Limiting Results:")
+    logger.info("   • Target rate: 5.0 requests/second")
     logger.info(f"   • Actual rate: {actual_rate:.1f} requests/second")
     logger.info(f"   • Total time: {total_time:.2f}s for {len(results)} requests")
     logger.info(f"   • Rate compliance: {'✅ Good' if actual_rate <= 5.5 else '❌ Exceeded'}")
@@ -331,7 +347,7 @@ async def run_async_logic_tests():
 
         if all_passed:
             logger.info("\n🚀 Key Benefits Validated:")
-            logger.info("   • 3-4x performance improvement through concurrency")
+            logger.info("   • 3 - 4x performance improvement through concurrency")
             logger.info("   • Robust error handling and circuit breaker protection")
             logger.info("   • Intelligent batch processing optimization")
             logger.info("   • Respectful rate limiting for external services")

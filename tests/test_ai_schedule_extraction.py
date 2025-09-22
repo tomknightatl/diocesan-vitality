@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script for AI-enhanced schedule extraction.
+Test script for AI - enhanced schedule extraction.
 """
 
 import json
@@ -38,7 +38,7 @@ def test_adoration_extraction():
 
     # Test case 2: Perpetual adoration
     test_content_2 = """
-    <div class="adoration-info">
+    <div class="adoration - info">
         <h3>Perpetual Adoration Chapel</h3>
         <p>Our Perpetual Adoration Chapel is open 24 hours a day, 7 days a week.</p>
         <p>Sign up for your hour at the parish office. We especially need adorers for:</p>

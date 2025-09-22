@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Async WebDriver Manager with concurrent request handling and intelligent rate limiting.
-Provides high-performance parish extraction with connection pooling and queue management.
+Provides high - performance parish extraction with connection pooling and queue management.
 """
 
 import asyncio
@@ -10,18 +10,21 @@ import shutil
 import subprocess
 import threading
 import time
-from collections import defaultdict, deque
+from collections import deque
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Set
 from urllib.parse import urlparse
 
 from selenium import webdriver
-from selenium.common.exceptions import TimeoutException, WebDriverException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
-from core.circuit_breaker import CircuitBreakerConfig, CircuitBreakerOpenError, circuit_breaker
+from core.circuit_breaker import (
+    CircuitBreakerConfig,
+    CircuitBreakerOpenError,
+    circuit_breaker,
+)
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -32,12 +35,12 @@ def _find_chrome_binary():
     """Find the Chrome binary path dynamically based on what's available."""
     # List of possible Chrome binary locations in order of preference
     chrome_binaries = [
-        "/usr/bin/google-chrome",  # Standard Google Chrome on Linux
-        "/usr/bin/chromium-browser",  # Chromium on Raspberry Pi/ARM64
+        "/usr/bin/google - chrome",  # Standard Google Chrome on Linux
+        "/usr/bin/chromium - browser",  # Chromium on Raspberry Pi/ARM64
         "/usr/bin/chromium",  # Alternative Chromium path
         "/opt/google/chrome/chrome",  # Alternative Google Chrome path
-        "google-chrome",  # System PATH fallback
-        "chromium-browser",  # System PATH fallback
+        "google - chrome",  # System PATH fallback
+        "chromium - browser",  # System PATH fallback
         "chromium",  # System PATH fallback
     ]
 
@@ -110,7 +113,7 @@ class DomainRateLimiter:
         with self._lock:
             current_time = time.time()
 
-            # Remove old request times (outside the 1-second window)
+            # Remove old request times (outside the 1 - second window)
             while self.request_times and current_time - self.request_times[0] > 1.0:
                 self.request_times.popleft()
 
@@ -189,9 +192,9 @@ class AsyncWebDriverPool:
             try:
                 driver = await self._create_driver()
                 await self.driver_pool.put(driver)
-                logger.debug(f"✅ Driver {i+1}/{self.pool_size} created")
+                logger.debug(f"✅ Driver {i + 1}/{self.pool_size} created")
             except Exception as e:
-                logger.error(f"❌ Failed to create driver {i+1}: {e}")
+                logger.error(f"❌ Failed to create driver {i + 1}: {e}")
 
         self._initialized = True
         logger.info(f"🎯 WebDriver pool initialized with {self.driver_pool.qsize()} drivers")
@@ -203,14 +206,14 @@ class AsyncWebDriverPool:
         """Create a new WebDriver instance"""
         chrome_options = Options()
         chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--window-size=1920,1080")
-        chrome_options.add_argument("--disable-images")
-        chrome_options.add_argument("--disable-javascript")  # Disable JS for faster loading
-        chrome_options.add_argument("--disable-plugins")
-        chrome_options.add_argument("--disable-extensions")
+        chrome_options.add_argument("--no - sandbox")
+        chrome_options.add_argument("--disable - dev - shm - usage")
+        chrome_options.add_argument("--disable - gpu")
+        chrome_options.add_argument("--window - size=1920,1080")
+        chrome_options.add_argument("--disable - images")
+        chrome_options.add_argument("--disable - javascript")  # Disable JS for faster loading
+        chrome_options.add_argument("--disable - plugins")
+        chrome_options.add_argument("--disable - extensions")
 
         # Run driver creation in thread pool to avoid blocking
         loop = asyncio.get_event_loop()
@@ -235,7 +238,10 @@ class AsyncWebDriverPool:
             if not _system_chromedriver_warning_logged:
                 logger.warning(f"System ChromeDriver failed: {e}, falling back to ChromeDriverManager")
                 _system_chromedriver_warning_logged = True
-            return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+            return webdriver.Chrome(
+                service=Service(ChromeDriverManager().install()),
+                options=chrome_options,
+            )
 
     def get_rate_limiter(self, domain: str) -> DomainRateLimiter:
         """Get or create rate limiter for domain"""
@@ -254,10 +260,23 @@ class AsyncWebDriverPool:
         return self.domain_rate_limiters[domain]
 
     async def submit_request(
-        self, url: str, callback: Callable, *args, priority: int = 1, max_retries: int = 2, **kwargs
+        self,
+        url: str,
+        callback: Callable,
+        *args,
+        priority: int = 1,
+        max_retries: int = 2,
+        **kwargs,
     ) -> Any:
         """Submit a request to the async queue"""
-        task = RequestTask(url=url, callback=callback, args=args, kwargs=kwargs, priority=priority, max_retries=max_retries)
+        task = RequestTask(
+            url=url,
+            callback=callback,
+            args=args,
+            kwargs=kwargs,
+            priority=priority,
+            max_retries=max_retries,
+        )
 
         # Create future for result
         future = asyncio.get_event_loop().create_future()
@@ -356,7 +375,13 @@ class AsyncWebDriverPool:
 
     @circuit_breaker(
         "async_webdriver_request",
-        CircuitBreakerConfig(failure_threshold=5, recovery_timeout=30, request_timeout=45, max_retries=1, retry_delay=2.0),
+        CircuitBreakerConfig(
+            failure_threshold=5,
+            recovery_timeout=30,
+            request_timeout=45,
+            max_retries=1,
+            retry_delay=2.0,
+        ),
     )
     async def _protected_execute(self, driver, task: RequestTask):
         """Execute request with circuit breaker protection"""

@@ -28,7 +28,7 @@ class OptimizedCircuitBreakerConfigs:
         - Shorter retry delay to speed up fallback attempts
         """
         return CircuitBreakerConfig(
-            failure_threshold=15,  # Optimized from 30 - fail-fast on problematic dioceses
+            failure_threshold=15,  # Optimized from 30 - fail - fast on problematic dioceses
             recovery_timeout=10,  # Decreased from 15 - DOM issues resolve quickly
             success_threshold=2,  # Only need 2 successes to confirm recovery
             request_timeout=10,  # Shorter timeout for element operations
@@ -167,11 +167,11 @@ class OptimizedCircuitBreakerConfigs:
         configs = {
             "element": OptimizedCircuitBreakerConfigs.get_element_interaction_config(),
             "page_load": OptimizedCircuitBreakerConfigs.get_page_load_config(),
-            "javascript": OptimizedCircuitBreakerConfigs.get_javascript_execution_config(),
+            "javascript": (OptimizedCircuitBreakerConfigs.get_javascript_execution_config()),
             "search": OptimizedCircuitBreakerConfigs.get_search_interaction_config(),
             "map": OptimizedCircuitBreakerConfigs.get_map_interaction_config(),
-            "url_verification": OptimizedCircuitBreakerConfigs.get_url_verification_config(),
-            "ai_content_analysis": OptimizedCircuitBreakerConfigs.get_ai_content_analysis_config(),
+            "url_verification": (OptimizedCircuitBreakerConfigs.get_url_verification_config()),
+            "ai_content_analysis": (OptimizedCircuitBreakerConfigs.get_ai_content_analysis_config()),
         }
 
         config = configs.get(operation_type)
@@ -182,7 +182,12 @@ class OptimizedCircuitBreakerConfigs:
         # Default configuration for unknown operation types
         logger.debug(f"🔧 Using default circuit breaker config for '{operation_type}' operations")
         return CircuitBreakerConfig(
-            failure_threshold=10, recovery_timeout=30, success_threshold=3, request_timeout=30, max_retries=2, retry_delay=1.5
+            failure_threshold=10,
+            recovery_timeout=30,
+            success_threshold=3,
+            request_timeout=30,
+            max_retries=2,
+            retry_delay=1.5,
         )
 
 

@@ -2,15 +2,15 @@
 """
 Intelligent URL filtering system for enhanced extraction efficiency.
 
-This module provides pre-filtering capabilities to reduce wasted processing
-on low-probability URLs before they reach the verification stage.
+This module provides pre - filtering capabilities to reduce wasted processing
+on low - probability URLs before they reach the verification stage.
 """
 
 import re
 import urllib.parse
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Tuple
 
 from core.logger import get_logger
 
@@ -42,7 +42,7 @@ class IntelligentURLFilter:
     """
     Intelligent URL filtering system to optimize processing efficiency.
 
-    Pre-filters URLs based on:
+    Pre - filters URLs based on:
     - URL structure patterns
     - Content type indicators
     - Blacklisted patterns
@@ -53,9 +53,9 @@ class IntelligentURLFilter:
     def __init__(self):
         self.logger = get_logger(__name__)
 
-        # High-value URL patterns
+        # High - value URL patterns
         self.high_value_patterns = [
-            # Schedule-related patterns
+            # Schedule - related patterns
             r"(?i)(reconciliation|confession|adoration|eucharistic)",
             r"(?i)(schedule|times|hours|worship)",
             r"(?i)(mass.*times|liturgy.*schedule)",
@@ -73,7 +73,7 @@ class IntelligentURLFilter:
             r"/prayer",
         ]
 
-        # Medium-value patterns
+        # Medium - value patterns
         self.medium_value_patterns = [
             r"(?i)(parish|church|catholic)",
             r"(?i)(ministry|ministries|faith)",
@@ -83,7 +83,7 @@ class IntelligentURLFilter:
             r"/events",
         ]
 
-        # Low-value patterns (still worth checking but lower priority)
+        # Low - value patterns (still worth checking but lower priority)
         self.low_value_patterns = [
             r"(?i)(community|news|announcements)",
             r"(?i)(education|school|youth)",
@@ -95,7 +95,7 @@ class IntelligentURLFilter:
         # Blacklisted patterns (skip entirely)
         self.blacklisted_patterns = [
             # Administrative/technical pages
-            r"(?i)(admin|wp-admin|login|register|signup)",
+            r"(?i)(admin|wp - admin|login|register|signup)",
             r"(?i)(forgot.*password|reset.*password)",
             r"(?i)(privacy.*policy|terms.*service|legal)",
             r"(?i)(sitemap|robots\.txt|favicon\.ico)",
@@ -114,7 +114,7 @@ class IntelligentURLFilter:
             r"(?i)(maintenance|coming.*soon|under.*construction)",
         ]
 
-        # Domain-specific blacklists
+        # Domain - specific blacklists
         self.blacklisted_domains = {
             "facebook.com",
             "twitter.com",
@@ -192,24 +192,20 @@ class IntelligentURLFilter:
 
         return analyses
 
-    def _analyze_single_url(self, url: str, ml_confidence: float) -> URLAnalysis:
-        """Analyze a single URL and determine its processing priority."""
-        reasons = []
-        confidence_score = 0.0
-        estimated_time = 10.0  # Base processing time in seconds
-
-        # Parse URL components
+    def _parse_url_safely(self, url: str) -> tuple:
+        """Parse URL components safely with error handling."""
         try:
             parsed = urllib.parse.urlparse(url)
             domain = parsed.netloc.lower()
             path = parsed.path.lower()
-            query = parsed.query.lower()
-            fragment = parsed.fragment.lower()
             full_url_lower = url.lower()
+            return parsed, domain, path, full_url_lower, None
         except Exception as e:
             self.logger.warning(f"🔍 Failed to parse URL {url}: {e}")
-            return URLAnalysis(url, URLQuality.SKIP, 0.0, ["Invalid URL format"], 0.0)
+            return None, None, None, None, e
 
+    def _check_blacklisted_content(self, url: str, domain: str, path: str, full_url_lower: str) -> URLAnalysis:
+        """Check if URL should be skipped due to blacklisted content."""
         # Check blacklisted domains
         if any(blacklisted in domain for blacklisted in self.blacklisted_domains):
             return URLAnalysis(url, URLQuality.SKIP, 0.0, ["Blacklisted domain"], 0.0)
@@ -220,42 +216,54 @@ class IntelligentURLFilter:
                 return URLAnalysis(url, URLQuality.SKIP, 0.0, [f"Blacklisted pattern: {pattern}"], 0.0)
 
         # Check file extensions
-        path_lower = path.lower()
         for ext in self.blacklisted_extensions:
-            if path_lower.endswith(ext):
+            if path.endswith(ext):
                 return URLAnalysis(url, URLQuality.SKIP, 0.0, [f"Blacklisted extension: {ext}"], 0.0)
 
-        # Analyze high-value patterns
-        high_value_matches = 0
+        return None  # Not blacklisted
+
+    def _analyze_value_patterns(self, full_url_lower: str) -> tuple:
+        """Analyze URL against value pattern lists and calculate confidence score."""
+        confidence_score = 0.0
+        reasons = []
+
+        # Analyze high - value patterns
         for pattern in self.high_value_patterns:
             if re.search(pattern, full_url_lower):
-                high_value_matches += 1
                 confidence_score += 25.0
-                reasons.append(f"High-value pattern: {pattern}")
+                reasons.append(f"High - value pattern: {pattern}")
 
-        # Analyze medium-value patterns
-        medium_value_matches = 0
+        # Analyze medium - value patterns
         for pattern in self.medium_value_patterns:
             if re.search(pattern, full_url_lower):
-                medium_value_matches += 1
                 confidence_score += 15.0
-                reasons.append(f"Medium-value pattern: {pattern}")
+                reasons.append(f"Medium - value pattern: {pattern}")
 
-        # Analyze low-value patterns
-        low_value_matches = 0
+        # Analyze low - value patterns
         for pattern in self.low_value_patterns:
             if re.search(pattern, full_url_lower):
-                low_value_matches += 1
                 confidence_score += 5.0
-                reasons.append(f"Low-value pattern: {pattern}")
+                reasons.append(f"Low - value pattern: {pattern}")
 
-        # Apply ML confidence boost
+        return confidence_score, reasons
+
+    def _apply_ml_confidence_boost(
+        self,
+        confidence_score: float,
+        reasons: list,
+        estimated_time: float,
+        ml_confidence: float,
+    ) -> tuple:
+        """Apply ML confidence boost to scoring."""
         if ml_confidence > 0.3:
             confidence_score += ml_confidence * 50.0
             reasons.append(f"ML confidence: {ml_confidence:.3f}")
-            estimated_time *= 0.8  # ML-predicted URLs process faster
+            estimated_time *= 0.8  # ML - predicted URLs process faster
+        return confidence_score, reasons, estimated_time
 
-        # URL structure analysis
+    def _analyze_url_structure(self, parsed, confidence_score: float, reasons: list, estimated_time: float) -> tuple:
+        """Analyze URL structure and adjust scoring accordingly."""
+        # URL depth analysis
         path_depth = len([p for p in parsed.path.split("/") if p])
         if path_depth <= 2:
             confidence_score += 10.0
@@ -271,7 +279,10 @@ class IntelligentURLFilter:
             estimated_time *= 1.2
             reasons.append("Dynamic parameters present")
 
-        # Determine quality level
+        return confidence_score, reasons, estimated_time
+
+    def _determine_quality_level(self, confidence_score: float, estimated_time: float) -> tuple:
+        """Determine URL quality level based on confidence score."""
         if confidence_score >= 80.0:
             quality = URLQuality.EXCELLENT
             estimated_time *= 0.7
@@ -287,6 +298,38 @@ class IntelligentURLFilter:
             quality = URLQuality.SKIP
             estimated_time = 0.0
 
+        return quality, estimated_time
+
+    def _analyze_single_url(self, url: str, ml_confidence: float) -> URLAnalysis:
+        """Analyze a single URL and determine its processing priority."""
+        estimated_time = 10.0  # Base processing time in seconds
+
+        # Parse URL components
+        parsed, domain, path, full_url_lower, parse_error = self._parse_url_safely(url)
+        if parse_error:
+            return URLAnalysis(url, URLQuality.SKIP, 0.0, ["Invalid URL format"], 0.0)
+
+        # Check for blacklisted content
+        blacklist_result = self._check_blacklisted_content(url, domain, path, full_url_lower)
+        if blacklist_result:
+            return blacklist_result
+
+        # Analyze value patterns
+        confidence_score, reasons = self._analyze_value_patterns(full_url_lower)
+
+        # Apply ML confidence boost
+        confidence_score, reasons, estimated_time = self._apply_ml_confidence_boost(
+            confidence_score, reasons, estimated_time, ml_confidence
+        )
+
+        # Analyze URL structure
+        confidence_score, reasons, estimated_time = self._analyze_url_structure(
+            parsed, confidence_score, reasons, estimated_time
+        )
+
+        # Determine quality level
+        quality, estimated_time = self._determine_quality_level(confidence_score, estimated_time)
+
         return URLAnalysis(
             url=url,
             quality=quality,
@@ -296,7 +339,10 @@ class IntelligentURLFilter:
         )
 
     def filter_urls(
-        self, urls: List[str], max_urls: int = 50, ml_predictions: Dict[str, float] = None
+        self,
+        urls: List[str],
+        max_urls: int = 50,
+        ml_predictions: Dict[str, float] = None,
     ) -> Tuple[List[str], Dict[str, URLAnalysis]]:
         """
         Filter URLs and return the top candidates for processing.
@@ -326,7 +372,7 @@ class IntelligentURLFilter:
 
         # Log filtering results
         skipped_count = len(urls) - len(processable_analyses)
-        self.logger.info(f"🔍 URL Filtering Results:")
+        self.logger.info("🔍 URL Filtering Results:")
         self.logger.info(f"   📊 Total URLs: {len(urls)}")
         self.logger.info(f"   ✅ Processable: {len(processable_analyses)}")
         self.logger.info(f"   🚫 Skipped: {skipped_count}")
@@ -352,7 +398,12 @@ class IntelligentURLFilter:
             List of batches (lists of URLAnalysis)
         """
         # Group by quality level
-        quality_groups = {URLQuality.EXCELLENT: [], URLQuality.GOOD: [], URLQuality.FAIR: [], URLQuality.POOR: []}
+        quality_groups = {
+            URLQuality.EXCELLENT: [],
+            URLQuality.GOOD: [],
+            URLQuality.FAIR: [],
+            URLQuality.POOR: [],
+        }
 
         for analysis in analyses:
             if analysis.quality in quality_groups:
@@ -361,7 +412,12 @@ class IntelligentURLFilter:
         batches = []
 
         # Process each quality level
-        for quality in [URLQuality.EXCELLENT, URLQuality.GOOD, URLQuality.FAIR, URLQuality.POOR]:
+        for quality in [
+            URLQuality.EXCELLENT,
+            URLQuality.GOOD,
+            URLQuality.FAIR,
+            URLQuality.POOR,
+        ]:
             group = quality_groups[quality]
             if not group:
                 continue
