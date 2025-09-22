@@ -5,15 +5,15 @@ import './Dashboard.css';
 const Dashboard = () => {
   // State management
   const [connected, setConnected] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState('disconnected');
+  const [_connectionStatus, setConnectionStatus] = useState('disconnected');
   const [extractionStatus, setExtractionStatus] = useState(null);
   const [circuitBreakers, setCircuitBreakers] = useState({});
-  const [performanceMetrics, setPerformanceMetrics] = useState(null);
+  const [_performanceMetrics, setPerformanceMetrics] = useState(null);
   const [systemHealth, setSystemHealth] = useState(null);
   const [recentErrors, setRecentErrors] = useState([]);
   const [extractionHistory, setExtractionHistory] = useState([]);
   const [liveLog, setLiveLog] = useState([]);
-  const [pipelineStatus, setPipelineStatus] = useState(null);
+  const [_pipelineStatus, setPipelineStatus] = useState(null);
 
   // Multi-worker support
   const [workers, setWorkers] = useState([]);
@@ -33,7 +33,7 @@ const Dashboard = () => {
         wsRef.current.close();
       }
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch worker list
   const fetchWorkers = async () => {
