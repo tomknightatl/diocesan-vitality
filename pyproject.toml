@@ -90,6 +90,7 @@ markers = [
     "unit: marks tests as unit tests",
     "webdriver: marks tests that use WebDriver (may be slow)",
     "network: marks tests that require network access",
+    "performance: marks tests that measure performance and detect regressions",
 ]
 
 [tool.coverage.run]
@@ -103,6 +104,9 @@ omit = [
 ]
 
 [tool.coverage.report]
+fail_under = 75
+show_missing = true
+skip_covered = false
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
