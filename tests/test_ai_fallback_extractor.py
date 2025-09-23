@@ -9,6 +9,8 @@ failed with standard extraction methods.
 import sys
 import time
 
+import pytest
+
 from config import get_genai_api_key
 from core.ai_content_analyzer import get_ai_content_analyzer
 from core.driver import get_protected_driver
@@ -18,6 +20,23 @@ from extractors.ai_fallback_extractor import AIFallbackExtractor
 logger = get_logger(__name__)
 
 
+def test_ai_analyzer_initialization():
+    """Test that AI analyzer can be initialized with proper API key."""
+    logger.info("🧪 Testing AI Analyzer Initialization...")
+
+    genai_api_key = get_genai_api_key()
+    if not genai_api_key:
+        pytest.skip("GenAI API key not available - skipping AI initialization test")
+
+    analyzer = get_ai_content_analyzer(genai_api_key)
+    assert analyzer is not None, "AI analyzer should initialize successfully with valid API key"
+
+    logger.info("✅ AI analyzer initialized successfully")
+
+
+@pytest.mark.webdriver
+@pytest.mark.network
+@pytest.mark.slow
 def test_ai_content_analyzer():
     """Test the AI content analyzer component."""
     logger.info("🧪 Testing AI Content Analyzer...")
@@ -125,6 +144,9 @@ def _check_parishes_found(analysis_result):
         return False
 
 
+@pytest.mark.webdriver
+@pytest.mark.network
+@pytest.mark.slow
 def test_ai_fallback_extractor():
     """Test the complete AI fallback extractor."""
     logger.info("\n🧪 Testing AI Fallback Extractor...")
