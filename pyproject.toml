@@ -91,6 +91,11 @@ markers = [
     "webdriver: marks tests that use WebDriver (may be slow)",
     "network: marks tests that require network access",
     "performance: marks tests that measure performance and detect regressions",
+    "mutation: marks tests that validate test quality through mutation testing",
+    "load: marks tests that validate system behavior under load",
+    "e2e: marks end-to-end integration tests",
+    "security: marks tests that validate security and input validation",
+    "async_test: marks tests that use async/await functionality",
 ]
 
 [tool.coverage.run]
