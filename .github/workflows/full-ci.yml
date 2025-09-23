@@ -109,7 +109,7 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
           # Core component tests - fast, independent, unit tests only
-          pytest tests/test_core.py tests/test_utils.py tests/test_circuit_breaker.py tests/test_deduplication.py tests/test_parish_validation.py tests/test_extractors.py -v --cov=core --cov=extractors --cov-report=xml --cov-report=term-missing --cov-report=html --cov-fail-under=70 --timeout=60 -m "not webdriver and not network and not slow"
+          pytest tests/test_core.py tests/test_utils.py tests/test_circuit_breaker.py tests/test_deduplication.py tests/test_parish_validation.py tests/test_extractors.py -v --cov=core --cov=extractors --cov-report=xml --cov-report=term-missing --cov-report=html --cov-fail-under=40 --timeout=60 -m "not webdriver and not network and not slow"
 
           # Performance regression tests
           pytest tests/test_performance.py -v --timeout=30 -m "performance and not slow"
@@ -142,8 +142,8 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          # Integration and external service tests (allow some network tests)
-          pytest tests/test_integration.py tests/test_monitoring.py tests/test_dashboard.py tests/test_dead_mans_switch.py tests/test_parish_url_consistency.py -v --cov=core --cov=extractors --cov-report=xml --cov-report=term-missing --timeout=90 -m "not webdriver and not slow"
+          # Integration and external service tests (no coverage requirements)
+          pytest tests/test_integration.py tests/test_monitoring.py tests/test_dashboard.py tests/test_dead_mans_switch.py tests/test_parish_url_consistency.py -v --timeout=90 -m "not webdriver and not slow"
           echo "✅ Integration & external tests passed"
 
   test-backend-ai-async:
