@@ -67,6 +67,13 @@ module = [
     "urllib3.*"
 ]
 ignore_errors = true
+ignore_missing_imports = true
+
+# Additional override for specific supabase imports
+[[tool.mypy.overrides]]
+module = "supabase"
+ignore_errors = true
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 minversion = "6.0"

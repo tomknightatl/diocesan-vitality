@@ -59,7 +59,7 @@ class CircuitBreaker:
         self.state = CircuitState.CLOSED
         self.failure_count = 0
         self.success_count = 0
-        self.last_failure_time = None
+        self.last_failure_time: float | None = None
         self.next_attempt_time = time.time()
 
         # Thread safety
@@ -114,7 +114,7 @@ class CircuitBreaker:
                 logger.debug(f"🟡 Circuit breaker '{self.name}' in HALF - OPEN state - testing request")
 
         # Execute the function with retry logic
-        last_exception = None
+        last_exception: Exception | None = None
 
         for attempt in range(self.config.max_retries + 1):
             try:
@@ -149,7 +149,10 @@ class CircuitBreaker:
 
         # All retries failed
         self._on_failure()
-        raise last_exception
+        if last_exception:
+            raise last_exception
+        else:
+            raise Exception("Circuit breaker failed without specific exception")
 
     def _execute_with_timeout(self, func: Callable, *args, **kwargs) -> Any:
         """Execute function with timeout protection"""
@@ -216,7 +219,7 @@ class CircuitBreaker:
                 self.next_attempt_time = time.time() + self.config.recovery_timeout
                 self.success_count = 0
 
-    def get_stats(self) -> Dict[str, Union[str, int, float]]:
+    def get_stats(self) -> Dict[str, str | int | float | None]:
         """Get circuit breaker statistics"""
         with self._lock:
             success_rate = (self.total_successes / max(self.total_requests, 1)) * 100
@@ -308,7 +311,7 @@ class CircuitBreakerManager:
         for name, cb in self.circuit_breakers.items():
             stats = cb.get_stats()
             logger.info(
-                f"  • {name}: {stats['state'].upper()} | "
+                f"  • {name}: {str(stats['state']).upper()} | "
                 f"Requests: {stats['total_requests']} | "
                 f"Success Rate: {stats['success_rate']} | "
                 f"Failures: {stats['total_failures']} | "
@@ -339,7 +342,7 @@ def circuit_breaker(name: str, config: Optional[CircuitBreakerConfig] = None):
 
         wrapper.__name__ = func.__name__
         wrapper.__doc__ = func.__doc__
-        wrapper.__timeout_wrapped__ = True
+        wrapper.__timeout_wrapped__ = True  # type: ignore
         return wrapper
 
     return decorator

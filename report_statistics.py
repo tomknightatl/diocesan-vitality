@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from dotenv import load_dotenv
 
-from supabase import Client, create_client
+from supabase import Client, create_client  # type: ignore
 
 # Load environment variables
 load_dotenv()

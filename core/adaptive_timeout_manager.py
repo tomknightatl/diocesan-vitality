@@ -17,7 +17,7 @@ from typing import Dict, List, Optional
 from urllib.parse import urlparse
 
 try:
-    from supabase import Client
+    from supabase import Client  # type: ignore
 except ImportError:
     Client = None
 from core.logger import get_logger

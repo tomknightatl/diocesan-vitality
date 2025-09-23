@@ -21,7 +21,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 
 from core.logger import get_logger
-from supabase import Client
+from supabase import Client  # type: ignore
 
 logger = get_logger(__name__)
 

@@ -6,6 +6,7 @@ A comprehensive data collection and analysis system for U.S. Catholic dioceses a
 """
 
 import os
+from typing import Any, Dict
 
 from setuptools import find_packages, setup
 
@@ -29,7 +30,7 @@ def get_version():
     version_file = os.path.join(this_directory, "src", "diocesan_vitality", "__version__.py")
 
     # Read version from __version__.py
-    version_vars = {}
+    version_vars: Dict[str, Any] = {}
     with open(version_file, encoding="utf - 8") as f:
         exec(f.read(), version_vars)
 

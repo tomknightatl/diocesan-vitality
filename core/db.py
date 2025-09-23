@@ -1,7 +1,7 @@
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 import config
-from supabase import Client, create_client
+from supabase import Client, create_client  # type: ignore
 
 supabase_client: Client = None
 

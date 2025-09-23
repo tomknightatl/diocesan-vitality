@@ -25,7 +25,7 @@ from core.intelligent_url_filter import get_url_filter
 from core.logger import get_logger
 from core.ml_url_predictor import get_ml_url_predictor
 from core.robust_error_handler import ErrorContext, get_error_handler
-from supabase import Client
+from supabase import Client  # type: ignore
 
 logger = get_logger(__name__)
 

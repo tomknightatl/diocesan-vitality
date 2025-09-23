@@ -9,7 +9,7 @@ from the ScheduleKeywords database table instead of hardcoding them.
 from typing import Any, Dict, List, Tuple
 
 from core.logger import get_logger
-from supabase import Client
+from supabase import Client  # type: ignore
 
 logger = get_logger(__name__)
 

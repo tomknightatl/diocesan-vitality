@@ -13,7 +13,7 @@ from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.websockets import WebSocketState
 
-from supabase import Client, create_client
+from supabase import Client, create_client  # type: ignore
 
 # Load .env file from the project root
 dotenv_path = Path(__file__).resolve().parent.parent / ".env"
