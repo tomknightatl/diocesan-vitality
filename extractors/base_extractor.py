@@ -34,7 +34,7 @@ class BaseExtractor(ABC):
         """
 
     @abstractmethod
-    def extract(self, driver: WebDriver, diocese_name: str, url: str, max_parishes: int = None) -> List[Dict[str, Any]]:
+    def extract(self, driver: WebDriver, diocese_name: str, url: str, max_parishes: int | None = None) -> List[Dict[str, Any]]:
         """
         Extract parish data from the page.
 

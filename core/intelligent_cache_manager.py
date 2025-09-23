@@ -109,7 +109,7 @@ class IntelligentCacheManager:
         max_size: int = 1000,
         max_memory_mb: int = 500,
         default_ttl: float = 3600.0,
-        cache_dir: str = None,
+        cache_dir: str | None = None,
     ):
         self.max_size = max_size
         self.max_memory_bytes = max_memory_mb * 1024 * 1024
@@ -202,8 +202,8 @@ class IntelligentCacheManager:
         value: Any,
         ttl: Optional[float] = None,
         content_type: ContentType = ContentType.HTML_PAGE,
-        metadata: Dict[str, Any] = None,
-        compress: bool = None,
+        metadata: Dict[str, Any] | None = None,
+        compress: bool | None = None,
     ) -> bool:
         """
         Store value in cache with intelligent TTL and compression.
@@ -356,12 +356,12 @@ class IntelligentCacheManager:
     def get_statistics(self) -> Dict:
         """Get comprehensive cache statistics."""
         with self._lock:
-            hit_rate = 0
+            hit_rate = 0.0
             if self.stats.total_requests > 0:
                 hit_rate = self.stats.cache_hits / self.stats.total_requests
 
             # Calculate hit rates by content type
-            type_stats = defaultdict(lambda: {"hits": 0, "requests": 0})
+            type_stats: dict[str, dict[str, int]] = defaultdict(lambda: {"hits": 0, "requests": 0})
             for entry in self._cache.values():
                 type_name = entry.content_type.value
                 if entry.access_count > 0:
@@ -557,8 +557,8 @@ class IntelligentCacheManager:
         self,
         url: str,
         method: str = "GET",
-        headers: Dict[str, str] = None,
-        params: Dict = None,
+        headers: Dict[str, str] | None = None,
+        params: Dict | None = None,
     ) -> str:
         """Create consistent cache key for URL requests."""
         key_parts = [method.upper(), url]
@@ -582,7 +582,7 @@ class IntelligentCacheManager:
         self,
         url: str,
         fetch_func: Callable,
-        ttl: float = None,
+        ttl: float | None = None,
         content_type: ContentType = ContentType.HTML_PAGE,
         **kwargs,
     ) -> Any:
@@ -625,7 +625,7 @@ class IntelligentCacheManager:
             logger.error(f"💾 Error fetching {url}: {e}")
             raise
 
-    def save_to_disk(self, filepath: str = None) -> bool:
+    def save_to_disk(self, filepath: str | None = None) -> bool:
         """Save cache to disk for persistence."""
         try:
             if not filepath:
@@ -648,7 +648,7 @@ class IntelligentCacheManager:
             logger.error(f"💾 Error saving cache to disk: {e}")
             return False
 
-    def load_from_disk(self, filepath: str = None) -> bool:
+    def load_from_disk(self, filepath: str | None = None) -> bool:
         """Load cache from disk."""
         try:
             if not filepath:
@@ -701,9 +701,9 @@ def get_cache_manager(max_size: int = 1000, max_memory_mb: int = 500) -> Intelli
 
 
 def cached(
-    ttl: float = None,
+    ttl: float | None = None,
     content_type: ContentType = ContentType.HTML_PAGE,
-    key_func: Callable = None,
+    key_func: Callable | None = None,
 ):
     """Decorator for caching function results."""
 

@@ -6,7 +6,7 @@ This module provides functionality to load schedule extraction keywords
 from the ScheduleKeywords database table instead of hardcoding them.
 """
 
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from core.logger import get_logger
 from supabase import Client
@@ -57,7 +57,7 @@ def _fetch_keywords_from_database(supabase: Client):
     )
 
 
-def _initialize_keyword_containers() -> Dict[str, any]:
+def _initialize_keyword_containers() -> Dict[str, Any]:
     """Initialize keyword storage containers"""
     return {
         "reconciliation_keywords": {},
@@ -69,7 +69,7 @@ def _initialize_keyword_containers() -> Dict[str, any]:
     }
 
 
-def _process_keyword_rows(rows: List[Dict], containers: Dict[str, any]):
+def _process_keyword_rows(rows: List[Dict], containers: Dict[str, Any]):
     """Process each keyword row and categorize appropriately"""
     for row in rows:
         keyword = row["keyword"]
@@ -89,7 +89,7 @@ def _process_keyword_rows(rows: List[Dict], containers: Dict[str, any]):
             _add_all_keyword(keyword, weight, is_negative, containers)
 
 
-def _add_reconciliation_keyword(keyword: str, weight: int, is_negative: bool, containers: Dict[str, any]):
+def _add_reconciliation_keyword(keyword: str, weight: int, is_negative: bool, containers: Dict[str, Any]):
     """Add keyword to reconciliation category"""
     if is_negative:
         containers["reconciliation_negative"].append(keyword)
@@ -97,7 +97,7 @@ def _add_reconciliation_keyword(keyword: str, weight: int, is_negative: bool, co
         containers["reconciliation_keywords"][keyword] = weight
 
 
-def _add_adoration_keyword(keyword: str, weight: int, is_negative: bool, containers: Dict[str, any]):
+def _add_adoration_keyword(keyword: str, weight: int, is_negative: bool, containers: Dict[str, Any]):
     """Add keyword to adoration category"""
     if is_negative:
         containers["adoration_negative"].append(keyword)
@@ -105,7 +105,7 @@ def _add_adoration_keyword(keyword: str, weight: int, is_negative: bool, contain
         containers["adoration_keywords"][keyword] = weight
 
 
-def _add_mass_keyword(keyword: str, weight: int, is_negative: bool, containers: Dict[str, any]):
+def _add_mass_keyword(keyword: str, weight: int, is_negative: bool, containers: Dict[str, Any]):
     """Add keyword to mass category"""
     if is_negative:
         containers["mass_negative"].append(keyword)
@@ -113,7 +113,7 @@ def _add_mass_keyword(keyword: str, weight: int, is_negative: bool, containers: 
         containers["mass_keywords"][keyword] = weight
 
 
-def _add_both_keyword(keyword: str, weight: int, is_negative: bool, containers: Dict[str, any]):
+def _add_both_keyword(keyword: str, weight: int, is_negative: bool, containers: Dict[str, Any]):
     """Add keyword to both reconciliation and adoration categories"""
     if is_negative:
         containers["reconciliation_negative"].append(keyword)
@@ -123,7 +123,7 @@ def _add_both_keyword(keyword: str, weight: int, is_negative: bool, containers: 
         containers["adoration_keywords"][keyword] = weight
 
 
-def _add_all_keyword(keyword: str, weight: int, is_negative: bool, containers: Dict[str, any]):
+def _add_all_keyword(keyword: str, weight: int, is_negative: bool, containers: Dict[str, Any]):
     """Add keyword to all categories (reconciliation, adoration, mass)"""
     if is_negative:
         containers["reconciliation_negative"].append(keyword)
@@ -135,7 +135,7 @@ def _add_all_keyword(keyword: str, weight: int, is_negative: bool, containers: D
         containers["mass_keywords"][keyword] = weight
 
 
-def _log_keyword_statistics(containers: Dict[str, any]):
+def _log_keyword_statistics(containers: Dict[str, Any]):
     """Log statistics about loaded keywords"""
     logger.info(
         f"Loaded from database: {len(containers['reconciliation_keywords'])} reconciliation keywords, "
@@ -148,7 +148,7 @@ def _log_keyword_statistics(containers: Dict[str, any]):
 
 
 def _build_keyword_tuple(
-    containers: Dict[str, any],
+    containers: Dict[str, Any],
 ) -> Tuple[Dict[str, int], List[str], Dict[str, int], List[str], Dict[str, int], List[str]]:
     """Build the final tuple return value from containers"""
     return (
@@ -249,7 +249,7 @@ def add_keyword(
     schedule_type: str,
     weight: int = 1,
     is_negative: bool = False,
-    description: str = None,
+    description: str | None = None,
 ) -> bool:
     """
     Adds a new keyword to the database.

@@ -38,7 +38,7 @@ def get_database_connection():
         return None
 
 
-def fetch_parishes_data(limit: int = None, diocese_id: int = None) -> List[Dict[str, Any]]:
+def fetch_parishes_data(limit: int | None = None, diocese_id: int | None = None) -> List[Dict[str, Any]]:
     """Fetch parishes data from the database."""
     conn = get_database_connection()
     if not conn:

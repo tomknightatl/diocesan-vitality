@@ -172,7 +172,6 @@ class ParishValidator:
         Returns:
             ValidationResult with confidence score and reasoning
         """
-        self._prepare_text(name, url, address, additional_text)
         name_lower = name.lower().strip()
 
         parish_score, exclude_score, matched_parish, matched_exclude = self._calculate_validation_scores(
@@ -195,12 +194,12 @@ class ParishValidator:
         self._log_validation_result(name, result)
         return result
 
-    def _calculate_validation_scores(self, name: str, name_lower: str, url: str, address: str) -> tuple:
+    def _calculate_validation_scores(self, name: str, name_lower: str, url: Optional[str], address: Optional[str]) -> tuple:
         """Calculate parish and exclusion scores from various validation signals"""
         parish_score = 0.0
         exclude_score = 0.0
-        matched_parish = []
-        matched_exclude = []
+        matched_parish: list[str] = []
+        matched_exclude: list[str] = []
 
         # Apply all validation checks
         parish_score = self._check_strong_parish_indicators(name_lower, parish_score, matched_parish)
@@ -245,14 +244,14 @@ class ParishValidator:
             matched_parish.append("saint_pattern")
         return parish_score
 
-    def _check_address_context(self, address: str, parish_score: float, matched_parish: list):
+    def _check_address_context(self, address: Optional[str], parish_score: float, matched_parish: list):
         """Check address context for validation signals"""
         if address and self.address_pattern.search(address):
             parish_score += 1.0
             matched_parish.append("address_pattern")
         return parish_score
 
-    def _check_url_context(self, url: str, parish_score: float, matched_parish: list):
+    def _check_url_context(self, url: Optional[str], parish_score: float, matched_parish: list):
         """Check URL context for validation signals"""
         if url:
             url_lower = url.lower()
@@ -287,7 +286,7 @@ class ParishValidator:
             f"Parish validation: '{name}' -> {result.is_valid} " f"(confidence: {result.confidence:.2f}) - {result.reason}"
         )
 
-    def _prepare_text(self, name: str, url: str, address: str, additional: str) -> str:
+    def _prepare_text(self, name: str, url: Optional[str], address: Optional[str], additional: Optional[str]) -> str:
         """Combine all available text for analysis"""
         texts = [text for text in [name, url, address, additional] if text]
         return " ".join(texts).lower()
@@ -379,10 +378,10 @@ class ParishValidator:
         logger.info(f"Parish validation: {len(valid_parishes)}/{len(entities)} entities validated as parishes")
         return valid_parishes
 
-    def get_validation_stats(self, entities: List[Dict]) -> Dict:
+    def get_validation_stats(self, entities: List[Dict]) -> Dict[str, int | Dict[str, int]]:
         """Get detailed validation statistics for a batch"""
 
-        stats = {
+        stats: Dict[str, int | Dict[str, int]] = {
             "total": len(entities),
             "valid_parishes": 0,
             "excluded_admin": 0,
@@ -400,21 +399,33 @@ class ParishValidator:
             result = self.validate_parish(name=name)
 
             if result.is_valid:
-                stats["valid_parishes"] += 1
+                valid_parishes = stats["valid_parishes"]
+                assert isinstance(valid_parishes, int)
+                stats["valid_parishes"] = valid_parishes + 1
                 if result.confidence > 0.7:
-                    stats["high_confidence"] += 1
+                    high_confidence = stats["high_confidence"]
+                    assert isinstance(high_confidence, int)
+                    stats["high_confidence"] = high_confidence + 1
                 else:
-                    stats["low_confidence"] += 1
+                    low_confidence = stats["low_confidence"]
+                    assert isinstance(low_confidence, int)
+                    stats["low_confidence"] = low_confidence + 1
 
                 # Track parish indicators
                 for keyword in result.matched_keywords:
-                    stats["parish_indicators"][keyword] = stats["parish_indicators"].get(keyword, 0) + 1
+                    parish_indicators = stats["parish_indicators"]
+                    assert isinstance(parish_indicators, dict)
+                    parish_indicators[keyword] = parish_indicators.get(keyword, 0) + 1
             else:
-                stats["excluded_admin"] += 1
+                excluded_admin = stats["excluded_admin"]
+                assert isinstance(excluded_admin, int)
+                stats["excluded_admin"] = excluded_admin + 1
 
                 # Track exclusion reasons
                 for keyword in result.excluded_keywords:
-                    stats["exclusion_reasons"][keyword] = stats["exclusion_reasons"].get(keyword, 0) + 1
+                    exclusion_reasons = stats["exclusion_reasons"]
+                    assert isinstance(exclusion_reasons, dict)
+                    exclusion_reasons[keyword] = exclusion_reasons.get(keyword, 0) + 1
 
         return stats
 

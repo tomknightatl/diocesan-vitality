@@ -92,8 +92,8 @@ class ResponseMetrics:
             "redirect_count": 1.4,
         }
 
-        weighted_score = 0
-        total_weight = 0
+        weighted_score = 0.0
+        total_weight = 0.0
 
         for indicator, value in self.complexity_indicators.items():
             if indicator in weights:
@@ -208,7 +208,7 @@ class AdaptiveTimeoutManager:
         url: str,
         operation_type: str = "page_load",
         retry_count: int = 0,
-        context: Dict = None,
+        context: Dict | None = None,
     ) -> float:
         """
         Calculate optimal timeout for a URL based on historical data and complexity.
@@ -257,7 +257,7 @@ class AdaptiveTimeoutManager:
             self.logger.error(f"⏱️ Error calculating timeout for {url}: {e}")
             return 30.0  # Safe fallback
 
-    def _determine_strategy(self, domain: str, metrics: ResponseMetrics, context: Dict = None) -> TimeoutStrategy:
+    def _determine_strategy(self, domain: str, metrics: ResponseMetrics, context: Dict | None = None) -> TimeoutStrategy:
         """Determine the best timeout strategy for a domain."""
         # Check explicit domain classifications first
         explicit_strategy = self._check_explicit_domain_classification(domain)
@@ -398,7 +398,7 @@ class AdaptiveTimeoutManager:
 
         return timeout
 
-    def _apply_operation_modifiers(self, timeout: float, operation_type: str, context: Dict = None) -> float:
+    def _apply_operation_modifiers(self, timeout: float, operation_type: str, context: Dict | None = None) -> float:
         """Apply final operation - specific modifiers."""
 
         if not context:
@@ -427,7 +427,7 @@ class AdaptiveTimeoutManager:
         url: str,
         response_time: float,
         success: bool,
-        complexity_indicators: Dict[str, float] = None,
+        complexity_indicators: Dict[str, float] | None = None,
         timeout_occurred: bool = False,
     ):
         """Record response metrics for future timeout optimization."""
@@ -501,9 +501,9 @@ class AdaptiveTimeoutManager:
 
     def analyze_complexity_indicators(
         self,
-        page_content: str = None,
-        response_headers: Dict = None,
-        network_logs: List = None,
+        page_content: str | None = None,
+        response_headers: Dict | None = None,
+        network_logs: List | None = None,
     ) -> Dict[str, float]:
         """Analyze page complexity indicators for timeout optimization."""
         indicators = {}
@@ -589,7 +589,7 @@ class AdaptiveTimeoutManager:
     def get_global_stats(self) -> Dict:
         """Get global timeout management statistics."""
         with self._lock:
-            timeout_rate = 0
+            timeout_rate = 0.0
             if self.global_stats["total_requests"] > 0:
                 timeout_rate = self.global_stats["total_timeouts"] / self.global_stats["total_requests"]
 

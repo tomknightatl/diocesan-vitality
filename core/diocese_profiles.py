@@ -23,14 +23,14 @@ class DiocesesExtractionProfile:
     diocese_domain: str
     strategy_type: str  # 'dynamic_loading', 'api_extraction', 'navigation_based', 'custom_selectors'
     wait_time: int = 10
-    custom_selectors: List[str] = None
-    api_endpoints: List[str] = None
+    custom_selectors: List[str] | None = None
+    api_endpoints: List[str] | None = None
     interaction_required: bool = False
-    loading_indicators: List[str] = None
-    content_selectors: List[str] = None
+    loading_indicators: List[str] | None = None
+    content_selectors: List[str] | None = None
     javascript_required: bool = False
     scroll_trigger: bool = False
-    button_clicks: List[str] = None
+    button_clicks: List[str] | None = None
     special_instructions: str = ""
 
     def __post_init__(self):
@@ -160,7 +160,7 @@ class DiocesesProfileManager:
 
         return profiles
 
-    def get_profile(self, url: str, diocese_name: str = None) -> Optional[DiocesesExtractionProfile]:
+    def get_profile(self, url: str, diocese_name: str | None = None) -> Optional[DiocesesExtractionProfile]:
         """Get the most appropriate profile for a diocese URL."""
         try:
             domain = urlparse(url).netloc.lower()
@@ -199,7 +199,7 @@ class DiocesesProfileManager:
         wordpress_indicators = ["wp - content", "wp - includes", "wp - admin"]
         return any(indicator in url.lower() for indicator in wordpress_indicators)
 
-    def create_custom_profile(self, domain: str, analysis_results: Dict) -> DiocesesExtractionProfile:
+    def create_custom_profile(self, domain: str, analysis_results: Dict) -> DiocesesExtractionProfile | None:
         """Create a custom profile based on AI analysis results."""
         try:
             # Extract strategy from AI analysis
@@ -258,9 +258,9 @@ class DiocesesProfileManager:
         """Get all available profiles."""
         return self.profiles.copy()
 
-    def get_profile_stats(self) -> Dict[str, Any]:
+    def get_profile_stats(self) -> Dict[str, int | Dict[str, int]]:
         """Get statistics about available profiles."""
-        stats = {
+        stats: Dict[str, int | Dict[str, int]] = {
             "total_profiles": len(self.profiles),
             "strategy_distribution": {},
             "javascript_required": 0,
@@ -270,16 +270,24 @@ class DiocesesProfileManager:
 
         for profile in self.profiles.values():
             strategy = profile.strategy_type
-            stats["strategy_distribution"][strategy] = stats["strategy_distribution"].get(strategy, 0) + 1
+            strategy_distribution = stats["strategy_distribution"]
+            assert isinstance(strategy_distribution, dict)
+            strategy_distribution[strategy] = strategy_distribution.get(strategy, 0) + 1
 
             if profile.javascript_required:
-                stats["javascript_required"] += 1
+                javascript_required = stats["javascript_required"]
+                assert isinstance(javascript_required, int)
+                stats["javascript_required"] = javascript_required + 1
 
             if profile.api_endpoints:
-                stats["api_based"] += 1
+                api_based = stats["api_based"]
+                assert isinstance(api_based, int)
+                stats["api_based"] = api_based + 1
 
             if profile.custom_selectors:
-                stats["custom_selectors"] += 1
+                custom_selectors = stats["custom_selectors"]
+                assert isinstance(custom_selectors, int)
+                stats["custom_selectors"] = custom_selectors + 1
 
         return stats
 

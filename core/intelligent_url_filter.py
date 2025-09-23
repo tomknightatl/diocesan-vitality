@@ -160,7 +160,7 @@ class IntelligentURLFilter:
             ".wmv",
         }
 
-    def analyze_urls(self, urls: List[str], ml_predictions: Dict[str, float] = None) -> List[URLAnalysis]:
+    def analyze_urls(self, urls: List[str], ml_predictions: Dict[str, float] | None = None) -> List[URLAnalysis]:
         """
         Analyze a list of URLs and return quality assessments.
 
@@ -184,7 +184,7 @@ class IntelligentURLFilter:
         analyses.sort(key=lambda x: (x.quality.value, x.confidence_score), reverse=True)
 
         # Log analysis summary
-        quality_counts = {}
+        quality_counts: dict[str, int] = {}
         for analysis in analyses:
             quality_counts[analysis.quality.value] = quality_counts.get(analysis.quality.value, 0) + 1
 
@@ -204,7 +204,7 @@ class IntelligentURLFilter:
             self.logger.warning(f"🔍 Failed to parse URL {url}: {e}")
             return None, None, None, None, e
 
-    def _check_blacklisted_content(self, url: str, domain: str, path: str, full_url_lower: str) -> URLAnalysis:
+    def _check_blacklisted_content(self, url: str, domain: str, path: str, full_url_lower: str) -> URLAnalysis | None:
         """Check if URL should be skipped due to blacklisted content."""
         # Check blacklisted domains
         if any(blacklisted in domain for blacklisted in self.blacklisted_domains):
@@ -342,7 +342,7 @@ class IntelligentURLFilter:
         self,
         urls: List[str],
         max_urls: int = 50,
-        ml_predictions: Dict[str, float] = None,
+        ml_predictions: Dict[str, float] | None = None,
     ) -> Tuple[List[str], Dict[str, URLAnalysis]]:
         """
         Filter URLs and return the top candidates for processing.
@@ -398,7 +398,7 @@ class IntelligentURLFilter:
             List of batches (lists of URLAnalysis)
         """
         # Group by quality level
-        quality_groups = {
+        quality_groups: Dict[URLQuality, List[URLAnalysis]] = {
             URLQuality.EXCELLENT: [],
             URLQuality.GOOD: [],
             URLQuality.FAIR: [],

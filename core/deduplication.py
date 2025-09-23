@@ -304,7 +304,7 @@ class ParishDeduplicator:
                 if j in processed_indices:
                     continue
 
-                is_duplicate, metrics = self.are_parishes_duplicate(parish, other_parish)
+                is_duplicate, duplicate_metrics = self.are_parishes_duplicate(parish, other_parish)
 
                 if is_duplicate:
                     # Mark as processed (duplicate)

@@ -30,8 +30,8 @@ class DatabaseBatchManager:
         """
         self.supabase = supabase_client
         self.batch_size = batch_size
-        self.pending_records = defaultdict(list)  # table_name -> [records]
-        self.batch_configs = {}  # table_name -> config
+        self.pending_records: dict[str, list] = defaultdict(list)  # table_name -> [records]
+        self.batch_configs: dict[str, dict] = {}  # table_name -> config
         self.stats = {"total_batches": 0, "total_records": 0, "total_time": 0.0}
 
         logger.info(f"📦 Database batch manager initialized (batch_size={batch_size})")

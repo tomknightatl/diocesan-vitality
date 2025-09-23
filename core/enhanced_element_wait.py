@@ -30,7 +30,7 @@ class ElementWaitStrategy:
     def smart_element_wait(
         self,
         selectors: List[str],
-        timeout: float = None,
+        timeout: float | None = None,
         condition: str = "presence",
         log_attempts: bool = True,
     ) -> Optional[Any]:
@@ -131,7 +131,7 @@ class ElementWaitStrategy:
     def smart_elements_wait(
         self,
         selectors: List[str],
-        timeout: float = None,
+        timeout: float | None = None,
         min_count: int = 1,
         log_attempts: bool = True,
     ) -> List[Any]:
@@ -240,7 +240,7 @@ class ElementWaitStrategy:
         logger.debug("⚠️ Page stability timeout reached")
         return False
 
-    def smart_form_wait(self, form_selectors: List[str], timeout: float = None) -> Optional[Tuple[Any, str]]:
+    def smart_form_wait(self, form_selectors: List[str], timeout: float | None = None) -> Optional[Tuple[Any, str]]:
         """
         Wait for forms with intelligent detection of form types.
         Returns the form element and the selector that found it.
@@ -275,7 +275,7 @@ class ElementWaitStrategy:
                 except (NoSuchElementException, WebDriverException):
                     continue
 
-        return None, None
+        return None
 
 
 def create_parish_extraction_selectors() -> List[str]:

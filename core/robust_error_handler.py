@@ -208,7 +208,7 @@ class RobustErrorHandler:
         self,
         operation: str,
         primary_func: Callable,
-        context: ErrorContext = None,
+        context: ErrorContext | None = None,
         **kwargs,
     ) -> Any:
         """

@@ -11,7 +11,7 @@ This module implements performance optimizations for parish extraction:
 
 import re
 import time
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
@@ -83,7 +83,7 @@ class ExtractorOptimizer:
                 f"🔌 Initialized circuit breaker for {extractor_name} " f"(timeout: {circuit_config.request_timeout}s)"
             )
 
-    def analyze_page_content(self, driver, html_content: str) -> Dict[str, any]:
+    def analyze_page_content(self, driver, html_content: str) -> Dict[str, Any]:
         """
         Analyze page content to determine optimal extractors and detect features
 
@@ -347,8 +347,8 @@ class ExtractorOptimizer:
             raise
 
     def optimize_extractor_sequence(
-        self, extractors_to_try: List[Tuple[str, any]], page_analysis: Dict
-    ) -> List[Tuple[str, any]]:
+        self, extractors_to_try: List[Tuple[str, Any]], page_analysis: Dict
+    ) -> List[Tuple[str, Any]]:
         """
         Optimize the sequence of extractors based on page analysis
         """
