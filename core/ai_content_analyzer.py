@@ -137,7 +137,7 @@ class AIContentAnalyzer:
             ".content a",
             ".main a",
             "#content a",
-            ".parish - list a",
+            ".parish-list a",
         ]
 
         parish_elements = []
@@ -162,9 +162,9 @@ class AIContentAnalyzer:
     def _detect_cms_indicators(self, driver: WebDriver) -> List[str]:
         """Detect content management system indicators."""
         cms_patterns = {
-            "wordpress": [".wp - content", ".wp - block", "#wp - content"],
-            "drupal": [".region - content", ".field - item", "#drupal"],
-            "squarespace": [".sqs - block", ".content - wrapper"],
+            "wordpress": [".wp-content", ".wp-block", "#wp-content"],
+            "drupal": [".region-content", ".field-item", "#drupal"],
+            "squarespace": [".sqs-block", ".content-wrapper"],
             "custom": [".container", ".content", "#main"],
         }
 
@@ -232,16 +232,16 @@ class AIContentAnalyzer:
             ".wrapper",
             "article",
             ".article",
-            ".parish - list",
-            ".church - list",
+            ".parish-list",
+            ".church-list",
             ".directory",
             # WordPress - specific selectors
-            ".entry - content",
-            ".post - content",
-            ".page - content",
+            ".entry-content",
+            ".post-content",
+            ".page-content",
             # Common CMS selectors
             ".vc_column",
-            ".elementor - widget",
+            ".elementor-widget",
             ".et_pb_text",
         ]
 
