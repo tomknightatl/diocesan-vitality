@@ -366,7 +366,7 @@ class MLURLPredictor:
         pattern = re.sub(r"[a - f0 - 9]{8,}", "ID", pattern.lower())
         return pattern
 
-    def predict_successful_urls(self, domain: str, base_patterns: List[str] = None) -> List[Tuple[str, float]]:
+    def predict_successful_urls(self, domain: str, base_patterns: List[str] | None = None) -> List[Tuple[str, float]]:
         """
         Predict URLs most likely to contain schedule information for a domain.
 
@@ -407,7 +407,7 @@ class MLURLPredictor:
         self,
         domain: str,
         profile: Optional[DomainProfile],
-        base_patterns: List[str] = None,
+        base_patterns: List[str] | None = None,
     ) -> Set[str]:
         """Generate candidate URLs for testing."""
         candidates = set()
@@ -489,7 +489,7 @@ class MLURLPredictor:
             logger.debug(f"🧠 Error calculating confidence for {url}: {e}")
             return 0.5
 
-    def _fallback_url_prediction(self, domain: str, base_patterns: List[str] = None) -> List[Tuple[str, float]]:
+    def _fallback_url_prediction(self, domain: str, base_patterns: List[str] | None = None) -> List[Tuple[str, float]]:
         """Fallback URL prediction using pattern - based approach."""
         predictions = []
 

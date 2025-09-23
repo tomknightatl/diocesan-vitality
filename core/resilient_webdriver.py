@@ -26,7 +26,7 @@ class ResilientWebDriver:
 
     def __init__(
         self,
-        driver_factory: Callable = None,
+        driver_factory: Callable | None = None,
         max_retries: int = 3,
         base_delay: float = 1.0,
         max_delay: float = 30.0,

@@ -203,7 +203,7 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
             logger.warning(f"    📊 AI confidence: {ai_result.get('confidence', 0.0):.2f}")
             logger.warning(f"    🚀 JS content loaded: {loading_result['content_loaded']}")
 
-    def extract(self, driver: WebDriver, diocese_name: str, url: str, max_parishes: int = None) -> List[Dict[str, Any]]:
+    def extract(self, driver: WebDriver, diocese_name: str, url: str, max_parishes: int | None = None) -> List[Dict[str, Any]]:
         """
         Enhanced extraction using AI analysis, JavaScript execution, and profiles.
 

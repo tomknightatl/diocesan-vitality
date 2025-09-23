@@ -14,7 +14,7 @@ __version__ = "1.0.0"
 __version_info__ = tuple(int(i) for i in __version__.split("."))
 
 # Build metadata - populated during CI/CD build process
-BUILD_INFO = {
+BUILD_INFO: Dict[str, Any] = {
     "version": __version__,
     "version_info": __version_info__,
     "git_commit": os.getenv("GITHUB_SHA", "unknown"),

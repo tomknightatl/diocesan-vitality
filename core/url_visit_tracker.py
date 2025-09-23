@@ -256,9 +256,9 @@ class URLVisitTracker:
         visit_result: VisitResult,
         status_code: int,
         response_time: float,
-        content_type: str = None,
-        content_size: int = None,
-        final_url: str = None,
+        content_type: str | None = None,
+        content_size: int | None = None,
+        final_url: str | None = None,
     ):
         """Record HTTP response details."""
         visit_result.http_status = status_code

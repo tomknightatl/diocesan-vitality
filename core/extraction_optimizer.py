@@ -94,7 +94,7 @@ class ExtractorOptimizer:
             - skip_extractors: List[str]
             - estimated_complexity: str
         """
-        analysis = {
+        analysis: Dict[str, Any] = {
             "has_map_features": False,
             "suitable_extractors": [],
             "skip_extractors": [],
@@ -116,6 +116,7 @@ class ExtractorOptimizer:
 
         # Detect content patterns
         indicators = analysis["content_indicators"]
+        assert isinstance(indicators, dict)
 
         # Iframe detection
         indicators["has_iframe"] = bool(re.search(r"<iframe[^>]*>", lower_content))
@@ -144,18 +145,22 @@ class ExtractorOptimizer:
         indicators["has_pdf_links"] = bool(re.search(r'href=["\'][^"\']*\.pdf["\']', lower_content))
 
         # Determine suitable extractors based on content analysis
-        analysis["suitable_extractors"] = self._determine_suitable_extractors(indicators, analysis["has_map_features"])
+        has_map_features = analysis["has_map_features"]
+        assert isinstance(has_map_features, bool)
+        analysis["suitable_extractors"] = self._determine_suitable_extractors(indicators, has_map_features)
 
         # Determine extractors to skip
-        analysis["skip_extractors"] = self._determine_skip_extractors(indicators, analysis["has_map_features"])
+        analysis["skip_extractors"] = self._determine_skip_extractors(indicators, has_map_features)
 
         # Estimate page complexity
         analysis["estimated_complexity"] = self._estimate_complexity(indicators, lower_content)
 
         logger.info("  📊 Page Analysis Complete:")
         logger.info(f"    🗺️ Map features: {analysis['has_map_features']}")
+        suitable_extractors = analysis['suitable_extractors']
+        assert isinstance(suitable_extractors, list)
         logger.info(
-            f"    ✅ Suitable: {analysis['suitable_extractors'][:3]}{'...' if len(analysis['suitable_extractors']) > 3 else ''}"
+            f"    ✅ Suitable: {suitable_extractors[:3]}{'...' if len(suitable_extractors) > 3 else ''}"
         )
         logger.info(f"    ❌ Skip: {analysis['skip_extractors']}")
         logger.info(f"    📈 Complexity: {analysis['estimated_complexity']}")
@@ -386,9 +391,9 @@ class ExtractorOptimizer:
 
         return optimized_sequence
 
-    def get_optimization_stats(self) -> Dict:
+    def get_optimization_stats(self) -> Dict[str, Any]:
         """Get statistics about optimization performance"""
-        stats = {
+        stats: Dict[str, Any] = {
             "circuit_breakers": {},
             "total_skipped_extractors": 0,
             "total_optimized_timeouts": 0,

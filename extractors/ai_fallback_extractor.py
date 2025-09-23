@@ -49,7 +49,7 @@ class AIFallbackExtractor(BaseExtractor):
         logger.info("🤖 AI Fallback Extractor: Ready to analyze failed extraction page")
         return True
 
-    def extract(self, driver: WebDriver, diocese_name: str, url: str, max_parishes: int = None) -> List[Dict[str, Any]]:
+    def extract(self, driver: WebDriver, diocese_name: str, url: str, max_parishes: int | None = None) -> List[Dict[str, Any]]:
         """
         Extract parishes using AI - powered content analysis.
 
