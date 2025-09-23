@@ -134,9 +134,7 @@ def test_imports():
 
     except ImportError as e:
         logger.error(f"❌ Import error: {e}")
-        return False
-
-    return True
+        assert False, f"Import error: {e}"
 
 
 def main():
@@ -151,9 +149,7 @@ def main():
         test_error_recovery_strategies()
         test_selector_generation()
 
-        if not test_imports():
-            logger.error("❌ Import tests failed!")
-            sys.exit(1)
+        test_imports()
 
         test_time = time.time() - start_time
         logger.info(f"🎉 All optimization tests passed! (completed in {test_time:.2f}s)")

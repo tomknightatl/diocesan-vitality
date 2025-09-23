@@ -24,18 +24,18 @@ def test_ai_content_analyzer():
 
     analyzer = _setup_ai_analyzer()
     if not analyzer:
-        return False
+        assert False, "Failed to setup AI analyzer"
 
     test_diocese, test_url = _get_test_parameters()
     driver = None
     try:
         driver = _setup_test_driver(test_url)
         analysis_result = _run_ai_analysis(analyzer, driver, test_diocese, test_url)
-        return _process_analysis_results(analysis_result)
+        assert _process_analysis_results(analysis_result), "Analysis results processing failed"
 
     except Exception as e:
         logger.error(f"❌ AI content analyzer test failed: {e}", exc_info=True)
-        return False
+        assert False, f"AI content analyzer test failed: {e}"
     finally:
         if driver:
             driver.quit()
@@ -133,7 +133,7 @@ def test_ai_fallback_extractor():
 
     if not extractor.ai_analyzer:
         logger.error("❌ AI Fallback Extractor not properly initialized")
-        return False
+        assert False, "AI Fallback Extractor not properly initialized"
 
     # Test diocese
     test_diocese = "Diocese of Houma - Thibodaux"
@@ -155,7 +155,7 @@ def test_ai_fallback_extractor():
 
         if not can_extract:
             logger.error("❌ AI Fallback Extractor cannot handle this page")
-            return False
+            assert False, "AI Fallback Extractor cannot handle this page"
 
         # Run extraction
         logger.info("🤖 Running AI fallback extraction...")
@@ -182,14 +182,14 @@ def test_ai_fallback_extractor():
                 if parish.get("address"):
                     logger.info(f"     📍 {parish['address']}")
 
-            return True
+            assert True
         else:
             logger.warning("⚠️ No parishes extracted")
-            return False
+            assert False, "No parishes extracted"
 
     except Exception as e:
         logger.error(f"❌ AI fallback extractor test failed: {e}", exc_info=True)
-        return False
+        assert False, f"AI fallback extractor test failed: {e}"
 
     finally:
         if driver:
@@ -206,10 +206,10 @@ def test_integration():
         pass
 
         logger.info("✅ AI Fallback Extractor successfully integrated")
-        return True
+        assert True
     except ImportError as e:
         logger.error(f"❌ Integration test failed: {e}")
-        return False
+        assert False, f"Integration test failed: {e}"
 
 
 def main():

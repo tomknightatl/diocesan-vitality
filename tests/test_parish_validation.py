@@ -70,7 +70,7 @@ def test_parish_validation_examples():
         logger.info(f"  {status} '{name}' -> {result} (expected {expected})")
 
     logger.info(f"\n📊 Validation Test Results: {passed} passed, {failed} failed")
-    return failed == 0
+    assert failed == 0, f"Validation test failed: {failed} tests failed"
 
 
 def test_batch_filtering():
@@ -113,7 +113,7 @@ def test_batch_filtering():
         f"\n📈 Filtering efficiency: {len(valid_parishes)}/{len(sample_entities)} = {len(valid_parishes)/len(sample_entities)*100:.1f}% parishes retained"
     )
 
-    return len(valid_parishes) == 5  # Should retain 5 actual parishes
+    assert len(valid_parishes) == 5, f"Expected 5 parishes, got {len(valid_parishes)}"  # Should retain 5 actual parishes
 
 
 def test_validation_statistics():
@@ -152,7 +152,9 @@ def test_validation_statistics():
         for reason, count in list(stats["exclusion_reasons"].items())[:3]:
             logger.info(f"    • {reason}: {count}")
 
-    return stats["valid_parishes"] == 5 and stats["excluded_admin"] == 5
+    assert (
+        stats["valid_parishes"] == 5 and stats["excluded_admin"] == 5
+    ), f"Expected 5 valid parishes and 5 excluded admin, got {stats['valid_parishes']} valid and {stats['excluded_admin']} excluded"
 
 
 def main():
