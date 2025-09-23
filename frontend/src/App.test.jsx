@@ -1,91 +1,89 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
-import App from './App'
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import { BrowserRouter } from "react-router-dom";
+import App from "./App";
 
 // Mock fetch globally
-global.fetch = vi.fn()
+global.fetch = vi.fn();
 
 // Wrapper component for Router context
-const AppWrapper = ({ children }) => (
-  <BrowserRouter>
-    {children}
-  </BrowserRouter>
-)
+const AppWrapper = ({ children }) => <BrowserRouter>{children}</BrowserRouter>;
 
-describe('App Component', () => {
+describe("App Component", () => {
   beforeEach(() => {
-    fetch.mockClear()
-  })
+    fetch.mockClear();
+  });
 
-  it('renders loading spinner initially', () => {
+  it("renders loading spinner initially", () => {
     // Mock fetch to never resolve so we stay in loading state
-    fetch.mockImplementation(() => new Promise(() => {}))
+    fetch.mockImplementation(() => new Promise(() => {}));
 
     render(
       <AppWrapper>
         <App />
-      </AppWrapper>
-    )
+      </AppWrapper>,
+    );
 
-    expect(screen.getByText('Loading...')).toBeInTheDocument()
-  })
+    expect(document.querySelector(".spinner-border")).toBeInTheDocument(); // Bootstrap Spinner class
+  });
 
-  it('displays dioceses table when data loads successfully', async () => {
+  it("displays dioceses table when data loads successfully", async () => {
     const mockDioceses = {
       data: [
         {
           id: 1,
-          Name: 'Archdiocese of New York',
-          Address: '1011 First Avenue, New York, NY 10022',
-          Website: 'https://archny.org',
-          parish_directory_url: 'https://archny.org/parishes',
+          Name: "Archdiocese of New York",
+          Address: "1011 First Avenue, New York, NY 10022",
+          Website: "https://archny.org",
+          parish_directory_url: "https://archny.org/parishes",
           parishes_in_db_count: 292,
           parishes_with_data_extracted_count: 180,
           is_blocked: false,
           respectful_automation_used: true,
-          status_description: 'Active'
-        }
+          status_description: "Active",
+        },
       ],
-      total_count: 1
-    }
+      total_count: 1,
+    };
 
     fetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => mockDioceses
-    })
+      json: async () => mockDioceses,
+    });
 
     render(
       <AppWrapper>
         <App />
-      </AppWrapper>
-    )
+      </AppWrapper>,
+    );
 
     await waitFor(() => {
-      expect(screen.getByText('Archdiocese of New York')).toBeInTheDocument()
-    })
+      expect(screen.getByText("Archdiocese of New York")).toBeInTheDocument();
+    });
 
-    expect(screen.getByText('Name')).toBeInTheDocument()
-    expect(screen.getByText('Address')).toBeInTheDocument()
-    expect(screen.getByText('Website')).toBeInTheDocument()
-    expect(screen.getByText('292')).toBeInTheDocument()
-  })
+    expect(screen.getByText("Name ▲")).toBeInTheDocument(); // Header includes sort arrow
+    expect(screen.getByText("Address")).toBeInTheDocument();
+    expect(screen.getByText("Website")).toBeInTheDocument();
+    expect(screen.getByText("292")).toBeInTheDocument();
+  });
 
-  it('displays error message when fetch fails', async () => {
-    fetch.mockRejectedValueOnce(new Error('Network error'))
+  it("displays error message when fetch fails", async () => {
+    fetch.mockRejectedValueOnce(new Error("Network error"));
 
     render(
       <AppWrapper>
         <App />
-      </AppWrapper>
-    )
+      </AppWrapper>,
+    );
 
     await waitFor(() => {
-      expect(screen.getByText(/Error fetching data: Network error/)).toBeInTheDocument()
-    })
-  })
+      expect(
+        screen.getByText(/Error fetching data: Network error/),
+      ).toBeInTheDocument();
+    });
+  });
 
-  it('renders pagination controls', async () => {
+  it("renders pagination controls", async () => {
     const mockDioceses = {
       data: Array.from({ length: 10 }, (_, i) => ({
         id: i + 1,
@@ -95,41 +93,41 @@ describe('App Component', () => {
         parishes_in_db_count: 10,
         parishes_with_data_extracted_count: 5,
         is_blocked: false,
-        respectful_automation_used: true
+        respectful_automation_used: true,
       })),
-      total_count: 100 // More than 50 (default page size) to trigger pagination
-    }
+      total_count: 100, // More than 50 (default page size) to trigger pagination
+    };
 
     fetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => mockDioceses
-    })
+      json: async () => mockDioceses,
+    });
 
     render(
       <AppWrapper>
         <App />
-      </AppWrapper>
-    )
+      </AppWrapper>,
+    );
 
     await waitFor(() => {
-      expect(screen.getByText('Diocese 1')).toBeInTheDocument()
-    })
+      expect(screen.getByText("Diocese 1")).toBeInTheDocument();
+    });
 
     // Check for pagination controls
-    expect(screen.getByText('1')).toBeInTheDocument() // Page number
-    expect(screen.getByText('2')).toBeInTheDocument() // Page number
-  })
+    expect(screen.getByText("1")).toBeInTheDocument(); // Page number
+    expect(screen.getByText("2")).toBeInTheDocument(); // Page number
+  });
 
-  it('renders items per page selector', () => {
-    fetch.mockImplementation(() => new Promise(() => {}))
+  it("renders items per page selector", () => {
+    fetch.mockImplementation(() => new Promise(() => {}));
 
     render(
       <AppWrapper>
         <App />
-      </AppWrapper>
-    )
+      </AppWrapper>,
+    );
 
-    expect(screen.getByText('Show:')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('50')).toBeInTheDocument() // Default page size
-  })
-})
+    expect(screen.getByText("Show:")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("50")).toBeInTheDocument(); // Default page size
+  });
+});
