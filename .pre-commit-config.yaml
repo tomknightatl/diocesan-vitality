@@ -43,7 +43,7 @@ repos:
     rev: 1.7.9
     hooks:
       - id: bandit
-        args: [-r, ., -s, B101, B601]
+        args: [-r, ., --skip, B101, B601]
         exclude: ^(tests/|scripts/ci_check\.py)
 
   # Frontend linting (when applicable)
