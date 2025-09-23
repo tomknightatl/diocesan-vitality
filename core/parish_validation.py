@@ -203,14 +203,14 @@ class ParishValidator:
         matched_exclude = []
 
         # Apply all validation checks
-        self._check_strong_parish_indicators(name_lower, parish_score, matched_parish)
-        self._check_exclusion_indicators(name_lower, exclude_score, matched_exclude)
-        self._check_weak_parish_indicators(name_lower, parish_score, matched_parish)
-        self._check_saint_pattern(name, parish_score, matched_parish)
-        self._check_address_context(address, parish_score, matched_parish)
-        self._check_url_context(url, parish_score, matched_parish)
-        self._check_format_heuristics(name, name_lower, exclude_score, matched_exclude)
-        self._check_navigation_terms(name_lower, exclude_score, matched_exclude)
+        parish_score = self._check_strong_parish_indicators(name_lower, parish_score, matched_parish)
+        exclude_score = self._check_exclusion_indicators(name_lower, exclude_score, matched_exclude)
+        parish_score = self._check_weak_parish_indicators(name_lower, parish_score, matched_parish)
+        parish_score = self._check_saint_pattern(name, parish_score, matched_parish)
+        parish_score = self._check_address_context(address, parish_score, matched_parish)
+        parish_score = self._check_url_context(url, parish_score, matched_parish)
+        exclude_score = self._check_format_heuristics(name, name_lower, exclude_score, matched_exclude)
+        exclude_score = self._check_navigation_terms(name_lower, exclude_score, matched_exclude)
 
         return parish_score, exclude_score, matched_parish, matched_exclude
 
