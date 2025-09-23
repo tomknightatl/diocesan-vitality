@@ -16,7 +16,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from core.circuit_breaker import CircuitBreaker
+from core.circuit_breaker import CircuitBreaker, CircuitBreakerConfig
 from core.logger import get_logger
 from tests.fixtures import TestDataFixtures
 
@@ -91,7 +91,7 @@ class TestPipelineLoadPerformance:
         failure_count = 0
         call_count = 0
 
-        @CircuitBreaker("load_test_circuit", failure_threshold=10, timeout=1)
+        @CircuitBreaker("load_test_circuit", CircuitBreakerConfig(failure_threshold=10, recovery_timeout=1))
         def unreliable_service():
             nonlocal failure_count, call_count
             call_count += 1
