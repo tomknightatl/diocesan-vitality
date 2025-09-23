@@ -47,7 +47,7 @@ kubectl config use-context diocesan-vitality-staging
 cd terraform/environments/dev
 terraform apply
 
-# Create staging cluster with automatic context  
+# Create staging cluster with automatic context
 cd terraform/environments/staging
 terraform apply
 ```
@@ -106,9 +106,9 @@ The `do-k8s-cluster` module now accepts these additional variables:
 ```hcl
 module "k8s_cluster" {
   source = "../../modules/do-k8s-cluster"
-  
+
   # ... other variables ...
-  
+
   # Context management options
   add_kubectl_context  = true                    # Enable automatic context addition
   kubectl_context_name = "diocesan-vitality-dev" # Custom context name
@@ -235,7 +235,7 @@ kubectl config set-context diocesan-vitality-dev \
   --user=$(terraform output -raw cluster_info.name)-admin \
   --namespace=default
 
-# For staging  
+# For staging
 cd terraform/environments/staging
 kubectl config set-context diocesan-vitality-staging \
   --cluster=$(terraform output -raw cluster_info.name) \

@@ -8,7 +8,7 @@ This directory contains Terraform configurations for managing the Diocesan Vital
 # Deploy development environment
 ./scripts/deploy-dev.sh
 
-# Deploy staging environment  
+# Deploy staging environment
 ./scripts/deploy-staging.sh
 ```
 
@@ -56,7 +56,7 @@ terraform/
    source .env
    ```
 
-3. **Configuration**: 
+3. **Configuration**:
    All configuration is handled via `.env` - no additional setup needed!
 
 ## Usage Examples

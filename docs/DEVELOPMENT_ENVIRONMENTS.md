@@ -322,7 +322,7 @@ cloudflared tunnel login
 
 **What this sets up:**
 - ✅ `dv-dev` cluster with development configuration
-- ✅ `dv-stg` cluster with staging configuration  
+- ✅ `dv-stg` cluster with staging configuration
 - ✅ ArgoCD installed in both clusters
 - ✅ GitHub repository connected to ArgoCD
 - ✅ ApplicationSets for automatic deployments

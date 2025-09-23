@@ -7,11 +7,7 @@ Tests the ability to distinguish between actual parishes and diocesan department
 import sys
 
 from core.logger import get_logger
-from core.parish_validation import (
-    filter_valid_parishes,
-    parish_validator,
-    validate_parish_entity,
-)
+from core.parish_validation import filter_valid_parishes, parish_validator, validate_parish_entity
 
 logger = get_logger(__name__)
 

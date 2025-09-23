@@ -13,10 +13,7 @@ from core.enhanced_element_wait import (
     create_search_form_selectors,
 )
 from core.logger import get_logger
-from core.optimized_circuit_breaker_configs import (
-    ErrorRecoveryStrategies,
-    OptimizedCircuitBreakerConfigs,
-)
+from core.optimized_circuit_breaker_configs import ErrorRecoveryStrategies, OptimizedCircuitBreakerConfigs
 
 logger = get_logger(__name__)
 

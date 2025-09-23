@@ -19,7 +19,7 @@ supabase login
 
 ### Step 3: Link Your Project
 
-Connect your local repository to your Supabase project. 
+Connect your local repository to your Supabase project.
 
 ```bash
 supabase link --project-ref <your-project-ref>

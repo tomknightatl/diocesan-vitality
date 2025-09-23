@@ -8,7 +8,7 @@ fullnameOverride: "sealed-secrets-controller"
 commonLabels:
   environment: dev
   component: sealed-secrets
-  
+
 podAnnotations:
   environment: dev
   managed-by: argocd

@@ -20,11 +20,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
-from core.circuit_breaker import (
-    CircuitBreakerConfig,
-    CircuitBreakerOpenError,
-    circuit_breaker,
-)
+from core.circuit_breaker import CircuitBreakerConfig, CircuitBreakerOpenError, circuit_breaker
 from core.logger import get_logger
 
 logger = get_logger(__name__)

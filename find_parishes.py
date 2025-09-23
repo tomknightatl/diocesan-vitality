@@ -25,13 +25,7 @@ from selenium.common.exceptions import TimeoutException, WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from tenacity import (
-    RetryError,
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential,
-)
+from tenacity import RetryError, retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 import config
 from core.db import get_supabase_client

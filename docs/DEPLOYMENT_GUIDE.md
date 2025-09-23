@@ -36,7 +36,7 @@ git push origin main
 
 **What happens automatically:**
 1. 🔍 **Change Detection**: GitHub Actions detects changes in `backend/`, `frontend/`, or pipeline files
-2. 🏗️ **Multi-Arch Build**: Builds images for both ARM64 and AMD64 architectures  
+2. 🏗️ **Multi-Arch Build**: Builds images for both ARM64 and AMD64 architectures
 3. 📤 **Push to Registry**: Automatically pushes images to Docker Hub
 4. 📝 **Update Manifests**: Updates Kubernetes deployment files with new image tags
 5. 🔄 **GitOps Trigger**: Commits updated manifests back to repository for ArgoCD sync
@@ -66,7 +66,7 @@ gh workflow run docker-build-push.yml -f force_build=true
 ### 📋 Setup Requirements
 
 **Repository Secrets (required):**
-- `DOCKER_USERNAME`: Your Docker Hub username  
+- `DOCKER_USERNAME`: Your Docker Hub username
 - `DOCKER_PASSWORD`: Your Docker Hub password or access token
 
 **Add secrets at:** `https://github.com/your-username/diocesan-vitality/settings/secrets/actions`

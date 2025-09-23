@@ -118,11 +118,11 @@
   .dashboard .display-6 {
     font-size: 1.5rem;
   }
-  
+
   .dashboard .card-body {
     padding: 1rem;
   }
-  
+
   .dashboard .table {
     font-size: 0.8rem;
   }
@@ -339,22 +339,22 @@
   .pipeline-steps {
     gap: 0.5rem;
   }
-  
+
   .pipeline-step {
     padding: 0.5rem;
   }
-  
+
   .step-icon {
     width: 2rem;
     height: 2rem;
     margin-right: 0.75rem;
     font-size: 0.9rem;
   }
-  
+
   .step-content strong {
     font-size: 0.9rem;
   }
-  
+
   .step-content small {
     font-size: 0.8rem;
   }

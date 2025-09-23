@@ -7,11 +7,7 @@ Provides smart element detection with multiple selector strategies and adaptive 
 import time
 from typing import Any, List, Optional, Tuple
 
-from selenium.common.exceptions import (
-    NoSuchElementException,
-    TimeoutException,
-    WebDriverException,
-)
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait

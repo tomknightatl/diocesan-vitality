@@ -1,7 +1,7 @@
 # Dev: more frequent checks for faster feedback
 livenessProbe:
   periodSeconds: 15
-  
+
 # Prd: less frequent, more stable
 livenessProbe:
   periodSeconds: 60
@@ -70,7 +70,7 @@ Each environment uses optimized resource allocation based on its purpose.
 
 The ApplicationSet now supports multiple environments with environment-specific configurations:
 - **Dev**: Uses `overlays/dev/` with dev-specific tunnel ID, hostnames, and minimal resources
-- **Stg**: Uses `overlays/stg/` with stg-specific tunnel ID, hostnames, and moderate resources  
+- **Stg**: Uses `overlays/stg/` with stg-specific tunnel ID, hostnames, and moderate resources
 - **Prd**: Uses `overlays/prd/` with prd-specific tunnel ID, hostnames, and production-grade resources
 - **Arg**: Uses `overlays/arg/` with ArgoCD-specific tunnel ID, hostnames, and management-appropriate resources
 - **Environment Isolation**: Each environment has its own sealed secret, tunnel configuration, and resource allocation
@@ -120,7 +120,7 @@ Those instructions are in the ~/Diocesan Vitality/k8s/argocd/README.md file
 kubectl apply -f ~/Diocesan Vitality/k8s/argocd/cloudflare-tunnel-applicationset.yaml
 ```
 
-**Expected Status After Step 2**: 
+**Expected Status After Step 2**:
 The Application will show as **Healthy** but **Degraded** with an error about the sealed secret: `Failed to unseal: no key could decrypt secret (tunnel-token)`. This is normal and expected because you haven't created the actual tunnel token yet. The Application will become fully healthy after completing Steps 4-7 below.
 
 ### Step 3: Create Environment-Specific Cloudflare Tunnels
@@ -129,7 +129,7 @@ Create separate tunnels for each environment to ensure proper isolation:
 
 #### Dev Environment
 1. In your Cloudflare dashboard, navigate to Zero Trust > Networks > Tunnels
-2. Click "Create a tunnel" 
+2. Click "Create a tunnel"
 3. Give your tunnel a name: "optinosis-cluster-dev"
 4. Choose your environment (Docker is easiest for copying the token)
 5. Copy the token - you'll need this for the sealed secret
@@ -138,22 +138,22 @@ Create separate tunnels for each environment to ensure proper isolation:
     - Subdomain: kubeflow, Domain: optinosis.tech, URL: istio-ingressgateway.istio-system.svc.cluster.local:80
     - Subdomain: optinexus2, Domain: optinosis.tech, URL: open-webui.open-webui.svc.cluster.local:8080
 
-#### Stg Environment (Optional)  
+#### Stg Environment (Optional)
 1. Create another tunnel: "optinosis-cluster-stg"
 2. Add stg-specific hostnames:
     - Subdomain: argocd-optinosis-stg, Domain: optinosis.tech
-    - Subdomain: kubeflow-stg, Domain: optinosis.tech  
+    - Subdomain: kubeflow-stg, Domain: optinosis.tech
     - Subdomain: optinexus2-stg, Domain: optinosis.tech
 
 #### Prd Environment (Optional)
-1. Create another tunnel: "optinosis-cluster-prd"  
+1. Create another tunnel: "optinosis-cluster-prd"
 2. Add prd hostnames:
     - Subdomain: argocd-optinosis, Domain: optinosis.tech
     - Subdomain: kubeflow, Domain: optinosis.tech
     - Subdomain: optinexus2, Domain: optinosis.tech
 
 #### Arg Environment (ArgoCD Management)
-1. Create another tunnel: "optinosis-cluster-arg"  
+1. Create another tunnel: "optinosis-cluster-arg"
 2. Add ArgoCD management hostnames:
     - Subdomain: argocd-arg, Domain: optinosis.tech
     - Subdomain: grafana-arg, Domain: optinosis.tech (if monitoring is deployed)
@@ -183,7 +183,7 @@ Repeat the above process for stg, prd, and arg with appropriate naming:
 
 Create sealed secrets for each environment's tunnel token:
 
-**Important Context Note**: 
+**Important Context Note**:
 - The `kubectl create secret` command can be run from any context since it uses `--dry-run=client` (no cluster interaction)
 - The `kubeseal` command **must** be run with your kubectl context set to the **destination cluster** (where the tunnel will be deployed), not the ArgoCD server cluster, because kubeseal needs to communicate with the SealedSecrets controller running on the destination cluster
 
@@ -194,7 +194,7 @@ Create sealed secrets for each environment's tunnel token:
    ```bash
    # Set context to the dev cluster where the tunnel will be deployed
    kubectl config use-context do-nyc2-optinosis-cluster-dev
-   
+
    # Verify you're in the correct context
    kubectl config current-context
    ```
@@ -267,7 +267,7 @@ The repository now includes environment-specific resource limits to optimize dep
    git commit -m "Add multi-environment Cloudflare tunnel with environment-specific resources
    - Use Kustomize strategic merge patches for resource customization
    - Environment-specific resources (dev, stg, arg, prd)"
-   
+
    git push -u origin feature/multi-env-cloudflare-tunnel-with-resources
    ```
 
@@ -444,7 +444,7 @@ This ApplicationSet supports multiple environments with environment-specific fea
 - **Security Focused**: Uses SealedSecrets for secure token management
 
 ### Stg Environment Features (Optional):
-- **Stg Labels**: Targets clusters labeled with `environment: stg`  
+- **Stg Labels**: Targets clusters labeled with `environment: stg`
 - **Stg Hostnames**: Uses `-stg` suffix for stg services
 - **Stg Tunnel**: Separate tunnel instance for stg validation
 - **Moderate Resources**: Balanced resource allocation (100m CPU, 256Mi memory)
@@ -586,10 +586,10 @@ If the tunnel is not working:
     ```bash
     # Check where your sealed-secrets controller is running
     kubectl get pods -A | grep sealed-secrets
-    
+
     # Verify the service name
     kubectl get svc -n kube-system | grep sealed-secrets
-    
+
     # Make sure you're using the correct namespace and name in your kubeseal command
     ```
 
@@ -609,7 +609,7 @@ After successful deployment across environments:
 
 **Dev:**
 - https://argocd-optinosis-dev.optinosis.tech
-- https://kubeflow.optinosis.tech  
+- https://kubeflow.optinosis.tech
 - https://optinexus2.optinosis.tech
 
 **Stg (Optional):**
@@ -708,7 +708,7 @@ Different environments can have different log levels in their `cloudflared-confi
 # Dev: debug logging
 loglevel: debug
 
-# Stg: info logging  
+# Stg: info logging
 loglevel: info
 
 # Prd: warn logging
@@ -723,7 +723,7 @@ Adjust health check intervals per environment by adding patches:
 # Dev: more frequent checks for faster feedback
 livenessProbe:
   periodSeconds: 15
-  
+
 # Production: less frequent, more stable
 livenessProbe:
   periodSeconds: 60
@@ -884,7 +884,7 @@ For prd environments, consider:
 - **Connection timeouts**: Often backend services not ready - check service availability
 - **Token issues**: Dev tokens may be regenerated frequently - verify sealed secret decryption
 
-#### Staging Environment  
+#### Staging Environment
 - **Configuration drift**: Ensure staging mirrors production settings
 - **Certificate issues**: Staging may use different certificates
 - **Load testing impacts**: High load may cause temporary issues - monitor resource usage
@@ -954,7 +954,7 @@ curl -v https://optinexus2.optinosis.tech
 
 #### Tunnel Token Compromise
 1. **Revoke token** in Cloudflare dashboard
-2. **Generate new token** for affected environment  
+2. **Generate new token** for affected environment
 3. **Create new sealed secret** following Step 5 procedures
 4. **Commit and push** updated sealed secret
 5. **Verify tunnel reconnection** in logs

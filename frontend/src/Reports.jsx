@@ -8,13 +8,13 @@ function Reports() {
       description: 'Number of diocese records added to the database over time'
     },
     {
-      file: 'diocesesparishdirectory_records_over_time.png', 
+      file: 'diocesesparishdirectory_records_over_time.png',
       title: 'Diocese Parish Directory Records Over Time',
       description: 'Number of diocese parish directory records processed over time'
     },
     {
       file: 'parishes_records_over_time.png',
-      title: 'Parishes Records Over Time', 
+      title: 'Parishes Records Over Time',
       description: 'Number of parish records extracted and added to the database over time'
     },
     {
@@ -33,10 +33,10 @@ function Reports() {
           <Col key={index} md={6} className="mb-4">
             <Card className="h-100">
               <Card.Body className="p-2">
-                <img 
-                  src={`/${chart.file}`} 
+                <img
+                  src={`/${chart.file}`}
                   alt={chart.title}
-                  className="img-fluid w-100" 
+                  className="img-fluid w-100"
                   style={{ maxHeight: '300px', objectFit: 'contain' }}
                 />
               </Card.Body>
@@ -51,10 +51,10 @@ function Reports() {
           <Col key={index} md={6} className="mb-4">
             <Card className="h-100">
               <Card.Body className="p-2">
-                <img 
-                  src={`/${chart.file}`} 
+                <img
+                  src={`/${chart.file}`}
                   alt={chart.title}
-                  className="img-fluid w-100" 
+                  className="img-fluid w-100"
                   style={{ maxHeight: '300px', objectFit: 'contain' }}
                 />
               </Card.Body>

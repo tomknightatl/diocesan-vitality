@@ -7,12 +7,7 @@ Validates circuit breaker functionality with different failure scenarios.
 import random
 import time
 
-from core.circuit_breaker import (
-    CircuitBreakerConfig,
-    CircuitBreakerOpenError,
-    circuit_breaker,
-    circuit_manager,
-)
+from core.circuit_breaker import CircuitBreakerConfig, CircuitBreakerOpenError, circuit_breaker, circuit_manager
 from core.logger import get_logger
 
 logger = get_logger(__name__)

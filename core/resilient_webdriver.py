@@ -7,20 +7,12 @@ import random
 import time
 from typing import Any, Callable
 
-from selenium.common.exceptions import (
-    StaleElementReferenceException,
-    TimeoutException,
-    WebDriverException,
-)
+from selenium.common.exceptions import StaleElementReferenceException, TimeoutException, WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from core.circuit_breaker import (
-    CircuitBreakerConfig,
-    CircuitBreakerOpenError,
-    circuit_breaker,
-)
+from core.circuit_breaker import CircuitBreakerConfig, CircuitBreakerOpenError, circuit_breaker
 from core.logger import get_logger
 
 logger = get_logger(__name__)

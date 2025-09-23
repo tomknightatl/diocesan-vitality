@@ -19,7 +19,7 @@ const Dashboard = () => {
   const [workers, setWorkers] = useState([]);
   const [selectedWorker, setSelectedWorker] = useState('aggregate');
   const [aggregateMode, setAggregateMode] = useState(true);
-  
+
   const wsRef = useRef(null);
   const maxLogEntries = 100;
   const maxErrorEntries = 20;
@@ -104,10 +104,10 @@ const Dashboard = () => {
         case '127.0.0.1':
           backendHost = 'localhost:8000';
           break;
-        
+
         case 'usccb.diocesevitality.org':
           // The old frontend domain points to the old backend API
-          backendHost = 'api.diocesevitality.org'; 
+          backendHost = 'api.diocesevitality.org';
           break;
 
         case 'diocesanvitality.org':
@@ -126,13 +126,13 @@ const Dashboard = () => {
       console.log('🏠 Hostname:', hostname);
 
       wsRef.current = new WebSocket(wsUrl);
-      
+
       wsRef.current.onopen = () => {
         console.log('WebSocket connected to monitoring');
         setConnected(true);
         setConnectionStatus('connected');
       };
-      
+
       wsRef.current.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
@@ -142,12 +142,12 @@ const Dashboard = () => {
           console.error('Error parsing WebSocket message:', error);
         }
       };
-      
+
       wsRef.current.onclose = () => {
         console.log('WebSocket disconnected');
         setConnected(false);
         setConnectionStatus('disconnected');
-        
+
         // Attempt to reconnect after 3 seconds
         setTimeout(() => {
           if (wsRef.current && wsRef.current.readyState === WebSocket.CLOSED) {
@@ -155,12 +155,12 @@ const Dashboard = () => {
           }
         }, 3000);
       };
-      
+
       wsRef.current.onerror = (error) => {
         console.error('WebSocket error:', error);
         setConnectionStatus('error');
       };
-      
+
     } catch (error) {
       console.error('Error creating WebSocket connection:', error);
       setConnectionStatus('error');
@@ -173,33 +173,33 @@ const Dashboard = () => {
       case 'extraction_status':
         setExtractionStatus(data.payload);
         break;
-        
+
       case 'circuit_breaker_status':
         setCircuitBreakers(data.payload);
         break;
-        
+
       case 'performance_metrics':
         setPerformanceMetrics(data.payload);
         break;
-        
+
       case 'system_health':
         setSystemHealth(data.payload);
         break;
-        
+
       case 'error_alert':
         setRecentErrors(prev => [
           { ...data.payload, timestamp: new Date().toISOString() },
           ...prev.slice(0, maxErrorEntries - 1)
         ]);
         break;
-        
+
       case 'extraction_complete':
         setExtractionHistory(prev => [
           data.payload,
           ...prev.slice(0, 19) // Keep last 20 extractions
         ]);
         break;
-        
+
       case 'live_log':
         setLiveLog(prev => [
           { ...data.payload, id: Date.now() + Math.random() },
@@ -210,7 +210,7 @@ const Dashboard = () => {
       case 'pipeline_status':
         setPipelineStatus(data.payload);
         break;
-        
+
       default:
         console.log('Unknown message type:', data.type);
     }

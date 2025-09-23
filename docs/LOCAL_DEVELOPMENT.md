@@ -184,7 +184,7 @@ DOCKER_PASSWORD="your_dockerhub_password_or_token"
 ```bash
 # Test all components in order
 make env-check     # Check environment variables
-make db-check      # Test database connection  
+make db-check      # Test database connection
 make ai-check      # Test AI API connection
 make webdriver-check  # Test Chrome WebDriver
 
@@ -822,7 +822,7 @@ python run_pipeline.py --diocese_id 123 --max_parishes_per_diocese 2
 # Standard Desktop/Server
 python run_pipeline.py --diocese_id 123 --max_parishes_per_diocese 10
 
-# High-Performance Systems  
+# High-Performance Systems
 python run_pipeline.py --diocese_id 123 --max_parishes_per_diocese 25
 ```
 

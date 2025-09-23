@@ -23,7 +23,7 @@ Before running these steps, ensure you have:
    ```bash
    # Configure DigitalOcean CLI
    doctl auth init --access-token $DIGITALOCEAN_TOKEN
-   
+
    # Verify access
    doctl account get
    ```

@@ -26,7 +26,7 @@ make infra-setup
 # For staging environment
 make infra-setup CLUSTER_LABEL=stg
 
-# For production environment  
+# For production environment
 make infra-setup CLUSTER_LABEL=prd
 ```
 
@@ -54,7 +54,7 @@ make sealed-secrets-create CLUSTER_LABEL=dev
 The system now supports environment-specific deployments:
 
 - **CLUSTER_LABEL=dev**: Development environment
-- **CLUSTER_LABEL=stg**: Staging environment  
+- **CLUSTER_LABEL=stg**: Staging environment
 - **CLUSTER_LABEL=prd**: Production environment
 
 Each environment:
@@ -99,14 +99,14 @@ If tunnel pods show `CrashLoopBackOff` or authentication errors:
    ```bash
    # Ensure correct kubectl context
    kubectl config use-context do-nyc2-dv-dev
-   
+
    # Create sealed secret (replace TOKEN with actual token)
    echo -n "TOKEN_HERE" | kubectl create secret generic cloudflared-token \
      --dry-run=client --from-file=tunnel-token=/dev/stdin \
      --namespace=cloudflare-tunnel-dev -o yaml | \
      kubeseal -o yaml --namespace=cloudflare-tunnel-dev > \
      k8s/infrastructure/cloudflare-tunnel/environments/dev/cloudflared-token-sealedsecret.yaml
-   
+
    # Commit and push
    git add k8s/infrastructure/cloudflare-tunnel/environments/dev/
    git commit -m "Update tunnel token sealed secret"
@@ -158,7 +158,7 @@ The system automatically:
 
 **Environment-specific passwords:**
 - `ARGOCD_ADMIN_PASSWORD_DEV` - Development environment
-- `ARGOCD_ADMIN_PASSWORD_STG` - Staging environment  
+- `ARGOCD_ADMIN_PASSWORD_STG` - Staging environment
 - `ARGOCD_ADMIN_PASSWORD_PRD` - Production environment
 
 If no custom password is found in `.env`, the initial random password is preserved.

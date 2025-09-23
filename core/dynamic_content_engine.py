@@ -13,11 +13,7 @@ import json
 import time
 from typing import Any, Dict, List, Set
 
-from selenium.common.exceptions import (
-    NoSuchElementException,
-    TimeoutException,
-    WebDriverException,
-)
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver

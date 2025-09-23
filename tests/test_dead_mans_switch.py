@@ -10,6 +10,9 @@ import pytest
 import requests
 
 
+@pytest.mark.slow
+@pytest.mark.network
+@pytest.mark.timeout(600)  # 10 minutes for this specific test
 def test_dead_mans_switch():
     backend_url = "http://localhost:8000"
 

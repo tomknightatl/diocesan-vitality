@@ -23,10 +23,7 @@ from core.enhanced_url_manager import get_enhanced_url_manager
 from core.intelligent_parish_prioritizer import get_intelligent_parish_prioritizer
 from core.logger import get_logger
 from core.schedule_ai_extractor import ScheduleAIExtractor, save_ai_schedule_results
-from core.schedule_keywords import (
-    get_all_keywords_for_priority_calculation,
-    load_keywords_from_database,
-)
+from core.schedule_keywords import get_all_keywords_for_priority_calculation, load_keywords_from_database
 from core.stealth_browser import get_stealth_browser
 from core.url_visit_tracker import VisitTracker, get_url_visit_tracker
 from core.utils import normalize_url  # Import normalize_url

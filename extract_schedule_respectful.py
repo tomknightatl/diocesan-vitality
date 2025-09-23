@@ -17,12 +17,7 @@ from core.db import get_supabase_client
 from core.logger import get_logger
 from core.schedule_ai_extractor import ScheduleAIExtractor, save_ai_schedule_results
 from core.schedule_keywords import load_keywords_from_database
-from extract_schedule import (
-    choose_best_url,
-    get_parishes_to_process,
-    get_sitemap_urls,
-    get_suppression_urls,
-)
+from extract_schedule import choose_best_url, get_parishes_to_process, get_sitemap_urls, get_suppression_urls
 from respectful_automation import RespectfulAutomation
 
 logger = get_logger(__name__)

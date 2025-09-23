@@ -103,7 +103,7 @@ function ParishList({ dioceseId }) {
         if (debouncedFilterDataAvailable) params.append('filter_data_available', debouncedFilterDataAvailable);
         if (debouncedFilterBlocked) params.append('filter_blocked', debouncedFilterBlocked);
 
-        const url = dioceseId 
+        const url = dioceseId
           ? `/api/dioceses/${dioceseId}/parishes?${params.toString()}`
           : `/api/parishes?${params.toString()}`;
 

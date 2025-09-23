@@ -8,7 +8,7 @@ fullnameOverride: "sealed-secrets-controller"
 commonLabels:
   environment: prd
   component: sealed-secrets
-  
+
 podAnnotations:
   environment: prd
   managed-by: argocd

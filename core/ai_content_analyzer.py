@@ -15,11 +15,7 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import urljoin
 
 import google.generativeai as genai
-from selenium.common.exceptions import (
-    NoSuchElementException,
-    TimeoutException,
-    WebDriverException,
-)
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
 

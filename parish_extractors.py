@@ -30,21 +30,13 @@ import pdfplumber
 import PyPDF2
 import requests
 from bs4 import BeautifulSoup
-from selenium.common.exceptions import (
-    NoSuchElementException,
-    TimeoutException,
-    WebDriverException,
-)
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select, WebDriverWait
 
-from core.circuit_breaker import (
-    CircuitBreakerConfig,
-    CircuitBreakerOpenError,
-    circuit_breaker,
-)
+from core.circuit_breaker import CircuitBreakerConfig, CircuitBreakerOpenError, circuit_breaker
 from core.logger import get_logger
 from core.parish_validation import filter_valid_parishes
 from extractors.enhanced_ai_fallback_extractor import EnhancedAIFallbackExtractor
