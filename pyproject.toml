@@ -43,6 +43,17 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 strict_equality = true
+exclude = [
+    "src/",
+    "venv/",
+    "test_venv/",
+    "tests/",
+    "frontend/",
+    "node_modules/",
+    "build/",
+    "dist/"
+]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 minversion = "6.0"

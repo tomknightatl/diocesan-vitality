@@ -72,7 +72,10 @@ jobs:
       - name: Python Type Checking (MyPy)
         continue-on-error: true
         run: |
-          mypy . --ignore-missing-imports || true
+          # Install type stubs and run mypy with proper exclusions
+          python -m pip install types-requests
+          # Run mypy only on core directories, exclude src/ packaging structure
+          mypy core/ extractors/ --ignore-missing-imports --config-file pyproject.toml || true
           echo "⚠️ Type checking completed (warnings allowed)"
 
   # ============================================================================

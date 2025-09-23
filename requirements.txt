@@ -14,6 +14,8 @@ pytest
 pytest-asyncio
 pytest-mock
 pytest-timeout
+types-requests
+mypy
 fastapi
 uvicorn
 lxml
