@@ -221,12 +221,8 @@ jobs:
       - name: Run Frontend Tests
         run: |
           cd frontend
-          # Skip tests if no test files exist
-          if [ -f "src/App.test.js" ] || [ -f "src/App.test.tsx" ]; then
-            npm test -- --coverage --watchAll=false
-          else
-            echo "⚠️ No frontend tests found, skipping"
-          fi
+          # Run Vitest tests
+          npm run test:run
           echo "✅ Frontend tests completed"
 
   # ============================================================================
