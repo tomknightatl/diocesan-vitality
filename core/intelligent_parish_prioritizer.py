@@ -32,7 +32,7 @@ class IntelligentParishPrioritizer:
         logger.info("🎯 Intelligent Parish Prioritizer initialized")
 
     def get_prioritized_parishes(
-        self, num_parishes: int, parish_id: int = None, diocese_id: int = None
+        self, num_parishes: int, parish_id: int | None = None, diocese_id: int | None = None
     ) -> List[Tuple[str, int]]:
         """
         Get prioritized parishes for schedule extraction using simplified logic.
@@ -72,7 +72,7 @@ class IntelligentParishPrioritizer:
             logger.error(f"🎯 Error fetching specific parish {parish_id}: {e}")
             return []
 
-    def _get_simple_prioritized_parishes(self, num_parishes: int, diocese_id: int = None) -> List[Dict]:
+    def _get_simple_prioritized_parishes(self, num_parishes: int, diocese_id: int | None = None) -> List[Dict]:
         """
         Get prioritized parishes using simplified logic:
         1. Never - tested parishes first (newer parishes first by ID)

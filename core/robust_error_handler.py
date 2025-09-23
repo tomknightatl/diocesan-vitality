@@ -617,7 +617,7 @@ class RobustErrorHandler:
             "method": "manual_patterns",
         }
 
-    def _database_retry_fallback(self, context: ErrorContext, operation_func: Callable = None, **kwargs):
+    def _database_retry_fallback(self, context: ErrorContext, operation_func: Callable | None = None, **kwargs):
         """Database retry with exponential backoff."""
         if not operation_func:
             raise ValueError("Database operation function required")
@@ -732,7 +732,7 @@ class RobustErrorHandler:
             "last_error_time": self.metrics.last_error_time,
         }
 
-    def create_resilient_wrapper(self, operation: str, fallback_config: FallbackConfig = None):
+    def create_resilient_wrapper(self, operation: str, fallback_config: FallbackConfig | None = None):
         """Create a decorator for making functions resilient."""
 
         def decorator(func: Callable) -> Callable:

@@ -267,7 +267,7 @@ class URLVisitTracker:
         visit_result.content_size_bytes = content_size
         visit_result.final_url = final_url
 
-    def record_extraction_attempt(self, visit_result: VisitResult, success: bool, error: Exception = None):
+    def record_extraction_attempt(self, visit_result: VisitResult, success: bool, error: Exception | None = None):
         """Record extraction attempt results."""
         visit_result.extraction_success = success
         visit_result.visit_status = VisitStatus.SUCCESS if success else VisitStatus.FAILED
@@ -394,7 +394,7 @@ class URLVisitTracker:
         visit_result.quality_score = quality_score
         visit_result.relevance_indicators = scoring_metrics["found_indicators"][:20]  # Limit stored indicators
 
-    def get_visit_statistics(self, parish_id: int = None) -> Dict[str, Any]:
+    def get_visit_statistics(self, parish_id: int | None = None) -> Dict[str, Any]:
         """
         Get visit statistics for analysis.
 
@@ -479,7 +479,7 @@ class URLVisitTracker:
             logger.error(f"🔍 Error getting successful URLs for parish {parish_id}: {e}")
             return []
 
-    def mark_url_as_visited(self, url: str, parish_id: int, visited_at: datetime = None):
+    def mark_url_as_visited(self, url: str, parish_id: int, visited_at: datetime | None = None):
         """
         Simple method to mark a URL as visited with timestamp.
 
@@ -511,7 +511,7 @@ def get_url_visit_tracker(supabase: Client = None) -> URLVisitTracker:
 class VisitTracker:
     """Context manager for automatic URL visit tracking."""
 
-    def __init__(self, url: str, parish_id: int, tracker: URLVisitTracker = None):
+    def __init__(self, url: str, parish_id: int, tracker: URLVisitTracker | None = None):
         self.url = url
         self.parish_id = parish_id
         self.tracker = tracker or get_url_visit_tracker()

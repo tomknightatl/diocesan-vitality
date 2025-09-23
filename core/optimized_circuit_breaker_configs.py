@@ -306,7 +306,7 @@ class ErrorRecoveryStrategies:
         error_counts = Counter(error_types)
 
         # Analyze patterns
-        analysis = {
+        analysis: Dict[str, Any] = {
             "total_errors": len(errors),
             "error_types": dict(error_counts),
             "dominant_error": error_counts.most_common(1)[0] if error_counts else None,

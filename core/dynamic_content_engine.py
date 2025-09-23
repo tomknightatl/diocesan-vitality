@@ -31,9 +31,9 @@ class NetworkTrafficAnalyzer:
     def __init__(self, driver: WebDriver):
         """Initialize the network traffic analyzer."""
         self.driver = driver
-        self.captured_requests = []
-        self.api_endpoints = set()
-        self.parish_data_urls = set()
+        self.captured_requests: List[Dict[str, Any]] = []
+        self.api_endpoints: Set[str] = set()
+        self.parish_data_urls: Set[str] = set()
 
     def enable_logging(self):
         """Enable browser logging to capture network requests."""

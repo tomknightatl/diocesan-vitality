@@ -18,7 +18,7 @@ import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -1039,7 +1039,7 @@ def analyze_parish_finder_quality(parishes: List[ParishData]) -> Dict:
     total_parishes = len(parishes)
 
     # Parish Finder specific analysis
-    analysis = {
+    analysis: Dict[str, Any] = {
         "total_parishes": total_parishes,
         "extraction_methods": {},
         "parish_finder_specific": {
