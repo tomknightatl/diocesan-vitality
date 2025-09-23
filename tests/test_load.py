@@ -91,7 +91,7 @@ class TestPipelineLoadPerformance:
         failure_count = 0
         call_count = 0
 
-        circuit_breaker = CircuitBreaker("load_test_circuit", CircuitBreakerConfig(failure_threshold=10, recovery_timeout=1))
+        circuit_breaker = CircuitBreaker("load_test_circuit", CircuitBreakerConfig(failure_threshold=10, recovery_timeout=0.1))
 
         def unreliable_service():
             nonlocal failure_count, call_count
