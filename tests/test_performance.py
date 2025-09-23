@@ -24,7 +24,7 @@ class TestPerformanceBenchmarks:
     def test_circuit_breaker_performance(self):
         """Test circuit breaker overhead is minimal."""
 
-        circuit_breaker = CircuitBreaker("test_circuit", CircuitBreakerConfig(failure_threshold=5, recovery_timeout=10))
+        circuit_breaker = CircuitBreaker("test_circuit", CircuitBreakerConfig(failure_threshold=5, recovery_timeout=0.1))
 
         def fast_operation():
             return "success"
@@ -96,7 +96,7 @@ class TestPerformanceBenchmarks:
         circuit_breakers = []
         for i in range(100):
             circuit_breaker = CircuitBreaker(
-                f"test_circuit_{i}", CircuitBreakerConfig(failure_threshold=3, recovery_timeout=5)
+                f"test_circuit_{i}", CircuitBreakerConfig(failure_threshold=3, recovery_timeout=0.1)
             )
 
             def dummy_operation():
@@ -124,7 +124,7 @@ class TestPerformanceBenchmarks:
         def worker_task(worker_id):
             start = time.time()
             circuit_breaker = CircuitBreaker(
-                f"concurrent_test_{worker_id}", CircuitBreakerConfig(failure_threshold=5, recovery_timeout=10)
+                f"concurrent_test_{worker_id}", CircuitBreakerConfig(failure_threshold=5, recovery_timeout=0.1)
             )
 
             # Simulate concurrent work
