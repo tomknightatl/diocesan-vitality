@@ -13,7 +13,7 @@ to dramatically improve extraction success rates by:
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 from urllib.parse import urlparse, urlunparse
 
 import requests
