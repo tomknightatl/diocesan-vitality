@@ -404,7 +404,9 @@ jobs:
     needs:
       [
         code-quality,
-        test-backend,
+        test-backend-core,
+        test-backend-integration,
+        test-backend-ai-async,
         test-frontend,
         integration-tests,
         build-images,
@@ -418,7 +420,9 @@ jobs:
           echo ""
           echo "📊 Job Results:"
           echo "   Code Quality: ${{ needs.code-quality.result }}"
-          echo "   Backend Tests: ${{ needs.test-backend.result }}"
+          echo "   Backend Tests - Core: ${{ needs.test-backend-core.result }}"
+          echo "   Backend Tests - Integration: ${{ needs.test-backend-integration.result }}"
+          echo "   Backend Tests - AI/Async: ${{ needs.test-backend-ai-async.result }}"
           echo "   Frontend Tests: ${{ needs.test-frontend.result }}"
           echo "   Integration Tests: ${{ needs.integration-tests.result }}"
           echo "   Build Images: ${{ needs.build-images.result }}"
@@ -426,7 +430,9 @@ jobs:
 
           # Check if all critical jobs passed
           if [[ "${{ needs.code-quality.result }}" == "success" && \
-                "${{ needs.test-backend.result }}" == "success" && \
+                "${{ needs.test-backend-core.result }}" == "success" && \
+                "${{ needs.test-backend-integration.result }}" == "success" && \
+                "${{ needs.test-backend-ai-async.result }}" == "success" && \
                 "${{ needs.integration-tests.result }}" == "success" ]]; then
             echo "✅ All critical checks passed!"
             echo "🚀 Code is ready for deployment"
