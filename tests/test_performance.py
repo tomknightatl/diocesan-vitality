@@ -11,7 +11,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from core.circuit_breaker import CircuitBreaker
+from core.circuit_breaker import CircuitBreaker, CircuitBreakerConfig
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -24,14 +24,15 @@ class TestPerformanceBenchmarks:
     def test_circuit_breaker_performance(self):
         """Test circuit breaker overhead is minimal."""
 
-        @CircuitBreaker("test_circuit", failure_threshold=5, timeout=10)
+        circuit_breaker = CircuitBreaker("test_circuit", CircuitBreakerConfig(failure_threshold=5, recovery_timeout=10))
+
         def fast_operation():
             return "success"
 
         # Measure baseline performance
         start_time = time.time()
         for _ in range(1000):
-            result = fast_operation()
+            result = circuit_breaker.call(fast_operation)
             assert result == "success"
         execution_time = time.time() - start_time
 
@@ -94,12 +95,14 @@ class TestPerformanceBenchmarks:
         # Create multiple circuit breakers
         circuit_breakers = []
         for i in range(100):
+            circuit_breaker = CircuitBreaker(
+                f"test_circuit_{i}", CircuitBreakerConfig(failure_threshold=3, recovery_timeout=5)
+            )
 
-            @CircuitBreaker(f"test_circuit_{i}", failure_threshold=3, timeout=5)
             def dummy_operation():
                 return i
 
-            circuit_breakers.append(dummy_operation)
+            circuit_breakers.append((circuit_breaker, dummy_operation))
 
         # Memory usage should scale linearly and reasonably
         final_size = sys.getsizeof(circuit_breakers)
@@ -120,14 +123,17 @@ class TestPerformanceBenchmarks:
 
         def worker_task(worker_id):
             start = time.time()
+            circuit_breaker = CircuitBreaker(
+                f"concurrent_test_{worker_id}", CircuitBreakerConfig(failure_threshold=5, recovery_timeout=10)
+            )
+
             # Simulate concurrent work
             for i in range(10):
 
-                @CircuitBreaker(f"concurrent_test_{worker_id}", failure_threshold=5, timeout=10)
                 def concurrent_operation():
                     return f"worker_{worker_id}_task_{i}"
 
-                result = concurrent_operation()
+                result = circuit_breaker.call(concurrent_operation)
                 assert result == f"worker_{worker_id}_task_{i}"
 
             execution_time = time.time() - start
