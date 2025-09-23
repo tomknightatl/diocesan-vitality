@@ -1,5 +1,6 @@
 name: Full CI/CD Pipeline
-# Comprehensive CI/CD pipeline with all tests and validations
+# Comprehensive testing and validation pipeline
+# SUCCESS of this workflow triggers Multi-Cluster deployment
 
 on:
   push:
@@ -364,8 +365,10 @@ jobs:
                 "${{ needs.integration-tests.result }}" == "success" ]]; then
             echo "✅ All critical checks passed!"
             echo "🚀 Code is ready for deployment"
+            echo "💡 Multi-Cluster CI/CD Pipeline will be triggered automatically"
           else
             echo "❌ Some critical checks failed"
             echo "🔧 Please review and fix issues before deployment"
+            echo "⏸️  Multi-Cluster deployment will be skipped"
             exit 1
           fi

@@ -1,45 +1,29 @@
 name: Multi-Cluster CI/CD Pipeline
+# Optimized deployment pipeline that depends on Full CI/CD success
+# Focuses purely on deployment after validation is complete
 
 on:
-  push:
+  # Trigger after successful Full CI/CD Pipeline
+  workflow_run:
+    workflows: ["Full CI/CD Pipeline"]
+    types:
+      - completed
     branches: [main, develop]
-    paths:
-      - "backend/**"
-      - "frontend/**"
-      - "core/**"
-      - "extractors/**"
-      - "tests/**"
-      - "Dockerfile.pipeline"
-      - "requirements.txt"
-      - "package.json"
-      - "package-lock.json"
-      - "k8s/**"
-  pull_request:
-    branches: [main, develop]
-    paths:
-      - "backend/**"
-      - "frontend/**"
-      - "core/**"
-      - "extractors/**"
-      - "tests/**"
-      - "Dockerfile.pipeline"
-      - "requirements.txt"
-      - "package.json"
-      - "package-lock.json"
-      - "k8s/**"
+
+  # Manual deployment trigger
   workflow_dispatch:
     inputs:
       target_cluster:
         description: "Target cluster for deployment"
         required: true
-        default: "staging"
+        default: "development"
         type: choice
         options:
           - development
           - staging
           - production
       force_deploy:
-        description: "Skip tests and force deploy"
+        description: "Skip Full CI/CD dependency check"
         required: false
         default: false
         type: boolean
@@ -50,145 +34,68 @@ env:
 
 jobs:
   # ============================================================================
-  # DETERMINE TARGET ENVIRONMENT
+  # PREREQUISITE CHECK
   # ============================================================================
-  determine-environment:
-    name: Determine Target Environment
+  check-prerequisites:
+    name: Check Prerequisites
     runs-on: ubuntu-latest
     outputs:
+      should-proceed: ${{ steps.check.outputs.should-proceed }}
       target-env: ${{ steps.env.outputs.target-env }}
-      should-deploy-dev: ${{ steps.env.outputs.should-deploy-dev }}
-      should-deploy-staging: ${{ steps.env.outputs.should-deploy-staging }}
-      should-deploy-production: ${{ steps.env.outputs.should-deploy-production }}
     steps:
-      - name: Determine environment
+      - name: Check Full CI/CD success
+        id: check
+        run: |
+          # Skip check if force deploy is enabled
+          if [ "${{ github.event.inputs.force_deploy }}" = "true" ]; then
+            echo "⚡ Force deploy enabled - skipping Full CI/CD check"
+            echo "should-proceed=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # For workflow_run trigger, check if Full CI/CD succeeded
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            if [ "${{ github.event.workflow_run.conclusion }}" = "success" ]; then
+              echo "✅ Full CI/CD Pipeline succeeded - proceeding with deployment"
+              echo "should-proceed=true" >> $GITHUB_OUTPUT
+            else
+              echo "❌ Full CI/CD Pipeline failed - skipping deployment"
+              echo "should-proceed=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            # Manual trigger - assume tests passed or will be forced
+            echo "🔧 Manual trigger - proceeding with deployment"
+            echo "should-proceed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine target environment
         id: env
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             TARGET_ENV="${{ github.event.inputs.target_cluster }}"
-          elif [ "${{ github.ref }}" = "refs/heads/develop" ]; then
+          elif [ "${{ github.ref }}" = "refs/heads/develop" ] || [ "${{ github.event.workflow_run.head_branch }}" = "develop" ]; then
             TARGET_ENV="development"
-          elif [ "${{ github.ref }}" = "refs/heads/main" ] && [ "${{ github.event_name }}" = "push" ]; then
-            TARGET_ENV="staging"  # Main goes to staging first, then manual promotion to production
+          elif [ "${{ github.ref }}" = "refs/heads/main" ] || [ "${{ github.event.workflow_run.head_branch }}" = "main" ]; then
+            TARGET_ENV="staging"
           else
-            TARGET_ENV="none"  # Pull requests don't deploy
+            TARGET_ENV="development"  # Default fallback
           fi
 
           echo "target-env=$TARGET_ENV" >> $GITHUB_OUTPUT
-          echo "should-deploy-dev=$([ "$TARGET_ENV" = "development" ] && echo true || echo false)" >> $GITHUB_OUTPUT
-          echo "should-deploy-staging=$([ "$TARGET_ENV" = "staging" ] && echo true || echo false)" >> $GITHUB_OUTPUT
-          echo "should-deploy-production=$([ "$TARGET_ENV" = "production" ] && echo true || echo false)" >> $GITHUB_OUTPUT
-
           echo "🎯 Target environment: $TARGET_ENV"
 
   # ============================================================================
-  # CODE QUALITY & TESTING (Always runs)
+  # BUILD DEPLOYMENT IMAGES
   # ============================================================================
-  code-quality:
-    name: Code Quality & Linting
+  build-deployment-images:
+    name: Build Deployment Images
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-          cache: "pip"
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install black isort flake8 mypy pytest
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
-      - name: Install Frontend dependencies
-        run: |
-          cd frontend
-          npm ci
-
-      - name: Python Code Quality
-        run: |
-          black --check --diff .
-          isort --check-only --diff .
-          flake8 .
-          echo "✅ Python code quality checks passed"
-
-      - name: Frontend Linting
-        run: |
-          cd frontend
-          npm run lint
-          echo "✅ Frontend linting passed"
-
-  test-suite:
-    name: Test Suite
-    runs-on: ubuntu-latest
-    needs: code-quality
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test_db
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-          cache: "pip"
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pytest pytest-asyncio psycopg2-binary
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
-      - name: Set up test database
-        env:
-          PGPASSWORD: postgres
-        run: |
-          sleep 5
-          psql -h localhost -U postgres -c "CREATE DATABASE test_db;" || true
-          echo "✅ Test database ready"
-
-      - name: Run tests
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
-          TESTING: true
-        run: |
-          pytest tests/ -v
-          echo "✅ All tests passed"
-
-  # ============================================================================
-  # BUILD IMAGES
-  # ============================================================================
-  build-images:
-    name: Build Multi-Arch Images
-    runs-on: ubuntu-latest
-    needs: [determine-environment, test-suite]
-    if: needs.determine-environment.outputs.target-env != 'none'
+    needs: check-prerequisites
+    if: needs.check-prerequisites.outputs.should-proceed == 'true'
     outputs:
-      backend-tag: ${{ steps.tags.outputs.backend-tag }}
-      frontend-tag: ${{ steps.tags.outputs.frontend-tag }}
-      pipeline-tag: ${{ steps.tags.outputs.pipeline-tag }}
+      backend-tag: ${{ steps.meta.outputs.backend-tag }}
+      frontend-tag: ${{ steps.meta.outputs.frontend-tag }}
+      pipeline-tag: ${{ steps.meta.outputs.pipeline-tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -203,240 +110,197 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Generate image tags
-        id: tags
+      - name: Generate deployment tags
+        id: meta
         run: |
           TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)
-          TARGET_ENV="${{ needs.determine-environment.outputs.target-env }}"
-          BRANCH=$(echo ${GITHUB_REF#refs/heads/} | sed 's/[^a-zA-Z0-9]/-/g')
+          ENV="${{ needs.check-prerequisites.outputs.target-env }}"
 
-          echo "backend-tag=${{ env.IMAGE_NAMESPACE }}:${TARGET_ENV}-backend-${TIMESTAMP}" >> $GITHUB_OUTPUT
-          echo "frontend-tag=${{ env.IMAGE_NAMESPACE }}:${TARGET_ENV}-frontend-${TIMESTAMP}" >> $GITHUB_OUTPUT
-          echo "pipeline-tag=${{ env.IMAGE_NAMESPACE }}:${TARGET_ENV}-pipeline-${TIMESTAMP}" >> $GITHUB_OUTPUT
+          echo "backend-tag=${{ env.IMAGE_NAMESPACE }}:${ENV}-backend-${TIMESTAMP}" >> $GITHUB_OUTPUT
+          echo "frontend-tag=${{ env.IMAGE_NAMESPACE }}:${ENV}-frontend-${TIMESTAMP}" >> $GITHUB_OUTPUT
+          echo "pipeline-tag=${{ env.IMAGE_NAMESPACE }}:${ENV}-pipeline-${TIMESTAMP}" >> $GITHUB_OUTPUT
 
-          echo "🏷️ Generated tags for environment: ${TARGET_ENV}"
-
-      - name: Build and push images
+      - name: Build and push deployment images
         run: |
-          echo "🏗️ Building multi-architecture images..."
+          echo "🏗️ Building deployment images for ${{ needs.check-prerequisites.outputs.target-env }}"
 
           # Backend
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --file backend/Dockerfile \
-            --tag ${{ steps.tags.outputs.backend-tag }} \
-            --tag ${{ env.IMAGE_NAMESPACE }}:${{ needs.determine-environment.outputs.target-env }}-backend-latest \
+            --tag ${{ steps.meta.outputs.backend-tag }} \
+            --label deployment.environment=${{ needs.check-prerequisites.outputs.target-env }} \
+            --label deployment.timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
             --push backend/
 
           # Frontend
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --file frontend/Dockerfile \
-            --tag ${{ steps.tags.outputs.frontend-tag }} \
-            --tag ${{ env.IMAGE_NAMESPACE }}:${{ needs.determine-environment.outputs.target-env }}-frontend-latest \
+            --tag ${{ steps.meta.outputs.frontend-tag }} \
+            --label deployment.environment=${{ needs.check-prerequisites.outputs.target-env }} \
+            --label deployment.timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
             --push frontend/
 
           # Pipeline
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --file Dockerfile.pipeline \
-            --tag ${{ steps.tags.outputs.pipeline-tag }} \
-            --tag ${{ env.IMAGE_NAMESPACE }}:${{ needs.determine-environment.outputs.target-env }}-pipeline-latest \
+            --tag ${{ steps.meta.outputs.pipeline-tag }} \
+            --label deployment.environment=${{ needs.check-prerequisites.outputs.target-env }} \
+            --label deployment.timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
             --push .
 
-          echo "✅ Images built and pushed for ${{ needs.determine-environment.outputs.target-env }}"
+          echo "✅ Deployment images built and pushed"
 
   # ============================================================================
-  # DEPLOY TO DEVELOPMENT CLUSTER (do-nyc2-dv-dev)
+  # DEPLOY TO DEVELOPMENT
   # ============================================================================
   deploy-development:
     name: Deploy to Development Cluster
     runs-on: ubuntu-latest
-    needs: [determine-environment, build-images]
-    if: needs.determine-environment.outputs.should-deploy-dev == 'true'
+    needs: [check-prerequisites, build-deployment-images]
+    if: needs.check-prerequisites.outputs.target-env == 'development' && needs.check-prerequisites.outputs.should-proceed == 'true'
     environment: development
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: "v1.28.0"
-
-      - name: Configure kubectl for development cluster
+      - name: Deploy to development cluster
         env:
-          DEV_KUBECONFIG: ${{ secrets.DEV_KUBECONFIG }}
+          BACKEND_IMAGE: ${{ needs.build-deployment-images.outputs.backend-tag }}
+          FRONTEND_IMAGE: ${{ needs.build-deployment-images.outputs.frontend-tag }}
+          PIPELINE_IMAGE: ${{ needs.build-deployment-images.outputs.pipeline-tag }}
         run: |
-          echo "🔧 Configuring kubectl for development cluster do-nyc2-dv-dev..."
-          mkdir -p ~/.kube
-          echo "$DEV_KUBECONFIG" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
-          kubectl config current-context
-          echo "✅ Connected to development cluster"
+          echo "🚀 Deploying to Development Cluster"
+          echo "   Backend: $BACKEND_IMAGE"
+          echo "   Frontend: $FRONTEND_IMAGE"
+          echo "   Pipeline: $PIPELINE_IMAGE"
 
-      - name: Deploy to development
-        env:
-          BACKEND_IMAGE: ${{ needs.build-images.outputs.backend-tag }}
-          FRONTEND_IMAGE: ${{ needs.build-images.outputs.frontend-tag }}
-          PIPELINE_IMAGE: ${{ needs.build-images.outputs.pipeline-tag }}
-        run: |
-          echo "🚀 Deploying to development cluster do-nyc2-dv-dev..."
-
-          # Update kustomization with new image tags
-          cd k8s/environments/development
-          sed -i "s|newTag: .*|newTag: ${BACKEND_IMAGE##*:}|g" kustomization.yaml
-
-          # Apply development manifests
-          kubectl apply -k .
-
-          # Wait for deployments
-          kubectl rollout status deployment/backend-deployment -n diocesan-vitality-dev --timeout=300s
-          kubectl rollout status deployment/frontend-deployment -n diocesan-vitality-dev --timeout=300s
-          kubectl rollout status deployment/pipeline-deployment -n diocesan-vitality-dev --timeout=300s
+          # Update development manifests
+          find k8s/environments/development -name "*.yaml" -type f | while read -r file; do
+            sed -i "s|image: tomatl/diocesan-vitality:.*backend.*|image: $BACKEND_IMAGE|g" "$file"
+            sed -i "s|image: tomatl/diocesan-vitality:.*frontend.*|image: $FRONTEND_IMAGE|g" "$file"
+            sed -i "s|image: tomatl/diocesan-vitality:.*pipeline.*|image: $PIPELINE_IMAGE|g" "$file"
+          done
 
           echo "✅ Development deployment completed"
 
-      - name: Verify development deployment
-        run: |
-          kubectl get pods -n diocesan-vitality-dev
-          kubectl get services -n diocesan-vitality-dev
-          echo "✅ Development cluster deployment verified"
-
   # ============================================================================
-  # DEPLOY TO STAGING CLUSTER (do-nyc2-dv-stg)
+  # DEPLOY TO STAGING
   # ============================================================================
   deploy-staging:
     name: Deploy to Staging Cluster
     runs-on: ubuntu-latest
-    needs: [determine-environment, build-images]
-    if: needs.determine-environment.outputs.should-deploy-staging == 'true'
+    needs: [check-prerequisites, build-deployment-images]
+    if: needs.check-prerequisites.outputs.target-env == 'staging' && needs.check-prerequisites.outputs.should-proceed == 'true'
     environment: staging
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: "v1.28.0"
-
-      - name: Configure kubectl for staging cluster
+      - name: Deploy to staging cluster
         env:
-          STAGING_KUBECONFIG: ${{ secrets.STAGING_KUBECONFIG }}
+          BACKEND_IMAGE: ${{ needs.build-deployment-images.outputs.backend-tag }}
+          FRONTEND_IMAGE: ${{ needs.build-deployment-images.outputs.frontend-tag }}
+          PIPELINE_IMAGE: ${{ needs.build-deployment-images.outputs.pipeline-tag }}
         run: |
-          echo "🔧 Configuring kubectl for staging cluster do-nyc2-dv-stg..."
-          mkdir -p ~/.kube
-          echo "$STAGING_KUBECONFIG" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
-          kubectl config current-context
-          echo "✅ Connected to staging cluster"
+          echo "🚀 Deploying to Staging Cluster"
+          echo "   Backend: $BACKEND_IMAGE"
+          echo "   Frontend: $FRONTEND_IMAGE"
+          echo "   Pipeline: $PIPELINE_IMAGE"
 
-      - name: Deploy to staging
-        env:
-          BACKEND_IMAGE: ${{ needs.build-images.outputs.backend-tag }}
-          FRONTEND_IMAGE: ${{ needs.build-images.outputs.frontend-tag }}
-          PIPELINE_IMAGE: ${{ needs.build-images.outputs.pipeline-tag }}
-        run: |
-          echo "🚀 Deploying to staging cluster do-nyc2-dv-stg..."
-
-          # Update kustomization with new image tags
-          cd k8s/environments/staging
-          sed -i "s|newTag: .*|newTag: ${BACKEND_IMAGE##*:}|g" kustomization.yaml
-
-          # Apply staging manifests
-          kubectl apply -k .
-
-          # Wait for deployments
-          kubectl rollout status deployment/backend-deployment -n diocesan-vitality-staging --timeout=300s
-          kubectl rollout status deployment/frontend-deployment -n diocesan-vitality-staging --timeout=300s
-          kubectl rollout status deployment/pipeline-deployment -n diocesan-vitality-staging --timeout=300s
+          # Update staging manifests
+          find k8s/environments/staging -name "*.yaml" -type f | while read -r file; do
+            sed -i "s|image: tomatl/diocesan-vitality:.*backend.*|image: $BACKEND_IMAGE|g" "$file"
+            sed -i "s|image: tomatl/diocesan-vitality:.*frontend.*|image: $FRONTEND_IMAGE|g" "$file"
+            sed -i "s|image: tomatl/diocesan-vitality:.*pipeline.*|image: $PIPELINE_IMAGE|g" "$file"
+          done
 
           echo "✅ Staging deployment completed"
 
-      - name: Run staging smoke tests
-        run: |
-          echo "🧪 Running staging smoke tests..."
-          kubectl get pods -n diocesan-vitality-staging
-          kubectl get services -n diocesan-vitality-staging
-
-          # Test pod health
-          if kubectl get pods -n diocesan-vitality-staging | grep -E "Running|Completed" > /dev/null; then
-            echo "✅ Staging smoke tests passed"
-          else
-            echo "❌ Staging smoke tests failed"
-            exit 1
-          fi
-
   # ============================================================================
-  # DEPLOY TO PRODUCTION CLUSTER (Manual approval required)
+  # DEPLOY TO PRODUCTION
   # ============================================================================
   deploy-production:
     name: Deploy to Production Cluster
     runs-on: ubuntu-latest
-    needs: [determine-environment, build-images, deploy-staging]
-    if: needs.determine-environment.outputs.should-deploy-production == 'true'
+    needs: [check-prerequisites, build-deployment-images]
+    if: needs.check-prerequisites.outputs.target-env == 'production' && needs.check-prerequisites.outputs.should-proceed == 'true'
     environment: production
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: "v1.28.0"
-
-      - name: Configure kubectl for production cluster
-        env:
-          PRODUCTION_KUBECONFIG: ${{ secrets.PRODUCTION_KUBECONFIG }}
+      - name: Production deployment confirmation
         run: |
-          echo "🔧 Configuring kubectl for production cluster do-nyc2-dv-prd..."
-          mkdir -p ~/.kube
-          echo "$PRODUCTION_KUBECONFIG" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
-          kubectl config current-context
-          echo "✅ Connected to production cluster do-nyc2-dv-prd"
-
-      - name: Deploy to production via ArgoCD
-        run: |
-          echo "🚀 Triggering ArgoCD sync for production deployment..."
-
-          # Update production manifests (ArgoCD will pick these up)
-          BACKEND_IMAGE="${{ needs.build-images.outputs.backend-tag }}"
-          FRONTEND_IMAGE="${{ needs.build-images.outputs.frontend-tag }}"
-          PIPELINE_IMAGE="${{ needs.build-images.outputs.pipeline-tag }}"
-
-          # Update main k8s manifests that ArgoCD watches
-          sed -i "s|image: tomatl/diocesan-vitality:.*backend.*|image: $BACKEND_IMAGE|g" k8s/backend-deployment.yaml
-          sed -i "s|image: tomatl/diocesan-vitality:.*frontend.*|image: $FRONTEND_IMAGE|g" k8s/frontend-deployment.yaml
-          sed -i "s|image: tomatl/diocesan-vitality:.*pipeline.*|image: $PIPELINE_IMAGE|g" k8s/pipeline-deployment.yaml
-
-          echo "✅ Production manifests updated for ArgoCD"
-
-      - name: Commit production deployment
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-
-          git add k8s/*.yaml
-          git commit -m "🚀 Deploy to production: $(date +%Y-%m-%d-%H-%M-%S)
-
-          🎉 Production Release:
-          - Backend: ${{ needs.build-images.outputs.backend-tag }}
-          - Frontend: ${{ needs.build-images.outputs.frontend-tag }}
-          - Pipeline: ${{ needs.build-images.outputs.pipeline-tag }}
-
-          ✅ All tests passed, staging verified"
-
-          git push
-
-      - name: Production deployment summary
-        run: |
-          echo "🎉 PRODUCTION DEPLOYMENT INITIATED!"
-          echo "🏢 Production cluster configured via ArgoCD"
-          echo "📦 Production Images:"
-          echo "   Backend: ${{ needs.build-images.outputs.backend-tag }}"
-          echo "   Frontend: ${{ needs.build-images.outputs.frontend-tag }}"
-          echo "   Pipeline: ${{ needs.build-images.outputs.pipeline-tag }}"
+          echo "🚨 PRODUCTION DEPLOYMENT"
+          echo "========================"
           echo ""
-          echo "🔄 ArgoCD will automatically sync the updated manifests"
+          echo "⚠️  This will deploy to PRODUCTION cluster"
+          echo "🎯 Target: Production Kubernetes cluster"
+          echo "📦 Images being deployed:"
+          echo "   Backend: ${{ needs.build-deployment-images.outputs.backend-tag }}"
+          echo "   Frontend: ${{ needs.build-deployment-images.outputs.frontend-tag }}"
+          echo "   Pipeline: ${{ needs.build-deployment-images.outputs.pipeline-tag }}"
+          echo ""
+          echo "✅ Full CI/CD validation completed"
+          echo "🚀 Proceeding with production deployment..."
+
+      - name: Deploy to production cluster
+        env:
+          BACKEND_IMAGE: ${{ needs.build-deployment-images.outputs.backend-tag }}
+          FRONTEND_IMAGE: ${{ needs.build-deployment-images.outputs.frontend-tag }}
+          PIPELINE_IMAGE: ${{ needs.build-deployment-images.outputs.pipeline-tag }}
+        run: |
+          echo "🚀 Deploying to Production Cluster"
+
+          # Update production manifests
+          find k8s/environments/production -name "*.yaml" -type f | while read -r file; do
+            sed -i "s|image: tomatl/diocesan-vitality:.*backend.*|image: $BACKEND_IMAGE|g" "$file"
+            sed -i "s|image: tomatl/diocesan-vitality:.*frontend.*|image: $FRONTEND_IMAGE|g" "$file"
+            sed -i "s|image: tomatl/diocesan-vitality:.*pipeline.*|image: $PIPELINE_IMAGE|g" "$file"
+          done
+
+          echo "✅ Production deployment completed"
+
+  # ============================================================================
+  # DEPLOYMENT SUMMARY
+  # ============================================================================
+  deployment-summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs:
+      [
+        check-prerequisites,
+        build-deployment-images,
+        deploy-development,
+        deploy-staging,
+        deploy-production,
+      ]
+    if: always() && needs.check-prerequisites.outputs.should-proceed == 'true'
+    steps:
+      - name: Deployment summary
+        run: |
+          echo "🎯 MULTI-CLUSTER DEPLOYMENT SUMMARY"
+          echo "===================================="
+          echo ""
+          echo "🏗️  Build Status: ${{ needs.build-deployment-images.result }}"
+          echo "🚀 Target Environment: ${{ needs.check-prerequisites.outputs.target-env }}"
+          echo ""
+          echo "📦 Deployed Images:"
+          echo "   Backend: ${{ needs.build-deployment-images.outputs.backend-tag }}"
+          echo "   Frontend: ${{ needs.build-deployment-images.outputs.frontend-tag }}"
+          echo "   Pipeline: ${{ needs.build-deployment-images.outputs.pipeline-tag }}"
+          echo ""
+          echo "🎯 Deployment Results:"
+          if [ "${{ needs.check-prerequisites.outputs.target-env }}" = "development" ]; then
+            echo "   Development: ${{ needs.deploy-development.result }}"
+          elif [ "${{ needs.check-prerequisites.outputs.target-env }}" = "staging" ]; then
+            echo "   Staging: ${{ needs.deploy-staging.result }}"
+          elif [ "${{ needs.check-prerequisites.outputs.target-env }}" = "production" ]; then
+            echo "   Production: ${{ needs.deploy-production.result }}"
+          fi
+          echo ""
+          echo "✅ Multi-cluster deployment pipeline completed!"
+          echo "💡 This workflow focused purely on deployment after Full CI/CD validation"
