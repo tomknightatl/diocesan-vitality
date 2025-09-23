@@ -129,6 +129,8 @@ jobs:
         env:
           TESTING: true
           GENAI_API_KEY: ${{ secrets.GENAI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
           # Core component tests - fast, independent
           pytest tests/test_core.py tests/test_utils.py tests/test_circuit_breaker.py tests/test_deduplication.py tests/test_parish_validation.py tests/test_extractors.py -v --cov=core --cov=extractors --cov-report=xml --cov-report=term -m "not slow and not webdriver and not network" --timeout=60
@@ -158,6 +160,8 @@ jobs:
         env:
           TESTING: true
           GENAI_API_KEY: ${{ secrets.GENAI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
           # Integration and external service tests
           pytest tests/test_integration.py tests/test_monitoring.py tests/test_dashboard.py tests/test_dead_mans_switch.py tests/test_parish_url_consistency.py -v --cov=core --cov=extractors --cov-report=xml --cov-report=term -m "not slow and not webdriver and not network" --timeout=90
@@ -187,6 +191,8 @@ jobs:
         env:
           TESTING: true
           GENAI_API_KEY: ${{ secrets.GENAI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
           # AI and async logic tests - potentially slower
           pytest tests/test_ai_fallback_extractor.py tests/test_ai_schedule_extraction.py tests/test_async_logic.py tests/test_async_extraction.py tests/test_optimizations.py tests/test_schedule_keywords.py -v --cov=core --cov=extractors --cov-report=xml --cov-report=term -m "not slow and not webdriver and not network" --timeout=120
