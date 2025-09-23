@@ -98,32 +98,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pytest-cov pytest-asyncio pytest-timeout
+          pip install pytest pytest-cov pytest-asyncio pytest-timeout pytest-mock
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
-      - name: Create test directory if not exists
-        run: |
-          if [ ! -d "tests" ]; then
-            mkdir -p tests
-            cat > tests/test_basic.py << 'EOF'
-          import sys
-          import os
-          sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-          def test_imports():
-              """Test basic imports work"""
-              try:
-                  import core.logger
-                  import core.db_batch_operations
-                  assert True
-              except ImportError:
-                  assert False, "Core imports failed"
-
-          def test_environment():
-              """Test environment is properly set"""
-              assert os.getenv('TESTING') == 'true'
-          EOF
-          fi
 
       - name: Run Core Component Tests
         env:
@@ -133,7 +109,7 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
           # Core component tests - fast, independent
-          pytest tests/test_core.py tests/test_utils.py tests/test_circuit_breaker.py tests/test_deduplication.py tests/test_parish_validation.py tests/test_extractors.py -v --cov=core --cov=extractors --cov-report=xml --cov-report=term -m "not slow and not webdriver and not network" --timeout=60
+          pytest tests/test_core.py tests/test_utils.py tests/test_circuit_breaker.py tests/test_deduplication.py tests/test_parish_validation.py tests/test_extractors.py -v --cov=core --cov=extractors --cov-report=xml --cov-report=term-missing --timeout=60
           echo "✅ Core component tests passed"
 
   test-backend-integration:
@@ -153,7 +129,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pytest-cov pytest-asyncio pytest-timeout
+          pip install pytest pytest-cov pytest-asyncio pytest-timeout pytest-mock
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
       - name: Run Integration & External Tests
@@ -164,7 +140,7 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
           # Integration and external service tests
-          pytest tests/test_integration.py tests/test_monitoring.py tests/test_dashboard.py tests/test_dead_mans_switch.py tests/test_parish_url_consistency.py -v --cov=core --cov=extractors --cov-report=xml --cov-report=term -m "not slow and not webdriver and not network" --timeout=90
+          pytest tests/test_integration.py tests/test_monitoring.py tests/test_dashboard.py tests/test_dead_mans_switch.py tests/test_parish_url_consistency.py -v --cov=core --cov=extractors --cov-report=xml --cov-report=term-missing --timeout=90
           echo "✅ Integration & external tests passed"
 
   test-backend-ai-async:
@@ -184,7 +160,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pytest-cov pytest-asyncio pytest-timeout
+          pip install pytest pytest-cov pytest-asyncio pytest-timeout pytest-mock
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
       - name: Run AI & Async Logic Tests
@@ -195,7 +171,7 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
           # AI and async logic tests - potentially slower
-          pytest tests/test_ai_fallback_extractor.py tests/test_ai_schedule_extraction.py tests/test_async_logic.py tests/test_async_extraction.py tests/test_optimizations.py tests/test_schedule_keywords.py -v --cov=core --cov=extractors --cov-report=xml --cov-report=term -m "not slow and not webdriver and not network" --timeout=120
+          pytest tests/test_ai_fallback_extractor.py tests/test_ai_schedule_extraction.py tests/test_async_logic.py tests/test_async_extraction.py tests/test_optimizations.py tests/test_schedule_keywords.py -v --cov=core --cov=extractors --cov-report=xml --cov-report=term-missing --timeout=120
           echo "✅ AI & async logic tests passed"
 
   test-frontend:
@@ -265,7 +241,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pytest-asyncio psycopg2-binary
+          pip install pytest pytest-cov pytest-asyncio pytest-timeout pytest-mock psycopg2-binary
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
       - name: Set up test database
@@ -285,31 +261,15 @@ jobs:
           "
           echo "✅ Test database initialized"
 
-      - name: Create integration tests if not exist
-        run: |
-          if [ ! -f "tests/test_integration.py" ]; then
-            cat > tests/test_integration.py << 'EOF'
-          import pytest
-          import os
-
-          def test_database_connection():
-              """Test database connectivity"""
-              db_url = os.getenv('DATABASE_URL')
-              assert db_url is not None
-              assert 'postgresql' in db_url
-
-          def test_environment_variables():
-              """Test required environment variables"""
-              assert os.getenv('TESTING') == 'true'
-          EOF
-          fi
-
       - name: Run Integration Tests
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
           TESTING: true
+          GENAI_API_KEY: ${{ secrets.GENAI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          pytest tests/test_integration.py -v
+          pytest tests/test_integration.py -v --cov=core --cov=extractors --cov-report=xml --cov-report=term-missing
           echo "✅ Integration tests passed"
 
   # ============================================================================
