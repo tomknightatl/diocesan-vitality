@@ -105,6 +105,17 @@ lint: ## Run linting
 	@flake8 . --exclude=venv,node_modules,frontend/node_modules
 	@echo "✅ Linting complete"
 
+ci-check: ## Run exact same checks as CI pipeline
+	@echo "🚀 Running CI checks locally..."
+	@python scripts/ci_check.py
+
+pre-commit-install: ## Install and update pre-commit hooks
+	@echo "🔧 Installing pre-commit hooks..."
+	@pip install pre-commit
+	@pre-commit install
+	@pre-commit autoupdate
+	@echo "✅ Pre-commit hooks installed and updated"
+
 env-check: ## Check environment configuration
 	@python scripts/dev_test.py --env
 

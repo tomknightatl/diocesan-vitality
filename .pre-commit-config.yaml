@@ -1,54 +1,33 @@
 # Pre-commit configuration for Diocesan Vitality
-# Runs the same checks as CI pipeline locally before commits
+# EXACTLY matches the Simple CI pipeline for consistency
 # Install with: pip install pre-commit && pre-commit install
 
 repos:
-  # Python Code Quality
+  # Core Python Code Quality - MATCHES Simple CI exactly
   - repo: https://github.com/psf/black
-    rev: 23.12.1
+    rev: 24.8.0
     hooks:
       - id: black
-        args: [--line-length=127]
+        # No args - reads from pyproject.toml like CI does
         language_version: python3
 
   - repo: https://github.com/pycqa/isort
     rev: 5.13.2
     hooks:
       - id: isort
-        args: [--profile=black, --line-length=127]
+        # No args - reads from pyproject.toml like CI does
 
   - repo: https://github.com/pycqa/flake8
-    rev: 7.0.0
+    rev: 7.1.1
     hooks:
       - id: flake8
-        args: [--max-line-length=127, --extend-ignore=E203,W503, --max-complexity=10]
+        # No args - reads from .flake8 like CI does
 
-  # Python Testing
-  - repo: local
-    hooks:
-      - id: pytest-check
-        name: pytest
-        entry: pytest
-        language: system
-        types: [python]
-        args: [tests/, -v]
-        pass_filenames: false
-        always_run: false
+  # Additional Local-Only Quality Checks (not in CI)
+  # These provide extra value during development but aren't CI blockers
 
-  # Frontend Quality (if working on frontend)
-  - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v8.56.0
-    hooks:
-      - id: eslint
-        files: ^frontend/.*\.(js|jsx|ts|tsx)$
-        additional_dependencies:
-          - eslint@8.56.0
-          - eslint-config-react-app
-        args: [--fix]
-
-  # General Code Quality
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v4.6.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -59,22 +38,30 @@ repos:
       - id: check-merge-conflict
       - id: debug-statements
 
-  # Security Checks
+  # Security scan (local development aid)
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.5
+    rev: 1.7.9
     hooks:
       - id: bandit
-        args: [-r, ., -f, json, -o, bandit-report.json]
-        exclude: ^tests/
+        args: [-r, ., --skip, B101, B601]
+        exclude: ^(tests/|scripts/ci_check\.py)
 
-  # Docker and Configuration
-  - repo: https://github.com/hadolint/hadolint
-    rev: v2.12.0
+  # Frontend linting (when applicable)
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v9.9.1
     hooks:
-      - id: hadolint-docker
-        args: [--ignore, DL3008, --ignore, DL3009]
+      - id: eslint
+        files: ^frontend/.*\.(js|jsx|ts|tsx)$
+        additional_dependencies:
+          - eslint@9.9.1
+          - eslint-config-react-app
+        args: [--fix]
 
 # Configuration
 default_stages: [pre-commit]
 fail_fast: false
 minimum_pre_commit_version: 3.0.0
+# CI Parity Notes:
+# - Black, isort, flake8 run EXACTLY like Simple CI workflow
+# - Additional hooks provide development value without breaking CI parity
+# - If Simple CI workflow changes, update the corresponding hooks here

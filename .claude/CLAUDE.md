@@ -7,6 +7,7 @@ includeClaudeAttribution: false
 ## kubectl Command Policy
 
 **🚨 CRITICAL: kubectl Command Approval Required**
+
 - **NEVER run kubectl create, kubectl apply, kubectl delete, or kubectl patch commands without explicit user permission**
 - **ALWAYS ask for permission before executing any kubectl command that modifies cluster state**
 - **Exception: Read-only commands (kubectl get, kubectl describe, kubectl logs) are allowed**
@@ -19,6 +20,7 @@ includeClaudeAttribution: false
 ## Environment Strategy
 
 ### Branch-Based Promotion Flow
+
 ```bash
 # Development: Push to develop branch → Dev cluster
 git checkout develop && git push origin develop
@@ -37,6 +39,7 @@ git checkout main && git commit -m "feat: new feature" && git push origin main
 ## Development Commands
 
 ### Quick Development Setup
+
 ```bash
 # Install dependencies
 make install
@@ -61,6 +64,7 @@ make lint
 ```
 
 ### Cluster Development Commands
+
 ```bash
 # Build and push development images to Docker Hub
 DEV_TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)-dev
@@ -89,6 +93,7 @@ kubectl logs deployment/backend-deployment -n diocesan-vitality-dev --follow
 ```
 
 ### Pipeline Commands
+
 ```bash
 # Quick pipeline test (5 parishes from diocese 1)
 make pipeline
@@ -113,6 +118,7 @@ python distributed_pipeline_runner.py --worker_type reporting    # Step 5: Analy
 ```
 
 ### Testing & Environment
+
 ```bash
 make env-check     # Check environment configuration
 make db-check      # Test database connection
@@ -127,6 +133,7 @@ pytest -v --tb=short     # Verbose output with short traceback
 ```
 
 ### Frontend Commands
+
 ```bash
 cd frontend
 npm install        # Install frontend dependencies
@@ -137,14 +144,46 @@ npm run preview    # Preview production build locally
 ```
 
 ### Backend Commands
+
 ```bash
 cd backend
 uvicorn main:app --reload --host 0.0.0.0 --port 8000  # Start FastAPI backend
 ```
 
+### Code Quality & CI/Pre-commit Workflow
+
+**🎯 Goal: Zero CI Failures - If it passes locally, it passes in CI**
+
+```bash
+# Essential Commands
+make ci-check              # Run exact same checks as CI pipeline
+make pre-commit-install    # Install pre-commit hooks (one-time setup)
+
+# Daily Workflow
+git add .
+git commit -m "message"    # Pre-commit hooks auto-run and fix issues
+
+# Manual Formatting
+make format               # Format all Python code
+make lint                # Run Python linting
+
+# Troubleshooting
+black . && isort .       # Auto-fix formatting issues
+flake8 .                 # Check specific linting issues
+```
+
+**📖 Complete Workflow Guide**: [docs/CI_PRECOMMIT_WORKFLOW.md](../docs/CI_PRECOMMIT_WORKFLOW.md)
+
+**Configuration**: Tools read from `pyproject.toml` and `.flake8` (no CLI overrides)
+
+- Black: 127-character lines, Python 3.11+ target
+- Isort: Black-compatible profile, 127-character lines
+- Flake8: 127-character lines, ignore E203/W503
+
 ## Architecture Overview
 
 ### Core System Components
+
 - **Pipeline Scripts**: Main extraction engine (`run_pipeline.py`, `async_extract_parishes.py`)
 - **Core Modules** (`core/`): Shared utilities for database, WebDriver, circuit breakers, AI analysis
 - **Frontend** (`frontend/`): React dashboard with real-time monitoring via WebSockets
@@ -152,6 +191,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000  # Start FastAPI backend
 - **Distributed Pipeline**: Kubernetes-based distributed processing (`distributed_pipeline_runner.py`)
 
 ### Pipeline Architecture
+
 The system operates in three modes:
 
 1. **Traditional Pipeline**: Sequential execution for initial setup/development
@@ -170,6 +210,7 @@ The system operates in three modes:
    - Single container image with runtime specialization via `WORKER_TYPE` environment variable
 
 ### Key Directories
+
 - **`core/`**: Essential utilities (database, WebDriver, circuit breakers, AI analysis, ML URL prediction)
 - **`extractors/`**: Website-specific parish extraction logic
 - **`scripts/`**: Development utilities (`dev_quick.py`, `dev_start.py`, `dev_test.py`)
@@ -178,6 +219,7 @@ The system operates in three modes:
 - **`tests/`**: Test suite
 
 ### Technology Stack
+
 - **Python 3.12+**: Core pipeline with Selenium, BeautifulSoup, Google Gemini AI
 - **React + Vite**: Frontend dashboard with real-time updates
 - **FastAPI**: Backend monitoring and data APIs
@@ -185,7 +227,9 @@ The system operates in three modes:
 - **Docker + Kubernetes**: Production deployment
 
 ### Environment Configuration
+
 Required environment variables in `.env` (copy from `.env.example`):
+
 - `SUPABASE_URL`, `SUPABASE_KEY`: Database connection
 - `GENAI_API_KEY`: Google Gemini AI for content analysis
 - `SEARCH_API_KEY`, `SEARCH_CX`: Google Custom Search
@@ -194,10 +238,12 @@ Required environment variables in `.env` (copy from `.env.example`):
 - `GITHUB_TOKEN`: GitHub Personal Access Token for GitHub Container Registry access
 
 **Container Registry Options**:
+
 - **Docker Hub**: `tomatl/diocesan-vitality` (production deployments)
 - **GitHub Container Registry**: `ghcr.io/tomknightatl/diocesan-vitality` (development/internal)
 
 **Setup**: Copy `.env.example` to `.env` and fill in your API keys
+
 ```bash
 cp .env.example .env
 # Edit .env with your API keys
@@ -206,18 +252,21 @@ cp .env.example .env
 ### Development Workflow
 
 #### Local Development
+
 1. Start backend: `cd backend && uvicorn main:app --reload --port 8000`
 2. Start frontend: `cd frontend && npm run dev`
 3. Run pipeline: `python run_pipeline.py --max_parishes_per_diocese 5`
 4. Monitor via dashboard: http://localhost:3000/dashboard
 
 #### Cluster Development (Alternative)
+
 1. Build and push development images: `DEV_TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)-dev && docker buildx build --platform linux/amd64,linux/arm64 -f backend/Dockerfile -t tomatl/diocesan-vitality:backend-${DEV_TIMESTAMP} --push backend/`
 2. Update development manifests: `sed -i "s|image: tomatl/diocesan-vitality:.*backend.*|image: tomatl/diocesan-vitality:backend-${DEV_TIMESTAMP}|g" k8s/environments/development/development-patches.yaml`
 3. Deploy via GitOps: `git add k8s/environments/development/ && git commit -m "Development deployment: ${DEV_TIMESTAMP}" && git push origin develop`
 4. Monitor cluster: `kubectl config use-context do-nyc2-dv-dev && kubectl get pods -n diocesan-vitality-dev -w`
 
 ### Key Features
+
 - **Respectful Automation**: Comprehensive robots.txt compliance, rate limiting, blocking detection
 - **AI-Powered Analysis**: Google Gemini integration for intelligent content extraction
 - **Circuit Breaker Protection**: Automatic failure detection and recovery (17+ circuit breakers)
@@ -227,10 +276,12 @@ cp .env.example .env
 - **Worker Specialization**: Specialized worker types with optimized resource allocation and independent scaling
 
 ### Database Schema
+
 Primary tables: `dioceses`, `parishes`, `mass_schedules`, `pipeline_workers`, `diocese_work_assignments`
 See `docs/DATABASE.md` for complete schema documentation.
 
 ### Performance Optimization
+
 - **Async Processing**: 60% performance improvement with concurrent extraction
 - **Intelligent Caching**: Content-aware TTL management
 - **Adaptive Timeouts**: Dynamic optimization based on site complexity
@@ -239,12 +290,13 @@ See `docs/DATABASE.md` for complete schema documentation.
 ### Code Quality Standards
 
 #### Python Code Style (Black & Flake8 Compliance)
+
 **MANDATORY: All Python code written by Claude must comply with Black and flake8 standards**
 
 - **Line Length**: 127 characters maximum (Black format)
-- **Import Organization**: 
+- **Import Organization**:
   - Standard library imports first
-  - Third-party imports second  
+  - Third-party imports second
   - Local imports last
   - Separate groups with blank lines
 - **String Quotes**: Use double quotes for strings (Black default)
@@ -253,6 +305,7 @@ See `docs/DATABASE.md` for complete schema documentation.
 - **Flake8 Ignored Rules**: E203 (whitespace before ':'), W503 (line break before binary operator)
 
 **Example compliant code structure:**
+
 ```python
 import os
 import sys
@@ -299,6 +352,7 @@ make ports            # Check development port usage
 ```
 
 ### Important Documentation References
+
 - **[docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md)**: Complete local setup guide
 - **[docs/COMMANDS.md](docs/COMMANDS.md)**: Comprehensive command reference
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**: Detailed system architecture
@@ -309,6 +363,7 @@ make ports            # Check development port usage
 ## Git Workflow Rules
 
 ### IMPORTANT: Repository Changes
+
 - **NEVER commit or push changes without explicit user permission**
 - **ALWAYS ask before running git commit or git push commands**
 - **Exception: Only push when the user explicitly requests "commit and push" or similar**
@@ -318,9 +373,10 @@ make ports            # Check development port usage
 ## GitOps and ArgoCD Rules
 
 ### CRITICAL: ArgoCD-Managed Resources
+
 - **NEVER directly patch, edit, or modify Kubernetes objects that are deployed by ArgoCD Applications**
 - **ALWAYS use GitOps principles**: modify the source manifests in the repository, then let ArgoCD sync the changes
-- **To change ArgoCD-managed resources**: 
+- **To change ArgoCD-managed resources**:
   1. Update the corresponding YAML manifests in the `k8s/` directory
   2. Commit changes to git (with user permission)
   3. Let ArgoCD automatically sync the changes, or manually trigger a sync
