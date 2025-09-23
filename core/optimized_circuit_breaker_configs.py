@@ -4,6 +4,8 @@ Optimized circuit breaker configurations based on observed diocese extraction pa
 Provides intelligent thresholds and recovery strategies for different types of operations.
 """
 
+from typing import Any, Dict
+
 from core.circuit_breaker import CircuitBreakerConfig
 from core.logger import get_logger
 

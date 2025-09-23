@@ -81,7 +81,7 @@ class URLVisitTracker:
     Comprehensive URL visit tracking system for schedule extraction optimization.
     """
 
-    def __init__(self, supabase: Client = None):
+    def __init__(self, supabase: Optional[Client] = None):
         """Initialize the URL visit tracker."""
         self.supabase = supabase or get_supabase_client()
         self.logger = logger
@@ -140,6 +140,8 @@ class URLVisitTracker:
         """Detect available columns in DiscoveredUrls table."""
         try:
             # Try to query with new columns to see what's available
+            if self.supabase is None:
+                raise RuntimeError("Supabase client not available")
             test_result = self.supabase.table("DiscoveredUrls").select("*").limit(1).execute()
             if test_result.data:
                 self.available_columns = set(test_result.data[0].keys())
@@ -307,7 +309,7 @@ class URLVisitTracker:
         """Analyze content for schedule-related keywords and calculate scoring metrics"""
         total_score = 0.0
         keyword_count = 0
-        found_indicators = []
+        found_indicators: List[str] = []
 
         # Analyze different keyword categories
         self._analyze_keyword_category(

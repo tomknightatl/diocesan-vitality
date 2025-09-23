@@ -1,0 +1,229 @@
+core/dynamic_content_engine.py:215: error: Need type annotation for "result"  [var-annotated]
+core/dynamic_content_engine.py:260: error: Incompatible types in assignment (expression has type "str", target has type "Union[int, Set[Any], List[Any], bool, None]")  [assignment]
+core/dynamic_content_engine.py:274: error: Incompatible types in assignment (expression has type "float", target has type "Union[int, Set[Any], List[Any], bool, None]")  [assignment]
+core/dynamic_content_engine.py:281: error: Incompatible types in assignment (expression has type "float", target has type "Union[int, Set[Any], List[Any], bool, None]")  [assignment]
+report_statistics.py:271: error: Need type annotation for "all_min_dates" (hint: "all_min_dates: List[<type>] = ...")  [var-annotated]
+report_statistics.py:272: error: Need type annotation for "all_max_dates" (hint: "all_max_dates: List[<type>] = ...")  [var-annotated]
+parish_extraction_core.py:136: error: Incompatible types in assignment (expression has type "float", target has type "Optional[str]")  [assignment]
+parish_extraction_core.py:171: error: Incompatible return value type (got "Tuple[None, None]", expected "Tuple[str, str]")  [return-value]
+scripts/dev_start.py:226: error: Need type annotation for "processes" (hint: "processes: List[<type>] = ...")  [var-annotated]
+core/ml_url_predictor.py:300: error: Incompatible types in assignment (expression has type "ndarray[Any, dtype[Any]]", variable has type "List[List[float]]")  [assignment]
+core/ml_url_predictor.py:317: error: Incompatible types in assignment (expression has type "str", variable has type "None")  [assignment]
+core/adaptive_timeout_manager.py:274: error: Argument 1 to "_determine_strategy_from_context" of "AdaptiveTimeoutManager" has incompatible type "Optional[Dict[Any, Any]]"; expected "Dict[Any, Any]"  [arg-type]
+core/adaptive_timeout_manager.py:439: error: Incompatible types in assignment (expression has type "Optional[float]", variable has type "float")  [assignment]
+core/adaptive_timeout_manager.py:444: error: Argument 2 to "_update_complexity_indicators" of "AdaptiveTimeoutManager" has incompatible type "Optional[Dict[str, float]]"; expected "Dict[str, float]"  [arg-type]
+extractors/ai_fallback_extractor.py:36: error: Incompatible types in assignment (expression has type "None", variable has type "AIContentAnalyzer")  [assignment]
+extractors/ai_fallback_extractor.py:62: error: Argument 3 to "_log_extraction_start" of "AIFallbackExtractor" has incompatible type "Optional[int]"; expected "int"  [arg-type]
+extractors/ai_fallback_extractor.py:71: error: Argument 2 to "_apply_parish_limit" of "AIFallbackExtractor" has incompatible type "Optional[int]"; expected "int"  [arg-type]
+core/resilient_webdriver.py:147: error: Exception must be derived from BaseException  [misc]
+core/optimized_circuit_breaker_configs.py:309: error: Name "Dict" is not defined  [name-defined]
+core/optimized_circuit_breaker_configs.py:309: note: Did you forget to import it from "typing"? (Suggestion: "from typing import Dict")
+extractors/enhanced_base_extractor.py:33: error: Need type annotation for "error_history" (hint: "error_history: List[<type>] = ...")  [var-annotated]
+extractors/enhanced_base_extractor.py:34: error: Need type annotation for "last_successful_selectors" (hint: "last_successful_selectors: Dict[<type>, <type>] = ...")  [var-annotated]
+extractors/enhanced_ai_fallback_extractor.py:51: error: Incompatible types in assignment (expression has type "None", variable has type "AIContentAnalyzer")  [assignment]
+extractors/enhanced_ai_fallback_extractor.py:52: error: Incompatible types in assignment (expression has type "None", variable has type "DiocesesProfileManager")  [assignment]
+extractors/enhanced_ai_fallback_extractor.py:218: error: Argument 3 to "_initialize_extraction" of "EnhancedAIFallbackExtractor" has incompatible type "Optional[int]"; expected "int"  [arg-type]
+extractors/enhanced_ai_fallback_extractor.py:223: error: Argument 4 to "_try_profile_extraction" of "EnhancedAIFallbackExtractor" has incompatible type "Optional[int]"; expected "int"  [arg-type]
+extractors/enhanced_ai_fallback_extractor.py:269: error: Need type annotation for "parishes" (hint: "parishes: List[<type>] = ...")  [var-annotated]
+core/url_visit_tracker.py:310: error: Need type annotation for "found_indicators" (hint: "found_indicators: List[<type>] = ...")  [var-annotated]
+core/url_visit_tracker.py:523: error: Incompatible types in assignment (expression has type "float", variable has type "None")  [assignment]
+core/url_visit_tracker.py:524: error: Incompatible types in assignment (expression has type "VisitResult", variable has type "None")  [assignment]
+core/url_visit_tracker.py:525: error: Incompatible return value type (got "None", expected "VisitResult")  [return-value]
+core/schedule_ai_extractor.py:172: error: Missing return statement  [return]
+core/robust_error_handler.py:265: error: Argument 4 to "_execute_fallback_methods" of "RobustErrorHandler" has incompatible type "Optional[Exception]"; expected "Exception"  [arg-type]
+core/robust_error_handler.py:327: error: "RobustErrorHandler" has no attribute "_selenium_fallback"  [attr-defined]
+core/robust_error_handler.py:722: error: Incompatible types in assignment (expression has type "float", variable has type "int")  [assignment]
+core/parallel_extraction_manager.py:548: error: Need type annotation for "domain_counts"  [var-annotated]
+core/parallel_extraction_manager.py:593: error: Incompatible types in assignment (expression has type "float", variable has type "int")  [assignment]
+core/parallel_extraction_manager.py:668: error: Unexpected keyword argument "timeout" for "shutdown" of "Executor"  [call-arg]
+core/monitoring_client.py:26: error: "Session" has no attribute "timeout"  [attr-defined]
+core/monitoring_client.py:316: error: Incompatible types in assignment (expression has type "float", variable has type "None")  [assignment]
+core/monitoring_client.py:323: error: Unsupported operand types for - ("float" and "None")  [operator]
+parish_extractors.py:258: error: Argument 2 to "_extract_details_from_parish_page" of "EnhancedDiocesesCardExtractor" has incompatible type "Optional[str]"; expected "str"  [arg-type]
+parish_extractors.py:531: error: Need type annotation for "parishes" (hint: "parishes: List[<type>] = ...")  [var-annotated]
+parish_extractors.py:547: error: Need type annotation for "parish_elements" (hint: "parish_elements: List[<type>] = ...")  [var-annotated]
+parish_extractors.py:650: error: Argument 1 to "clean_parish_name_and_extract_address" has incompatible type "Optional[str]"; expected "str"  [arg-type]
+parish_extractors.py:788: error: Need type annotation for "enhanced_data" (hint: "enhanced_data: Dict[<type>, <type>] = ...")  [var-annotated]
+parish_extractors.py:1194: error: Need type annotation for "parishes" (hint: "parishes: List[<type>] = ...")  [var-annotated]
+parish_extractors.py:1581: error: Need type annotation for "parishes" (hint: "parishes: List[<type>] = ...")  [var-annotated]
+parish_extractors.py:1720: error: Argument 2 to "_create_parish_data_from_cleaned_info" of "ImprovedGenericExtractor" has incompatible type "Optional[str]"; expected "str"  [arg-type]
+parish_extractors.py:1720: error: Argument 3 to "_create_parish_data_from_cleaned_info" of "ImprovedGenericExtractor" has incompatible type "Optional[str]"; expected "str"  [arg-type]
+parish_extractors.py:1880: error: Argument 1 to "append" of "list" has incompatible type "Tuple[str, ParishFinderExtractor]"; expected "Tuple[str, IframeExtractor]"  [arg-type]
+parish_extractors.py:1882: error: Argument 1 to "append" of "list" has incompatible type "Tuple[str, EnhancedDiocesesCardExtractor]"; expected "Tuple[str, IframeExtractor]"  [arg-type]
+parish_extractors.py:1884: error: Argument 1 to "append" of "list" has incompatible type "Tuple[str, TableExtractor]"; expected "Tuple[str, IframeExtractor]"  [arg-type]
+parish_extractors.py:1887: error: Argument 1 to "append" of "list" has incompatible type "Tuple[str, ImprovedInteractiveMapExtractor]"; expected "Tuple[str, IframeExtractor]"  [arg-type]
+parish_extractors.py:1893: error: Argument 1 to "append" of "list" has incompatible type "Tuple[str, NavigationExtractor]"; expected "Tuple[str, IframeExtractor]"  [arg-type]
+parish_extractors.py:1911: error: Argument 1 to "append" of "list" has incompatible type "Tuple[str, object]"; expected "Tuple[str, IframeExtractor]"  [arg-type]
+parish_extractors.py:2247: error: Need type annotation for "parishes" (hint: "parishes: List[<type>] = ...")  [var-annotated]
+parish_extractors.py:3763: error: Incompatible default for argument "page_source" (default has type "None", argument has type "str")  [assignment]
+parish_extractors.py:3763: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+parish_extractors.py:3763: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+parish_extractors.py:3945: error: Need type annotation for "parishes" (hint: "parishes: List[<type>] = ...")  [var-annotated]
+monitor_distributed_pipeline.py:72: error: Need type annotation for "assignments_by_status" (hint: "assignments_by_status: Dict[<type>, <type>] = ...")  [var-annotated]
+find_parishes.py:637: error: Need type annotation for "search_results_items" (hint: "search_results_items: List[<type>] = ...")  [var-annotated]
+find_parishes.py:638: error: Need type annotation for "unique_links" (hint: "unique_links: Set[<type>] = ...")  [var-annotated]
+scripts/dev_test.py:76: error: Module "core.driver" has no attribute "get_driver"; maybe "setup_driver"?  [attr-defined]
+core/enhanced_url_manager.py:180: error: Incompatible return value type (got "Tuple[List[str], Dict[str, URLAnalysis], Dict[str, float], List[Tuple[str, float]]]", expected "Tuple[List[str], Dict[Any, Any], Dict[Any, Any]]")  [return-value]
+core/enhanced_url_manager.py:278: error: Need more than 3 values to unpack (4 expected)  [misc]
+core/enhanced_url_manager.py:283: error: Need type annotation for "processed_urls" (hint: "processed_urls: Set[<type>] = ...")  [var-annotated]
+core/enhanced_url_manager.py:288: error: Cannot determine type of "ml_predictions"  [has-type]
+core/enhanced_url_manager.py:289: error: Cannot determine type of "filtered_urls"  [has-type]
+core/enhanced_url_manager.py:290: error: Cannot determine type of "ml_confidence_dict"  [has-type]
+core/enhanced_url_manager.py:292: error: Cannot determine type of "url_analyses"  [has-type]
+core/enhanced_url_manager.py:299: error: Cannot determine type of "filtered_urls"  [has-type]
+core/enhanced_url_manager.py:299: error: Cannot determine type of "url_analyses"  [has-type]
+core/enhanced_url_manager.py:658: error: Argument 2 to "record_response" of "AdaptiveTimeoutManager" has incompatible type "str"; expected "float"  [arg-type]
+core/enhanced_url_manager.py:659: error: Argument 3 to "record_response" of "AdaptiveTimeoutManager" has incompatible type "float"; expected "bool"  [arg-type]
+core/enhanced_url_manager.py:660: error: Argument 4 to "record_response" of "AdaptiveTimeoutManager" has incompatible type "bool"; expected "Optional[Dict[str, float]]"  [arg-type]
+core/enhanced_url_manager.py:665: error: Argument 2 to "record_response" of "AdaptiveTimeoutManager" has incompatible type "str"; expected "float"  [arg-type]
+core/enhanced_url_manager.py:665: error: Argument 3 to "record_response" of "AdaptiveTimeoutManager" has incompatible type "float"; expected "bool"  [arg-type]
+core/enhanced_url_manager.py:665: error: Argument 4 to "record_response" of "AdaptiveTimeoutManager" has incompatible type "bool"; expected "Optional[Dict[str, float]]"  [arg-type]
+core/enhanced_url_manager.py:665: error: Argument 5 to "record_response" of "AdaptiveTimeoutManager" has incompatible type "str"; expected "bool"  [arg-type]
+core/enhanced_url_manager.py:703: error: Incompatible default for argument "context" (default has type "None", argument has type "Dict[Any, Any]")  [assignment]
+core/enhanced_url_manager.py:703: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core/enhanced_url_manager.py:703: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core/async_driver.py:74: error: Incompatible types in assignment (expression has type "None", variable has type "Dict[Any, Any]")  [assignment]
+core/async_driver.py:101: error: Need type annotation for "request_times"  [var-annotated]
+core/async_driver.py:131: error: Incompatible types in assignment (expression has type "float", variable has type "int")  [assignment]
+core/async_driver.py:163: error: Need type annotation for "driver_pool"  [var-annotated]
+core/async_driver.py:165: error: Need type annotation for "request_queue"  [var-annotated]
+core/async_driver.py:279: error: "RequestTask" has no attribute "future"  [attr-defined]
+core/async_driver.py:398: error: "submit_request" of "AsyncWebDriverPool" gets multiple values for keyword argument "url"  [misc]
+core/async_driver.py:398: error: "submit_request" of "AsyncWebDriverPool" gets multiple values for keyword argument "callback"  [misc]
+backend/main.py:584: error: Incompatible default for argument "filter_name" (default has type "None", argument has type "str")  [assignment]
+backend/main.py:584: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+backend/main.py:584: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+backend/main.py:585: error: Incompatible default for argument "filter_address" (default has type "None", argument has type "str")  [assignment]
+backend/main.py:585: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+backend/main.py:585: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+backend/main.py:586: error: Incompatible default for argument "filter_website" (default has type "None", argument has type "str")  [assignment]
+backend/main.py:586: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+backend/main.py:586: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+backend/main.py:671: error: Need type annotation for "parish_counts" (hint: "parish_counts: Dict[<type>, <type>] = ...")  [var-annotated]
+backend/main.py:683: error: Need type annotation for "parishes_with_data_extracted_counts" (hint: "parishes_with_data_extracted_counts: Dict[<type>, <type>] = ...")  [var-annotated]
+backend/main.py:837: error: Need type annotation for "parish_facts" (hint: "parish_facts: Dict[<type>, <type>] = ...")  [var-annotated]
+backend/main.py:942: error: Incompatible default for argument "filter_name" (default has type "None", argument has type "str")  [assignment]
+backend/main.py:942: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+backend/main.py:942: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+backend/main.py:943: error: Incompatible default for argument "filter_website" (default has type "None", argument has type "str")  [assignment]
+backend/main.py:943: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+backend/main.py:943: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+backend/main.py:944: error: Incompatible default for argument "filter_data_extracted" (default has type "None", argument has type "str")  [assignment]
+backend/main.py:944: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+backend/main.py:944: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+backend/main.py:945: error: Incompatible default for argument "filter_data_available" (default has type "None", argument has type "str")  [assignment]
+backend/main.py:945: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+backend/main.py:945: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+backend/main.py:946: error: Incompatible default for argument "filter_blocked" (default has type "None", argument has type "str")  [assignment]
+backend/main.py:946: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+backend/main.py:946: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+backend/main.py:947: error: Incompatible default for argument "filter_diocese_name" (default has type "None", argument has type "str")  [assignment]
+backend/main.py:947: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+backend/main.py:947: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+backend/main.py:1015: error: Incompatible default for argument "filter_name" (default has type "None", argument has type "str")  [assignment]
+backend/main.py:1015: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+backend/main.py:1015: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+backend/main.py:1016: error: Incompatible default for argument "filter_website" (default has type "None", argument has type "str")  [assignment]
+backend/main.py:1016: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+backend/main.py:1016: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+backend/main.py:1017: error: Incompatible default for argument "filter_data_extracted" (default has type "None", argument has type "str")  [assignment]
+backend/main.py:1017: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+backend/main.py:1017: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+backend/main.py:1018: error: Incompatible default for argument "filter_data_available" (default has type "None", argument has type "str")  [assignment]
+backend/main.py:1018: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+backend/main.py:1018: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+backend/main.py:1019: error: Incompatible default for argument "filter_blocked" (default has type "None", argument has type "str")  [assignment]
+backend/main.py:1019: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+backend/main.py:1019: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+backend/main.py:1020: error: Incompatible default for argument "filter_diocese_name" (default has type "None", argument has type "str")  [assignment]
+backend/main.py:1020: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+backend/main.py:1020: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+extract_schedule.py:36: error: Need type annotation for "_sitemap_cache" (hint: "_sitemap_cache: Dict[<type>, <type>] = ...")  [var-annotated]
+extract_schedule.py:296: error: Incompatible return value type (got "None", expected "str")  [return-value]
+extract_schedule.py:300: error: Incompatible return value type (got "None", expected "str")  [return-value]
+extract_schedule.py:302: error: Incompatible return value type (got "Optional[str]", expected "str")  [return-value]
+extract_schedule.py:312: error: Incompatible return value type (got "None", expected "str")  [return-value]
+extract_schedule.py:826: error: Incompatible default for argument "base_domain" (default has type "None", argument has type "str")  [assignment]
+extract_schedule.py:826: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+extract_schedule.py:826: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+extract_schedule.py:909: error: Need type annotation for "urls_to_visit" (hint: "urls_to_visit: List[<type>] = ...")  [var-annotated]
+extract_schedule.py:954: error: Need type annotation for "candidate_pages"  [var-annotated]
+extract_schedule.py:1167: error: Incompatible types in assignment (expression has type "bool", target has type "str")  [assignment]
+extract_schedule.py:1174: error: Incompatible types in assignment (expression has type "Optional[Any]", target has type "str")  [assignment]
+extract_schedule.py:1180: error: Incompatible types in assignment (expression has type "Optional[str]", target has type "str")  [assignment]
+extract_schedule.py:1184: error: Incompatible types in assignment (expression has type "int", target has type "str")  [assignment]
+extract_schedule.py:1187: error: Incompatible types in assignment (expression has type "bool", target has type "str")  [assignment]
+extract_schedule.py:1190: error: Incompatible types in assignment (expression has type "None", target has type "str")  [assignment]
+extract_schedule.py:1192: error: Incompatible types in assignment (expression has type "int", target has type "str")  [assignment]
+extract_schedule.py:1203: error: Incompatible types in assignment (expression has type "bool", target has type "str")  [assignment]
+extract_schedule.py:1210: error: Incompatible types in assignment (expression has type "Optional[Any]", target has type "str")  [assignment]
+extract_schedule.py:1216: error: Incompatible types in assignment (expression has type "Optional[str]", target has type "str")  [assignment]
+extract_schedule.py:1220: error: Incompatible types in assignment (expression has type "int", target has type "str")  [assignment]
+extract_schedule.py:1223: error: Incompatible types in assignment (expression has type "bool", target has type "str")  [assignment]
+extract_schedule.py:1226: error: Incompatible types in assignment (expression has type "None", target has type "str")  [assignment]
+extract_schedule.py:1228: error: Incompatible types in assignment (expression has type "int", target has type "str")  [assignment]
+extract_schedule.py:1405: error: Incompatible default for argument "parish_id" (default has type "None", argument has type "int")  [assignment]
+extract_schedule.py:1405: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+extract_schedule.py:1405: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+extract_schedule.py:1405: error: Incompatible default for argument "diocese_id" (default has type "None", argument has type "int")  [assignment]
+extract_schedule.py:1437: error: Incompatible default for argument "parish_id" (default has type "None", argument has type "int")  [assignment]
+extract_schedule.py:1437: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+extract_schedule.py:1437: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+extract_schedule.py:1437: error: Incompatible default for argument "diocese_id" (default has type "None", argument has type "int")  [assignment]
+extract_schedule.py:1488: error: Need type annotation for "facts_to_save" (hint: "facts_to_save: List[<type>] = ...")  [var-annotated]
+extract_schedule.py:1606: error: Incompatible default for argument "parish_id" (default has type "None", argument has type "int")  [assignment]
+extract_schedule.py:1606: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+extract_schedule.py:1606: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core/async_parish_extractor.py:58: error: Incompatible types in assignment (expression has type "AsyncWebDriverPool", variable has type "None")  [assignment]
+core/async_parish_extractor.py:62: error: Incompatible default for argument "max_concurrent" (default has type "None", argument has type "int")  [assignment]
+core/async_parish_extractor.py:62: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core/async_parish_extractor.py:62: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core/async_parish_extractor.py:170: error: "None" has no attribute "batch_requests"  [attr-defined]
+core/async_parish_extractor.py:222: error: Dict entry 2 has incompatible type "str": "float"; expected "str": "int"  [dict-item]
+core/async_parish_extractor.py:223: error: Dict entry 3 has incompatible type "str": "float"; expected "str": "int"  [dict-item]
+core/async_parish_extractor.py:346: error: Unexpected keyword argument "enhanced_extraction" for "ParishData"  [call-arg]
+core/async_parish_extractor.py:499: error: Item "List[str]" of "Union[str, List[str]]" has no attribute "startswith"  [union-attr]
+core/async_parish_extractor.py:499: error: Item "List[str]" of "Union[str, List[str]]" has no attribute "lower"  [union-attr]
+core/async_parish_extractor.py:505: error: Unexpected keyword argument "enhanced_extraction" for "ParishData"  [call-arg]
+extract_schedule_respectful.py:32: error: "Session" has no attribute "timeout"  [attr-defined]
+extract_schedule_respectful.py:34: error: Incompatible default for argument "parish_id" (default has type "None", argument has type "int")  [assignment]
+extract_schedule_respectful.py:34: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+extract_schedule_respectful.py:34: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+extract_schedule_respectful.py:51: error: Incompatible default for argument "current_diocese" (default has type "None", argument has type "str")  [assignment]
+extract_schedule_respectful.py:51: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+extract_schedule_respectful.py:51: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+extract_schedule_respectful.py:105: error: Incompatible default for argument "diocese" (default has type "None", argument has type "str")  [assignment]
+extract_schedule_respectful.py:105: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+extract_schedule_respectful.py:105: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+extract_schedule_respectful.py:106: error: Incompatible default for argument "parish_id" (default has type "None", argument has type "int")  [assignment]
+extract_schedule_respectful.py:106: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+extract_schedule_respectful.py:106: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+extract_schedule_respectful.py:234: error: Incompatible default for argument "error_message" (default has type "None", argument has type "str")  [assignment]
+extract_schedule_respectful.py:234: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+extract_schedule_respectful.py:234: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+extract_schedule_respectful.py:254: error: Need type annotation for "candidate_pages"  [var-annotated]
+extract_schedule_respectful.py:304: error: Argument 2 to "choose_best_url" has incompatible type "List[Any]"; expected "Dict[Any, Any]"  [arg-type]
+extract_schedule_respectful.py:334: error: Argument 2 to "choose_best_url" has incompatible type "List[Any]"; expected "Dict[Any, Any]"  [arg-type]
+extract_schedule_respectful.py:422: error: Argument 5 to "_process_reconciliation_pages" has incompatible type "Dict[str, int]"; expected "List[Any]"  [arg-type]
+extract_schedule_respectful.py:436: error: Argument 5 to "_process_adoration_pages" has incompatible type "Dict[str, int]"; expected "List[Any]"  [arg-type]
+extract_schedule_respectful.py:459: error: Incompatible default for argument "num_parishes" (default has type "None", argument has type "int")  [assignment]
+extract_schedule_respectful.py:459: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+extract_schedule_respectful.py:459: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+extract_schedule_respectful.py:460: error: Incompatible default for argument "parish_id" (default has type "None", argument has type "int")  [assignment]
+extract_schedule_respectful.py:460: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+extract_schedule_respectful.py:460: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+extract_schedule_respectful.py:462: error: Incompatible default for argument "diocese_id" (default has type "None", argument has type "int")  [assignment]
+extract_schedule_respectful.py:462: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+extract_schedule_respectful.py:462: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+async_extract_parishes.py:133: error: Incompatible types in assignment (expression has type "AsyncWebDriverPool", variable has type "None")  [assignment]
+async_extract_parishes.py:136: error: Incompatible types in assignment (expression has type "AsyncParishExtractor", variable has type "None")  [assignment]
+async_extract_parishes.py:203: error: "object" has no attribute "append"  [attr-defined]
+async_extract_parishes.py:209: error: "object" has no attribute "append"  [attr-defined]
+async_extract_parishes.py:234: error: Dict entry 1 has incompatible type "str": "float"; expected "str": "int"  [dict-item]
+async_extract_parishes.py:235: error: Dict entry 2 has incompatible type "str": "float"; expected "str": "int"  [dict-item]
+async_extract_parishes.py:249: error: Unsupported operand types for / ("object" and "float")  [operator]
+async_extract_parishes.py:287: error: "None" has no attribute "submit_request"  [attr-defined]
+async_extract_parishes.py:322: error: "None" has no attribute "extract_parish_details_concurrent"  [attr-defined]
+run_pipeline.py:248: error: Argument "parish_id" to "main" has incompatible type "None"; expected "int"  [arg-type]
+distributed_pipeline_runner.py:232: error: Argument "parish_id" to "main" has incompatible type "None"; expected "int"  [arg-type]
+distributed_pipeline_runner.py:234: error: Argument "diocese_id" to "main" has incompatible type "None"; expected "int"  [arg-type]

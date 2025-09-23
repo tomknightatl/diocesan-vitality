@@ -48,8 +48,8 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
             self.profile_manager = get_diocese_profile_manager()
             logger.info("🚀 Enhanced AI Fallback Extractor initialized with full capabilities")
         else:
-            self.ai_analyzer = None
-            self.profile_manager = None
+            self.ai_analyzer: Optional[Any] = None
+            self.profile_manager: Optional[Any] = None
             logger.warning("🚀 Enhanced AI Fallback Extractor disabled - missing GenAI API key")
 
     def can_extract(self, driver: WebDriver, url: str) -> bool:
@@ -266,7 +266,7 @@ class EnhancedAIFallbackExtractor(BaseExtractor):
 
     def _extract_with_custom_selectors(self, driver: WebDriver, url: str, profile, max_parishes: int) -> List[Dict[str, Any]]:
         """Extract parishes using profile's custom selectors."""
-        parishes = []
+        parishes: List[Dict[str, Any]] = []
         if not profile.custom_selectors:
             return parishes
 

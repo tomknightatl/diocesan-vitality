@@ -19,7 +19,7 @@ from urllib.parse import urlparse
 try:
     from supabase import Client  # type: ignore
 except ImportError:
-    Client = None
+    Client = type(None)  # type: ignore
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -271,9 +271,10 @@ class AdaptiveTimeoutManager:
                 return metrics_strategy
 
         # Check context hints
-        context_strategy = self._determine_strategy_from_context(context)
-        if context_strategy:
-            return context_strategy
+        if context:
+            context_strategy = self._determine_strategy_from_context(context)
+            if context_strategy:
+                return context_strategy
 
         # Default to moderate
         return self.strategies["moderate"]
@@ -436,13 +437,14 @@ class AdaptiveTimeoutManager:
                 domain = urlparse(url).netloc.lower()
                 metrics = self._get_or_create_domain_metrics(domain)
 
-                response_time = self._validate_response_time(response_time, url)
-                if response_time is None:
+                validated_time = self._validate_response_time(response_time, url)
+                if validated_time is None:
                     return
 
-                self._record_response_timing(metrics, response_time, success)
-                self._update_complexity_indicators(metrics, complexity_indicators, url)
-                self._update_global_statistics(response_time, timeout_occurred)
+                self._record_response_timing(metrics, validated_time, success)
+                if complexity_indicators:
+                    self._update_complexity_indicators(metrics, complexity_indicators, url)
+                self._update_global_statistics(validated_time, timeout_occurred)
 
                 metrics.last_updated = time.time()
 

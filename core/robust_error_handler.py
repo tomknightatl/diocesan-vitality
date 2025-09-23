@@ -262,6 +262,8 @@ class RobustErrorHandler:
                     break
 
         # Primary function failed, try fallback methods
+        if last_exception is None:
+            last_exception = Exception("Unknown error occurred during operation")
         return self._execute_fallback_methods(operation, config, context, last_exception, **kwargs)
 
     def _execute_fallback_methods(
@@ -460,6 +462,16 @@ class RobustErrorHandler:
                 "confidence": 0.1,
                 "method": "keyword_search_failed",
             }
+
+    def _selenium_fallback(self, context: ErrorContext, **kwargs) -> Any:
+        """Selenium-based fallback for web scraping operations."""
+        try:
+            logger.info("🛡️ Attempting Selenium fallback")
+            # Basic selenium fallback - return empty result for now
+            return {"success": False, "method": "selenium_fallback", "message": "Selenium fallback not fully implemented"}
+        except Exception as e:
+            logger.debug(f"🛡️ Selenium fallback failed: {e}")
+            return {"success": False, "method": "selenium_fallback_failed", "error": str(e)}
 
     def _structure_analysis_fallback(self, context: ErrorContext, content: str = "", **kwargs) -> Dict:
         """Fallback using HTML structure analysis."""
@@ -717,7 +729,7 @@ class RobustErrorHandler:
     def get_error_statistics(self) -> Dict:
         """Get comprehensive error handling statistics."""
         total_operations = self.metrics.successful_recoveries + self.metrics.failed_recoveries
-        recovery_rate = 0
+        recovery_rate = 0.0
         if total_operations > 0:
             recovery_rate = self.metrics.successful_recoveries / total_operations
 

@@ -1,9 +1,11 @@
+from typing import Optional
+
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 import config
 from supabase import Client, create_client  # type: ignore
 
-supabase_client: Client = None
+supabase_client: Optional[Client] = None
 
 # Define retryable exceptions for Supabase connection
 RETRYABLE_SUPABASE_EXCEPTIONS = (Exception,)  # Broad exception for now, can be refined
@@ -20,7 +22,7 @@ def _create_supabase_client_with_retry(url, key):
     return create_client(url, key)
 
 
-def get_supabase_client() -> Client:
+def get_supabase_client() -> Optional[Client]:
     """Initializes and returns the Supabase client."""
     global supabase_client
     if supabase_client is None:

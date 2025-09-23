@@ -45,7 +45,7 @@ class NetworkTrafficAnalyzer:
                 return self._inject_xhr_monitor()
 
             # Get performance logs
-            logs = self.driver.get_log("performance")
+            logs: List[Any] = getattr(self.driver, "get_log", lambda x: [])("performance")
             for log in logs:
                 self._process_performance_log(log)
 
@@ -212,7 +212,7 @@ class JavaScriptExecutionEngine:
             - parish_elements: Any parish elements found after loading
             - api_endpoints: Discovered API endpoints
         """
-        result = {
+        result: Dict[str, Any] = {
             "content_loaded": False,
             "method_used": None,
             "parish_elements": [],
@@ -501,11 +501,11 @@ class JavaScriptExecutionEngine:
             # Remove duplicates
             seen = set()
             unique_elements = []
-            for elem in parish_elements:
-                key = (elem["name"].lower(), elem["url"])
+            for parish_dict in parish_elements:
+                key = (parish_dict["name"].lower(), parish_dict["url"])
                 if key not in seen:
                     seen.add(key)
-                    unique_elements.append(elem)
+                    unique_elements.append(parish_dict)
 
             logger.info(f"🔍 Extracted {len(unique_elements)} parish elements from dynamic content")
             return unique_elements

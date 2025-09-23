@@ -7,7 +7,7 @@ Uses Google Gemini AI to extract structured schedule information.
 import json
 import re
 from datetime import datetime, timezone
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import google.generativeai as genai
 
@@ -22,6 +22,7 @@ class ScheduleAIExtractor:
 
     def __init__(self):
         """Initialize the AI extractor with Gemini API."""
+        self.model: Optional[genai.GenerativeModel] = None
         try:
             genai.configure(api_key=config.GENAI_API_KEY)
             self.model = genai.GenerativeModel("gemini - 1.5 - flash")
@@ -145,6 +146,7 @@ class ScheduleAIExtractor:
             import concurrent.futures
 
             def generate_with_timeout():
+                assert self.model is not None
                 return self.model.generate_content(prompt)
 
             with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -271,6 +273,9 @@ Please respond ONLY in this JSON format:
 
 If no Mass schedule is found, return has_weekly_schedule: false and schedule_found: false.
 """
+        else:
+            # Default case for unknown schedule types
+            return f"Extract {schedule_type} schedule information from the following content:\n{cleaned_content}"
 
     def _clean_content_for_ai(self, content: str) -> str:
         """Clean and intelligently truncate content for AI processing."""

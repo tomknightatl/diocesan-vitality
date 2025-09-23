@@ -144,7 +144,10 @@ class ResilientWebDriver:
                     break
 
         # All attempts failed
-        raise last_error
+        if last_error is not None:
+            raise last_error
+        else:
+            raise RuntimeError("Operation failed but no exception was captured")
 
     def _execute_protected_operation(self, operation: Callable, args: tuple, kwargs: dict) -> Any:
         """Execute operation with circuit breaker protection."""

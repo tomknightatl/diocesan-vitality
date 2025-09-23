@@ -306,7 +306,7 @@ class ExtractionMonitoring:
         self.diocese_name = diocese_name
         self.total_parishes = total_parishes
         self.client = get_monitoring_client(base_url, worker_id)
-        self.start_time = None
+        self.start_time: Optional[float] = None
         self.parishes_processed = 0
         self.successful_parishes = 0
 
@@ -320,7 +320,7 @@ class ExtractionMonitoring:
     def __exit__(self, exc_type, exc_val, exc_tb):
         import time
 
-        duration = time.time() - self.start_time
+        duration = time.time() - (self.start_time or 0)
         success_rate = (self.successful_parishes / max(self.parishes_processed, 1)) * 100
 
         if exc_type is not None:

@@ -157,11 +157,9 @@ class ExtractorOptimizer:
 
         logger.info("  📊 Page Analysis Complete:")
         logger.info(f"    🗺️ Map features: {analysis['has_map_features']}")
-        suitable_extractors = analysis['suitable_extractors']
+        suitable_extractors = analysis["suitable_extractors"]
         assert isinstance(suitable_extractors, list)
-        logger.info(
-            f"    ✅ Suitable: {suitable_extractors[:3]}{'...' if len(suitable_extractors) > 3 else ''}"
-        )
+        logger.info(f"    ✅ Suitable: {suitable_extractors[:3]}{'...' if len(suitable_extractors) > 3 else ''}")
         logger.info(f"    ❌ Skip: {analysis['skip_extractors']}")
         logger.info(f"    📈 Complexity: {analysis['estimated_complexity']}")
 

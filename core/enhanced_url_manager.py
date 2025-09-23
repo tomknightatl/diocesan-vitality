@@ -280,7 +280,7 @@ class EnhancedURLManager:
         )
 
         candidates = []
-        processed_urls = set()
+        processed_urls: Set[str] = set()
 
         # Process candidates by priority
         candidates.extend(

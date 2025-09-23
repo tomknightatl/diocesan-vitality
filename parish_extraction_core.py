@@ -133,7 +133,7 @@ def clean_parish_name_and_extract_address(raw_name: str) -> Dict:
     distance_match = re.search(r"\((\d+\.?\d*)\s*Miles\)", raw_name, re.IGNORECASE)
     if distance_match:
         try:
-            cleaned_data["distance_miles"] = float(distance_match.group(1))
+            cleaned_data["distance_miles"] = str(float(distance_match.group(1)))
             # Remove distance from raw_name
             raw_name = raw_name.replace(distance_match.group(0), "").strip()
         except ValueError:
@@ -159,7 +159,7 @@ def clean_parish_name_and_extract_address(raw_name: str) -> Dict:
     return legacy_address_parsing(raw_name, cleaned_data)
 
 
-def _extract_address_pattern_from_raw_name(raw_name: str) -> tuple[str, str]:
+def _extract_address_pattern_from_raw_name(raw_name: str) -> tuple[Optional[str], Optional[str]]:
     """Extract address pattern and parish name from raw name string."""
     address_pattern = re.search(
         r"(\d+\s+[A - Za - z0 - 9\s\.\-\,]+(?:street|st|avenue|ave|road|rd|drive|dr|way|lane|ln|boulevard|blvd|court|ct|plaza|pl|terrace|ter|circle|cir|parkway|pkwy|highway|hwy|route|rte|blvd).*?)$",
@@ -447,7 +447,8 @@ class PatternDetector:
         iframes = soup.find_all("iframe")
 
         for iframe in iframes:
-            src = iframe.get("src", "") or ""
+            src_attr = iframe.get("src", "") if hasattr(iframe, "get") else ""
+            src = str(src_attr) if src_attr else ""
             src_lower = src.lower()
 
             # Check for mapping/parish directory services in iframes

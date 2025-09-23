@@ -12,7 +12,7 @@ import threading
 import time
 from collections import deque
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Set
+from typing import Any, Callable, Dict, List, Optional, Set
 from urllib.parse import urlparse
 
 from selenium import webdriver
@@ -71,11 +71,12 @@ class RequestTask:
     url: str
     callback: Callable
     args: tuple = ()
-    kwargs: dict = None
+    kwargs: Optional[dict] = None
     priority: int = 1  # Lower number = higher priority
     retry_count: int = 0
     max_retries: int = 2
     domain: str = ""
+    future: Optional[asyncio.Future] = None
 
     def __post_init__(self):
         if self.kwargs is None:
@@ -98,9 +99,9 @@ class DomainRateLimiter:
 
     def __init__(self, config: RateLimitConfig):
         self.config = config
-        self.request_times = deque()
+        self.request_times: deque = deque()
         self.active_requests = 0
-        self.last_request_time = 0
+        self.last_request_time = 0.0
         self.in_cooldown = False
         self._lock = threading.Lock()
 
@@ -160,9 +161,9 @@ class AsyncWebDriverPool:
     def __init__(self, pool_size: int = 4, default_timeout: int = 30):
         self.pool_size = pool_size
         self.default_timeout = default_timeout
-        self.driver_pool = asyncio.Queue()
+        self.driver_pool: asyncio.Queue = asyncio.Queue()
         self.domain_rate_limiters: Dict[str, DomainRateLimiter] = {}
-        self.request_queue = asyncio.PriorityQueue()
+        self.request_queue: asyncio.PriorityQueue = asyncio.PriorityQueue()
         self.active_domains: Set[str] = set()
         self.stats = {
             "total_requests": 0,
@@ -332,7 +333,7 @@ class AsyncWebDriverPool:
             result = await self._protected_execute(driver, task)
 
             # Set result
-            if hasattr(task, "future"):
+            if task.future is not None:
                 task.future.set_result(result)
 
             success = True
@@ -340,7 +341,7 @@ class AsyncWebDriverPool:
 
         except CircuitBreakerOpenError as e:
             logger.warning(f"🚫 Circuit breaker blocked request: {task.url}")
-            if hasattr(task, "future"):
+            if task.future is not None:
                 task.future.set_exception(e)
 
         except Exception as e:
@@ -353,7 +354,7 @@ class AsyncWebDriverPool:
                 await self.request_queue.put((task.priority + 1, time.time(), task))
             else:
                 self.stats["failed_requests"] += 1
-                if hasattr(task, "future"):
+                if task.future is not None:
                     task.future.set_exception(e)
 
         finally:
@@ -385,7 +386,7 @@ class AsyncWebDriverPool:
 
         # Execute callback in thread pool to avoid blocking
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            result = await loop.run_in_executor(executor, lambda: task.callback(driver, *task.args, **task.kwargs))
+            result = await loop.run_in_executor(executor, lambda: task.callback(driver, *task.args, **(task.kwargs or {})))
 
         return result
 
@@ -396,8 +397,8 @@ class AsyncWebDriverPool:
         tasks = []
         for request in requests:
             task = await self.submit_request(
-                url=request["url"],
-                callback=request["callback"],
+                request["url"],
+                request["callback"],
                 *request.get("args", []),
                 priority=request.get("priority", 1),
                 max_retries=request.get("max_retries", 2),

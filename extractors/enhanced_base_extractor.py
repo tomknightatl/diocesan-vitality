@@ -30,8 +30,8 @@ class EnhancedBaseExtractor:
     def __init__(self, name: str = "EnhancedBaseExtractor"):
         self.name = name
         self.failure_count = 0
-        self.error_history = []
-        self.last_successful_selectors = {}
+        self.error_history: List[Dict[str, Any]] = []
+        self.last_successful_selectors: Dict[str, str] = {}
 
     def extract_parishes_with_recovery(self, driver, url: str, operation_type: str = "element") -> List[Dict[str, Any]]:
         """

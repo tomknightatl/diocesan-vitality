@@ -7,7 +7,7 @@ High - performance parish detail extraction using asyncio and intelligent batchi
 import asyncio
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from bs4 import BeautifulSoup
 from selenium.webdriver.common.by import By
@@ -41,14 +41,14 @@ class AsyncParishExtractor:
     def __init__(self, pool_size: int = 4, batch_size: int = 8):
         self.pool_size = pool_size
         self.batch_size = batch_size
-        self.driver_pool = None
+        self.driver_pool: Optional[Any] = None
         self.extraction_stats = {
             "total_parishes": 0,
             "successful_extractions": 0,
             "failed_extractions": 0,
             "concurrent_requests": 0,
-            "total_time": 0,
-            "average_time_per_parish": 0,
+            "total_time": 0.0,
+            "average_time_per_parish": 0.0,
         }
 
         logger.info(f"🚀 Async Parish Extractor initialized (pool: {pool_size}, batch: {batch_size})")
@@ -59,7 +59,7 @@ class AsyncParishExtractor:
         logger.info("✅ Async Parish Extractor ready for concurrent extraction")
 
     async def extract_parish_details_concurrent(
-        self, parishes: List[ParishData], diocese_name: str, max_concurrent: int = None
+        self, parishes: List[ParishData], diocese_name: str, max_concurrent: Optional[int] = None
     ) -> List[ParishData]:
         """
         Extract detailed information for multiple parishes concurrently.
@@ -167,6 +167,8 @@ class AsyncParishExtractor:
         batch_failed = 0
 
         try:
+            if self.driver_pool is None:
+                raise RuntimeError("Driver pool not initialized. Call initialize() first.")
             batch_results = await self.driver_pool.batch_requests(batch_requests, batch_size=min(max_concurrent, len(batch)))
 
             batch_enhanced, batch_failed = self._process_batch_results(batch, batch_results)

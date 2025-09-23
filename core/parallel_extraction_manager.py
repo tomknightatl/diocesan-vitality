@@ -545,7 +545,7 @@ class ParallelExtractionManager:
             return self.max_workers
 
         # Count tasks by domain
-        domain_counts = defaultdict(int)
+        domain_counts: Dict[str, int] = defaultdict(int)
         temp_tasks = []
 
         # Sample up to 100 tasks to analyze distribution
