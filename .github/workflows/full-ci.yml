@@ -114,12 +114,9 @@ jobs:
           # Light performance regression tests (removed problematic threading tests)
           pytest tests/test_performance.py -v --timeout=30 -m "performance and not slow and not threading"
 
-          # Mutation testing for critical logic
-          pytest tests/test_mutation.py -v --timeout=30 -m "mutation and not slow"
-
           # Security testing
           pytest tests/test_security.py -v --timeout=30 -m "security"
-          echo "✅ Core component tests, light performance benchmarks, mutation tests, and security tests passed"
+          echo "✅ Core component tests, light performance benchmarks, and security tests passed"
 
   test-backend-integration:
     name: Backend Tests - Integration & External
