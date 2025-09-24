@@ -1,0 +1,998 @@
+Code Quality & Linting	Set up job	﻿2025-09-23T19:54:24.8321285Z Current runner version: '2.328.0'
+Code Quality & Linting	Set up job	2025-09-23T19:54:24.8345451Z ##[group]Runner Image Provisioner
+Code Quality & Linting	Set up job	2025-09-23T19:54:24.8346366Z Hosted Compute Agent
+Code Quality & Linting	Set up job	2025-09-23T19:54:24.8346891Z Version: 20250829.383
+Code Quality & Linting	Set up job	2025-09-23T19:54:24.8347493Z Commit: 27cb235aab5b0e52e153a26cd86b4742e89dac5d
+Code Quality & Linting	Set up job	2025-09-23T19:54:24.8348190Z Build Date: 2025-08-29T13:48:48Z
+Code Quality & Linting	Set up job	2025-09-23T19:54:24.8348809Z ##[endgroup]
+Code Quality & Linting	Set up job	2025-09-23T19:54:24.8349623Z ##[group]Operating System
+Code Quality & Linting	Set up job	2025-09-23T19:54:24.8350419Z Ubuntu
+Code Quality & Linting	Set up job	2025-09-23T19:54:24.8350899Z 24.04.3
+Code Quality & Linting	Set up job	2025-09-23T19:54:24.8351379Z LTS
+Code Quality & Linting	Set up job	2025-09-23T19:54:24.8351881Z ##[endgroup]
+Code Quality & Linting	Set up job	2025-09-23T19:54:24.8352362Z ##[group]Runner Image
+Code Quality & Linting	Set up job	2025-09-23T19:54:24.8352940Z Image: ubuntu-24.04
+Code Quality & Linting	Set up job	2025-09-23T19:54:24.8353403Z Version: 20250907.24.1
+Code Quality & Linting	Set up job	2025-09-23T19:54:24.8354476Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20250907.24/images/ubuntu/Ubuntu2404-Readme.md
+Code Quality & Linting	Set up job	2025-09-23T19:54:24.8355813Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20250907.24
+Code Quality & Linting	Set up job	2025-09-23T19:54:24.8357013Z ##[endgroup]
+Code Quality & Linting	Set up job	2025-09-23T19:54:24.8358166Z ##[group]GITHUB_TOKEN Permissions
+Code Quality & Linting	Set up job	2025-09-23T19:54:24.8360237Z Contents: read
+Code Quality & Linting	Set up job	2025-09-23T19:54:24.8360814Z Metadata: read
+Code Quality & Linting	Set up job	2025-09-23T19:54:24.8361284Z Packages: read
+Code Quality & Linting	Set up job	2025-09-23T19:54:24.8361871Z ##[endgroup]
+Code Quality & Linting	Set up job	2025-09-23T19:54:24.8363857Z Secret source: Actions
+Code Quality & Linting	Set up job	2025-09-23T19:54:24.8364566Z Prepare workflow directory
+Code Quality & Linting	Set up job	2025-09-23T19:54:24.8744445Z Prepare all required actions
+Code Quality & Linting	Set up job	2025-09-23T19:54:24.8782195Z Getting action download info
+Code Quality & Linting	Set up job	2025-09-23T19:54:25.3736204Z Download action repository 'actions/checkout@v4' (SHA:08eba0b27e820071cde6df949e0beb9ba4906955)
+Code Quality & Linting	Set up job	2025-09-23T19:54:25.5454253Z Download action repository 'actions/setup-python@v4' (SHA:7f4fc3e22c37d6ff65e88745f38bd3157c663f7c)
+Code Quality & Linting	Set up job	2025-09-23T19:54:25.6653759Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+Code Quality & Linting	Set up job	2025-09-23T19:54:25.8378547Z Complete job name: Code Quality & Linting
+Code Quality & Linting	Checkout	﻿2025-09-23T19:54:25.9058728Z ##[group]Run actions/checkout@v4
+Code Quality & Linting	Checkout	2025-09-23T19:54:25.9059768Z with:
+Code Quality & Linting	Checkout	2025-09-23T19:54:25.9060206Z   repository: tomknightatl/diocesan-vitality
+Code Quality & Linting	Checkout	2025-09-23T19:54:25.9060895Z   token: ***
+Code Quality & Linting	Checkout	2025-09-23T19:54:25.9061280Z   ssh-strict: true
+Code Quality & Linting	Checkout	2025-09-23T19:54:25.9061673Z   ssh-user: git
+Code Quality & Linting	Checkout	2025-09-23T19:54:25.9062067Z   persist-credentials: true
+Code Quality & Linting	Checkout	2025-09-23T19:54:25.9062511Z   clean: true
+Code Quality & Linting	Checkout	2025-09-23T19:54:25.9062943Z   sparse-checkout-cone-mode: true
+Code Quality & Linting	Checkout	2025-09-23T19:54:25.9063419Z   fetch-depth: 1
+Code Quality & Linting	Checkout	2025-09-23T19:54:25.9063812Z   fetch-tags: false
+Code Quality & Linting	Checkout	2025-09-23T19:54:25.9064209Z   show-progress: true
+Code Quality & Linting	Checkout	2025-09-23T19:54:25.9064610Z   lfs: false
+Code Quality & Linting	Checkout	2025-09-23T19:54:25.9064970Z   submodules: false
+Code Quality & Linting	Checkout	2025-09-23T19:54:25.9065377Z   set-safe-directory: true
+Code Quality & Linting	Checkout	2025-09-23T19:54:25.9065997Z env:
+Code Quality & Linting	Checkout	2025-09-23T19:54:25.9066366Z   REGISTRY: docker.io
+Code Quality & Linting	Checkout	2025-09-23T19:54:25.9066807Z   IMAGE_NAMESPACE: tomatl/diocesan-vitality
+Code Quality & Linting	Checkout	2025-09-23T19:54:25.9067320Z ##[endgroup]
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0117943Z Syncing repository: tomknightatl/diocesan-vitality
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0120121Z ##[group]Getting Git version info
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0120958Z Working directory is '/home/runner/work/diocesan-vitality/diocesan-vitality'
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0122150Z [command]/usr/bin/git version
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0206746Z git version 2.51.0
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0233553Z ##[endgroup]
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0255352Z Temporarily overriding HOME='/home/runner/work/_temp/3e376082-6b88-4919-bb44-c847ca07712c' before making global git config changes
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0256914Z Adding repository directory to the temporary git global config as a safe directory
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0260782Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/diocesan-vitality/diocesan-vitality
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0297472Z Deleting the contents of '/home/runner/work/diocesan-vitality/diocesan-vitality'
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0301172Z ##[group]Initializing the repository
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0305163Z [command]/usr/bin/git init /home/runner/work/diocesan-vitality/diocesan-vitality
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0417077Z hint: Using 'master' as the name for the initial branch. This default branch name
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0419176Z hint: is subject to change. To configure the initial branch name to use in all
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0421213Z hint: of your new repositories, which will suppress this warning, call:
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0422701Z hint:
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0423615Z hint: 	git config --global init.defaultBranch <name>
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0424410Z hint:
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0425046Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0426117Z hint: 'development'. The just-created branch can be renamed via this command:
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0426999Z hint:
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0427438Z hint: 	git branch -m <name>
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0428083Z hint:
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0428947Z hint: Disable this message with "git config set advice.defaultBranchName false"
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0430852Z Initialized empty Git repository in /home/runner/work/diocesan-vitality/diocesan-vitality/.git/
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0434154Z [command]/usr/bin/git remote add origin https://github.com/tomknightatl/diocesan-vitality
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0472398Z ##[endgroup]
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0473178Z ##[group]Disabling automatic garbage collection
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0476327Z [command]/usr/bin/git config --local gc.auto 0
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0506139Z ##[endgroup]
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0506827Z ##[group]Setting up auth
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0513608Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0542615Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0912197Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.0941038Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.1158437Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.1193909Z ##[endgroup]
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.1195161Z ##[group]Fetching the repository
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.1204447Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +20df3cf8c352b2e0e517e6df5ec2760e4f9c04fa:refs/remotes/origin/develop
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.7473780Z From https://github.com/tomknightatl/diocesan-vitality
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.7480477Z  * [new ref]         20df3cf8c352b2e0e517e6df5ec2760e4f9c04fa -> origin/develop
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.7508669Z ##[endgroup]
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.7510217Z ##[group]Determining the checkout info
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.7511722Z ##[endgroup]
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.7514745Z [command]/usr/bin/git sparse-checkout disable
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.7556502Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.7586922Z ##[group]Checking out the ref
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.7590513Z [command]/usr/bin/git checkout --progress --force -B develop refs/remotes/origin/develop
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.7857538Z Switched to a new branch 'develop'
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.7861058Z branch 'develop' set up to track 'origin/develop'.
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.7867404Z ##[endgroup]
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.7902395Z [command]/usr/bin/git log -1 --format=%H
+Code Quality & Linting	Checkout	2025-09-23T19:54:26.7924307Z 20df3cf8c352b2e0e517e6df5ec2760e4f9c04fa
+Code Quality & Linting	Set up Python	﻿2025-09-23T19:54:26.8211462Z ##[group]Run actions/setup-python@v4
+Code Quality & Linting	Set up Python	2025-09-23T19:54:26.8212665Z with:
+Code Quality & Linting	Set up Python	2025-09-23T19:54:26.8213446Z   python-version: 3.11
+Code Quality & Linting	Set up Python	2025-09-23T19:54:26.8214483Z   cache: pip
+Code Quality & Linting	Set up Python	2025-09-23T19:54:26.8215456Z   check-latest: false
+Code Quality & Linting	Set up Python	2025-09-23T19:54:26.8216756Z   token: ***
+Code Quality & Linting	Set up Python	2025-09-23T19:54:26.8217768Z   update-environment: true
+Code Quality & Linting	Set up Python	2025-09-23T19:54:26.8218834Z   allow-prereleases: false
+Code Quality & Linting	Set up Python	2025-09-23T19:54:26.8219945Z env:
+Code Quality & Linting	Set up Python	2025-09-23T19:54:26.8220710Z   REGISTRY: docker.io
+Code Quality & Linting	Set up Python	2025-09-23T19:54:26.8221713Z   IMAGE_NAMESPACE: tomatl/diocesan-vitality
+Code Quality & Linting	Set up Python	2025-09-23T19:54:26.8223097Z ##[endgroup]
+Code Quality & Linting	Set up Python	2025-09-23T19:54:26.9907862Z ##[group]Installed versions
+Code Quality & Linting	Set up Python	2025-09-23T19:54:27.0015161Z Successfully set up CPython (3.11.13)
+Code Quality & Linting	Set up Python	2025-09-23T19:54:27.0018214Z ##[endgroup]
+Code Quality & Linting	Set up Python	2025-09-23T19:54:27.0899601Z [command]/opt/hostedtoolcache/Python/3.11.13/x64/bin/pip cache dir
+Code Quality & Linting	Set up Python	2025-09-23T19:54:29.4068839Z /home/runner/.cache/pip
+Code Quality & Linting	Set up Python	2025-09-23T19:54:29.7622946Z Cache hit for: setup-python-Linux-24.04-Ubuntu-python-3.11.13-pip-0dfbf67a32385d4bc3b5e9284fa4cb0ab1618668f542d4098a3e00b7772f167c
+Code Quality & Linting	Set up Python	2025-09-23T19:54:31.1314989Z Received 4194304 of 236948509 (1.8%), 4.0 MBs/sec
+Code Quality & Linting	Set up Python	2025-09-23T19:54:32.1319864Z Received 96468992 of 236948509 (40.7%), 46.0 MBs/sec
+Code Quality & Linting	Set up Python	2025-09-23T19:54:33.1323155Z Received 205520896 of 236948509 (86.7%), 65.3 MBs/sec
+Code Quality & Linting	Set up Python	2025-09-23T19:54:34.1321936Z Received 234881024 of 236948509 (99.1%), 56.0 MBs/sec
+Code Quality & Linting	Set up Python	2025-09-23T19:54:35.1323076Z Received 234881024 of 236948509 (99.1%), 44.8 MBs/sec
+Code Quality & Linting	Set up Python	2025-09-23T19:54:35.6702834Z Received 236948509 of 236948509 (100.0%), 40.8 MBs/sec
+Code Quality & Linting	Set up Python	2025-09-23T19:54:35.6704321Z Cache Size: ~226 MB (236948509 B)
+Code Quality & Linting	Set up Python	2025-09-23T19:54:35.6752632Z [command]/usr/bin/tar -xf /home/runner/work/_temp/d3eb7ff4-c410-484a-9792-1903efd4efbe/cache.tzst -P -C /home/runner/work/diocesan-vitality/diocesan-vitality --use-compress-program unzstd
+Code Quality & Linting	Set up Python	2025-09-23T19:54:36.1456368Z Cache restored successfully
+Code Quality & Linting	Set up Python	2025-09-23T19:54:36.1912256Z Cache restored from key: setup-python-Linux-24.04-Ubuntu-python-3.11.13-pip-0dfbf67a32385d4bc3b5e9284fa4cb0ab1618668f542d4098a3e00b7772f167c
+Code Quality & Linting	Set up Node.js	﻿2025-09-23T19:54:36.2114131Z ##[group]Run actions/setup-node@v4
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:36.2114433Z with:
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:36.2114615Z   node-version: 20
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:36.2114826Z   cache: npm
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:36.2115052Z   cache-dependency-path: frontend/package-lock.json
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:36.2115349Z   always-auth: false
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:36.2115553Z   check-latest: false
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:36.2115867Z   token: ***
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:36.2116036Z env:
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:36.2116202Z   REGISTRY: docker.io
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:36.2116450Z   IMAGE_NAMESPACE: tomatl/diocesan-vitality
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:36.2116773Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:36.2117189Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.13/x64/lib/pkgconfig
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:36.2117621Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:36.2117972Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:36.2118313Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:36.2118683Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.13/x64/lib
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:36.2118988Z ##[endgroup]
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:36.4155617Z Found in cache @ /opt/hostedtoolcache/node/20.19.5/x64
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:36.4162430Z ##[group]Environment details
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:39.0809953Z node: v20.19.5
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:39.0810397Z npm: 10.8.2
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:39.0810867Z yarn: 1.22.22
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:39.0812132Z ##[endgroup]
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:39.0838422Z [command]/opt/hostedtoolcache/node/20.19.5/x64/bin/npm config get cache
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:39.3948156Z /home/runner/.npm
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:39.6952000Z Cache hit for: node-cache-Linux-x64-npm-58a2fd287114fed6e1e2fdf7e23dc2f9b61a377daf160c5765f87b79f05fe382
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:41.0034396Z Received 0 of 28824628 (0.0%), 0.0 MBs/sec
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:41.6621466Z Received 28824628 of 28824628 (100.0%), 16.6 MBs/sec
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:41.6623874Z Cache Size: ~27 MB (28824628 B)
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:41.6727584Z [command]/usr/bin/tar -xf /home/runner/work/_temp/c6ac4075-eec0-4ed2-a76e-72cee2c53a5c/cache.tzst -P -C /home/runner/work/diocesan-vitality/diocesan-vitality --use-compress-program unzstd
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:41.7768623Z Cache restored successfully
+Code Quality & Linting	Set up Node.js	2025-09-23T19:54:41.7825811Z Cache restored from key: node-cache-Linux-x64-npm-58a2fd287114fed6e1e2fdf7e23dc2f9b61a377daf160c5765f87b79f05fe382
+Code Quality & Linting	Install Python dependencies	﻿2025-09-23T19:54:41.7962114Z ##[group]Run python -m pip install --upgrade pip
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:41.7962535Z [36;1mpython -m pip install --upgrade pip[0m
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:41.7963120Z [36;1mpip install flake8 black isort mypy pytest[0m
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:41.7963509Z [36;1mif [ -f requirements.txt ]; then pip install -r requirements.txt; fi[0m
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:41.8105481Z shell: /usr/bin/bash -e {0}
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:41.8105738Z env:
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:41.8105924Z   REGISTRY: docker.io
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:41.8106164Z   IMAGE_NAMESPACE: tomatl/diocesan-vitality
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:41.8106503Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:41.8106902Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.13/x64/lib/pkgconfig
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:41.8107278Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:41.8107623Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:41.8107969Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:41.8108312Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.13/x64/lib
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:41.8108645Z ##[endgroup]
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:43.8661470Z Requirement already satisfied: pip in /opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages (25.2)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:44.7406515Z Collecting flake8
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:44.7422873Z   Using cached flake8-7.3.0-py2.py3-none-any.whl.metadata (3.8 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:44.7842382Z Collecting black
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:44.7857638Z   Using cached black-25.9.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_28_x86_64.whl.metadata (83 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:44.8323207Z Collecting isort
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:44.8338561Z   Using cached isort-6.0.1-py3-none-any.whl.metadata (11 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:44.9287429Z Collecting mypy
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:44.9304826Z   Using cached mypy-1.18.2-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.2 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:44.9638519Z Collecting pytest
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:44.9651973Z   Using cached pytest-8.4.2-py3-none-any.whl.metadata (7.7 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:44.9755865Z Collecting mccabe<0.8.0,>=0.7.0 (from flake8)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:44.9769012Z   Using cached mccabe-0.7.0-py2.py3-none-any.whl.metadata (5.0 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:44.9871663Z Collecting pycodestyle<2.15.0,>=2.14.0 (from flake8)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:44.9884844Z   Using cached pycodestyle-2.14.0-py2.py3-none-any.whl.metadata (4.5 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:44.9993799Z Collecting pyflakes<3.5.0,>=3.4.0 (from flake8)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.0007042Z   Using cached pyflakes-3.4.0-py2.py3-none-any.whl.metadata (3.5 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.0166733Z Collecting click>=8.0.0 (from black)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.0179833Z   Using cached click-8.3.0-py3-none-any.whl.metadata (2.6 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.0306608Z Collecting mypy-extensions>=0.4.3 (from black)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.0326808Z   Using cached mypy_extensions-1.1.0-py3-none-any.whl.metadata (1.1 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.0456100Z Collecting packaging>=22.0 (from black)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.0469079Z   Using cached packaging-25.0-py3-none-any.whl.metadata (3.3 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.0574211Z Collecting pathspec>=0.9.0 (from black)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.0587615Z   Using cached pathspec-0.12.1-py3-none-any.whl.metadata (21 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.0753999Z Collecting platformdirs>=2 (from black)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.0767251Z   Using cached platformdirs-4.4.0-py3-none-any.whl.metadata (12 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.0903700Z Collecting pytokens>=0.1.10 (from black)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.0916877Z   Using cached pytokens-0.1.10-py3-none-any.whl.metadata (2.0 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.1072023Z Collecting typing_extensions>=4.6.0 (from mypy)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.1084852Z   Using cached typing_extensions-4.15.0-py3-none-any.whl.metadata (3.3 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.1320211Z Collecting iniconfig>=1 (from pytest)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.1333367Z   Using cached iniconfig-2.1.0-py3-none-any.whl.metadata (2.7 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.1551986Z Collecting pluggy<2,>=1.5 (from pytest)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.1564805Z   Using cached pluggy-1.6.0-py3-none-any.whl.metadata (4.8 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.1742522Z Collecting pygments>=2.7.2 (from pytest)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.1755434Z   Using cached pygments-2.19.2-py3-none-any.whl.metadata (2.5 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.1835811Z Using cached flake8-7.3.0-py2.py3-none-any.whl (57 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.1849136Z Using cached mccabe-0.7.0-py2.py3-none-any.whl (7.3 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.1861962Z Using cached pycodestyle-2.14.0-py2.py3-none-any.whl (31 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.1874708Z Using cached pyflakes-3.4.0-py2.py3-none-any.whl (63 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.1888159Z Using cached black-25.9.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_28_x86_64.whl (1.6 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.1915321Z Using cached isort-6.0.1-py3-none-any.whl (94 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.1930843Z Using cached mypy-1.18.2-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (13.2 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.2039763Z Using cached pytest-8.4.2-py3-none-any.whl (365 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.2054774Z Using cached pluggy-1.6.0-py3-none-any.whl (20 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.2067606Z Using cached click-8.3.0-py3-none-any.whl (107 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.2081091Z Using cached iniconfig-2.1.0-py3-none-any.whl (6.0 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.2093702Z Using cached mypy_extensions-1.1.0-py3-none-any.whl (5.0 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.2106186Z Using cached packaging-25.0-py3-none-any.whl (66 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.2119595Z Using cached pathspec-0.12.1-py3-none-any.whl (31 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.2132698Z Using cached platformdirs-4.4.0-py3-none-any.whl (18 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.2145524Z Using cached pygments-2.19.2-py3-none-any.whl (1.2 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.2166919Z Using cached pytokens-0.1.10-py3-none-any.whl (12 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.2179988Z Using cached typing_extensions-4.15.0-py3-none-any.whl (44 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:45.2964093Z Installing collected packages: typing_extensions, pytokens, pygments, pyflakes, pycodestyle, pluggy, platformdirs, pathspec, packaging, mypy-extensions, mccabe, isort, iniconfig, click, pytest, mypy, flake8, black
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:47.9592260Z
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:47.9608866Z Successfully installed black-25.9.0 click-8.3.0 flake8-7.3.0 iniconfig-2.1.0 isort-6.0.1 mccabe-0.7.0 mypy-1.18.2 mypy-extensions-1.1.0 packaging-25.0 pathspec-0.12.1 platformdirs-4.4.0 pluggy-1.6.0 pycodestyle-2.14.0 pyflakes-3.4.0 pygments-2.19.2 pytest-8.4.2 pytokens-0.1.10 typing_extensions-4.15.0
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.4253892Z Collecting supabase (from -r requirements.txt (line 1))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.4270902Z   Using cached supabase-2.20.0-py3-none-any.whl.metadata (4.5 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.4616384Z Collecting selenium (from -r requirements.txt (line 2))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.4631891Z   Using cached selenium-4.35.0-py3-none-any.whl.metadata (7.4 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.4795954Z Collecting webdriver-manager (from -r requirements.txt (line 3))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.4810769Z   Using cached webdriver_manager-4.0.2-py2.py3-none-any.whl.metadata (12 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.4918650Z Collecting google-generativeai (from -r requirements.txt (line 4))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.4933404Z   Using cached google_generativeai-0.8.5-py3-none-any.whl.metadata (3.9 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.5544621Z Collecting google-api-python-client (from -r requirements.txt (line 5))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.5559011Z   Using cached google_api_python_client-2.182.0-py3-none-any.whl.metadata (7.0 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.5709895Z Collecting tenacity (from -r requirements.txt (line 6))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.5723501Z   Using cached tenacity-9.1.2-py3-none-any.whl.metadata (1.2 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.6729515Z Collecting pandas (from -r requirements.txt (line 7))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.6744812Z   Using cached pandas-2.3.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (91 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.7191373Z Collecting beautifulsoup4 (from -r requirements.txt (line 8))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.7212258Z   Using cached beautifulsoup4-4.13.5-py3-none-any.whl.metadata (3.8 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.7514953Z Collecting requests (from -r requirements.txt (line 9))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.7529154Z   Using cached requests-2.32.5-py3-none-any.whl.metadata (4.9 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.7675454Z Collecting python-dotenv (from -r requirements.txt (line 10))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.7688849Z   Using cached python_dotenv-1.1.1-py3-none-any.whl.metadata (24 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.7782034Z Collecting jupyter (from -r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.7795652Z   Using cached jupyter-1.1.1-py2.py3-none-any.whl.metadata (2.0 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.8986735Z Collecting matplotlib (from -r requirements.txt (line 12))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.9001838Z   Using cached matplotlib-3.10.6-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (11 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.9038066Z Requirement already satisfied: pytest in /opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages (from -r requirements.txt (line 13)) (8.4.2)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.9215809Z Collecting pytest-asyncio (from -r requirements.txt (line 14))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.9228535Z   Using cached pytest_asyncio-1.2.0-py3-none-any.whl.metadata (4.1 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.9416062Z Collecting pytest-mock (from -r requirements.txt (line 15))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.9429152Z   Using cached pytest_mock-3.15.1-py3-none-any.whl.metadata (3.9 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.9542464Z Collecting pytest-timeout (from -r requirements.txt (line 16))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.9555012Z   Using cached pytest_timeout-2.4.0-py3-none-any.whl.metadata (20 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.9835142Z Collecting types-requests (from -r requirements.txt (line 17))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.9847967Z   Using cached types_requests-2.32.4.20250913-py3-none-any.whl.metadata (2.0 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:48.9861082Z Requirement already satisfied: mypy in /opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages (from -r requirements.txt (line 18)) (1.18.2)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.0397959Z Collecting fastapi (from -r requirements.txt (line 19))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.0411656Z   Using cached fastapi-0.117.1-py3-none-any.whl.metadata (28 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.0763738Z Collecting uvicorn (from -r requirements.txt (line 20))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.1143372Z   Downloading uvicorn-0.37.0-py3-none-any.whl.metadata (6.6 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.3086184Z Collecting lxml (from -r requirements.txt (line 21))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.3101969Z   Using cached lxml-6.0.2-cp311-cp311-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl.metadata (3.6 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.3686390Z Collecting psutil (from -r requirements.txt (line 22))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.3701503Z   Using cached psutil-7.1.0-cp36-abi3-manylinux_2_12_x86_64.manylinux2010_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (23 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.3846863Z Collecting usaddress (from -r requirements.txt (line 23))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.3860299Z   Using cached usaddress-0.5.16-py3-none-any.whl.metadata (6.7 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.4022397Z Collecting PyPDF2 (from -r requirements.txt (line 24))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.4035722Z   Using cached pypdf2-3.0.1-py3-none-any.whl.metadata (6.8 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.4197639Z Collecting pdfplumber (from -r requirements.txt (line 25))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.4210779Z   Using cached pdfplumber-0.11.7-py3-none-any.whl.metadata (42 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.5289560Z Collecting pydantic (from -r requirements.txt (line 26))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.5304278Z   Using cached pydantic-2.11.9-py3-none-any.whl.metadata (68 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.6080105Z Collecting scikit-learn (from -r requirements.txt (line 27))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.6094941Z   Using cached scikit_learn-1.7.2-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (11 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.6299110Z Collecting realtime (from supabase->-r requirements.txt (line 1))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.6313183Z   Using cached realtime-2.20.0-py3-none-any.whl.metadata (6.9 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.6437703Z Collecting supabase-functions (from supabase->-r requirements.txt (line 1))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.6451421Z   Using cached supabase_functions-2.20.0-py3-none-any.whl.metadata (2.2 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.6593048Z Collecting storage3 (from supabase->-r requirements.txt (line 1))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.6606474Z   Using cached storage3-2.20.0-py3-none-any.whl.metadata (2.0 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.6744798Z Collecting supabase-auth (from supabase->-r requirements.txt (line 1))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.6758245Z   Using cached supabase_auth-2.20.0-py3-none-any.whl.metadata (6.3 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.7131168Z Collecting postgrest (from supabase->-r requirements.txt (line 1))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.7145260Z   Using cached postgrest-2.20.0-py3-none-any.whl.metadata (3.3 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.7310972Z Collecting httpx<0.29,>=0.26 (from supabase->-r requirements.txt (line 1))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.7324650Z   Using cached httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.7518650Z Collecting anyio (from httpx<0.29,>=0.26->supabase->-r requirements.txt (line 1))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.7566241Z   Downloading anyio-4.11.0-py3-none-any.whl.metadata (4.1 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.7748473Z Collecting certifi (from httpx<0.29,>=0.26->supabase->-r requirements.txt (line 1))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.7762104Z   Using cached certifi-2025.8.3-py3-none-any.whl.metadata (2.4 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.7948075Z Collecting httpcore==1.* (from httpx<0.29,>=0.26->supabase->-r requirements.txt (line 1))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.7961851Z   Using cached httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.8084467Z Collecting idna (from httpx<0.29,>=0.26->supabase->-r requirements.txt (line 1))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.8097909Z   Using cached idna-3.10-py3-none-any.whl.metadata (10 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.8193975Z Collecting h11>=0.16 (from httpcore==1.*->httpx<0.29,>=0.26->supabase->-r requirements.txt (line 1))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.8207247Z   Using cached h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.8412142Z Collecting urllib3<3.0,>=2.5.0 (from urllib3[socks]<3.0,>=2.5.0->selenium->-r requirements.txt (line 2))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.8425221Z   Using cached urllib3-2.5.0-py3-none-any.whl.metadata (6.5 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.8570863Z Collecting trio~=0.30.0 (from selenium->-r requirements.txt (line 2))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.8584038Z   Using cached trio-0.30.0-py3-none-any.whl.metadata (8.5 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.8696348Z Collecting trio-websocket~=0.12.2 (from selenium->-r requirements.txt (line 2))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.8709647Z   Using cached trio_websocket-0.12.2-py3-none-any.whl.metadata (5.1 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.8890279Z Collecting typing_extensions~=4.14.0 (from selenium->-r requirements.txt (line 2))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.8903763Z   Using cached typing_extensions-4.14.1-py3-none-any.whl.metadata (3.0 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.9070243Z Collecting websocket-client~=1.8.0 (from selenium->-r requirements.txt (line 2))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.9083564Z   Using cached websocket_client-1.8.0-py3-none-any.whl.metadata (8.0 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.9205865Z Collecting attrs>=23.2.0 (from trio~=0.30.0->selenium->-r requirements.txt (line 2))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.9219851Z   Using cached attrs-25.3.0-py3-none-any.whl.metadata (10 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.9397079Z Collecting sortedcontainers (from trio~=0.30.0->selenium->-r requirements.txt (line 2))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.9410906Z   Using cached sortedcontainers-2.4.0-py2.py3-none-any.whl.metadata (10 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.9510964Z Collecting outcome (from trio~=0.30.0->selenium->-r requirements.txt (line 2))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.9524266Z   Using cached outcome-1.3.0.post0-py2.py3-none-any.whl.metadata (2.6 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.9597662Z Collecting sniffio>=1.3.0 (from trio~=0.30.0->selenium->-r requirements.txt (line 2))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.9611007Z   Using cached sniffio-1.3.1-py3-none-any.whl.metadata (3.9 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.9748788Z Collecting wsproto>=0.14 (from trio-websocket~=0.12.2->selenium->-r requirements.txt (line 2))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.9762353Z   Using cached wsproto-1.2.0-py3-none-any.whl.metadata (5.6 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.9904369Z Collecting pysocks!=1.5.7,<2.0,>=1.5.6 (from urllib3[socks]<3.0,>=2.5.0->selenium->-r requirements.txt (line 2))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.9917354Z   Using cached PySocks-1.7.1-py3-none-any.whl.metadata (13 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:49.9963738Z Requirement already satisfied: packaging in /opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages (from webdriver-manager->-r requirements.txt (line 3)) (25.0)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:50.0087736Z Collecting google-ai-generativelanguage==0.6.15 (from google-generativeai->-r requirements.txt (line 4))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:50.0101951Z   Using cached google_ai_generativelanguage-0.6.15-py3-none-any.whl.metadata (5.7 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:50.0477534Z Collecting google-api-core (from google-generativeai->-r requirements.txt (line 4))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:50.0491851Z   Using cached google_api_core-2.25.1-py3-none-any.whl.metadata (3.0 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:50.0836434Z Collecting google-auth>=2.15.0 (from google-generativeai->-r requirements.txt (line 4))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:50.0851189Z   Using cached google_auth-2.40.3-py2.py3-none-any.whl.metadata (6.2 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:50.2370660Z Collecting protobuf (from google-generativeai->-r requirements.txt (line 4))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:50.2386213Z   Using cached protobuf-6.32.1-cp39-abi3-manylinux2014_x86_64.whl.metadata (593 bytes)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:50.2796694Z Collecting tqdm (from google-generativeai->-r requirements.txt (line 4))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:50.2810398Z   Using cached tqdm-4.67.1-py3-none-any.whl.metadata (57 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:50.3975792Z Collecting proto-plus<2.0.0dev,>=1.22.3 (from google-ai-generativelanguage==0.6.15->google-generativeai->-r requirements.txt (line 4))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:50.3988976Z   Using cached proto_plus-1.26.1-py3-none-any.whl.metadata (2.2 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:50.4713764Z Collecting protobuf (from google-generativeai->-r requirements.txt (line 4))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:50.4727937Z   Using cached protobuf-5.29.5-cp38-abi3-manylinux2014_x86_64.whl.metadata (592 bytes)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:50.4909583Z Collecting googleapis-common-protos<2.0.0,>=1.56.2 (from google-api-core->google-generativeai->-r requirements.txt (line 4))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:50.4922779Z   Using cached googleapis_common_protos-1.70.0-py3-none-any.whl.metadata (9.3 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:50.7051896Z Collecting charset_normalizer<4,>=2 (from requests->-r requirements.txt (line 9))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:50.7066937Z   Using cached charset_normalizer-3.4.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (36 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.2502856Z Collecting grpcio<2.0.0,>=1.33.2 (from google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.10.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,!=2.8.*,!=2.9.*,<3.0.0dev,>=1.34.1->google-ai-generativelanguage==0.6.15->google-generativeai->-r requirements.txt (line 4))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.2517956Z   Using cached grpcio-1.75.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (3.7 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.3009490Z Collecting grpcio-status<2.0.0,>=1.33.2 (from google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.10.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,!=2.8.*,!=2.9.*,<3.0.0dev,>=1.34.1->google-ai-generativelanguage==0.6.15->google-generativeai->-r requirements.txt (line 4))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.3022301Z   Using cached grpcio_status-1.75.0-py3-none-any.whl.metadata (1.1 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.3317076Z Collecting cachetools<6.0,>=2.0.0 (from google-auth>=2.15.0->google-generativeai->-r requirements.txt (line 4))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.3329884Z   Using cached cachetools-5.5.2-py3-none-any.whl.metadata (5.4 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.3492960Z Collecting pyasn1-modules>=0.2.1 (from google-auth>=2.15.0->google-generativeai->-r requirements.txt (line 4))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.3505783Z   Using cached pyasn1_modules-0.4.2-py3-none-any.whl.metadata (3.5 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.3641381Z Collecting rsa<5,>=3.1.4 (from google-auth>=2.15.0->google-generativeai->-r requirements.txt (line 4))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.3654105Z   Using cached rsa-4.9.1-py3-none-any.whl.metadata (5.6 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.4150268Z INFO: pip is looking at multiple versions of grpcio-status to determine which version is compatible with other requirements. This could take a while.
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.4156582Z Collecting grpcio-status<2.0.0,>=1.33.2 (from google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.10.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,!=2.8.*,!=2.9.*,<3.0.0dev,>=1.34.1->google-ai-generativelanguage==0.6.15->google-generativeai->-r requirements.txt (line 4))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.4170187Z   Using cached grpcio_status-1.74.0-py3-none-any.whl.metadata (1.1 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.4208966Z   Using cached grpcio_status-1.73.1-py3-none-any.whl.metadata (1.1 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.5029905Z   Using cached grpcio_status-1.73.0-py3-none-any.whl.metadata (1.1 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.5069739Z   Using cached grpcio_status-1.72.2-py3-none-any.whl.metadata (1.1 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.5108379Z   Using cached grpcio_status-1.72.1-py3-none-any.whl.metadata (1.1 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.5147375Z   Using cached grpcio_status-1.71.2-py3-none-any.whl.metadata (1.1 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.7258258Z Collecting pyasn1>=0.1.3 (from rsa<5,>=3.1.4->google-auth>=2.15.0->google-generativeai->-r requirements.txt (line 4))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.7271843Z   Using cached pyasn1-0.6.1-py3-none-any.whl.metadata (8.4 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.7419489Z Collecting httplib2<1.0.0,>=0.19.0 (from google-api-python-client->-r requirements.txt (line 5))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.7432936Z   Using cached httplib2-0.31.0-py3-none-any.whl.metadata (2.2 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.7804232Z Collecting google-auth-httplib2<1.0.0,>=0.2.0 (from google-api-python-client->-r requirements.txt (line 5))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.7817385Z   Using cached google_auth_httplib2-0.2.0-py2.py3-none-any.whl.metadata (2.2 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.7918600Z Collecting uritemplate<5,>=3.0.1 (from google-api-python-client->-r requirements.txt (line 5))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.7932090Z   Using cached uritemplate-4.2.0-py3-none-any.whl.metadata (2.6 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.8201041Z Collecting pyparsing<4,>=3.0.4 (from httplib2<1.0.0,>=0.19.0->google-api-python-client->-r requirements.txt (line 5))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.8214495Z   Using cached pyparsing-3.2.5-py3-none-any.whl.metadata (5.0 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.9859160Z Collecting numpy>=1.23.2 (from pandas->-r requirements.txt (line 7))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:51.9874931Z   Using cached numpy-2.3.3-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (62 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.0067633Z Collecting python-dateutil>=2.8.2 (from pandas->-r requirements.txt (line 7))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.0081247Z   Using cached python_dateutil-2.9.0.post0-py2.py3-none-any.whl.metadata (8.4 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.0396573Z Collecting pytz>=2020.1 (from pandas->-r requirements.txt (line 7))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.0409996Z   Using cached pytz-2025.2-py2.py3-none-any.whl.metadata (22 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.0526748Z Collecting tzdata>=2022.7 (from pandas->-r requirements.txt (line 7))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.0539903Z   Using cached tzdata-2025.2-py2.py3-none-any.whl.metadata (1.4 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.0757874Z Collecting soupsieve>1.2 (from beautifulsoup4->-r requirements.txt (line 8))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.0771320Z   Using cached soupsieve-2.8-py3-none-any.whl.metadata (4.6 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.1160515Z Collecting notebook (from jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.1174013Z   Using cached notebook-7.4.5-py3-none-any.whl.metadata (10 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.1321415Z Collecting jupyter-console (from jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.1334588Z   Using cached jupyter_console-6.6.3-py3-none-any.whl.metadata (5.8 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.1675476Z Collecting nbconvert (from jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.1689713Z   Using cached nbconvert-7.16.6-py3-none-any.whl.metadata (8.5 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.2030593Z Collecting ipykernel (from jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.2045202Z   Using cached ipykernel-6.30.1-py3-none-any.whl.metadata (6.2 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.2359853Z Collecting ipywidgets (from jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.2373475Z   Using cached ipywidgets-8.1.7-py3-none-any.whl.metadata (2.4 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.3799077Z Collecting jupyterlab (from jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.3813843Z   Using cached jupyterlab-4.4.7-py3-none-any.whl.metadata (16 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.4507898Z Collecting contourpy>=1.0.1 (from matplotlib->-r requirements.txt (line 12))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.4522881Z   Using cached contourpy-1.3.3-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (5.5 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.4628853Z Collecting cycler>=0.10 (from matplotlib->-r requirements.txt (line 12))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.4642954Z   Using cached cycler-0.12.1-py3-none-any.whl.metadata (3.8 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.6026140Z Collecting fonttools>=4.22.0 (from matplotlib->-r requirements.txt (line 12))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.6041446Z   Using cached fonttools-4.60.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (111 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.6699559Z Collecting kiwisolver>=1.3.1 (from matplotlib->-r requirements.txt (line 12))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.6713196Z   Using cached kiwisolver-1.4.9-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (6.3 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.8276781Z Collecting pillow>=8 (from matplotlib->-r requirements.txt (line 12))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.8292054Z   Using cached pillow-11.3.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (9.0 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.8430102Z Requirement already satisfied: iniconfig>=1 in /opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages (from pytest->-r requirements.txt (line 13)) (2.1.0)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.8436319Z Requirement already satisfied: pluggy<2,>=1.5 in /opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages (from pytest->-r requirements.txt (line 13)) (1.6.0)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.8440728Z Requirement already satisfied: pygments>=2.7.2 in /opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages (from pytest->-r requirements.txt (line 13)) (2.19.2)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.8612047Z Requirement already satisfied: mypy_extensions>=1.0.0 in /opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages (from mypy->-r requirements.txt (line 18)) (1.1.0)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.8616317Z Requirement already satisfied: pathspec>=0.9.0 in /opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages (from mypy->-r requirements.txt (line 18)) (0.12.1)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.8913115Z Collecting starlette<0.49.0,>=0.40.0 (from fastapi->-r requirements.txt (line 19))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.8926199Z   Using cached starlette-0.48.0-py3-none-any.whl.metadata (6.3 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.9516923Z Collecting annotated-types>=0.6.0 (from pydantic->-r requirements.txt (line 26))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:52.9530307Z   Using cached annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:53.6098584Z Collecting pydantic-core==2.33.2 (from pydantic->-r requirements.txt (line 26))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:53.6114376Z   Using cached pydantic_core-2.33.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.8 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:53.6259743Z Collecting typing-inspection>=0.4.0 (from pydantic->-r requirements.txt (line 26))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:53.6272982Z   Using cached typing_inspection-0.4.1-py3-none-any.whl.metadata (2.6 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:53.6578998Z Requirement already satisfied: click>=7.0 in /opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages (from uvicorn->-r requirements.txt (line 20)) (8.3.0)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:53.6917059Z Collecting python-crfsuite>=0.7 (from usaddress->-r requirements.txt (line 23))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:53.6931175Z   Using cached python_crfsuite-0.9.11-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.3 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:53.7008380Z Collecting probableparsing (from usaddress->-r requirements.txt (line 23))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:53.7023028Z   Using cached probableparsing-0.0.1-py2.py3-none-any.whl.metadata (908 bytes)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:53.7161501Z Collecting pdfminer.six==20250506 (from pdfplumber->-r requirements.txt (line 25))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:53.7174629Z   Using cached pdfminer_six-20250506-py3-none-any.whl.metadata (4.2 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:53.7953686Z Collecting pypdfium2>=4.18.0 (from pdfplumber->-r requirements.txt (line 25))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:53.7968274Z   Using cached pypdfium2-4.30.0-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (48 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.0599962Z Collecting cryptography>=36.0.0 (from pdfminer.six==20250506->pdfplumber->-r requirements.txt (line 25))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.0614913Z   Using cached cryptography-46.0.1-cp311-abi3-manylinux_2_34_x86_64.whl.metadata (5.7 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.1841578Z Collecting scipy>=1.8.0 (from scikit-learn->-r requirements.txt (line 27))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.1856845Z   Using cached scipy-1.16.2-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (62 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.2165127Z Collecting joblib>=1.2.0 (from scikit-learn->-r requirements.txt (line 27))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.2178684Z   Using cached joblib-1.5.2-py3-none-any.whl.metadata (5.6 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.2276322Z Collecting threadpoolctl>=3.1.0 (from scikit-learn->-r requirements.txt (line 27))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.2297393Z   Using cached threadpoolctl-3.6.0-py3-none-any.whl.metadata (13 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.3489983Z Collecting cffi>=2.0.0 (from cryptography>=36.0.0->pdfminer.six==20250506->pdfplumber->-r requirements.txt (line 25))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.3505368Z   Using cached cffi-2.0.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.6 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.3627026Z Collecting pycparser (from cffi>=2.0.0->cryptography>=36.0.0->pdfminer.six==20250506->pdfplumber->-r requirements.txt (line 25))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.3640329Z   Using cached pycparser-2.23-py3-none-any.whl.metadata (993 bytes)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.4113900Z Collecting six>=1.5 (from python-dateutil>=2.8.2->pandas->-r requirements.txt (line 7))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.4127229Z   Using cached six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.4559101Z Collecting comm>=0.1.1 (from ipykernel->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.4572572Z   Using cached comm-0.2.3-py3-none-any.whl.metadata (3.7 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.5431080Z Collecting debugpy>=1.6.5 (from ipykernel->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.5445934Z   Using cached debugpy-1.8.17-cp311-cp311-manylinux_2_34_x86_64.whl.metadata (1.4 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.5863899Z Collecting ipython>=7.23.1 (from ipykernel->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.5877487Z   Using cached ipython-9.5.0-py3-none-any.whl.metadata (4.4 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.6122517Z Collecting jupyter-client>=8.0.0 (from ipykernel->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.6135730Z   Using cached jupyter_client-8.6.3-py3-none-any.whl.metadata (8.3 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.6365340Z Collecting jupyter-core!=5.0.*,>=4.12 (from ipykernel->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.6379004Z   Using cached jupyter_core-5.8.1-py3-none-any.whl.metadata (1.6 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.7277078Z Collecting matplotlib-inline>=0.1 (from ipykernel->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.7290779Z   Using cached matplotlib_inline-0.1.7-py3-none-any.whl.metadata (3.9 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.7438049Z Collecting nest-asyncio>=1.4 (from ipykernel->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.7451980Z   Using cached nest_asyncio-1.6.0-py3-none-any.whl.metadata (2.8 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.9687865Z Collecting pyzmq>=25 (from ipykernel->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:54.9703423Z   Using cached pyzmq-27.1.0-cp311-cp311-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl.metadata (6.0 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.0026740Z Collecting tornado>=6.2 (from ipykernel->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.0041229Z   Using cached tornado-6.5.2-cp39-abi3-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (2.8 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.0192948Z Collecting traitlets>=5.4.0 (from ipykernel->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.0206251Z   Using cached traitlets-5.14.3-py3-none-any.whl.metadata (10 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.0431603Z Collecting decorator (from ipython>=7.23.1->ipykernel->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.0445183Z   Using cached decorator-5.2.1-py3-none-any.whl.metadata (3.9 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.0538908Z Collecting ipython-pygments-lexers (from ipython>=7.23.1->ipykernel->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.0552431Z   Using cached ipython_pygments_lexers-1.1.1-py3-none-any.whl.metadata (1.1 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.0729468Z Collecting jedi>=0.16 (from ipython>=7.23.1->ipykernel->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.0742868Z   Using cached jedi-0.19.2-py2.py3-none-any.whl.metadata (22 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.0877414Z Collecting pexpect>4.3 (from ipython>=7.23.1->ipykernel->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.0890586Z   Using cached pexpect-4.9.0-py2.py3-none-any.whl.metadata (2.5 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.1170640Z Collecting prompt_toolkit<3.1.0,>=3.0.41 (from ipython>=7.23.1->ipykernel->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.1184190Z   Using cached prompt_toolkit-3.0.52-py3-none-any.whl.metadata (6.4 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.1286473Z Collecting stack_data (from ipython>=7.23.1->ipykernel->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.1299719Z   Using cached stack_data-0.6.3-py3-none-any.whl.metadata (18 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.1470505Z Collecting wcwidth (from prompt_toolkit<3.1.0,>=3.0.41->ipython>=7.23.1->ipykernel->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.1483667Z   Using cached wcwidth-0.2.14-py2.py3-none-any.whl.metadata (15 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.1639783Z Collecting parso<0.9.0,>=0.8.4 (from jedi>=0.16->ipython>=7.23.1->ipykernel->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.1653115Z   Using cached parso-0.8.5-py2.py3-none-any.whl.metadata (8.3 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.1868101Z Requirement already satisfied: platformdirs>=2.5 in /opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages (from jupyter-core!=5.0.*,>=4.12->ipykernel->jupyter->-r requirements.txt (line 11)) (4.4.0)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.2002302Z Collecting ptyprocess>=0.5 (from pexpect>4.3->ipython>=7.23.1->ipykernel->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.2015748Z   Using cached ptyprocess-0.7.0-py2.py3-none-any.whl.metadata (1.3 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.2647298Z Collecting widgetsnbextension~=4.0.14 (from ipywidgets->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.2661711Z   Using cached widgetsnbextension-4.0.14-py3-none-any.whl.metadata (1.6 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.2837510Z Collecting jupyterlab_widgets~=3.0.15 (from ipywidgets->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.2850628Z   Using cached jupyterlab_widgets-3.0.15-py3-none-any.whl.metadata (20 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.4555269Z Collecting async-lru>=1.0.0 (from jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.4570346Z   Using cached async_lru-2.0.5-py3-none-any.whl.metadata (4.5 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.4867911Z Collecting jinja2>=3.0.3 (from jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.4881731Z   Using cached jinja2-3.1.6-py3-none-any.whl.metadata (2.9 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.5003514Z Collecting jupyter-lsp>=2.0.0 (from jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.5016683Z   Using cached jupyter_lsp-2.3.0-py3-none-any.whl.metadata (1.8 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.5310857Z Collecting jupyter-server<3,>=2.4.0 (from jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.5324671Z   Using cached jupyter_server-2.17.0-py3-none-any.whl.metadata (8.5 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.5621253Z Collecting jupyterlab-server<3,>=2.27.1 (from jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.5636061Z   Using cached jupyterlab_server-2.27.3-py3-none-any.whl.metadata (5.9 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.5758709Z Collecting notebook-shim>=0.2 (from jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.5772401Z   Using cached notebook_shim-0.2.4-py3-none-any.whl.metadata (4.0 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.5794275Z Requirement already satisfied: setuptools>=41.1.0 in /opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages (from jupyterlab->jupyter->-r requirements.txt (line 11)) (65.5.0)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.6075325Z Collecting argon2-cffi>=21.1 (from jupyter-server<3,>=2.4.0->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.6088517Z   Using cached argon2_cffi-25.1.0-py3-none-any.whl.metadata (4.1 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.6246291Z Collecting jupyter-events>=0.11.0 (from jupyter-server<3,>=2.4.0->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.6259593Z   Using cached jupyter_events-0.12.0-py3-none-any.whl.metadata (5.8 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.6416684Z Collecting jupyter-server-terminals>=0.4.4 (from jupyter-server<3,>=2.4.0->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.6430201Z   Using cached jupyter_server_terminals-0.5.3-py3-none-any.whl.metadata (5.6 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.6646140Z Collecting nbformat>=5.3.0 (from jupyter-server<3,>=2.4.0->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.6659617Z   Using cached nbformat-5.10.4-py3-none-any.whl.metadata (3.6 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.6794044Z Collecting overrides>=5.0 (from jupyter-server<3,>=2.4.0->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.6807240Z   Using cached overrides-7.7.0-py3-none-any.whl.metadata (5.8 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.6935942Z Collecting prometheus-client>=0.9 (from jupyter-server<3,>=2.4.0->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.6949087Z   Using cached prometheus_client-0.23.1-py3-none-any.whl.metadata (1.9 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.7143646Z Collecting send2trash>=1.8.2 (from jupyter-server<3,>=2.4.0->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.7156483Z   Using cached Send2Trash-1.8.3-py3-none-any.whl.metadata (4.0 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.7290284Z Collecting terminado>=0.8.3 (from jupyter-server<3,>=2.4.0->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.7303446Z   Using cached terminado-0.18.1-py3-none-any.whl.metadata (5.8 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.7578129Z Collecting babel>=2.10 (from jupyterlab-server<3,>=2.27.1->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.7591580Z   Using cached babel-2.17.0-py3-none-any.whl.metadata (2.0 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.7863942Z Collecting json5>=0.9.0 (from jupyterlab-server<3,>=2.27.1->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.7877627Z   Using cached json5-0.12.1-py3-none-any.whl.metadata (36 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.8130350Z Collecting jsonschema>=4.18.0 (from jupyterlab-server<3,>=2.27.1->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.8144016Z   Using cached jsonschema-4.25.1-py3-none-any.whl.metadata (7.6 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.8492676Z Collecting argon2-cffi-bindings (from argon2-cffi>=21.1->jupyter-server<3,>=2.4.0->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.8506156Z   Using cached argon2_cffi_bindings-25.1.0-cp39-abi3-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl.metadata (7.4 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.9044182Z Collecting MarkupSafe>=2.0 (from jinja2>=3.0.3->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.9058153Z   Using cached MarkupSafe-3.0.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.0 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.9258749Z Collecting jsonschema-specifications>=2023.03.6 (from jsonschema>=4.18.0->jupyterlab-server<3,>=2.27.1->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.9272237Z   Using cached jsonschema_specifications-2025.9.1-py3-none-any.whl.metadata (2.9 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.9488308Z Collecting referencing>=0.28.4 (from jsonschema>=4.18.0->jupyterlab-server<3,>=2.27.1->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:55.9501958Z   Using cached referencing-0.36.2-py3-none-any.whl.metadata (2.8 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.1867625Z Collecting rpds-py>=0.7.1 (from jsonschema>=4.18.0->jupyterlab-server<3,>=2.27.1->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.1883333Z   Using cached rpds_py-0.27.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.2 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.2122242Z Collecting python-json-logger>=2.0.4 (from jupyter-events>=0.11.0->jupyter-server<3,>=2.4.0->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.2135660Z   Using cached python_json_logger-3.3.0-py3-none-any.whl.metadata (4.0 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.2578567Z Collecting pyyaml>=5.3 (from jupyter-events>=0.11.0->jupyter-server<3,>=2.4.0->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.2593148Z   Using cached PyYAML-6.0.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (2.1 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.2676188Z Collecting rfc3339-validator (from jupyter-events>=0.11.0->jupyter-server<3,>=2.4.0->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.2689098Z   Using cached rfc3339_validator-0.1.4-py2.py3-none-any.whl.metadata (1.5 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.2768864Z Collecting rfc3986-validator>=0.1.1 (from jupyter-events>=0.11.0->jupyter-server<3,>=2.4.0->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.2782159Z   Using cached rfc3986_validator-0.1.1-py2.py3-none-any.whl.metadata (1.7 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.2896830Z Collecting fqdn (from jsonschema[format-nongpl]>=4.18.0->jupyter-events>=0.11.0->jupyter-server<3,>=2.4.0->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.2909792Z   Using cached fqdn-1.5.1-py3-none-any.whl.metadata (1.4 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.2985844Z Collecting isoduration (from jsonschema[format-nongpl]>=4.18.0->jupyter-events>=0.11.0->jupyter-server<3,>=2.4.0->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.2998612Z   Using cached isoduration-20.11.0-py3-none-any.whl.metadata (5.7 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.3098458Z Collecting jsonpointer>1.13 (from jsonschema[format-nongpl]>=4.18.0->jupyter-events>=0.11.0->jupyter-server<3,>=2.4.0->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.3111681Z   Using cached jsonpointer-3.0.0-py2.py3-none-any.whl.metadata (2.3 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.3201799Z Collecting rfc3987-syntax>=1.1.0 (from jsonschema[format-nongpl]>=4.18.0->jupyter-events>=0.11.0->jupyter-server<3,>=2.4.0->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.3214829Z   Using cached rfc3987_syntax-1.1.0-py3-none-any.whl.metadata (7.7 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.3317115Z Collecting uri-template (from jsonschema[format-nongpl]>=4.18.0->jupyter-events>=0.11.0->jupyter-server<3,>=2.4.0->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.3329717Z   Using cached uri_template-1.3.0-py3-none-any.whl.metadata (8.8 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.3443944Z Collecting webcolors>=24.6.0 (from jsonschema[format-nongpl]>=4.18.0->jupyter-events>=0.11.0->jupyter-server<3,>=2.4.0->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.3456119Z   Using cached webcolors-24.11.1-py3-none-any.whl.metadata (2.2 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.3902552Z Collecting bleach!=5.0.0 (from bleach[css]!=5.0.0->nbconvert->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.3915103Z   Using cached bleach-6.2.0-py3-none-any.whl.metadata (30 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.4629034Z Collecting defusedxml (from nbconvert->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.4642718Z   Using cached defusedxml-0.7.1-py2.py3-none-any.whl.metadata (32 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.4891718Z Collecting jupyterlab-pygments (from nbconvert->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.4905115Z   Using cached jupyterlab_pygments-0.3.0-py3-none-any.whl.metadata (4.4 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.5056816Z Collecting mistune<4,>=2.0.3 (from nbconvert->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.5069935Z   Using cached mistune-3.1.4-py3-none-any.whl.metadata (1.8 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.5220156Z Collecting nbclient>=0.5.0 (from nbconvert->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.5233889Z   Using cached nbclient-0.10.2-py3-none-any.whl.metadata (8.3 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.5391635Z Collecting pandocfilters>=1.4.1 (from nbconvert->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.5404967Z   Using cached pandocfilters-1.5.1-py2.py3-none-any.whl.metadata (9.0 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.5610450Z Collecting webencodings (from bleach!=5.0.0->bleach[css]!=5.0.0->nbconvert->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.5623588Z   Using cached webencodings-0.5.1-py2.py3-none-any.whl.metadata (2.1 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.5752256Z Collecting tinycss2<1.5,>=1.1.0 (from bleach[css]!=5.0.0->nbconvert->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.5766589Z   Using cached tinycss2-1.4.0-py3-none-any.whl.metadata (3.0 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.6093748Z Collecting fastjsonschema>=2.15 (from nbformat>=5.3.0->jupyter-server<3,>=2.4.0->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.6106906Z   Using cached fastjsonschema-2.21.2-py3-none-any.whl.metadata (2.3 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.6853500Z Collecting lark>=1.2.2 (from rfc3987-syntax>=1.1.0->jsonschema[format-nongpl]>=4.18.0->jupyter-events>=0.11.0->jupyter-server<3,>=2.4.0->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.6866523Z   Using cached lark-1.3.0-py3-none-any.whl.metadata (1.8 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.7514230Z Collecting arrow>=0.15.0 (from isoduration->jsonschema[format-nongpl]>=4.18.0->jupyter-events>=0.11.0->jupyter-server<3,>=2.4.0->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.7528065Z   Using cached arrow-1.3.0-py3-none-any.whl.metadata (7.5 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.7756828Z Collecting types-python-dateutil>=2.8.10 (from arrow>=0.15.0->isoduration->jsonschema[format-nongpl]>=4.18.0->jupyter-events>=0.11.0->jupyter-server<3,>=2.4.0->jupyterlab->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.7769898Z   Using cached types_python_dateutil-2.9.0.20250822-py3-none-any.whl.metadata (1.8 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.8318081Z Collecting deprecation>=2.1.0 (from postgrest->supabase->-r requirements.txt (line 1))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.8330923Z   Using cached deprecation-2.1.0-py2.py3-none-any.whl.metadata (4.6 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.8832250Z Collecting h2<5,>=3 (from httpx[http2]<0.29,>=0.26->postgrest->supabase->-r requirements.txt (line 1))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.8845138Z   Using cached h2-4.3.0-py3-none-any.whl.metadata (5.1 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.9007184Z Collecting hyperframe<7,>=6.1 (from h2<5,>=3->httpx[http2]<0.29,>=0.26->postgrest->supabase->-r requirements.txt (line 1))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.9019942Z   Using cached hyperframe-6.1.0-py3-none-any.whl.metadata (4.3 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.9129108Z Collecting hpack<5,>=4.1 (from h2<5,>=3->httpx[http2]<0.29,>=0.26->postgrest->supabase->-r requirements.txt (line 1))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:56.9142227Z   Using cached hpack-4.1.0-py3-none-any.whl.metadata (4.6 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.0465475Z Collecting websockets<16,>=11 (from realtime->supabase->-r requirements.txt (line 1))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.0480356Z   Using cached websockets-15.0.1-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.8 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.0723137Z Collecting executing>=1.2.0 (from stack_data->ipython>=7.23.1->ipykernel->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.0735875Z   Using cached executing-2.2.1-py2.py3-none-any.whl.metadata (8.9 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.0876140Z Collecting asttokens>=2.1.0 (from stack_data->ipython>=7.23.1->ipykernel->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.0888883Z   Using cached asttokens-3.0.0-py3-none-any.whl.metadata (4.7 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.0976807Z Collecting pure-eval (from stack_data->ipython>=7.23.1->ipykernel->jupyter->-r requirements.txt (line 11))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.0989495Z   Using cached pure_eval-0.2.3-py3-none-any.whl.metadata (6.3 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.1621815Z Collecting pyjwt>=2.10.1 (from pyjwt[crypto]>=2.10.1->supabase-auth->supabase->-r requirements.txt (line 1))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.1634746Z   Using cached PyJWT-2.10.1-py3-none-any.whl.metadata (4.0 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2102360Z Collecting strenum>=0.4.15 (from supabase-functions->supabase->-r requirements.txt (line 1))
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2114983Z   Using cached StrEnum-0.4.15-py3-none-any.whl.metadata (5.3 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2343687Z Using cached supabase-2.20.0-py3-none-any.whl (16 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2356351Z Using cached httpx-0.28.1-py3-none-any.whl (73 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2369687Z Using cached httpcore-1.0.9-py3-none-any.whl (78 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2382964Z Using cached selenium-4.35.0-py3-none-any.whl (9.6 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2464003Z Using cached trio-0.30.0-py3-none-any.whl (499 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2479797Z Using cached trio_websocket-0.12.2-py3-none-any.whl (21 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2492547Z Using cached typing_extensions-4.14.1-py3-none-any.whl (43 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2505252Z Using cached urllib3-2.5.0-py3-none-any.whl (129 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2518579Z Using cached PySocks-1.7.1-py3-none-any.whl (16 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2531487Z Using cached websocket_client-1.8.0-py3-none-any.whl (58 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2544363Z Using cached webdriver_manager-4.0.2-py2.py3-none-any.whl (27 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2556986Z Using cached google_generativeai-0.8.5-py3-none-any.whl (155 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2571378Z Using cached google_ai_generativelanguage-0.6.15-py3-none-any.whl (1.3 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2593088Z Using cached google_api_core-2.25.1-py3-none-any.whl (160 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2606582Z Using cached requests-2.32.5-py3-none-any.whl (64 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2620159Z Using cached charset_normalizer-3.4.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (150 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2633347Z Using cached google_auth-2.40.3-py2.py3-none-any.whl (216 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2647029Z Using cached cachetools-5.5.2-py3-none-any.whl (10 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2659814Z Using cached googleapis_common_protos-1.70.0-py3-none-any.whl (294 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2674787Z Using cached grpcio-1.75.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (6.5 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2733954Z Using cached grpcio_status-1.71.2-py3-none-any.whl (14 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2746673Z Using cached idna-3.10-py3-none-any.whl (70 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2759855Z Using cached proto_plus-1.26.1-py3-none-any.whl (50 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2772999Z Using cached protobuf-5.29.5-cp38-abi3-manylinux2014_x86_64.whl (319 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2787529Z Using cached rsa-4.9.1-py3-none-any.whl (34 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2800631Z Using cached google_api_python_client-2.182.0-py3-none-any.whl (14.2 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2912014Z Using cached google_auth_httplib2-0.2.0-py2.py3-none-any.whl (9.3 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2924470Z Using cached httplib2-0.31.0-py3-none-any.whl (91 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2937603Z Using cached pyparsing-3.2.5-py3-none-any.whl (113 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2951105Z Using cached uritemplate-4.2.0-py3-none-any.whl (11 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2963844Z Using cached tenacity-9.1.2-py3-none-any.whl (28 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.2977105Z Using cached pandas-2.3.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (12.4 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3076964Z Using cached beautifulsoup4-4.13.5-py3-none-any.whl (105 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3090923Z Using cached python_dotenv-1.1.1-py3-none-any.whl (20 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3103598Z Using cached jupyter-1.1.1-py2.py3-none-any.whl (2.7 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3116492Z Using cached matplotlib-3.10.6-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (8.7 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3189140Z Using cached pytest_asyncio-1.2.0-py3-none-any.whl (15 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3202066Z Using cached pytest_mock-3.15.1-py3-none-any.whl (10 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3214662Z Using cached pytest_timeout-2.4.0-py3-none-any.whl (14 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3227555Z Using cached types_requests-2.32.4.20250913-py3-none-any.whl (20 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3240619Z Using cached fastapi-0.117.1-py3-none-any.whl (95 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3253781Z Using cached pydantic-2.11.9-py3-none-any.whl (444 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3270161Z Using cached pydantic_core-2.33.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.0 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3296478Z Using cached starlette-0.48.0-py3-none-any.whl (73 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3328017Z Downloading anyio-4.11.0-py3-none-any.whl (109 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3519709Z Downloading uvicorn-0.37.0-py3-none-any.whl (67 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3575941Z Using cached lxml-6.0.2-cp311-cp311-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl (5.2 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3625946Z Using cached psutil-7.1.0-cp36-abi3-manylinux_2_12_x86_64.manylinux2010_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl (291 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3640628Z Using cached usaddress-0.5.16-py3-none-any.whl (70 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3653681Z Using cached pypdf2-3.0.1-py3-none-any.whl (232 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3688585Z Using cached pdfplumber-0.11.7-py3-none-any.whl (60 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3689638Z Using cached pdfminer_six-20250506-py3-none-any.whl (5.6 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3734732Z Using cached scikit_learn-1.7.2-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (9.7 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3815886Z Using cached annotated_types-0.7.0-py3-none-any.whl (13 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3828640Z Using cached attrs-25.3.0-py3-none-any.whl (63 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3841999Z Using cached certifi-2025.8.3-py3-none-any.whl (161 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3855837Z Using cached contourpy-1.3.3-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (355 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3871011Z Using cached cryptography-46.0.1-cp311-abi3-manylinux_2_34_x86_64.whl (4.6 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3916929Z Using cached cffi-2.0.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (215 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3930856Z Using cached cycler-0.12.1-py3-none-any.whl (8.3 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3950662Z Using cached fonttools-4.60.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (5.0 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.3998016Z Using cached h11-0.16.0-py3-none-any.whl (37 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4011506Z Using cached joblib-1.5.2-py3-none-any.whl (308 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4027186Z Using cached kiwisolver-1.4.9-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (1.4 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4050448Z Using cached numpy-2.3.3-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (16.9 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4182242Z Using cached outcome-1.3.0.post0-py2.py3-none-any.whl (10 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4195747Z Using cached pillow-11.3.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (6.6 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4255081Z Using cached pyasn1-0.6.1-py3-none-any.whl (83 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4268731Z Using cached pyasn1_modules-0.4.2-py3-none-any.whl (181 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4283532Z Using cached pypdfium2-4.30.0-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.8 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4317028Z Using cached python_crfsuite-0.9.11-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (1.3 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4338728Z Using cached python_dateutil-2.9.0.post0-py2.py3-none-any.whl (229 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4353139Z Using cached pytz-2025.2-py2.py3-none-any.whl (509 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4370818Z Using cached scipy-1.16.2-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (35.9 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4633393Z Using cached six-1.17.0-py2.py3-none-any.whl (11 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4645691Z Using cached sniffio-1.3.1-py3-none-any.whl (10 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4658044Z Using cached soupsieve-2.8-py3-none-any.whl (36 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4671002Z Using cached threadpoolctl-3.6.0-py3-none-any.whl (18 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4683670Z Using cached typing_inspection-0.4.1-py3-none-any.whl (14 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4696252Z Using cached tzdata-2025.2-py2.py3-none-any.whl (347 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4711283Z Using cached wsproto-1.2.0-py3-none-any.whl (24 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4723925Z Using cached ipykernel-6.30.1-py3-none-any.whl (117 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4737241Z Using cached comm-0.2.3-py3-none-any.whl (7.3 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4750270Z Using cached debugpy-1.8.17-cp311-cp311-manylinux_2_34_x86_64.whl (3.2 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4785337Z Using cached ipython-9.5.0-py3-none-any.whl (612 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4802321Z Using cached prompt_toolkit-3.0.52-py3-none-any.whl (391 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4817701Z Using cached jedi-0.19.2-py2.py3-none-any.whl (1.6 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4841576Z Using cached parso-0.8.5-py2.py3-none-any.whl (106 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4854817Z Using cached jupyter_client-8.6.3-py3-none-any.whl (106 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4868045Z Using cached jupyter_core-5.8.1-py3-none-any.whl (28 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4881093Z Using cached matplotlib_inline-0.1.7-py3-none-any.whl (9.9 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4893489Z Using cached nest_asyncio-1.6.0-py3-none-any.whl (5.2 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4905980Z Using cached pexpect-4.9.0-py2.py3-none-any.whl (63 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4920635Z Using cached ptyprocess-0.7.0-py2.py3-none-any.whl (13 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4934342Z Using cached pyzmq-27.1.0-cp311-cp311-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl (857 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4954046Z Using cached tornado-6.5.2-cp39-abi3-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl (443 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4969819Z Using cached traitlets-5.14.3-py3-none-any.whl (85 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4983553Z Using cached decorator-5.2.1-py3-none-any.whl (9.2 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.4996815Z Using cached ipython_pygments_lexers-1.1.1-py3-none-any.whl (8.1 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5010160Z Using cached ipywidgets-8.1.7-py3-none-any.whl (139 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5024378Z Using cached jupyterlab_widgets-3.0.15-py3-none-any.whl (216 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5038812Z Using cached widgetsnbextension-4.0.14-py3-none-any.whl (2.2 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5067474Z Using cached jupyter_console-6.6.3-py3-none-any.whl (24 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5080786Z Using cached jupyterlab-4.4.7-py3-none-any.whl (12.3 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5181219Z Using cached jupyter_server-2.17.0-py3-none-any.whl (388 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5196880Z Using cached jupyterlab_server-2.27.3-py3-none-any.whl (59 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5210238Z Using cached argon2_cffi-25.1.0-py3-none-any.whl (14 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5223406Z Using cached async_lru-2.0.5-py3-none-any.whl (6.1 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5236494Z Using cached babel-2.17.0-py3-none-any.whl (10.2 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5322537Z Using cached jinja2-3.1.6-py3-none-any.whl (134 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5336205Z Using cached json5-0.12.1-py3-none-any.whl (36 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5349741Z Using cached jsonschema-4.25.1-py3-none-any.whl (90 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5363621Z Using cached jsonschema_specifications-2025.9.1-py3-none-any.whl (18 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5376756Z Using cached jupyter_events-0.12.0-py3-none-any.whl (19 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5389963Z Using cached jsonpointer-3.0.0-py2.py3-none-any.whl (7.6 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5403088Z Using cached jupyter_lsp-2.3.0-py3-none-any.whl (76 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5416533Z Using cached jupyter_server_terminals-0.5.3-py3-none-any.whl (13 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5430269Z Using cached MarkupSafe-3.0.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (23 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5443642Z Using cached nbconvert-7.16.6-py3-none-any.whl (258 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5458238Z Using cached mistune-3.1.4-py3-none-any.whl (53 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5471876Z Using cached bleach-6.2.0-py3-none-any.whl (163 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5485808Z Using cached tinycss2-1.4.0-py3-none-any.whl (26 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5498977Z Using cached nbclient-0.10.2-py3-none-any.whl (25 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5512402Z Using cached nbformat-5.10.4-py3-none-any.whl (78 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5525887Z Using cached fastjsonschema-2.21.2-py3-none-any.whl (24 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5538867Z Using cached notebook_shim-0.2.4-py3-none-any.whl (13 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5552170Z Using cached overrides-7.7.0-py3-none-any.whl (17 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5565448Z Using cached pandocfilters-1.5.1-py2.py3-none-any.whl (8.7 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5578626Z Using cached prometheus_client-0.23.1-py3-none-any.whl (61 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5592805Z Using cached python_json_logger-3.3.0-py3-none-any.whl (15 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5606456Z Using cached PyYAML-6.0.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (762 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5625049Z Using cached referencing-0.36.2-py3-none-any.whl (26 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5637927Z Using cached rfc3986_validator-0.1.1-py2.py3-none-any.whl (4.2 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5651022Z Using cached rfc3987_syntax-1.1.0-py3-none-any.whl (8.0 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5663928Z Using cached lark-1.3.0-py3-none-any.whl (113 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5677867Z Using cached rpds_py-0.27.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (384 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5694188Z Using cached Send2Trash-1.8.3-py3-none-any.whl (18 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5707130Z Using cached terminado-0.18.1-py3-none-any.whl (14 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5719904Z Using cached webcolors-24.11.1-py3-none-any.whl (14 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5733275Z Using cached webencodings-0.5.1-py2.py3-none-any.whl (11 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5746873Z Using cached argon2_cffi_bindings-25.1.0-cp39-abi3-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl (87 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5760257Z Using cached defusedxml-0.7.1-py2.py3-none-any.whl (25 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5773498Z Using cached fqdn-1.5.1-py3-none-any.whl (9.1 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5786603Z Using cached isoduration-20.11.0-py3-none-any.whl (11 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5799588Z Using cached arrow-1.3.0-py3-none-any.whl (66 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5813311Z Using cached types_python_dateutil-2.9.0.20250822-py3-none-any.whl (17 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5826531Z Using cached jupyterlab_pygments-0.3.0-py3-none-any.whl (15 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5839761Z Using cached notebook-7.4.5-py3-none-any.whl (14.3 MB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5954566Z Using cached postgrest-2.20.0-py3-none-any.whl (22 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5967546Z Using cached h2-4.3.0-py3-none-any.whl (61 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5980975Z Using cached hpack-4.1.0-py3-none-any.whl (34 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.5994172Z Using cached hyperframe-6.1.0-py3-none-any.whl (13 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.6007326Z Using cached deprecation-2.1.0-py2.py3-none-any.whl (11 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.6020757Z Using cached probableparsing-0.0.1-py2.py3-none-any.whl (3.1 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.6033677Z Using cached pycparser-2.23-py3-none-any.whl (118 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.6047410Z Using cached realtime-2.20.0-py3-none-any.whl (21 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.6061455Z Using cached websockets-15.0.1-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl (182 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.6075612Z Using cached rfc3339_validator-0.1.4-py2.py3-none-any.whl (3.5 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.6088781Z Using cached sortedcontainers-2.4.0-py2.py3-none-any.whl (29 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.6102282Z Using cached stack_data-0.6.3-py3-none-any.whl (24 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.6115458Z Using cached asttokens-3.0.0-py3-none-any.whl (26 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.6128541Z Using cached executing-2.2.1-py2.py3-none-any.whl (28 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.6142109Z Using cached pure_eval-0.2.3-py3-none-any.whl (11 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.6155359Z Using cached storage3-2.20.0-py3-none-any.whl (18 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.6168430Z Using cached supabase_auth-2.20.0-py3-none-any.whl (43 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.6181811Z Using cached PyJWT-2.10.1-py3-none-any.whl (22 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.6194917Z Using cached supabase_functions-2.20.0-py3-none-any.whl (8.5 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.6207739Z Using cached StrEnum-0.4.15-py3-none-any.whl (8.9 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.6220821Z Using cached tqdm-4.67.1-py3-none-any.whl (78 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.6234751Z Using cached uri_template-1.3.0-py3-none-any.whl (11 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:57.6247795Z Using cached wcwidth-0.2.14-py2.py3-none-any.whl (37 kB)
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:58.2200088Z Installing collected packages: webencodings, strenum, sortedcontainers, pytz, pure-eval, ptyprocess, probableparsing, fastjsonschema, widgetsnbextension, websockets, websocket-client, webcolors, wcwidth, urllib3, uritemplate, uri-template, tzdata, typing_extensions, types-python-dateutil, traitlets, tqdm, tornado, tinycss2, threadpoolctl, tenacity, soupsieve, sniffio, six, send2trash, rpds-py, rfc3986-validator, pyzmq, pyyaml, python-json-logger, python-dotenv, python-crfsuite, pysocks, pypdfium2, PyPDF2, pyparsing, pyjwt, pycparser, pyasn1, psutil, protobuf, prometheus-client, pillow, pexpect, parso, pandocfilters, overrides, numpy, nest-asyncio, mistune, MarkupSafe, lxml, lark, kiwisolver, jupyterlab_widgets, jupyterlab-pygments, jsonpointer, json5, joblib, ipython-pygments-lexers, idna, hyperframe, hpack, h11, fqdn, fonttools, executing, deprecation, defusedxml, decorator, debugpy, cycler, comm, charset_normalizer, certifi, cachetools, bleach, babel, attrs, async-lru, asttokens, annotated-types, wsproto, uvicorn, usaddress, typing-inspection, types-requests, terminado, stack_data, scipy, rsa, rfc3987-syntax, rfc3339-validator, requests, referencing, python-dateutil, pytest-timeout, pytest-mock, pytest-asyncio, pydantic-core, pyasn1-modules, proto-plus, prompt_toolkit, outcome, matplotlib-inline, jupyter-core, jinja2, jedi, httplib2, httpcore, h2, grpcio, googleapis-common-protos, contourpy, cffi, beautifulsoup4, anyio, webdriver-manager, trio, starlette, scikit-learn, pydantic, pandas, matplotlib, jupyter-server-terminals, jupyter-client, jsonschema-specifications, ipython, httpx, grpcio-status, google-auth, cryptography, arrow, argon2-cffi-bindings, trio-websocket, realtime, pdfminer.six, jsonschema, isoduration, ipywidgets, ipykernel, google-auth-httplib2, google-api-core, fastapi, argon2-cffi, supabase-functions, supabase-auth, storage3, selenium, postgrest, pdfplumber, nbformat, jupyter-console, google-api-python-client, supabase, nbclient, jupyter-events, google-ai-generativelanguage, nbconvert, google-generativeai, jupyter-server, notebook-shim, jupyterlab-server, jupyter-lsp, jupyterlab, notebook, jupyter
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:58.7954439Z   Attempting uninstall: typing_extensions
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:58.7974903Z     Found existing installation: typing_extensions 4.15.0
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:58.7992263Z     Uninstalling typing_extensions-4.15.0:
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:54:59.1858066Z       Successfully uninstalled typing_extensions-4.15.0
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:55:23.5637577Z
+Code Quality & Linting	Install Python dependencies	2025-09-23T19:55:23.5726084Z Successfully installed MarkupSafe-3.0.2 PyPDF2-3.0.1 annotated-types-0.7.0 anyio-4.11.0 argon2-cffi-25.1.0 argon2-cffi-bindings-25.1.0 arrow-1.3.0 asttokens-3.0.0 async-lru-2.0.5 attrs-25.3.0 babel-2.17.0 beautifulsoup4-4.13.5 bleach-6.2.0 cachetools-5.5.2 certifi-2025.8.3 cffi-2.0.0 charset_normalizer-3.4.3 comm-0.2.3 contourpy-1.3.3 cryptography-46.0.1 cycler-0.12.1 debugpy-1.8.17 decorator-5.2.1 defusedxml-0.7.1 deprecation-2.1.0 executing-2.2.1 fastapi-0.117.1 fastjsonschema-2.21.2 fonttools-4.60.0 fqdn-1.5.1 google-ai-generativelanguage-0.6.15 google-api-core-2.25.1 google-api-python-client-2.182.0 google-auth-2.40.3 google-auth-httplib2-0.2.0 google-generativeai-0.8.5 googleapis-common-protos-1.70.0 grpcio-1.75.0 grpcio-status-1.71.2 h11-0.16.0 h2-4.3.0 hpack-4.1.0 httpcore-1.0.9 httplib2-0.31.0 httpx-0.28.1 hyperframe-6.1.0 idna-3.10 ipykernel-6.30.1 ipython-9.5.0 ipython-pygments-lexers-1.1.1 ipywidgets-8.1.7 isoduration-20.11.0 jedi-0.19.2 jinja2-3.1.6 joblib-1.5.2 json5-0.12.1 jsonpointer-3.0.0 jsonschema-4.25.1 jsonschema-specifications-2025.9.1 jupyter-1.1.1 jupyter-client-8.6.3 jupyter-console-6.6.3 jupyter-core-5.8.1 jupyter-events-0.12.0 jupyter-lsp-2.3.0 jupyter-server-2.17.0 jupyter-server-terminals-0.5.3 jupyterlab-4.4.7 jupyterlab-pygments-0.3.0 jupyterlab-server-2.27.3 jupyterlab_widgets-3.0.15 kiwisolver-1.4.9 lark-1.3.0 lxml-6.0.2 matplotlib-3.10.6 matplotlib-inline-0.1.7 mistune-3.1.4 nbclient-0.10.2 nbconvert-7.16.6 nbformat-5.10.4 nest-asyncio-1.6.0 notebook-7.4.5 notebook-shim-0.2.4 numpy-2.3.3 outcome-1.3.0.post0 overrides-7.7.0 pandas-2.3.2 pandocfilters-1.5.1 parso-0.8.5 pdfminer.six-20250506 pdfplumber-0.11.7 pexpect-4.9.0 pillow-11.3.0 postgrest-2.20.0 probableparsing-0.0.1 prometheus-client-0.23.1 prompt_toolkit-3.0.52 proto-plus-1.26.1 protobuf-5.29.5 psutil-7.1.0 ptyprocess-0.7.0 pure-eval-0.2.3 pyasn1-0.6.1 pyasn1-modules-0.4.2 pycparser-2.23 pydantic-2.11.9 pydantic-core-2.33.2 pyjwt-2.10.1 pyparsing-3.2.5 pypdfium2-4.30.0 pysocks-1.7.1 pytest-asyncio-1.2.0 pytest-mock-3.15.1 pytest-timeout-2.4.0 python-crfsuite-0.9.11 python-dateutil-2.9.0.post0 python-dotenv-1.1.1 python-json-logger-3.3.0 pytz-2025.2 pyyaml-6.0.2 pyzmq-27.1.0 realtime-2.20.0 referencing-0.36.2 requests-2.32.5 rfc3339-validator-0.1.4 rfc3986-validator-0.1.1 rfc3987-syntax-1.1.0 rpds-py-0.27.1 rsa-4.9.1 scikit-learn-1.7.2 scipy-1.16.2 selenium-4.35.0 send2trash-1.8.3 six-1.17.0 sniffio-1.3.1 sortedcontainers-2.4.0 soupsieve-2.8 stack_data-0.6.3 starlette-0.48.0 storage3-2.20.0 strenum-0.4.15 supabase-2.20.0 supabase-auth-2.20.0 supabase-functions-2.20.0 tenacity-9.1.2 terminado-0.18.1 threadpoolctl-3.6.0 tinycss2-1.4.0 tornado-6.5.2 tqdm-4.67.1 traitlets-5.14.3 trio-0.30.0 trio-websocket-0.12.2 types-python-dateutil-2.9.0.20250822 types-requests-2.32.4.20250913 typing-inspection-0.4.1 typing_extensions-4.14.1 tzdata-2025.2 uri-template-1.3.0 uritemplate-4.2.0 urllib3-2.5.0 usaddress-0.5.16 uvicorn-0.37.0 wcwidth-0.2.14 webcolors-24.11.1 webdriver-manager-4.0.2 webencodings-0.5.1 websocket-client-1.8.0 websockets-15.0.1 widgetsnbextension-4.0.14 wsproto-1.2.0
+Code Quality & Linting	Install Frontend dependencies	﻿2025-09-23T19:55:24.6085965Z ##[group]Run cd frontend
+Code Quality & Linting	Install Frontend dependencies	2025-09-23T19:55:24.6086252Z [36;1mcd frontend[0m
+Code Quality & Linting	Install Frontend dependencies	2025-09-23T19:55:24.6086446Z [36;1mnpm ci[0m
+Code Quality & Linting	Install Frontend dependencies	2025-09-23T19:55:24.6118236Z shell: /usr/bin/bash -e {0}
+Code Quality & Linting	Install Frontend dependencies	2025-09-23T19:55:24.6118474Z env:
+Code Quality & Linting	Install Frontend dependencies	2025-09-23T19:55:24.6118653Z   REGISTRY: docker.io
+Code Quality & Linting	Install Frontend dependencies	2025-09-23T19:55:24.6118878Z   IMAGE_NAMESPACE: tomatl/diocesan-vitality
+Code Quality & Linting	Install Frontend dependencies	2025-09-23T19:55:24.6119354Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Install Frontend dependencies	2025-09-23T19:55:24.6119795Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.13/x64/lib/pkgconfig
+Code Quality & Linting	Install Frontend dependencies	2025-09-23T19:55:24.6120199Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Install Frontend dependencies	2025-09-23T19:55:24.6120552Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Install Frontend dependencies	2025-09-23T19:55:24.6120897Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Install Frontend dependencies	2025-09-23T19:55:24.6121258Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.13/x64/lib
+Code Quality & Linting	Install Frontend dependencies	2025-09-23T19:55:24.6121552Z ##[endgroup]
+Code Quality & Linting	Install Frontend dependencies	2025-09-23T19:55:31.2404699Z
+Code Quality & Linting	Install Frontend dependencies	2025-09-23T19:55:31.2405367Z added 339 packages, and audited 340 packages in 7s
+Code Quality & Linting	Install Frontend dependencies	2025-09-23T19:55:31.2407540Z
+Code Quality & Linting	Install Frontend dependencies	2025-09-23T19:55:31.2407786Z 72 packages are looking for funding
+Code Quality & Linting	Install Frontend dependencies	2025-09-23T19:55:31.2408223Z   run `npm fund` for details
+Code Quality & Linting	Install Frontend dependencies	2025-09-23T19:55:31.2615254Z
+Code Quality & Linting	Install Frontend dependencies	2025-09-23T19:55:31.2615661Z 6 moderate severity vulnerabilities
+Code Quality & Linting	Install Frontend dependencies	2025-09-23T19:55:31.2616008Z
+Code Quality & Linting	Install Frontend dependencies	2025-09-23T19:55:31.2616372Z To address all issues (including breaking changes), run:
+Code Quality & Linting	Install Frontend dependencies	2025-09-23T19:55:31.2616893Z   npm audit fix --force
+Code Quality & Linting	Install Frontend dependencies	2025-09-23T19:55:31.2617127Z
+Code Quality & Linting	Install Frontend dependencies	2025-09-23T19:55:31.2617316Z Run `npm audit` for details.
+Code Quality & Linting	Python Code Formatting (Black)	﻿2025-09-23T19:55:31.2904276Z ##[group]Run black --check --diff .
+Code Quality & Linting	Python Code Formatting (Black)	2025-09-23T19:55:31.2904799Z [36;1mblack --check --diff .[0m
+Code Quality & Linting	Python Code Formatting (Black)	2025-09-23T19:55:31.2905315Z [36;1mecho "✅ Python code formatting passed"[0m
+Code Quality & Linting	Python Code Formatting (Black)	2025-09-23T19:55:31.2952765Z shell: /usr/bin/bash -e {0}
+Code Quality & Linting	Python Code Formatting (Black)	2025-09-23T19:55:31.2953169Z env:
+Code Quality & Linting	Python Code Formatting (Black)	2025-09-23T19:55:31.2953490Z   REGISTRY: docker.io
+Code Quality & Linting	Python Code Formatting (Black)	2025-09-23T19:55:31.2953878Z   IMAGE_NAMESPACE: tomatl/diocesan-vitality
+Code Quality & Linting	Python Code Formatting (Black)	2025-09-23T19:55:31.2954457Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Python Code Formatting (Black)	2025-09-23T19:55:31.2955152Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.13/x64/lib/pkgconfig
+Code Quality & Linting	Python Code Formatting (Black)	2025-09-23T19:55:31.2955837Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Python Code Formatting (Black)	2025-09-23T19:55:31.2956458Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Python Code Formatting (Black)	2025-09-23T19:55:31.2957099Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Python Code Formatting (Black)	2025-09-23T19:55:31.2957746Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.13/x64/lib
+Code Quality & Linting	Python Code Formatting (Black)	2025-09-23T19:55:31.2958047Z ##[endgroup]
+Code Quality & Linting	Python Code Formatting (Black)	2025-09-23T19:55:34.5658599Z All done! ✨ 🍰 ✨
+Code Quality & Linting	Python Code Formatting (Black)	2025-09-23T19:55:34.5659426Z 95 files would be left unchanged.
+Code Quality & Linting	Python Code Formatting (Black)	2025-09-23T19:55:34.5881800Z ✅ Python code formatting passed
+Code Quality & Linting	Python Import Sorting (isort)	﻿2025-09-23T19:55:34.5916184Z ##[group]Run isort --check-only --diff .
+Code Quality & Linting	Python Import Sorting (isort)	2025-09-23T19:55:34.5916533Z [36;1misort --check-only --diff .[0m
+Code Quality & Linting	Python Import Sorting (isort)	2025-09-23T19:55:34.5916993Z [36;1mecho "✅ Python import sorting passed"[0m
+Code Quality & Linting	Python Import Sorting (isort)	2025-09-23T19:55:34.5947670Z shell: /usr/bin/bash -e {0}
+Code Quality & Linting	Python Import Sorting (isort)	2025-09-23T19:55:34.5947906Z env:
+Code Quality & Linting	Python Import Sorting (isort)	2025-09-23T19:55:34.5948079Z   REGISTRY: docker.io
+Code Quality & Linting	Python Import Sorting (isort)	2025-09-23T19:55:34.5948304Z   IMAGE_NAMESPACE: tomatl/diocesan-vitality
+Code Quality & Linting	Python Import Sorting (isort)	2025-09-23T19:55:34.5948630Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Python Import Sorting (isort)	2025-09-23T19:55:34.5949024Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.13/x64/lib/pkgconfig
+Code Quality & Linting	Python Import Sorting (isort)	2025-09-23T19:55:34.5949866Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Python Import Sorting (isort)	2025-09-23T19:55:34.5950227Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Python Import Sorting (isort)	2025-09-23T19:55:34.5950600Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Python Import Sorting (isort)	2025-09-23T19:55:34.5950964Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.13/x64/lib
+Code Quality & Linting	Python Import Sorting (isort)	2025-09-23T19:55:34.5951257Z ##[endgroup]
+Code Quality & Linting	Python Import Sorting (isort)	2025-09-23T19:55:34.9563331Z Skipped 2 files
+Code Quality & Linting	Python Import Sorting (isort)	2025-09-23T19:55:34.9683473Z ✅ Python import sorting passed
+Code Quality & Linting	Python Linting (Flake8)	﻿2025-09-23T19:55:34.9718060Z ##[group]Run flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+Code Quality & Linting	Python Linting (Flake8)	2025-09-23T19:55:34.9719012Z [36;1mflake8 . --count --select=E9,F63,F7,F82 --show-source --statistics[0m
+Code Quality & Linting	Python Linting (Flake8)	2025-09-23T19:55:34.9720037Z [36;1mflake8 . --count --exit-zero --max-complexity=10 --statistics[0m
+Code Quality & Linting	Python Linting (Flake8)	2025-09-23T19:55:34.9720692Z [36;1mecho "✅ Python linting passed"[0m
+Code Quality & Linting	Python Linting (Flake8)	2025-09-23T19:55:34.9765003Z shell: /usr/bin/bash -e {0}
+Code Quality & Linting	Python Linting (Flake8)	2025-09-23T19:55:34.9765416Z env:
+Code Quality & Linting	Python Linting (Flake8)	2025-09-23T19:55:34.9765721Z   REGISTRY: docker.io
+Code Quality & Linting	Python Linting (Flake8)	2025-09-23T19:55:34.9766139Z   IMAGE_NAMESPACE: tomatl/diocesan-vitality
+Code Quality & Linting	Python Linting (Flake8)	2025-09-23T19:55:34.9766733Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Python Linting (Flake8)	2025-09-23T19:55:34.9767478Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.13/x64/lib/pkgconfig
+Code Quality & Linting	Python Linting (Flake8)	2025-09-23T19:55:34.9768271Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Python Linting (Flake8)	2025-09-23T19:55:34.9768983Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Python Linting (Flake8)	2025-09-23T19:55:34.9769834Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Python Linting (Flake8)	2025-09-23T19:55:34.9770540Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.13/x64/lib
+Code Quality & Linting	Python Linting (Flake8)	2025-09-23T19:55:34.9771066Z ##[endgroup]
+Code Quality & Linting	Python Linting (Flake8)	2025-09-23T19:55:36.7962710Z 0
+Code Quality & Linting	Python Linting (Flake8)	2025-09-23T19:55:38.3567633Z ./core/circuit_breaker.py:11:1: F401 'typing.Union' imported but unused
+Code Quality & Linting	Python Linting (Flake8)	2025-09-23T19:55:38.3568688Z ./core/circuit_breaker.py:81:5: C901 'CircuitBreaker.call' is too complex (11)
+Code Quality & Linting	Python Linting (Flake8)	2025-09-23T19:55:38.3569761Z ./core/diocese_profiles.py:11:1: F401 'typing.Any' imported but unused
+Code Quality & Linting	Python Linting (Flake8)	2025-09-23T19:55:38.3570475Z 1     C901 'CircuitBreaker.call' is too complex (11)
+Code Quality & Linting	Python Linting (Flake8)	2025-09-23T19:55:38.3571061Z 2     F401 'typing.Union' imported but unused
+Code Quality & Linting	Python Linting (Flake8)	2025-09-23T19:55:38.3571474Z 3
+Code Quality & Linting	Python Linting (Flake8)	2025-09-23T19:55:38.3736369Z ✅ Python linting passed
+Code Quality & Linting	Frontend Linting (ESLint)	﻿2025-09-23T19:55:38.3762339Z ##[group]Run cd frontend
+Code Quality & Linting	Frontend Linting (ESLint)	2025-09-23T19:55:38.3762608Z [36;1mcd frontend[0m
+Code Quality & Linting	Frontend Linting (ESLint)	2025-09-23T19:55:38.3762802Z [36;1mnpm run lint[0m
+Code Quality & Linting	Frontend Linting (ESLint)	2025-09-23T19:55:38.3763023Z [36;1mecho "✅ Frontend linting passed"[0m
+Code Quality & Linting	Frontend Linting (ESLint)	2025-09-23T19:55:38.3793514Z shell: /usr/bin/bash -e {0}
+Code Quality & Linting	Frontend Linting (ESLint)	2025-09-23T19:55:38.3793760Z env:
+Code Quality & Linting	Frontend Linting (ESLint)	2025-09-23T19:55:38.3793925Z   REGISTRY: docker.io
+Code Quality & Linting	Frontend Linting (ESLint)	2025-09-23T19:55:38.3794150Z   IMAGE_NAMESPACE: tomatl/diocesan-vitality
+Code Quality & Linting	Frontend Linting (ESLint)	2025-09-23T19:55:38.3794475Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Frontend Linting (ESLint)	2025-09-23T19:55:38.3794880Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.13/x64/lib/pkgconfig
+Code Quality & Linting	Frontend Linting (ESLint)	2025-09-23T19:55:38.3795265Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Frontend Linting (ESLint)	2025-09-23T19:55:38.3795610Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Frontend Linting (ESLint)	2025-09-23T19:55:38.3795956Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Frontend Linting (ESLint)	2025-09-23T19:55:38.3796297Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.13/x64/lib
+Code Quality & Linting	Frontend Linting (ESLint)	2025-09-23T19:55:38.3796586Z ##[endgroup]
+Code Quality & Linting	Frontend Linting (ESLint)	2025-09-23T19:55:38.4933418Z
+Code Quality & Linting	Frontend Linting (ESLint)	2025-09-23T19:55:38.4933784Z > frontend@0.0.0 lint
+Code Quality & Linting	Frontend Linting (ESLint)	2025-09-23T19:55:38.4934466Z > eslint .
+Code Quality & Linting	Frontend Linting (ESLint)	2025-09-23T19:55:38.4934679Z
+Code Quality & Linting	Frontend Linting (ESLint)	2025-09-23T19:55:39.1618625Z ✅ Frontend linting passed
+Code Quality & Linting	Python Type Checking (MyPy)	﻿2025-09-23T19:55:39.1644219Z ##[group]Run # Install type stubs and run mypy with proper exclusions
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:39.1644943Z [36;1m# Install type stubs and run mypy with proper exclusions[0m
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:39.1645333Z [36;1mpython -m pip install types-requests[0m
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:39.1645734Z [36;1m# Run mypy only on core directories, exclude src/ packaging structure[0m
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:39.1646247Z [36;1mmypy core/ extractors/ --ignore-missing-imports --config-file pyproject.toml || true[0m
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:39.1646735Z [36;1mecho "⚠️ Type checking completed (warnings allowed)"[0m
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:39.1677437Z shell: /usr/bin/bash -e {0}
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:39.1677684Z env:
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:39.1677854Z   REGISTRY: docker.io
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:39.1678084Z   IMAGE_NAMESPACE: tomatl/diocesan-vitality
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:39.1678416Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:39.1678827Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.13/x64/lib/pkgconfig
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:39.1679392Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:39.1679906Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:39.1680284Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:39.1680642Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.13/x64/lib
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:39.1680938Z ##[endgroup]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:39.5297677Z Requirement already satisfied: types-requests in /opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages (2.32.4.20250913)
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:39.5307338Z Requirement already satisfied: urllib3>=2 in /opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages (from types-requests) (2.5.0)
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:49.7173281Z core/monitoring_client.py:26: error: "Session" has no attribute "timeout"  [attr-defined]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:49.7218261Z core/http_client.py:102: error: "MutableMapping[str, str | bytes]" has no attribute "copy"  [attr-defined]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:49.7219600Z core/http_client.py:142: error: "MutableMapping[str, str | bytes]" has no attribute "copy"  [attr-defined]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:52.9722558Z core/async_parish_extractor.py:348: error: Unexpected keyword argument "enhanced_extraction" for "ParishData"  [call-arg]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:52.9724384Z core/async_parish_extractor.py:501: error: Item "AttributeValueList" of "str | AttributeValueList" has no attribute "startswith"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:52.9726177Z core/async_parish_extractor.py:501: error: Item "AttributeValueList" of "str | AttributeValueList" has no attribute "lower"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:52.9727878Z core/async_parish_extractor.py:507: error: Unexpected keyword argument "enhanced_extraction" for "ParishData"  [call-arg]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:53.5841826Z core/ml_url_predictor.py:300: error: Incompatible types in assignment (expression has type "ndarray[tuple[Any, ...], dtype[Any]]", variable has type "list[list[float]]")  [assignment]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:53.5843919Z core/ml_url_predictor.py:317: error: Incompatible types in assignment (expression has type "str", variable has type "None")  [assignment]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.0952992Z core/url_visit_tracker.py:227: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.0954529Z core/url_visit_tracker.py:410: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.0955928Z core/url_visit_tracker.py:461: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.0957320Z core/url_visit_tracker.py:469: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.0959005Z core/url_visit_tracker.py:507: error: Incompatible default for argument "supabase" (default has type "None", argument has type "SyncClient")  [assignment]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.0961350Z core/url_visit_tracker.py:507: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.0963228Z core/url_visit_tracker.py:507: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.0965812Z core/url_visit_tracker.py:525: error: Incompatible types in assignment (expression has type "float", variable has type "None")  [assignment]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.0967698Z core/url_visit_tracker.py:526: error: Incompatible types in assignment (expression has type "VisitResult", variable has type "None")  [assignment]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.0969626Z core/url_visit_tracker.py:527: error: Incompatible return value type (got "None", expected "VisitResult")  [return-value]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1250190Z core/parallel_extraction_manager.py:593: error: Incompatible types in assignment (expression has type "float", variable has type "int")  [assignment]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1252201Z core/parallel_extraction_manager.py:668: error: Unexpected keyword argument "timeout" for "shutdown" of "Executor"  [call-arg]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1254335Z /opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages/mypy/typeshed/stdlib/concurrent/futures/_base.pyi:70: note: "shutdown" of "Executor" defined here
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1335265Z core/intelligent_parish_prioritizer.py:28: error: Incompatible default for argument "supabase" (default has type "None", argument has type "SyncClient")  [assignment]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1337421Z core/intelligent_parish_prioritizer.py:28: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1339669Z core/intelligent_parish_prioritizer.py:28: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1341517Z core/intelligent_parish_prioritizer.py:65: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1343130Z core/intelligent_parish_prioritizer.py:84: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1345069Z core/intelligent_parish_prioritizer.py:183: error: Incompatible default for argument "supabase" (default has type "None", argument has type "SyncClient")  [assignment]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1347239Z core/intelligent_parish_prioritizer.py:183: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1349463Z core/intelligent_parish_prioritizer.py:183: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1579065Z core/enhanced_url_manager.py:65: error: Incompatible default for argument "supabase" (default has type "None", argument has type "SyncClient")  [assignment]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1581248Z core/enhanced_url_manager.py:65: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1583079Z core/enhanced_url_manager.py:65: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1584979Z core/enhanced_url_manager.py:71: error: Argument 1 to "get_ml_url_predictor" has incompatible type "SyncClient | None"; expected "SyncClient"  [arg-type]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1587443Z core/enhanced_url_manager.py:180: error: Incompatible return value type (got "tuple[list[str], dict[str, URLAnalysis], dict[str, float], list[tuple[str, float]]]", expected "tuple[list[str], dict[Any, Any], dict[Any, Any]]")  [return-value]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1589590Z core/enhanced_url_manager.py:278: error: Need more than 3 values to unpack (4 expected)  [misc]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1590998Z core/enhanced_url_manager.py:317: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1592411Z core/enhanced_url_manager.py:351: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1593798Z core/enhanced_url_manager.py:405: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1595632Z core/enhanced_url_manager.py:532: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1597727Z core/enhanced_url_manager.py:658: error: Argument 2 to "record_response" of "AdaptiveTimeoutManager" has incompatible type "str"; expected "float"  [arg-type]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1600025Z core/enhanced_url_manager.py:659: error: Argument 3 to "record_response" of "AdaptiveTimeoutManager" has incompatible type "float"; expected "bool"  [arg-type]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1602206Z core/enhanced_url_manager.py:660: error: Argument 4 to "record_response" of "AdaptiveTimeoutManager" has incompatible type "bool"; expected "dict[str, float] | None"  [arg-type]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1604460Z core/enhanced_url_manager.py:665: error: Argument 2 to "record_response" of "AdaptiveTimeoutManager" has incompatible type "str"; expected "float"  [arg-type]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1606672Z core/enhanced_url_manager.py:665: error: Argument 3 to "record_response" of "AdaptiveTimeoutManager" has incompatible type "float"; expected "bool"  [arg-type]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1608974Z core/enhanced_url_manager.py:665: error: Argument 4 to "record_response" of "AdaptiveTimeoutManager" has incompatible type "bool"; expected "dict[str, float] | None"  [arg-type]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1611398Z core/enhanced_url_manager.py:665: error: Argument 5 to "record_response" of "AdaptiveTimeoutManager" has incompatible type "str"; expected "bool"  [arg-type]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1613543Z core/enhanced_url_manager.py:703: error: Incompatible default for argument "context" (default has type "None", argument has type "dict[Any, Any]")  [assignment]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1615587Z core/enhanced_url_manager.py:703: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1617520Z core/enhanced_url_manager.py:703: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1619693Z core/enhanced_url_manager.py:734: error: Incompatible default for argument "supabase" (default has type "None", argument has type "SyncClient")  [assignment]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1621727Z core/enhanced_url_manager.py:734: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1623617Z core/enhanced_url_manager.py:734: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1734215Z core/distributed_work_coordinator.py:92: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1735767Z core/distributed_work_coordinator.py:113: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1737313Z core/distributed_work_coordinator.py:114: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1738834Z core/distributed_work_coordinator.py:168: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1740661Z core/distributed_work_coordinator.py:179: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1742134Z core/distributed_work_coordinator.py:186: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1743575Z core/distributed_work_coordinator.py:195: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1745000Z core/distributed_work_coordinator.py:243: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1746556Z core/distributed_work_coordinator.py:261: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1748131Z core/distributed_work_coordinator.py:284: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1750215Z core/distributed_work_coordinator.py:301: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1752080Z core/distributed_work_coordinator.py:312: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1753654Z core/distributed_work_coordinator.py:317: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1755218Z core/distributed_work_coordinator.py:331: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1756786Z core/distributed_work_coordinator.py:339: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1758340Z core/distributed_work_coordinator.py:369: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1760088Z core/distributed_work_coordinator.py:374: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.1761659Z core/distributed_work_coordinator.py:395: error: Item "None" of "SyncClient | None" has no attribute "table"  [union-attr]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.3395052Z extractors/enhanced_ai_fallback_extractor.py:51: error: Attribute "ai_analyzer" already defined on line 47  [no-redef]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.3397108Z extractors/enhanced_ai_fallback_extractor.py:51: error: Incompatible types in assignment (expression has type "None", variable has type "AIContentAnalyzer")  [assignment]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.3399006Z extractors/enhanced_ai_fallback_extractor.py:52: error: Attribute "profile_manager" already defined on line 48  [no-redef]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.3401495Z extractors/enhanced_ai_fallback_extractor.py:52: error: Incompatible types in assignment (expression has type "None", variable has type "DiocesesProfileManager")  [assignment]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.3403958Z extractors/enhanced_ai_fallback_extractor.py:218: error: Argument 3 to "_initialize_extraction" of "EnhancedAIFallbackExtractor" has incompatible type "int | None"; expected "int"  [arg-type]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.3406572Z extractors/enhanced_ai_fallback_extractor.py:223: error: Argument 4 to "_try_profile_extraction" of "EnhancedAIFallbackExtractor" has incompatible type "int | None"; expected "int"  [arg-type]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.3500317Z extractors/ai_fallback_extractor.py:36: error: Incompatible types in assignment (expression has type "None", variable has type "AIContentAnalyzer")  [assignment]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.3502679Z extractors/ai_fallback_extractor.py:62: error: Argument 3 to "_log_extraction_start" of "AIFallbackExtractor" has incompatible type "int | None"; expected "int"  [arg-type]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.3504620Z extractors/ai_fallback_extractor.py:71: error: Argument 2 to "_apply_parish_limit" of "AIFallbackExtractor" has incompatible type "int | None"; expected "int"  [arg-type]
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.3556707Z Found 67 errors in 11 files (checked 38 source files)
+Code Quality & Linting	Python Type Checking (MyPy)	2025-09-23T19:55:54.3865021Z ⚠️ Type checking completed (warnings allowed)
+Code Quality & Linting	Post Set up Node.js	﻿2025-09-23T19:55:54.3918531Z Post job cleanup.
+Code Quality & Linting	Post Set up Node.js	2025-09-23T19:55:54.5425875Z Cache hit occurred on the primary key node-cache-Linux-x64-npm-58a2fd287114fed6e1e2fdf7e23dc2f9b61a377daf160c5765f87b79f05fe382, not saving cache.
+Code Quality & Linting	Post Set up Python	﻿2025-09-23T19:55:54.5510710Z Post job cleanup.
+Code Quality & Linting	Post Set up Python	2025-09-23T19:55:54.7068574Z Cache hit occurred on the primary key setup-python-Linux-24.04-Ubuntu-python-3.11.13-pip-0dfbf67a32385d4bc3b5e9284fa4cb0ab1618668f542d4098a3e00b7772f167c, not saving cache.
+Code Quality & Linting	Post Checkout	﻿2025-09-23T19:55:54.7227538Z Post job cleanup.
+Code Quality & Linting	Post Checkout	2025-09-23T19:55:54.8163278Z [command]/usr/bin/git version
+Code Quality & Linting	Post Checkout	2025-09-23T19:55:54.8198935Z git version 2.51.0
+Code Quality & Linting	Post Checkout	2025-09-23T19:55:54.8242757Z Temporarily overriding HOME='/home/runner/work/_temp/3573c154-80fe-4bde-8276-70471fde6656' before making global git config changes
+Code Quality & Linting	Post Checkout	2025-09-23T19:55:54.8243892Z Adding repository directory to the temporary git global config as a safe directory
+Code Quality & Linting	Post Checkout	2025-09-23T19:55:54.8255911Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/diocesan-vitality/diocesan-vitality
+Code Quality & Linting	Post Checkout	2025-09-23T19:55:54.8289483Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Code Quality & Linting	Post Checkout	2025-09-23T19:55:54.8321306Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Code Quality & Linting	Post Checkout	2025-09-23T19:55:54.8550661Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Code Quality & Linting	Post Checkout	2025-09-23T19:55:54.8571282Z http.https://github.com/.extraheader
+Code Quality & Linting	Post Checkout	2025-09-23T19:55:54.8583678Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+Code Quality & Linting	Post Checkout	2025-09-23T19:55:54.8613076Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Code Quality & Linting	Complete job	﻿2025-09-23T19:55:54.8932562Z Cleaning up orphan processes
