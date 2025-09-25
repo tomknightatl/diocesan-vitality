@@ -116,3 +116,10 @@ dmypy.json
 terraform/**/k8s-secrets/
 **/k8s-secrets/*.yaml
 **/k8s-secrets/*.yml
+
+# Tunnel tokens (contain secrets)
+.tunnel-token-*
+
+# Frontend documentation artifacts
+docs/frontend/node_modules/
+docs/frontend/package-lock.json
