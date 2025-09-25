@@ -123,14 +123,16 @@ monitor-check: ## Test monitoring integration
 # Infrastructure Commands
 # =======================
 
-infra-setup: ## Set up complete infrastructure (all 5 steps, usage: make infra-setup CLUSTER_LABEL=dev)
+infra-setup: ## Set up complete infrastructure (all 6 steps, usage: make infra-setup CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	echo "🚀 Setting up complete infrastructure for '$$CLUSTER_LABEL'..." && \
 	$(MAKE) cluster-create CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	$(MAKE) tunnel-create CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	$(MAKE) tunnel-verify CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	$(MAKE) argocd-install CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	$(MAKE) argocd-apps CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	$(MAKE) sealed-secrets-create CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	$(MAKE) infra-test CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	echo "🎉 Infrastructure setup complete for $$CLUSTER_LABEL!"
 
 cluster-create: ## Step 1: Create cluster and kubectl context (usage: make cluster-create CLUSTER_LABEL=dev)
@@ -145,10 +147,17 @@ cluster-create: ## Step 1: Create cluster and kubectl context (usage: make clust
 	if [ "$$CLUSTER_LABEL" = "stg" ]; then ENV_DIR="staging"; else ENV_DIR="$$CLUSTER_LABEL"; fi && \
 	cd terraform/environments/$$ENV_DIR && \
 		echo "⏳ Initializing Terraform... ($$(date '+%H:%M:%S'))" && \
-		export DIGITALOCEAN_TOKEN=$$(grep DIGITALOCEAN_TOKEN ../../../.env | cut -d'=' -f2) && \
-		terraform init && \
+		export $$(grep DIGITALOCEAN_TOKEN ../../../.env | xargs) && \
+		if ! terraform init; then \
+			echo "❌ FAILED: Terraform initialization failed at $$(date '+%H:%M:%S')" && \
+			exit 1; \
+		fi && \
 		echo "🔧 Applying Terraform configuration... ($$(date '+%H:%M:%S'))" && \
-		terraform apply -target=module.k8s_cluster -auto-approve && \
+		if ! terraform apply -target=module.k8s_cluster -auto-approve; then \
+			echo "❌ FAILED: Terraform apply failed at $$(date '+%H:%M:%S')" && \
+			echo "💡 Check the error output above for details" && \
+			exit 1; \
+		fi && \
 		echo "📋 Monitoring cluster provisioning status... ($$(date '+%H:%M:%S'))" && \
 		CLUSTER_NAME="dv-$$CLUSTER_LABEL" && \
 		while true; do \
@@ -191,37 +200,85 @@ tunnel-create: ## Step 2: Create Cloudflare tunnel and DNS records (usage: make 
 	echo "🧹 Cleaning up any stale tunnel state..." && \
 	if [ "$$CLUSTER_LABEL" = "stg" ]; then ENV_DIR="staging"; else ENV_DIR="$$CLUSTER_LABEL"; fi && \
 	cd terraform/environments/$$ENV_DIR && \
-		export CLOUDFLARE_API_TOKEN=$$(grep CLOUDFLARE_API_TOKEN ../../../.env | cut -d'=' -f2) && \
-		terraform state list | grep "module.cloudflare_tunnel" | xargs -r terraform state rm || true && \
-		terraform apply -target=module.cloudflare_tunnel -auto-approve
+		echo "🔧 Setting up environment variables... ($$(date '+%H:%M:%S'))" && \
+		export $$(grep CLOUDFLARE_API_TOKEN ../../../.env | xargs) && \
+		echo "🧹 Cleaning up stale tunnel state... ($$(date '+%H:%M:%S'))" && \
+		if ! terraform state list | grep "module.cloudflare_tunnel" | xargs -r terraform state rm; then \
+			echo "💡 No stale tunnel state to clean" && true; \
+		fi && \
+		echo "🚀 Applying Cloudflare tunnel configuration... ($$(date '+%H:%M:%S'))" && \
+		if ! terraform apply -target=module.cloudflare_tunnel -auto-approve; then \
+			echo "❌ FAILED: Tunnel creation failed at $$(date '+%H:%M:%S')" && \
+			echo "💡 Check the error output above for details" && \
+			exit 1; \
+		fi
 	@echo "✅ Step 2 Complete: Cloudflare tunnel created for $$CLUSTER_LABEL"
 
 argocd-install: ## Step 3: Install ArgoCD via Helm with proper configuration (usage: make argocd-install CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	echo "🚀 Step 3: Installing ArgoCD via Helm for '$$CLUSTER_LABEL'..." && \
-	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
-		echo "🔧 Installing Helm if needed..." && \
-		$(MAKE) _install-helm && \
-		echo "📦 Adding ArgoCD Helm repository..." && \
-		helm repo add argo https://argoproj.github.io/argo-helm && \
-		helm repo update && \
-		kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f - && \
-		echo "🚀 Installing ArgoCD with values-$$CLUSTER_LABEL.yaml..." && \
-		helm upgrade --install argocd argo/argo-cd \
+	echo "🔧 Switching to cluster context... ($$(date '+%H:%M:%S'))" && \
+	if ! kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL; then \
+		echo "❌ FAILED: Could not switch to kubectl context do-nyc2-dv-$$CLUSTER_LABEL at $$(date '+%H:%M:%S')" && \
+		echo "💡 Check if cluster exists: doctl kubernetes cluster list" && \
+		exit 1; \
+	fi && \
+		echo "🔧 Installing Helm if needed... ($$(date '+%H:%M:%S'))" && \
+		if ! $(MAKE) _install-helm; then \
+			echo "❌ FAILED: Helm installation failed at $$(date '+%H:%M:%S')" && \
+			exit 1; \
+		fi && \
+		echo "📦 Adding ArgoCD Helm repository... ($$(date '+%H:%M:%S'))" && \
+		if ! helm repo add argo https://argoproj.github.io/argo-helm; then \
+			echo "❌ FAILED: Could not add ArgoCD Helm repository at $$(date '+%H:%M:%S')" && \
+			exit 1; \
+		fi && \
+		if ! helm repo update; then \
+			echo "❌ FAILED: Helm repo update failed at $$(date '+%H:%M:%S')" && \
+			exit 1; \
+		fi && \
+		echo "🏗️  Creating ArgoCD namespace... ($$(date '+%H:%M:%S'))" && \
+		if ! kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -; then \
+			echo "❌ FAILED: Could not create argocd namespace at $$(date '+%H:%M:%S')" && \
+			exit 1; \
+		fi && \
+		echo "🚀 Installing ArgoCD with values-$$CLUSTER_LABEL.yaml... ($$(date '+%H:%M:%S'))" && \
+		if ! helm upgrade --install argocd argo/argo-cd \
 			--namespace argocd \
 			--values k8s/infrastructure/argocd/values-$$CLUSTER_LABEL.yaml \
-			--wait --timeout=10m && \
-		echo "⏳ Waiting for ArgoCD server to be ready..." && \
-		kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=argocd-server -n argocd --timeout=300s && \
-		echo "🔧 Configuring repository access..." && \
-		while ! kubectl get configmap argocd-cm -n argocd >/dev/null 2>&1; do sleep 2; done && \
+			--wait --timeout=10m; then \
+			echo "❌ FAILED: ArgoCD Helm installation failed at $$(date '+%H:%M:%S')" && \
+			echo "💡 Check Helm values file: k8s/infrastructure/argocd/values-$$CLUSTER_LABEL.yaml" && \
+			exit 1; \
+		fi && \
+		echo "⏳ Waiting for ArgoCD server to be ready... ($$(date '+%H:%M:%S'))" && \
+		if ! kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=argocd-server -n argocd --timeout=300s; then \
+			echo "❌ FAILED: ArgoCD server pods not ready within 5 minutes at $$(date '+%H:%M:%S')" && \
+			echo "💡 Check pod status: kubectl get pods -n argocd" && \
+			exit 1; \
+		fi && \
+		echo "🔧 Configuring repository access... ($$(date '+%H:%M:%S'))" && \
+		TIMEOUT=60 && START_TIME=$$(date +%s) && \
+		while ! kubectl get configmap argocd-cm -n argocd >/dev/null 2>&1; do \
+			CURRENT_TIME=$$(date +%s) && \
+			if [ $$((CURRENT_TIME - START_TIME)) -gt $$TIMEOUT ]; then \
+				echo "❌ FAILED: ArgoCD configmap not available within 60 seconds at $$(date '+%H:%M:%S')" && \
+				exit 1; \
+			fi && \
+			sleep 2; \
+		done && \
 		sleep 5 && \
-		kubectl patch configmap argocd-cm -n argocd --patch '{"data":{"repositories":"- url: https://github.com/tomknightatl/diocesan-vitality.git"}}'
+		if ! kubectl patch configmap argocd-cm -n argocd --patch '{"data":{"repositories":"- url: https://github.com/tomknightatl/diocesan-vitality.git"}}'; then \
+			echo "❌ FAILED: Could not configure repository access at $$(date '+%H:%M:%S')" && \
+			exit 1; \
+		fi
 	@echo "🔧 Setting up custom ArgoCD password..."
 	@$(MAKE) _setup-argocd-password CLUSTER_LABEL=$$CLUSTER_LABEL
 	@echo "🏷️  Registering cluster with ArgoCD..."
 	@$(MAKE) _register-cluster-with-argocd CLUSTER_LABEL=$$CLUSTER_LABEL
-	@echo "✅ Step 3 Complete: ArgoCD installed via Helm with insecure mode for $$CLUSTER_LABEL"
+	@echo "🚀 Deploying App-of-Apps for ApplicationSets..."
+	@$(MAKE) _deploy-app-of-apps CLUSTER_LABEL=$$CLUSTER_LABEL
+	@echo "✅ Step 3 Complete: ArgoCD installed via Helm with App-of-Apps pattern for $$CLUSTER_LABEL"
 
 _register-cluster-with-argocd: ## Register current cluster with ArgoCD with proper labels
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
@@ -265,48 +322,61 @@ _setup-argocd-password: ## Setup custom ArgoCD password from .env using kubectl
 		echo "✅ Custom password configured and saved to: .argocd-admin-password"; \
 	fi
 
-argocd-apps: ## Step 4: Install ArgoCD ApplicationSets (usage: make argocd-apps CLUSTER_LABEL=dev)
+_deploy-app-of-apps: ## Deploy App-of-Apps root Application for ApplicationSets
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
-	echo "🚀 Step 4: Installing ArgoCD ApplicationSets for '$$CLUSTER_LABEL'..." && \
-	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
-		kubectl apply -f k8s/argocd/sealed-secrets-$$CLUSTER_LABEL-applicationset.yaml && \
-		kubectl apply -f k8s/argocd/cloudflare-tunnel-$$CLUSTER_LABEL-applicationset.yaml && \
-		kubectl apply -f k8s/argocd/diocesan-vitality-$$CLUSTER_LABEL-applicationset.yaml
-	@echo "✅ Step 4 Complete: ApplicationSets installed for $$CLUSTER_LABEL"
+	echo "🚀 Deploying root Application for ApplicationSets in '$$CLUSTER_LABEL' environment..." && \
+	echo "⏳ Waiting for ArgoCD to be fully ready... ($$(date '+%H:%M:%S'))" && \
+	sleep 10 && \
+	if ! kubectl apply -f k8s/argocd/root-applicationsets-$$CLUSTER_LABEL.yaml; then \
+		echo "❌ FAILED: Could not deploy root Application at $$(date '+%H:%M:%S')" && \
+		echo "💡 Check file: k8s/argocd/root-applicationsets-$$CLUSTER_LABEL.yaml" && \
+		exit 1; \
+	fi && \
+	echo "⏳ Waiting for root Application to be synced... ($$(date '+%H:%M:%S'))" && \
+	TIMEOUT=300 && START_TIME=$$(date +%s) && \
+	while ! kubectl get application root-applicationsets-$$CLUSTER_LABEL -n argocd -o jsonpath='{.status.sync.status}' 2>/dev/null | grep -q "Synced"; do \
+		CURRENT_TIME=$$(date +%s) && \
+		if [ $$((CURRENT_TIME - START_TIME)) -gt $$TIMEOUT ]; then \
+			echo "❌ FAILED: Root Application not synced within 5 minutes at $$(date '+%H:%M:%S')" && \
+			echo "💡 Check Application status: kubectl get application root-applicationsets-$$CLUSTER_LABEL -n argocd" && \
+			exit 1; \
+		fi && \
+		echo "🔄 Waiting for Application sync... ($$((CURRENT_TIME - START_TIME))s elapsed)" && \
+		sleep 5; \
+	done && \
+	echo "✅ Root Application deployed and synced successfully" && \
+	echo "🔍 ApplicationSets that will be deployed:" && \
+	kubectl get applicationsets -n argocd --no-headers 2>/dev/null | grep "$$CLUSTER_LABEL" | awk '{print "  - " $$1}' || echo "  (ApplicationSets will appear shortly)" && \
+	echo "💡 Monitor ApplicationSets: kubectl get applicationsets -n argocd"
 
-sealed-secrets-create: ## Step 5: Create tunnel token sealed secret (usage: make sealed-secrets-create CLUSTER_LABEL=dev)
+argocd-password: ## Get ArgoCD admin password
+sealed-secrets-create: ## Step 4: Create tunnel token sealed secret from environment file (usage: make sealed-secrets-create CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
-	echo "🚀 Step 5: Creating tunnel token sealed secret for '$$CLUSTER_LABEL'..." && \
-	if [ "$$CLUSTER_LABEL" = "stg" ]; then ENV_DIR="staging"; else ENV_DIR="$$CLUSTER_LABEL"; fi && \
-	echo "🔍 Extracting tunnel credentials from Terraform k8s-secrets..." && \
-	cd terraform/environments/$$ENV_DIR && \
-	CREDENTIALS_FILE="k8s-secrets/cloudflare-tunnel-$$ENV_DIR.yaml" && \
-	if [ ! -f "$$CREDENTIALS_FILE" ]; then \
-		echo "❌ Could not find tunnel credentials file: $$CREDENTIALS_FILE"; \
-		echo "💡 Ensure tunnel has been created: make tunnel-create CLUSTER_LABEL=$$CLUSTER_LABEL"; \
+	echo "🚀 Step 4: Creating tunnel token sealed secret for '$$CLUSTER_LABEL'..." && \
+	echo "🔍 Loading tunnel token from environment file..." && \
+	if [ ! -f ".tunnel-token-$$CLUSTER_LABEL" ]; then \
+		echo "❌ Could not find tunnel token file: .tunnel-token-$$CLUSTER_LABEL"; \
+		echo "💡 Ensure tunnel verification has been run: make tunnel-verify CLUSTER_LABEL=$$CLUSTER_LABEL"; \
 		exit 1; \
 	fi && \
-	CREDENTIALS_B64=$$(grep "credentials.json" "$$CREDENTIALS_FILE" | cut -d'"' -f4) && \
-	CREDENTIALS_JSON=$$(echo "$$CREDENTIALS_B64" | base64 -d) && \
-	ACCOUNT_TAG=$$(echo "$$CREDENTIALS_JSON" | jq -r '.AccountTag') && \
-	TUNNEL_ID=$$(echo "$$CREDENTIALS_JSON" | jq -r '.TunnelID') && \
-	TUNNEL_SECRET=$$(echo "$$CREDENTIALS_JSON" | jq -r '.TunnelSecret') && \
-	TUNNEL_SECRET_B64=$$(echo -n "$$TUNNEL_SECRET" | base64 -w0) && \
-	TUNNEL_TOKEN=$$(echo "{\"a\":\"$$ACCOUNT_TAG\",\"t\":\"$$TUNNEL_ID\",\"s\":\"$$TUNNEL_SECRET_B64\"}" | base64 -w0) && \
-	cd - >/dev/null && \
-	if [ -z "$$TUNNEL_TOKEN" ] || [ -z "$$TUNNEL_ID" ]; then \
-		echo "❌ Could not extract tunnel credentials"; \
-		echo "💡 Ensure tunnel has been created: make tunnel-create CLUSTER_LABEL=$$CLUSTER_LABEL"; \
+	TUNNEL_TOKEN=$$(grep "TUNNEL_TOKEN_$$CLUSTER_LABEL" .tunnel-token-$$CLUSTER_LABEL | cut -d'=' -f2) && \
+	if [ -z "$$TUNNEL_TOKEN" ]; then \
+		echo "❌ Could not extract tunnel token from environment file"; \
+		echo "💡 Ensure tunnel verification has been run: make tunnel-verify CLUSTER_LABEL=$$CLUSTER_LABEL"; \
 		exit 1; \
 	fi && \
-	echo "✅ Extracted tunnel ID: $$TUNNEL_ID" && \
-	echo "✅ Generated tunnel token: $$(echo "$$TUNNEL_TOKEN" | cut -c1-20)..." && \
+	echo "✅ Loaded tunnel token from environment file" && \
+	echo "🔍 Extracting tunnel ID for logging..." && \
+	TUNNEL_INFO=$$(echo "$$TUNNEL_TOKEN" | base64 -d) && \
+	TUNNEL_ID=$$(echo "$$TUNNEL_INFO" | jq -r '.t // "unknown"') && \
+	echo "✅ Tunnel ID: $$TUNNEL_ID" && \
+	echo "✅ Tunnel token loaded: $$(echo "$$TUNNEL_TOKEN" | cut -c1-20)..." && \
 	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
 	echo "🔧 Installing kubeseal CLI if needed..." && \
 	$(MAKE) _install-kubeseal && \
 	echo "⏳ Waiting for sealed-secrets controller to be ready..." && \
 	kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=sealed-secrets -n kube-system --timeout=300s && \
-	echo "🔐 Creating sealed secret from extracted tunnel token..." && \
+	echo "🔐 Creating sealed secret from tunnel token..." && \
 	echo -n "$$TUNNEL_TOKEN" | kubectl create secret generic cloudflared-token \
 		--dry-run=client --from-file=tunnel-token=/dev/stdin \
 		--namespace=cloudflare-tunnel-$$CLUSTER_LABEL -o yaml | \
@@ -321,6 +391,18 @@ sealed-secrets-create: ## Step 5: Create tunnel token sealed secret (usage: make
 	echo "⏳ Waiting for tunnel application to sync and become healthy..." && \
 	sleep 30 && \
 	echo "✅ Step 5 Complete: Tunnel token sealed secret created for $$CLUSTER_LABEL (tunnel: $$TUNNEL_ID)"
+
+_install-helm: ## Install Helm CLI if not present
+	@if ! command -v helm >/dev/null 2>&1; then \
+		echo "📦 Installing Helm CLI..."; \
+		curl -fsSL -o /tmp/get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 && \
+		chmod 700 /tmp/get_helm.sh && \
+		/tmp/get_helm.sh && \
+		rm -f /tmp/get_helm.sh && \
+		echo "✅ Helm CLI installed successfully"; \
+	else \
+		echo "✅ Helm CLI already installed"; \
+	fi
 
 _install-kubeseal: ## Install kubeseal CLI if not present
 	@if ! command -v kubeseal >/dev/null 2>&1; then \
@@ -341,40 +423,6 @@ _install-kubeseal: ## Install kubeseal CLI if not present
 	else \
 		echo "✅ kubeseal CLI already installed"; \
 	fi
-
-_install-helm: ## Install Helm CLI if not present
-	@if ! command -v helm >/dev/null 2>&1; then \
-		echo "📦 Installing Helm CLI..."; \
-		curl -fsSL -o /tmp/get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 && \
-		chmod 700 /tmp/get_helm.sh && \
-		/tmp/get_helm.sh && \
-		rm -f /tmp/get_helm.sh && \
-		echo "✅ Helm CLI installed successfully"; \
-	else \
-		echo "✅ Helm CLI already installed"; \
-	fi
-
-_update-kustomization-for-sealed-secret: ## Update kustomization to use sealed secret instead of plain secret
-	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
-	KUSTOMIZATION_FILE="k8s/infrastructure/cloudflare-tunnel/environments/$$CLUSTER_LABEL/kustomization.yaml" && \
-	echo "📝 Updating $$CLUSTER_LABEL kustomization to include sealed secret..." && \
-	if ! grep -q "cloudflared-token-sealedsecret.yaml" $$KUSTOMIZATION_FILE 2>/dev/null; then \
-		if [ ! -f $$KUSTOMIZATION_FILE ]; then \
-			echo "apiVersion: kustomize.config.k8s.io/v1beta1" > $$KUSTOMIZATION_FILE && \
-			echo "kind: Kustomization" >> $$KUSTOMIZATION_FILE && \
-			echo "" >> $$KUSTOMIZATION_FILE && \
-			echo "resources:" >> $$KUSTOMIZATION_FILE && \
-			echo "  - ../../base" >> $$KUSTOMIZATION_FILE; \
-		fi && \
-		if ! grep -q "resources:" $$KUSTOMIZATION_FILE; then \
-			echo "" >> $$KUSTOMIZATION_FILE && \
-			echo "resources:" >> $$KUSTOMIZATION_FILE && \
-			echo "  - ../../base" >> $$KUSTOMIZATION_FILE; \
-		fi && \
-		echo "  - cloudflared-token-sealedsecret.yaml" >> $$KUSTOMIZATION_FILE; \
-	fi
-
-argocd-password: ## Get ArgoCD admin password
 	@echo "🔑 ArgoCD Admin Password:"
 	@if [ -f .argocd-admin-password ]; then \
 		cat .argocd-admin-password && echo; \
@@ -430,3 +478,104 @@ cluster-destroy: ## Destroy cluster (usage: make cluster-destroy CLUSTER_LABEL=d
 	cd terraform/environments/$$ENV_DIR && \
 		export DIGITALOCEAN_TOKEN=$$(grep DIGITALOCEAN_TOKEN ../../../.env | cut -d'=' -f2) && \
 		terraform destroy -target=module.k8s_cluster -auto-approve || true
+
+tunnel-verify: ## Step 2.5: Verify tunnel and cluster, save tunnel token to environment (usage: make tunnel-verify CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🔍 Step 2.5: Verifying tunnel and cluster for '$$CLUSTER_LABEL'..." && \
+	if [ "$$CLUSTER_LABEL" = "stg" ]; then ENV_DIR="staging"; else ENV_DIR="$$CLUSTER_LABEL"; fi && \
+	echo "📋 Verifying cluster status... ($$(date '+%H:%M:%S'))" && \
+	if ! kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL; then \
+		echo "❌ FAILED: Could not switch to kubectl context do-nyc2-dv-$$CLUSTER_LABEL at $$(date '+%H:%M:%S')" && \
+		echo "💡 Check if cluster exists: doctl kubernetes cluster list" && \
+		exit 1; \
+	fi && \
+	if ! kubectl get nodes --no-headers | wc -l | grep -q "[1-9]"; then \
+		echo "❌ FAILED: Cluster has no ready nodes at $$(date '+%H:%M:%S')" && \
+		echo "💡 Check cluster status: kubectl get nodes" && \
+		exit 1; \
+	fi && \
+	echo "✅ Cluster verification passed ($$(date '+%H:%M:%S'))" && \
+	echo "🔍 Verifying tunnel creation... ($$(date '+%H:%M:%S'))" && \
+	cd terraform/environments/$$ENV_DIR && \
+		export $$(grep CLOUDFLARE_API_TOKEN ../../../.env | xargs) && \
+		if ! TUNNEL_OUTPUT=$$(terraform output -json tunnel_info 2>/dev/null); then \
+			echo "❌ FAILED: Could not get tunnel info from Terraform at $$(date '+%H:%M:%S')" && \
+			echo "💡 Check if tunnel was created: make tunnel-create CLUSTER_LABEL=$$CLUSTER_LABEL" && \
+			exit 1; \
+		fi && \
+		TUNNEL_ID=$$(echo "$$TUNNEL_OUTPUT" | jq -r '.id // empty') && \
+		TUNNEL_CNAME=$$(echo "$$TUNNEL_OUTPUT" | jq -r '.cname // empty') && \
+		if [ -z "$$TUNNEL_ID" ] || [ -z "$$TUNNEL_CNAME" ]; then \
+			echo "❌ FAILED: Tunnel verification failed - missing tunnel info at $$(date '+%H:%M:%S')" && \
+			echo "💡 Tunnel output: $$TUNNEL_OUTPUT" && \
+			exit 1; \
+		fi && \
+		echo "✅ Tunnel verification passed: $$TUNNEL_ID ($$(date '+%H:%M:%S'))" && \
+		echo "🔐 Extracting tunnel token from k8s-secrets... ($$(date '+%H:%M:%S'))" && \
+		CREDENTIALS_FILE="k8s-secrets/cloudflare-tunnel-$$ENV_DIR.yaml" && \
+		if [ ! -f "$$CREDENTIALS_FILE" ]; then \
+			echo "❌ FAILED: Could not find tunnel credentials file: $$CREDENTIALS_FILE at $$(date '+%H:%M:%S')" && \
+			echo "💡 Check if tunnel created credentials: ls -la terraform/environments/$$ENV_DIR/k8s-secrets/" && \
+			exit 1; \
+		fi && \
+		if ! CREDENTIALS_B64=$$(grep "credentials.json" "$$CREDENTIALS_FILE" | cut -d'"' -f4); then \
+			echo "❌ FAILED: Could not extract credentials from file at $$(date '+%H:%M:%S')" && \
+			echo "💡 Check file format: head -5 $$CREDENTIALS_FILE" && \
+			exit 1; \
+		fi && \
+		if ! CREDENTIALS_JSON=$$(echo "$$CREDENTIALS_B64" | base64 -d 2>/dev/null); then \
+			echo "❌ FAILED: Could not decode base64 credentials at $$(date '+%H:%M:%S')" && \
+			exit 1; \
+		fi && \
+		ACCOUNT_TAG=$$(echo "$$CREDENTIALS_JSON" | jq -r '.AccountTag') && \
+		TUNNEL_SECRET=$$(echo "$$CREDENTIALS_JSON" | jq -r '.TunnelSecret') && \
+		if [ -z "$$ACCOUNT_TAG" ] || [ -z "$$TUNNEL_SECRET" ]; then \
+			echo "❌ FAILED: Missing AccountTag or TunnelSecret at $$(date '+%H:%M:%S')" && \
+			echo "💡 Credentials JSON: $$CREDENTIALS_JSON" && \
+			exit 1; \
+		fi && \
+		TUNNEL_SECRET_B64=$$(echo -n "$$TUNNEL_SECRET" | base64 -w0) && \
+		TUNNEL_TOKEN=$$(echo "{\"a\":\"$$ACCOUNT_TAG\",\"t\":\"$$TUNNEL_ID\",\"s\":\"$$TUNNEL_SECRET_B64\"}" | base64 -w0) && \
+		if [ -z "$$TUNNEL_TOKEN" ]; then \
+			echo "❌ FAILED: Failed to generate tunnel token at $$(date '+%H:%M:%S')" && \
+			exit 1; \
+		fi && \
+		echo "💾 Saving tunnel token to environment file... ($$(date '+%H:%M:%S'))" && \
+		echo "TUNNEL_TOKEN_$$CLUSTER_LABEL=$$TUNNEL_TOKEN" > ../../../.tunnel-token-$$CLUSTER_LABEL && \
+		echo "✅ Tunnel token saved to .tunnel-token-$$CLUSTER_LABEL" && \
+		echo "🔍 Verifying token format... ($$(date '+%H:%M:%S'))" && \
+		if ! echo "$$TUNNEL_TOKEN" | base64 -d | jq . >/dev/null 2>&1; then \
+			echo "❌ FAILED: Token format verification failed at $$(date '+%H:%M:%S')" && \
+			exit 1; \
+		fi && \
+		echo "✅ Tunnel token verification passed ($$(date '+%H:%M:%S'))"
+	@echo "✅ Step 2.5 Complete: Tunnel and cluster verified, token saved"
+
+infra-test: ## Step 6: Integration testing and cleanup (usage: make infra-test CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🧪 Step 6: Running integration tests and cleanup for '$$CLUSTER_LABEL'..." && \
+	echo "🔍 Testing cluster connectivity..." && \
+	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
+	kubectl get nodes >/dev/null && \
+	echo "✅ Cluster connectivity test passed" && \
+	echo "🔍 Testing ArgoCD installation..." && \
+	kubectl get pods -n argocd | grep -q "argocd-server.*Running" && \
+	echo "✅ ArgoCD installation test passed" && \
+	echo "🔍 Testing ApplicationSets..." && \
+	kubectl get applicationsets -n argocd | grep -q "diocesan-vitality-$$CLUSTER_LABEL" && \
+	echo "✅ ApplicationSets test passed" && \
+	echo "🔍 Testing sealed-secrets controller..." && \
+	kubectl get pods -n kube-system -l app.kubernetes.io/name=sealed-secrets | grep -q "Running" && \
+	echo "✅ Sealed-secrets controller test passed" && \
+	echo "🧹 Cleaning up temporary files..." && \
+	rm -f .tunnel-token-$$CLUSTER_LABEL && \
+	echo "✅ Temporary tunnel token file removed" && \
+	echo "🔐 Verifying no sensitive data in environment..." && \
+	if env | grep -q "TUNNEL_TOKEN"; then \
+		echo "⚠️  Found tunnel tokens in environment - consider unsetting them"; \
+	else \
+		echo "✅ No tunnel tokens found in environment"; \
+	fi && \
+	echo "📊 Final infrastructure status:" && \
+	$(MAKE) infra-status CLUSTER_LABEL=$$CLUSTER_LABEL
+	@echo "✅ Step 6 Complete: Integration tests passed and cleanup completed"

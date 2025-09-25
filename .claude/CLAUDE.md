@@ -16,6 +16,43 @@ includeClaudeAttribution: false
   3. Wait for explicit user approval before proceeding
 - **This policy applies to all kubectl commands, including those in Makefile targets**
 
+## Infrastructure Command Policy
+
+**🚨 CRITICAL: Do Not Re-run Infrastructure Commands**
+- **NEVER run the same infrastructure command twice in succession**
+- **Infrastructure commands like `make cluster-create` often succeed even when timeout occurs**
+- **If a command times out, check the actual infrastructure state before re-running:**
+  - `doctl kubernetes cluster list` - check if cluster was created
+  - `kubectl get nodes` - verify cluster connectivity
+  - `doctl auth list` - verify DigitalOcean authentication
+- **Common mistake pattern to avoid:**
+  1. Run `make cluster-create` in foreground → times out but cluster is created
+  2. Incorrectly assume it failed and run again in background → fails with "cluster already exists"
+
+## ArgoCD App-of-Apps Pattern
+
+**🚀 AUTOMATED: ApplicationSets Deploy Automatically**
+- **ArgoCD uses App-of-Apps pattern for automatic ApplicationSet deployment**
+- **Infrastructure setup sequence:**
+  1. `make cluster-create CLUSTER_LABEL=dev` - Create DigitalOcean Kubernetes cluster
+  2. `make tunnel-create CLUSTER_LABEL=dev` - Create Cloudflare tunnel
+  3. `make tunnel-verify CLUSTER_LABEL=dev` - Verify tunnel and extract token
+  4. `make argocd-install CLUSTER_LABEL=dev` - Install ArgoCD + Auto-deploy ApplicationSets
+  5. `make sealed-secrets-create CLUSTER_LABEL=dev` - Create sealed secrets from tunnel token
+- **Step 4 automatically deploys root Application:** `root-applicationsets-dev`
+- **Root Application manages three ApplicationSets:**
+  - `sealed-secrets-dev-applicationset.yaml` - Bitnami Sealed Secrets controller
+  - `cloudflare-tunnel-dev-applicationset.yaml` - Cloudflare tunnel deployment  
+  - `diocesan-vitality-dev-applicationset.yaml` - Main application deployment
+- **Monitor ApplicationSets:** `kubectl get applicationsets -n argocd`
+- **Monitor Applications:** `kubectl get applications -n argocd`
+- **Correct approach:**
+  1. Run infrastructure command once with appropriate timeout (30+ minutes)
+  2. If timeout occurs, check actual infrastructure state first
+  3. Only re-run if infrastructure was not actually created
+- **NEVER claim a command "timed out" unless it actually reached the specified timeout duration**
+- **When commands fail quickly, analyze the actual error message rather than assuming timeout**
+
 ## Development Commands
 
 ### Quick Development Setup
