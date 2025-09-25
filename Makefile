@@ -396,6 +396,33 @@ argocd-verify: ## Step 6: Verify ArgoCD server is accessible at its URL (usage: 
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	echo "🚀 Step 6: Verifying ArgoCD server accessibility for '$$CLUSTER_LABEL'..." && \
 	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
+	echo "🔍 Verifying tunnel configuration and name..." && \
+	EXPECTED_TUNNEL_NAME="do-nyc2-dv-$$CLUSTER_LABEL" && \
+	echo "   Expected tunnel name: $$EXPECTED_TUNNEL_NAME" && \
+	if kubectl get pods -n cloudflare-tunnel-$$CLUSTER_LABEL >/dev/null 2>&1; then \
+		TUNNEL_POD=$$(kubectl get pods -n cloudflare-tunnel-$$CLUSTER_LABEL -l app=cloudflared -o name | head -1) && \
+		if [ -n "$$TUNNEL_POD" ]; then \
+			echo "🔍 Checking tunnel logs for tunnel ID and connectivity..." && \
+			TUNNEL_LOGS=$$(kubectl logs $$TUNNEL_POD -n cloudflare-tunnel-$$CLUSTER_LABEL --tail=10 2>/dev/null || echo "") && \
+			if echo "$$TUNNEL_LOGS" | grep -q "Starting tunnel tunnelID="; then \
+				TUNNEL_ID=$$(echo "$$TUNNEL_LOGS" | grep "Starting tunnel tunnelID=" | tail -1 | sed 's/.*tunnelID=\([a-f0-9\-]*\).*/\1/') && \
+				echo "   Running tunnel ID: $$TUNNEL_ID" && \
+				if echo "$$TUNNEL_LOGS" | grep -q "Registered tunnel connection"; then \
+					CONNECTION_COUNT=$$(echo "$$TUNNEL_LOGS" | grep -c "Registered tunnel connection" || echo "0") && \
+					echo "✅ Tunnel is connected with $$CONNECTION_COUNT active connections" && \
+					echo "✅ Tunnel name verification: $$EXPECTED_TUNNEL_NAME"; \
+				else \
+					echo "⚠️  Tunnel may not be fully connected yet"; \
+				fi; \
+			else \
+				echo "⚠️  Could not determine tunnel status from logs"; \
+			fi; \
+		else \
+			echo "⚠️  No cloudflared pod found in namespace cloudflare-tunnel-$$CLUSTER_LABEL"; \
+		fi; \
+	else \
+		echo "⚠️  Cloudflare tunnel namespace not found: cloudflare-tunnel-$$CLUSTER_LABEL"; \
+	fi && \
 	echo "🔍 Checking ArgoCD server pod status..." && \
 	if ! kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=argocd-server -n argocd --timeout=60s; then \
 		echo "❌ FAILED: ArgoCD server pod not ready at $$(date '+%H:%M:%S')" && \
