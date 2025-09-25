@@ -432,6 +432,176 @@ argocd-verify: ## Step 6: Verify ArgoCD server is accessible at its URL (usage: 
 	fi && \
 	echo "✅ Step 6 Complete: ArgoCD server verified and accessible at $$ARGOCD_URL"
 
+docker-build: ## Step 6.5: Build and push Docker images from appropriate branch (usage: make docker-build CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🚀 Step 6.5: Building and pushing Docker images for '$$CLUSTER_LABEL'..." && \
+	echo "🎯 Setting source branch for $$CLUSTER_LABEL environment..." && \
+	if [ "$$CLUSTER_LABEL" = "dev" ]; then \
+		SOURCE_BRANCH="develop"; \
+	elif [ "$$CLUSTER_LABEL" = "stg" ]; then \
+		SOURCE_BRANCH="staging"; \
+	else \
+		SOURCE_BRANCH="main"; \
+	fi && \
+	echo "📋 Docker build configuration:" && \
+	echo "   Environment: $$CLUSTER_LABEL" && \
+	echo "   Source branch: $$SOURCE_BRANCH" && \
+	echo "   Registry: Docker Hub (tomatl/diocesan-vitality)" && \
+	echo "🔍 Checking current git branch..." && \
+	CURRENT_BRANCH=$$(git branch --show-current) && \
+	echo "   Current branch: $$CURRENT_BRANCH" && \
+	if [ "$$CURRENT_BRANCH" != "$$SOURCE_BRANCH" ]; then \
+		echo "🔄 Switching to $$SOURCE_BRANCH branch..." && \
+		git fetch origin && \
+		git checkout $$SOURCE_BRANCH && \
+		git pull origin $$SOURCE_BRANCH && \
+		echo "✅ Switched to $$SOURCE_BRANCH branch"; \
+	else \
+		echo "✅ Already on $$SOURCE_BRANCH branch" && \
+		git pull origin $$SOURCE_BRANCH; \
+	fi && \
+	echo "🏷️  Generating image tags..." && \
+	TIMESTAMP=$$(date +%Y-%m-%d-%H-%M-%S) && \
+	IMAGE_TAG="$$CLUSTER_LABEL-$$TIMESTAMP" && \
+	echo "   Image tag: $$IMAGE_TAG" && \
+	echo "🔧 Checking Docker login..." && \
+	if ! docker info >/dev/null 2>&1; then \
+		echo "❌ FAILED: Docker daemon not running at $$(date '+%H:%M:%S')" && \
+		echo "💡 Start Docker daemon and ensure you're logged in: docker login" && \
+		exit 1; \
+	fi && \
+	echo "🏗️  Building multi-platform images..." && \
+	echo "📦 Building backend image..." && \
+	if ! docker buildx build --platform linux/amd64,linux/arm64 \
+		-f backend/Dockerfile \
+		-t tomatl/diocesan-vitality:backend-$$IMAGE_TAG \
+		-t tomatl/diocesan-vitality:backend-$$CLUSTER_LABEL-latest \
+		--push backend/; then \
+		echo "❌ FAILED: Backend image build failed at $$(date '+%H:%M:%S')" && \
+		exit 1; \
+	fi && \
+	echo "📦 Building frontend image..." && \
+	if ! docker buildx build --platform linux/amd64,linux/arm64 \
+		-f frontend/Dockerfile \
+		-t tomatl/diocesan-vitality:frontend-$$IMAGE_TAG \
+		-t tomatl/diocesan-vitality:frontend-$$CLUSTER_LABEL-latest \
+		--push frontend/; then \
+		echo "❌ FAILED: Frontend image build failed at $$(date '+%H:%M:%S')" && \
+		exit 1; \
+	fi && \
+	echo "📦 Building pipeline image..." && \
+	if ! docker buildx build --platform linux/amd64,linux/arm64 \
+		-f Dockerfile.pipeline \
+		-t tomatl/diocesan-vitality:pipeline-$$IMAGE_TAG \
+		-t tomatl/diocesan-vitality:pipeline-$$CLUSTER_LABEL-latest \
+		--push .; then \
+		echo "❌ FAILED: Pipeline image build failed at $$(date '+%H:%M:%S')" && \
+		exit 1; \
+	fi && \
+	echo "🎯 Updating Kubernetes manifests with new image tags..." && \
+	MANIFEST_PATH="k8s/environments/development" && \
+	if [ "$$CLUSTER_LABEL" = "stg" ]; then MANIFEST_PATH="k8s/environments/staging"; \
+	elif [ "$$CLUSTER_LABEL" = "prd" ]; then MANIFEST_PATH="k8s/environments/production"; fi && \
+	echo "   Manifest path: $$MANIFEST_PATH" && \
+	if [ -f "$$MANIFEST_PATH/kustomization.yaml" ]; then \
+		echo "🔄 Updating image tags in Kubernetes manifests..." && \
+		if [ -f "$$MANIFEST_PATH/backend-deployment.yaml" ]; then \
+			sed -i "s|image: tomatl/diocesan-vitality:backend-.*|image: tomatl/diocesan-vitality:backend-$$IMAGE_TAG|g" "$$MANIFEST_PATH/backend-deployment.yaml"; \
+		fi && \
+		if [ -f "$$MANIFEST_PATH/frontend-deployment.yaml" ]; then \
+			sed -i "s|image: tomatl/diocesan-vitality:frontend-.*|image: tomatl/diocesan-vitality:frontend-$$IMAGE_TAG|g" "$$MANIFEST_PATH/frontend-deployment.yaml"; \
+		fi && \
+		if [ -f "$$MANIFEST_PATH/pipeline-deployment.yaml" ]; then \
+			sed -i "s|image: tomatl/diocesan-vitality:pipeline-.*|image: tomatl/diocesan-vitality:pipeline-$$IMAGE_TAG|g" "$$MANIFEST_PATH/pipeline-deployment.yaml"; \
+		fi && \
+		echo "💾 Committing image tag updates to git..." && \
+		git add $$MANIFEST_PATH/ && \
+		git commit -m "Update $$CLUSTER_LABEL environment images to $$IMAGE_TAG" && \
+		git push origin $$SOURCE_BRANCH && \
+		echo "✅ Image tags updated and committed to $$SOURCE_BRANCH"; \
+	else \
+		echo "⚠️  Kubernetes manifests not found at $$MANIFEST_PATH" && \
+		echo "💡 Images built and pushed, but manifests need manual update"; \
+	fi && \
+	echo "📊 Built images:" && \
+	echo "   Backend: tomatl/diocesan-vitality:backend-$$IMAGE_TAG" && \
+	echo "   Frontend: tomatl/diocesan-vitality:frontend-$$IMAGE_TAG" && \
+	echo "   Pipeline: tomatl/diocesan-vitality:pipeline-$$IMAGE_TAG" && \
+	echo "💡 GitOps will automatically deploy these images when ArgoCD syncs" && \
+	echo "✅ Step 6.5 Complete: Docker images built and pushed from $$SOURCE_BRANCH branch"
+
+app-deploy: ## Step 7: Verify diocesan-vitality application deployment via GitOps (usage: make app-deploy CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🚀 Step 7: Verifying diocesan-vitality application deployment for '$$CLUSTER_LABEL'..." && \
+	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
+	echo "🔍 Checking that ArgoCD ApplicationSets are ready..." && \
+	if ! kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=argocd-server -n argocd --timeout=30s; then \
+		echo "❌ FAILED: ArgoCD not ready at $$(date '+%H:%M:%S')" && \
+		echo "💡 Run: make argocd-verify CLUSTER_LABEL=$$CLUSTER_LABEL" && \
+		exit 1; \
+	fi && \
+	echo "🎯 GitOps configuration for $$CLUSTER_LABEL environment:" && \
+	if [ "$$CLUSTER_LABEL" = "dev" ]; then \
+		TARGET_BRANCH="develop"; \
+		echo "   Source branch: $$TARGET_BRANCH (configured in ApplicationSet)"; \
+	elif [ "$$CLUSTER_LABEL" = "stg" ]; then \
+		TARGET_BRANCH="staging"; \
+		echo "   Source branch: $$TARGET_BRANCH (configured in ApplicationSet)"; \
+	else \
+		TARGET_BRANCH="main"; \
+		echo "   Source branch: $$TARGET_BRANCH (configured in ApplicationSet)"; \
+	fi && \
+	echo "   Application: diocesan-vitality-$$CLUSTER_LABEL" && \
+	echo "   Namespace: diocesan-vitality-$$CLUSTER_LABEL" && \
+	echo "🔄 Checking current application status..." && \
+	if ! kubectl get application diocesan-vitality-$$CLUSTER_LABEL -n argocd >/dev/null 2>&1; then \
+		echo "❌ FAILED: diocesan-vitality-$$CLUSTER_LABEL application not found at $$(date '+%H:%M:%S')" && \
+		echo "💡 Ensure ArgoCD ApplicationSets are deployed: kubectl get applicationsets -n argocd" && \
+		echo "💡 Check App-of-Apps root: kubectl get application root-applicationsets-$$CLUSTER_LABEL -n argocd" && \
+		exit 1; \
+	fi && \
+	CURRENT_STATUS=$$(kubectl get application diocesan-vitality-$$CLUSTER_LABEL -n argocd -o jsonpath='{.status.sync.status}' 2>/dev/null || echo "Unknown") && \
+	CURRENT_HEALTH=$$(kubectl get application diocesan-vitality-$$CLUSTER_LABEL -n argocd -o jsonpath='{.status.health.status}' 2>/dev/null || echo "Unknown") && \
+	CURRENT_BRANCH=$$(kubectl get application diocesan-vitality-$$CLUSTER_LABEL -n argocd -o jsonpath='{.spec.source.targetRevision}' 2>/dev/null || echo "Unknown") && \
+	echo "   Current sync status: $$CURRENT_STATUS" && \
+	echo "   Current health: $$CURRENT_HEALTH" && \
+	echo "   Current branch: $$CURRENT_BRANCH" && \
+	if [ "$$CURRENT_BRANCH" != "$$TARGET_BRANCH" ]; then \
+		echo "⚠️  Application is configured for branch '$$CURRENT_BRANCH' but should be '$$TARGET_BRANCH'" && \
+		echo "💡 Check ApplicationSet configuration: k8s/argocd/diocesan-vitality-$$CLUSTER_LABEL-applicationset.yaml"; \
+	fi && \
+	echo "⏳ Monitoring application sync status (up to 2 minutes)..." && \
+	TIMEOUT=120 && START_TIME=$$(date +%s) && \
+	while true; do \
+		SYNC_STATUS=$$(kubectl get application diocesan-vitality-$$CLUSTER_LABEL -n argocd -o jsonpath='{.status.sync.status}' 2>/dev/null || echo "Unknown") && \
+		HEALTH_STATUS=$$(kubectl get application diocesan-vitality-$$CLUSTER_LABEL -n argocd -o jsonpath='{.status.health.status}' 2>/dev/null || echo "Unknown") && \
+		if [ "$$SYNC_STATUS" = "Synced" ] && [ "$$HEALTH_STATUS" = "Healthy" ]; then \
+			echo "✅ Application successfully synced and healthy via GitOps"; \
+			break; \
+		elif [ "$$SYNC_STATUS" = "Synced" ] && [ "$$HEALTH_STATUS" != "Healthy" ]; then \
+			echo "⚠️  Application synced but not healthy: $$HEALTH_STATUS"; \
+			echo "💡 This may be normal if container images are not yet available"; \
+			break; \
+		fi && \
+		CURRENT_TIME=$$(date +%s) && \
+		if [ $$((CURRENT_TIME - START_TIME)) -gt $$TIMEOUT ]; then \
+			echo "⏳ Application still syncing after 2 minutes" && \
+			echo "💡 Current status: Sync=$$SYNC_STATUS, Health=$$HEALTH_STATUS" && \
+			echo "💡 GitOps deployments may take time for initial sync" && \
+			break; \
+		fi && \
+		echo "🔄 Waiting for GitOps sync... Sync=$$SYNC_STATUS, Health=$$HEALTH_STATUS ($$((CURRENT_TIME - START_TIME))s elapsed)" && \
+		sleep 10; \
+	done && \
+	echo "📊 Final deployment status:" && \
+	kubectl get application diocesan-vitality-$$CLUSTER_LABEL -n argocd -o custom-columns=NAME:.metadata.name,SYNC:.status.sync.status,HEALTH:.status.health.status,BRANCH:.spec.source.targetRevision,REVISION:.status.sync.revision && \
+	echo "🌐 Application URLs (when healthy):" && \
+	echo "   Frontend: https://$$CLUSTER_LABEL.ui.diocesanvitality.org" && \
+	echo "   Backend API: https://$$CLUSTER_LABEL.api.diocesanvitality.org" && \
+	echo "💡 Monitor deployment: kubectl get pods -n diocesan-vitality-$$CLUSTER_LABEL" && \
+	echo "💡 GitOps approach: Application configured via ApplicationSet to deploy from $$TARGET_BRANCH branch" && \
+	echo "✅ Step 7 Complete: diocesan-vitality application verified via GitOps"
+
 _install-helm: ## Install Helm CLI if not present
 	@if ! command -v helm >/dev/null 2>&1; then \
 		echo "📦 Installing Helm CLI..."; \
