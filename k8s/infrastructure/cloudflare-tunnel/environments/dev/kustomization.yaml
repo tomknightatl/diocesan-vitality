@@ -24,9 +24,7 @@ patches:
           - hostname: dev.api.diocesanvitality.org
             service: http://diocesan-vitality-api.default.svc.cluster.local:8000
           - hostname: dev.argocd.diocesanvitality.org
-            service: https://argocd-server.argocd.svc.cluster.local:443
-            originRequest:
-              noTLSVerify: true
+            service: http://argocd-server.argocd.svc.cluster.local:80
           - service: http_status:404
 
 commonLabels:
