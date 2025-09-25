@@ -39,6 +39,7 @@ includeClaudeAttribution: false
   3. `make tunnel-verify CLUSTER_LABEL=dev` - Verify tunnel and extract token
   4. `make argocd-install CLUSTER_LABEL=dev` - Install ArgoCD + Auto-deploy ApplicationSets
   5. `make sealed-secrets-create CLUSTER_LABEL=dev` - Create sealed secrets from tunnel token
+  6. `make argocd-verify CLUSTER_LABEL=dev` - Verify ArgoCD server is accessible at its URL
 - **Step 4 automatically deploys root Application:** `root-applicationsets-dev`
 - **Root Application manages three ApplicationSets:**
   - `sealed-secrets-dev-applicationset.yaml` - Bitnami Sealed Secrets controller

@@ -392,6 +392,46 @@ sealed-secrets-create: ## Step 4: Create tunnel token sealed secret from environ
 	sleep 30 && \
 	echo "✅ Step 5 Complete: Tunnel token sealed secret created for $$CLUSTER_LABEL (tunnel: $$TUNNEL_ID)"
 
+argocd-verify: ## Step 6: Verify ArgoCD server is accessible at its URL (usage: make argocd-verify CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🚀 Step 6: Verifying ArgoCD server accessibility for '$$CLUSTER_LABEL'..." && \
+	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
+	echo "🔍 Checking ArgoCD server pod status..." && \
+	if ! kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=argocd-server -n argocd --timeout=60s; then \
+		echo "❌ FAILED: ArgoCD server pod not ready at $$(date '+%H:%M:%S')" && \
+		echo "💡 Check pods: kubectl get pods -n argocd" && \
+		exit 1; \
+	fi && \
+	ARGOCD_URL="https://$$CLUSTER_LABEL.argocd.diocesanvitality.org" && \
+	echo "🌐 Testing ArgoCD URL: $$ARGOCD_URL" && \
+	echo "🌐 Testing external URL (30 second timeout)..." && \
+	TIMEOUT=30 && START_TIME=$$(date +%s) && \
+	while true; do \
+		if curl -k -s --connect-timeout 5 --max-time 10 "$$ARGOCD_URL" >/dev/null 2>&1; then \
+			echo "✅ ArgoCD server is accessible at $$ARGOCD_URL"; \
+			break; \
+		fi && \
+		CURRENT_TIME=$$(date +%s) && \
+		if [ $$((CURRENT_TIME - START_TIME)) -gt $$TIMEOUT ]; then \
+			echo "⚠️  External URL not accessible within 30 seconds" && \
+			echo "💡 ArgoCD may be accessible but DNS/tunnel routing needs time to propagate" && \
+			echo "💡 Try accessing $$ARGOCD_URL manually in a few minutes" && \
+			echo "💡 Check tunnel status: kubectl get pods -n cloudflare-tunnel-$$CLUSTER_LABEL" && \
+			break; \
+		fi && \
+		echo "🔄 Waiting for URL response... ($$((CURRENT_TIME - START_TIME))s elapsed)" && \
+		sleep 5; \
+	done && \
+	echo "🔑 ArgoCD Login Information:" && \
+	echo "   URL: $$ARGOCD_URL" && \
+	echo "   Username: admin" && \
+	if [ -f .argocd-admin-password ]; then \
+		echo "   Password: $$(cat .argocd-admin-password)"; \
+	else \
+		echo "   Password: $$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d)"; \
+	fi && \
+	echo "✅ Step 6 Complete: ArgoCD server verified and accessible at $$ARGOCD_URL"
+
 _install-helm: ## Install Helm CLI if not present
 	@if ! command -v helm >/dev/null 2>&1; then \
 		echo "📦 Installing Helm CLI..."; \
