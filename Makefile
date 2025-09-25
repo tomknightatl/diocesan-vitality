@@ -404,24 +404,44 @@ argocd-verify: ## Step 6: Verify ArgoCD server is accessible at its URL (usage: 
 	fi && \
 	ARGOCD_URL="https://$$CLUSTER_LABEL.argocd.diocesanvitality.org" && \
 	echo "🌐 Testing ArgoCD URL: $$ARGOCD_URL" && \
-	echo "🌐 Testing external URL (30 second timeout)..." && \
+	echo "🌐 Testing ArgoCD login screen (30 second timeout)..." && \
 	TIMEOUT=30 && START_TIME=$$(date +%s) && \
+	ARGOCD_ACCESSIBLE=false && \
 	while true; do \
-		if curl -k -s --connect-timeout 5 --max-time 10 "$$ARGOCD_URL" >/dev/null 2>&1; then \
-			echo "✅ ArgoCD server is accessible at $$ARGOCD_URL"; \
+		RESPONSE=$$(curl -k -s --connect-timeout 5 --max-time 10 "$$ARGOCD_URL" 2>/dev/null || echo "") && \
+		if echo "$$RESPONSE" | grep -q "Argo CD" && echo "$$RESPONSE" | grep -q "html"; then \
+			echo "✅ ArgoCD login screen confirmed at $$ARGOCD_URL"; \
+			ARGOCD_ACCESSIBLE=true && \
 			break; \
+		elif [ -n "$$RESPONSE" ]; then \
+			echo "🔍 URL responding but not ArgoCD login screen - checking content..." && \
+			if echo "$$RESPONSE" | grep -qi "error\|not found\|503\|502\|500"; then \
+				echo "⚠️  Server error detected in response"; \
+			else \
+				echo "⚠️  Unexpected response content (not ArgoCD login)"; \
+			fi; \
 		fi && \
 		CURRENT_TIME=$$(date +%s) && \
 		if [ $$((CURRENT_TIME - START_TIME)) -gt $$TIMEOUT ]; then \
-			echo "⚠️  External URL not accessible within 30 seconds" && \
-			echo "💡 ArgoCD may be accessible but DNS/tunnel routing needs time to propagate" && \
-			echo "💡 Try accessing $$ARGOCD_URL manually in a few minutes" && \
+			echo "⚠️  ArgoCD login screen not accessible within 30 seconds" && \
+			if [ -n "$$RESPONSE" ]; then \
+				echo "💡 URL is responding but not showing ArgoCD login screen" && \
+				echo "💡 Check tunnel configuration and ArgoCD server status"; \
+			else \
+				echo "💡 URL not responding - DNS/tunnel may need more time to propagate" && \
+				echo "💡 Try accessing $$ARGOCD_URL manually in a few minutes"; \
+			fi && \
 			echo "💡 Check tunnel status: kubectl get pods -n cloudflare-tunnel-$$CLUSTER_LABEL" && \
 			break; \
 		fi && \
-		echo "🔄 Waiting for URL response... ($$((CURRENT_TIME - START_TIME))s elapsed)" && \
+		echo "🔄 Waiting for ArgoCD login screen... ($$((CURRENT_TIME - START_TIME))s elapsed)" && \
 		sleep 5; \
 	done && \
+	if [ "$$ARGOCD_ACCESSIBLE" = "true" ]; then \
+		echo "🔐 ArgoCD login screen verified successfully"; \
+	else \
+		echo "⚠️  ArgoCD login screen verification incomplete - manual check recommended"; \
+	fi && \
 	echo "🔑 ArgoCD Login Information:" && \
 	echo "   URL: $$ARGOCD_URL" && \
 	echo "   Username: admin" && \
