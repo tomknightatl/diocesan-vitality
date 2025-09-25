@@ -430,6 +430,18 @@ _install-kubeseal: ## Install kubeseal CLI if not present
 		kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" 2>/dev/null | base64 -d && echo || echo "❌ ArgoCD not installed or password not found"; \
 	fi
 
+_update-kustomization-for-sealed-secret: ## Update kustomization.yaml to include sealed secret
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	KUSTOMIZATION_FILE="k8s/infrastructure/cloudflare-tunnel/environments/$$CLUSTER_LABEL/kustomization.yaml" && \
+	SEALED_SECRET_FILE="cloudflared-token-sealedsecret.yaml" && \
+	echo "🔧 Checking kustomization file: $$KUSTOMIZATION_FILE" && \
+	if ! grep -q "$$SEALED_SECRET_FILE" "$$KUSTOMIZATION_FILE"; then \
+		echo "📝 Adding sealed secret to kustomization resources..." && \
+		sed -i "/resources:/a\  - $$SEALED_SECRET_FILE" "$$KUSTOMIZATION_FILE"; \
+	else \
+		echo "✅ Sealed secret already included in kustomization"; \
+	fi
+
 infra-status: ## Check infrastructure status
 	@echo "🔍 Infrastructure Status:"
 	@echo "========================"
