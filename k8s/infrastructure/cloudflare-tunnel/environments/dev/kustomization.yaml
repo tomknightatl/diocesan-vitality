@@ -15,7 +15,7 @@ patches:
       - op: replace
         path: /data/config.yaml
         value: |
-          tunnel: da4b9224-567a-4ba1-b1b3-9c4eceddfa1e
+          tunnel: ce21635c-1779-46cc-9f7d-01fbeac17a21
           metrics: 0.0.0.0:2000
 
           ingress:
