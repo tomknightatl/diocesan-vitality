@@ -45,7 +45,7 @@ output "next_steps" {
   description = "Next steps after infrastructure creation"
   value = [
     "1. Switch kubectl context: kubectl config use-context do-nyc2-${module.k8s_cluster.cluster_name}",
-    "2. Apply tunnel secret: kubectl apply -f ${module.cloudflare_tunnel.k8s_secret_file}",
+    "2. Tunnel secrets are managed via sealed secrets in Kubernetes (no manual application needed)",
     "3. Install ArgoCD: kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml",
     "4. Apply ArgoCD ApplicationSets from k8s/argocd/",
     "5. Access ArgoCD at: https://${module.cloudflare_tunnel.argocd_hostname}"

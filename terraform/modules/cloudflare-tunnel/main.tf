@@ -14,6 +14,18 @@ data "cloudflare_zero_trust_tunnel_cloudflared" "diocesan_vitality" {
   name       = "do-nyc2-${var.cluster_name}"
 }
 
+# Configure zone SSL/TLS settings for proper tunnel operation
+resource "cloudflare_zone_settings_override" "diocesan_vitality_ssl" {
+  zone_id = var.cloudflare_zone_id
+  settings {
+    ssl                      = "flexible"  # Cloudflare handles SSL, backend is HTTP
+    always_use_https         = "on"        # Force HTTPS redirect
+    automatic_https_rewrites = "on"        # Rewrite HTTP links to HTTPS
+    tls_1_3                  = "on"        # Enable TLS 1.3
+    min_tls_version          = "1.2"       # Minimum TLS version
+  }
+}
+
 # DNS records for the tunnel - these will appear as Public Hostnames in Cloudflare dashboard
 resource "cloudflare_record" "ui" {
   count   = var.create_ui_record ? 1 : 0
