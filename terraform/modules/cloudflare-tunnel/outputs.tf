@@ -1,16 +1,16 @@
 output "tunnel_id" {
-  description = "ID of the created Cloudflare tunnel"
-  value       = cloudflare_zero_trust_tunnel_cloudflared.diocesan_vitality.id
+  description = "ID of the existing Cloudflare tunnel"
+  value       = data.cloudflare_zero_trust_tunnel_cloudflared.diocesan_vitality.id
 }
 
 output "tunnel_name" {
-  description = "Name of the created Cloudflare tunnel"
-  value       = cloudflare_zero_trust_tunnel_cloudflared.diocesan_vitality.name
+  description = "Name of the existing Cloudflare tunnel"
+  value       = data.cloudflare_zero_trust_tunnel_cloudflared.diocesan_vitality.name
 }
 
 output "tunnel_cname" {
   description = "CNAME target for the tunnel"
-  value       = "${cloudflare_zero_trust_tunnel_cloudflared.diocesan_vitality.id}.cfargotunnel.com"
+  value       = "${data.cloudflare_zero_trust_tunnel_cloudflared.diocesan_vitality.id}.cfargotunnel.com"
 }
 
 output "ui_hostname" {
@@ -28,16 +28,8 @@ output "argocd_hostname" {
   value       = var.create_argocd_record ? "${var.argocd_subdomain}.${var.domain_name}" : null
 }
 
-output "tunnel_credentials" {
-  description = "Tunnel credentials for Kubernetes secret"
-  value       = local.tunnel_credentials
-  sensitive   = true
-}
-
-output "k8s_secret_file" {
-  description = "Path to the generated Kubernetes secret file"
-  value       = var.write_k8s_secret ? local_file.tunnel_secret[0].filename : null
-}
+# Note: Tunnel credentials are managed separately via sealed secrets in Kubernetes
+# No longer outputting tunnel credentials since we use existing tunnels
 
 output "dns_records" {
   description = "Information about created DNS records (which appear as Public Hostnames)"
