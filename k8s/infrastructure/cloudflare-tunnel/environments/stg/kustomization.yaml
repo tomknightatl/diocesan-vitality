@@ -22,7 +22,7 @@ patches:
       - op: replace
         path: /data/config.yaml
         value: |
-          tunnel: stg-tunnel-id-placeholder
+          tunnel: 59509582-7efd-41e9-8080-98a3814aa1bd
           metrics: 0.0.0.0:2000
 
           ingress:
