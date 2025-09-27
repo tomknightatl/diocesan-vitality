@@ -1,27 +1,12 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: cloudflare-tunnel
+namespace: cloudflare-tunnel-prd
 
 resources:
   - ../../base
 
 patches:
-  - target:
-      kind: Deployment
-      name: cloudflared
-    patch: |-
-      - op: replace
-        path: /spec/template/spec/containers/0/args
-        value:
-          - tunnel
-          - --config
-          - /etc/cloudflared/config/config.yaml
-          - --metrics
-          - 0.0.0.0:2000
-          - run
-          - diocesan-vitality-tunnel
-
   - target:
       kind: ConfigMap
       name: cloudflared-config
@@ -29,18 +14,24 @@ patches:
       - op: replace
         path: /data/config.yaml
         value: |
-          tunnel: diocesan-vitality-tunnel
-          credentials-file: /etc/cloudflared/creds/credentials.json
+          tunnel: prd-tunnel-id-placeholder
           metrics: 0.0.0.0:2000
 
           ingress:
-          - hostname: ui.diocesan-vitality.org
-            service: http://frontend.diocesan-vitality.svc.cluster.local:80
-          - hostname: api.diocesan-vitality.org
-            service: http://backend.diocesan-vitality.svc.cluster.local:8000
-          - hostname: argocd.diocesan-vitality.org
+          - hostname: prd.ui.diocesanvitality.org
+            service: http://diocesan-vitality-ui.default.svc.cluster.local:80
+            originRequest:
+              httpHostHeader: prd.ui.diocesanvitality.org
+              noTLSVerify: true
+          - hostname: prd.api.diocesanvitality.org
+            service: http://diocesan-vitality-api.default.svc.cluster.local:8000
+            originRequest:
+              httpHostHeader: prd.api.diocesanvitality.org
+              noTLSVerify: true
+          - hostname: prd.argocd.diocesanvitality.org
             service: https://argocd-server.argocd.svc.cluster.local:443
             originRequest:
+              httpHostHeader: prd.argocd.diocesanvitality.org
               noTLSVerify: true
           - service: http_status:404
 
