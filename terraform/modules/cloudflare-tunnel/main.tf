@@ -18,7 +18,7 @@ data "cloudflare_zero_trust_tunnel_cloudflared" "diocesan_vitality" {
 resource "cloudflare_zone_settings_override" "diocesan_vitality_ssl" {
   zone_id = var.cloudflare_zone_id
   settings {
-    ssl                      = "flexible"  # Cloudflare handles SSL, backend is HTTP
+    ssl                      = "full"      # Cloudflare and origin both use HTTPS
     always_use_https         = "on"        # Force HTTPS redirect
     automatic_https_rewrites = "on"        # Rewrite HTTP links to HTTPS
     tls_1_3                  = "on"        # Enable TLS 1.3
