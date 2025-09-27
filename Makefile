@@ -848,3 +848,64 @@ infra-test: ## Step 6: Integration testing and cleanup (usage: make infra-test C
 	echo "📊 Final infrastructure status:" && \
 	$(MAKE) infra-status CLUSTER_LABEL=$$CLUSTER_LABEL
 	@echo "✅ Step 6 Complete: Integration tests passed and cleanup completed"
+
+tunnel-destroy: ## Destroy tunnel and remove DNS records (usage: make tunnel-destroy CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🚨 DESTRUCTIVE: Destroying tunnel infrastructure for '$$CLUSTER_LABEL'..." && \
+	echo "⚠️  This will remove DNS records and tunnel resources" && \
+	read -p "Are you sure? Type 'yes' to continue: " CONFIRM && \
+	if [ "$$CONFIRM" != "yes" ]; then \
+		echo "❌ Operation cancelled"; \
+		exit 1; \
+	fi && \
+	echo "🔍 Checking Cloudflare CLI availability..." && \
+	if ! command -v cloudflared >/dev/null 2>&1; then \
+		echo "📦 Installing cloudflared CLI..." && \
+		if [ "$$(uname -m)" = "aarch64" ]; then \
+			ARCH="arm64"; \
+		else \
+			ARCH="amd64"; \
+		fi && \
+		curl -L -o cloudflared.deb "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-$$ARCH.deb" && \
+		sudo dpkg -i cloudflared.deb && \
+		rm cloudflared.deb; \
+	fi && \
+	echo "🗑️  Removing DNS records for $$CLUSTER_LABEL environment..." && \
+	ZONE_ID=$$(grep CLOUDFLARE_ZONE_ID .env 2>/dev/null | cut -d'=' -f2 || echo "") && \
+	API_TOKEN=$$(grep CLOUDFLARE_API_TOKEN .env 2>/dev/null | cut -d'=' -f2 || echo "") && \
+	if [ -z "$$ZONE_ID" ] || [ -z "$$API_TOKEN" ]; then \
+		echo "⚠️  CLOUDFLARE_ZONE_ID or CLOUDFLARE_API_TOKEN not found in .env" && \
+		echo "💡 Please manually remove these DNS records from Cloudflare dashboard:" && \
+		echo "   - $$CLUSTER_LABEL.ui.diocesanvitality.org" && \
+		echo "   - $$CLUSTER_LABEL.api.diocesanvitality.org" && \
+		echo "   - $$CLUSTER_LABEL.argocd.diocesanvitality.org"; \
+	else \
+		export CLOUDFLARE_API_TOKEN=$$API_TOKEN && \
+		for SUBDOMAIN in ui api argocd; do \
+			HOSTNAME="$$CLUSTER_LABEL.$$SUBDOMAIN.diocesanvitality.org" && \
+			echo "🔍 Looking for DNS record: $$HOSTNAME" && \
+			RECORD_ID=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$$ZONE_ID/dns_records?name=$$HOSTNAME" \
+				-H "Authorization: Bearer $$API_TOKEN" \
+				-H "Content-Type: application/json" | \
+				jq -r '.result[0].id // "null"') && \
+			if [ "$$RECORD_ID" != "null" ] && [ "$$RECORD_ID" != "" ]; then \
+				echo "🗑️  Deleting DNS record: $$HOSTNAME ($$RECORD_ID)" && \
+				curl -s -X DELETE "https://api.cloudflare.com/client/v4/zones/$$ZONE_ID/dns_records/$$RECORD_ID" \
+					-H "Authorization: Bearer $$API_TOKEN" | \
+				jq -r '.success // "false"' | grep -q "true" && \
+				echo "✅ Deleted: $$HOSTNAME" || \
+				echo "❌ Failed to delete: $$HOSTNAME"; \
+			else \
+				echo "ℹ️  DNS record not found: $$HOSTNAME"; \
+			fi; \
+		done; \
+	fi && \
+	echo "🗑️  Removing Kubernetes tunnel resources..." && \
+	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL 2>/dev/null && \
+	kubectl delete namespace cloudflare-tunnel-$$CLUSTER_LABEL --ignore-not-found=true && \
+	echo "🗑️  Removing ArgoCD applications related to tunnels..." && \
+	kubectl delete application cloudflare-tunnel-$$CLUSTER_LABEL -n argocd --ignore-not-found=true && \
+	echo "🧹 Cleaning up local tunnel files..." && \
+	rm -f .tunnel-token-$$CLUSTER_LABEL && \
+	echo "✅ Tunnel infrastructure destroyed for $$CLUSTER_LABEL environment" && \
+	echo "💡 You can now run 'make tunnels-create CLUSTER_LABEL=$$CLUSTER_LABEL' to recreate"
