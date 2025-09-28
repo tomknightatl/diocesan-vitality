@@ -1,4 +1,4 @@
-# Core dependencies for diocesan vitality pipeline - testing expanded flake8 ignore
+# Core dependencies for diocesan vitality pipeline - testing skipped test suite
 supabase
 selenium
 webdriver-manager
