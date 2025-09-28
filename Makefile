@@ -197,17 +197,13 @@ cluster-check: ## Step b: Check if cluster exists (usage: make cluster-check CLU
 	echo "🔍 Step b: Checking if cluster exists..." && \
 	CLUSTER_NAME="dv-$$CLUSTER_LABEL" && \
 	$(MAKE) cluster-auth && \
-	DIGITALOCEAN_TOKEN=$$(awk -F'=' '/^DIGITALOCEAN_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-	CLUSTER_CHECK_OUTPUT=$$(DIGITALOCEAN_ACCESS_TOKEN="$$DIGITALOCEAN_TOKEN" doctl kubernetes cluster get $$CLUSTER_NAME 2>&1) && \
-	echo "📄 Cluster check output: $$CLUSTER_CHECK_OUTPUT" && \
-	if echo "$$CLUSTER_CHECK_OUTPUT" | grep -q "Error: cluster not found"; then \
-		echo "ℹ️  Step b Complete: Cluster $$CLUSTER_NAME does not exist"; \
-	elif echo "$$CLUSTER_CHECK_OUTPUT" | grep -q "$$CLUSTER_NAME"; then \
-		STATUS=$$(DIGITALOCEAN_ACCESS_TOKEN="$$DIGITALOCEAN_TOKEN" doctl kubernetes cluster get $$CLUSTER_NAME --format Status --no-header 2>/dev/null) && \
-		echo "✅ Step b Complete: Cluster $$CLUSTER_NAME exists with status: $$STATUS"; \
-	else \
-		echo "ℹ️  Step b Complete: Unable to determine cluster status"; \
-	fi
+	echo "🔍 Querying cluster $$CLUSTER_NAME..." && \
+	$(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster get $$CLUSTER_NAME" && \
+	echo "✅ Step b Complete: Cluster $$CLUSTER_NAME exists and is accessible"
+
+_doctl-exec: ## Internal helper to execute doctl commands with authentication
+	@DIGITALOCEAN_TOKEN=$$(awk -F'=' '/^DIGITALOCEAN_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	DIGITALOCEAN_ACCESS_TOKEN="$$DIGITALOCEAN_TOKEN" timeout 15 doctl $(DOCTL_CMD)
 
 cluster-create: ## Step c: Create cluster (usage: make cluster-create CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
