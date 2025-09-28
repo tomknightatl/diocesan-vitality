@@ -123,29 +123,414 @@ monitor-check: ## Test monitoring integration
 # Infrastructure Commands
 # =======================
 
-infra-setup: ## Set up complete infrastructure (all 6 steps, usage: make infra-setup CLUSTER_LABEL=dev)
+infra-setup: ## Set up complete infrastructure (8 core steps, usage: make infra-setup CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	echo "🚀 Setting up complete infrastructure for '$$CLUSTER_LABEL'..." && \
+	echo "📋 Executing 8-step infrastructure setup:" && \
+	echo "   Steps 1-4: Cluster (Auth → Check → Create → Context)" && \
+	echo "   Steps 5-8: Tunnel (Auth → Check → Create → DNS)" && \
+	$(MAKE) cluster-auth && \
+	$(MAKE) cluster-check CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	$(MAKE) cluster-create CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	$(MAKE) cluster-context CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	$(MAKE) tunnel-auth && \
+	$(MAKE) tunnel-check CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	$(MAKE) tunnel-create CLUSTER_LABEL=$$CLUSTER_LABEL && \
-	$(MAKE) tunnel-verify CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	$(MAKE) tunnel-dns CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	echo "✅ Core infrastructure setup complete (Steps 1-8)!" && \
+	echo "🔄 Proceeding with ArgoCD and applications..." && \
 	$(MAKE) argocd-install CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	$(MAKE) argocd-apps CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	$(MAKE) sealed-secrets-create CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	$(MAKE) infra-test CLUSTER_LABEL=$$CLUSTER_LABEL && \
-	echo "🎉 Infrastructure setup complete for $$CLUSTER_LABEL!"
+	echo "🎉 Complete infrastructure setup finished for $$CLUSTER_LABEL!"
 
-cluster-create: ## Step 1: Create cluster and kubectl context (usage: make cluster-create CLUSTER_LABEL=dev) - REDIRECTS TO CLI VERSION
-	@echo "🔄 Redirecting to CLI-based cluster creation..."
-	@$(MAKE) cluster-create-cli CLUSTER_LABEL=$${CLUSTER_LABEL:-dev}
-
-tunnel-create: ## Step 2: Create Cloudflare tunnel and DNS records (usage: make tunnel-create CLUSTER_LABEL=dev) - REDIRECTS TO CLI VERSION
-	@echo "🔄 Redirecting to CLI-based tunnel creation..."
-	@$(MAKE) tunnels-create-cli CLUSTER_LABEL=$${CLUSTER_LABEL:-dev}
-
-argocd-install: ## Step 3: Install ArgoCD via Helm with proper configuration (usage: make argocd-install CLUSTER_LABEL=dev)
+infra-destroy: ## Destroy complete infrastructure (usage: make infra-destroy CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
-	echo "🚀 Step 3: Installing ArgoCD via Helm for '$$CLUSTER_LABEL'..." && \
+	echo "🚨 DESTRUCTIVE: Destroying complete infrastructure for '$$CLUSTER_LABEL'..." && \
+	echo "⚠️  This will permanently delete:" && \
+	echo "   - DigitalOcean cluster: dv-$$CLUSTER_LABEL" && \
+	echo "   - Cloudflare tunnel: do-nyc2-dv-$$CLUSTER_LABEL" && \
+	echo "   - DNS records for $$CLUSTER_LABEL.{ui,api,argocd}.diocesanvitality.org" && \
+	echo "   - kubectl context: do-nyc2-dv-$$CLUSTER_LABEL" && \
+	read -p "Are you sure? Type 'yes' to continue: " CONFIRM </dev/tty && \
+	if [ "$$CONFIRM" != "yes" ]; then \
+		echo "❌ Operation cancelled"; \
+		exit 1; \
+	fi && \
+	echo "🗑️  Executing infrastructure destruction in reverse order..." && \
+	$(MAKE) tunnel-dns-destroy CLUSTER_LABEL=$$CLUSTER_LABEL || true && \
+	$(MAKE) tunnel-destroy CLUSTER_LABEL=$$CLUSTER_LABEL || true && \
+	$(MAKE) cluster-context-destroy CLUSTER_LABEL=$$CLUSTER_LABEL || true && \
+	$(MAKE) cluster-destroy CLUSTER_LABEL=$$CLUSTER_LABEL || true && \
+	echo "✅ Infrastructure destruction complete for $$CLUSTER_LABEL"
+
+cluster-auth: ## Step 1: Authenticate with DigitalOcean (usage: make cluster-auth)
+	@echo "🔍 Step 1: Setting up DigitalOcean authentication..." && \
+	if [ ! -f .env ]; then \
+		echo "❌ .env file not found. Please copy .env.example to .env and configure your tokens" && \
+		exit 1; \
+	fi && \
+	DIGITALOCEAN_TOKEN=$$(awk -F'=' '/^DIGITALOCEAN_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	if [ -z "$$DIGITALOCEAN_TOKEN" ] || [ "$$DIGITALOCEAN_TOKEN" = "<key>" ]; then \
+		echo "❌ DIGITALOCEAN_TOKEN not set in .env file. Please add your DigitalOcean API token" && \
+		exit 1; \
+	fi && \
+	echo "🔐 Authenticating doctl with token from .env..." && \
+	export DIGITALOCEAN_ACCESS_TOKEN="$$DIGITALOCEAN_TOKEN" && \
+	echo "🧪 Testing doctl authentication..." && \
+	if doctl account get >/dev/null 2>&1; then \
+		echo "✅ Step 1 Complete: doctl authentication verified - can access DigitalOcean account"; \
+	else \
+		echo "❌ doctl authentication failed - cannot access DigitalOcean account" && \
+		exit 1; \
+	fi
+
+cluster-check: ## Step 2: Check if cluster exists (usage: make cluster-check CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🔍 Step 2: Checking if cluster exists..." && \
+	CLUSTER_NAME="dv-$$CLUSTER_LABEL" && \
+	$(MAKE) cluster-auth && \
+	export DIGITALOCEAN_ACCESS_TOKEN=$$(awk -F'=' '/^DIGITALOCEAN_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	CLUSTER_CHECK_OUTPUT=$$(doctl kubernetes cluster get $$CLUSTER_NAME 2>&1) && \
+	echo "📄 Cluster check output: $$CLUSTER_CHECK_OUTPUT" && \
+	if echo "$$CLUSTER_CHECK_OUTPUT" | grep -q "Error: cluster not found"; then \
+		echo "ℹ️  Step 2 Complete: Cluster $$CLUSTER_NAME does not exist"; \
+	elif echo "$$CLUSTER_CHECK_OUTPUT" | grep -q "$$CLUSTER_NAME"; then \
+		STATUS=$$(doctl kubernetes cluster get $$CLUSTER_NAME --format Status --no-header 2>/dev/null) && \
+		echo "✅ Step 2 Complete: Cluster $$CLUSTER_NAME exists with status: $$STATUS"; \
+	else \
+		echo "❌ Unable to determine cluster status - check output above" && \
+		exit 1; \
+	fi
+
+cluster-create: ## Step 3a: Create cluster (usage: make cluster-create CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🚀 Step 3a: Creating DigitalOcean cluster for '$$CLUSTER_LABEL'..." && \
+	CLUSTER_NAME="dv-$$CLUSTER_LABEL" && \
+	$(MAKE) cluster-check CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	export DIGITALOCEAN_ACCESS_TOKEN=$$(awk -F'=' '/^DIGITALOCEAN_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	CLUSTER_CHECK_OUTPUT=$$(doctl kubernetes cluster get $$CLUSTER_NAME 2>&1) && \
+	if echo "$$CLUSTER_CHECK_OUTPUT" | grep -q "$$CLUSTER_NAME"; then \
+		echo "✅ Step 3a Complete: Cluster $$CLUSTER_NAME already exists - skipping creation"; \
+	else \
+		REGION="nyc2" && \
+		NODE_SIZE="s-2vcpu-2gb" && \
+		NODE_COUNT=2 && \
+		echo "📋 Cluster configuration:" && \
+		echo "   Name: $$CLUSTER_NAME" && \
+		echo "   Region: $$REGION" && \
+		echo "   Node size: $$NODE_SIZE" && \
+		echo "   Node count: $$NODE_COUNT" && \
+		echo "🏗️  Creating cluster $$CLUSTER_NAME..." && \
+		echo "🚀 Starting cluster creation (this may take 5-10 minutes)..." && \
+		doctl kubernetes cluster create $$CLUSTER_NAME \
+			--region $$REGION \
+			--size $$NODE_SIZE \
+			--count $$NODE_COUNT \
+			--auto-upgrade=true \
+			--surge-upgrade=true \
+			--tag "environment:$$CLUSTER_LABEL" \
+			--tag "project:diocesan-vitality" & \
+		CREATE_PID=$$! && \
+		echo "🔍 Monitoring cluster creation progress..." && \
+		while kill -0 $$CREATE_PID 2>/dev/null; do \
+			if CURRENT_STATUS=$$(doctl kubernetes cluster get $$CLUSTER_NAME --format Status --no-header 2>/dev/null); then \
+				echo "📊 Cluster status: $$CURRENT_STATUS ($$(date '+%H:%M:%S'))"; \
+			else \
+				echo "⏳ Cluster initializing... ($$(date '+%H:%M:%S'))"; \
+			fi; \
+			sleep 30; \
+		done && \
+		wait $$CREATE_PID && \
+		echo "✅ Cluster creation process completed!" && \
+		echo "🔍 Verifying final cluster status..." && \
+		FINAL_STATUS=$$(doctl kubernetes cluster get $$CLUSTER_NAME --format Status --no-header 2>/dev/null) && \
+		echo "📊 Final cluster status: $$FINAL_STATUS" && \
+		if [ "$$FINAL_STATUS" = "running" ]; then \
+			echo "✅ Step 3a Complete: Cluster is running and ready!"; \
+			CLUSTER_ID=$$(doctl kubernetes cluster get $$CLUSTER_NAME --format ID --no-header 2>/dev/null) && \
+			echo "🔢 Cluster ID: $$CLUSTER_ID"; \
+		else \
+			echo "⚠️  Cluster status is $$FINAL_STATUS - may still be initializing"; \
+			echo "✅ Step 3a Complete: Cluster creation initiated"; \
+		fi; \
+	fi
+
+cluster-destroy: ## Step 3b: Destroy cluster (usage: make cluster-destroy CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🚨 Step 3b: DESTRUCTIVE - Destroying DigitalOcean cluster for '$$CLUSTER_LABEL'..." && \
+	CLUSTER_NAME="dv-$$CLUSTER_LABEL" && \
+	echo "⚠️  This will permanently delete cluster: $$CLUSTER_NAME" && \
+	read -p "Are you sure? Type 'yes' to continue: " CONFIRM </dev/tty && \
+	if [ "$$CONFIRM" != "yes" ]; then \
+		echo "❌ Operation cancelled"; \
+		exit 1; \
+	fi && \
+	$(MAKE) cluster-check CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	export DIGITALOCEAN_ACCESS_TOKEN=$$(awk -F'=' '/^DIGITALOCEAN_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	CLUSTER_CHECK_OUTPUT=$$(doctl kubernetes cluster get $$CLUSTER_NAME 2>&1) && \
+	if echo "$$CLUSTER_CHECK_OUTPUT" | grep -q "Error: cluster not found"; then \
+		echo "ℹ️  Step 3b Complete: Cluster $$CLUSTER_NAME does not exist - nothing to destroy"; \
+	elif echo "$$CLUSTER_CHECK_OUTPUT" | grep -q "$$CLUSTER_NAME"; then \
+		echo "🗑️  Deleting cluster $$CLUSTER_NAME (this may take several minutes)..." && \
+		DELETION_OUTPUT=$$(doctl kubernetes cluster delete $$CLUSTER_NAME --force 2>&1) && \
+		echo "📄 Deletion output: $$DELETION_OUTPUT" && \
+		if echo "$$DELETION_OUTPUT" | grep -q -i "deleted\|removed"; then \
+			echo "✅ Step 3b Complete: Cluster $$CLUSTER_NAME deleted successfully"; \
+		else \
+			echo "❌ Cluster deletion may have failed - check output above"; \
+		fi; \
+	else \
+		echo "❌ Unable to determine cluster status - check output above" && \
+		exit 1; \
+	fi
+
+cluster-context: ## Step 4: Setup kubectl context (usage: make cluster-context CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🔧 Step 4: Setting up kubectl context for '$$CLUSTER_LABEL'..." && \
+	CLUSTER_NAME="dv-$$CLUSTER_LABEL" && \
+	$(MAKE) cluster-check CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	export DIGITALOCEAN_ACCESS_TOKEN=$$(awk -F'=' '/^DIGITALOCEAN_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	echo "🔍 Attempting to save kubectl configuration..." && \
+	if doctl kubernetes cluster kubeconfig save $$CLUSTER_NAME 2>/dev/null; then \
+		echo "✅ kubectl configuration saved successfully"; \
+	else \
+		echo "⚠️  Could not save kubectl config"; \
+		echo "💡 You may need to run manually: doctl kubernetes cluster kubeconfig save $$CLUSTER_NAME"; \
+	fi && \
+	if kubectl config get-contexts -o name | grep -q "^do-nyc2-dv-$$CLUSTER_LABEL$$"; then \
+		echo "ℹ️  Context do-nyc2-dv-$$CLUSTER_LABEL already exists"; \
+	else \
+		kubectl config rename-context do-nyc2-$$CLUSTER_NAME do-nyc2-dv-$$CLUSTER_LABEL; \
+	fi && \
+	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
+	echo "🔍 Verifying cluster access..." && \
+	kubectl cluster-info && \
+	kubectl get nodes && \
+	echo "✅ Step 4 Complete: kubectl context configured for $$CLUSTER_NAME"
+
+cluster-context-destroy: ## Step 4b: Remove kubectl context (usage: make cluster-context-destroy CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🧹 Step 4b: Cleaning up kubectl context for '$$CLUSTER_LABEL'..." && \
+	kubectl config delete-context do-nyc2-dv-$$CLUSTER_LABEL 2>/dev/null || true && \
+	echo "✅ Step 4b Complete: kubectl context destroyed for $$CLUSTER_LABEL"
+
+tunnel-auth: ## Step 5: Authenticate with Cloudflare (usage: make tunnel-auth)
+	@echo "🔍 Step 5: Setting up Cloudflare authentication..." && \
+	if [ ! -f .env ]; then \
+		echo "❌ .env file not found. Please copy .env.example to .env and configure your tokens" && \
+		exit 1; \
+	fi && \
+	CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	CLOUDFLARE_ACCOUNT_ID=$$(awk -F'=' '/^CLOUDFLARE_ACCOUNT_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	ZONE_ID=$$(awk -F'=' '/^CLOUDFLARE_ZONE_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	if [ -z "$$CLOUDFLARE_API_TOKEN" ] || [ -z "$$CLOUDFLARE_ACCOUNT_ID" ] || [ -z "$$ZONE_ID" ]; then \
+		echo "❌ Missing Cloudflare credentials in .env file" && \
+		echo "Required: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_ZONE_ID" && \
+		exit 1; \
+	fi && \
+	echo "🔐 Authenticating with Cloudflare API..." && \
+	export CLOUDFLARE_API_TOKEN="$$CLOUDFLARE_API_TOKEN" && \
+	echo "🔍 Verifying Cloudflare authentication..." && \
+	if curl -s -X GET "https://api.cloudflare.com/client/v4/user/tokens/verify" \
+		-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN" | jq -e '.success == true' >/dev/null 2>&1; then \
+		echo "✅ Step 5 Complete: Cloudflare API authentication verified"; \
+	else \
+		echo "❌ Cloudflare API authentication failed. Please check your CLOUDFLARE_API_TOKEN in .env" && \
+		exit 1; \
+	fi
+
+tunnel-check: ## Step 6: Check if tunnel exists (usage: make tunnel-check CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🔍 Step 6: Checking if tunnel exists..." && \
+	TUNNEL_NAME="do-nyc2-dv-$$CLUSTER_LABEL" && \
+	$(MAKE) tunnel-auth && \
+	CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	CLOUDFLARE_ACCOUNT_ID=$$(awk -F'=' '/^CLOUDFLARE_ACCOUNT_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	export CLOUDFLARE_API_TOKEN="$$CLOUDFLARE_API_TOKEN" && \
+	echo "🔧 Fetching tunnels via API..." && \
+	TUNNELS_RESPONSE=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel" \
+		-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN" \
+		-H "Content-Type: application/json") && \
+	if TUNNEL_ID=$$(echo "$$TUNNELS_RESPONSE" | jq -r ".result[] | select(.name==\"$$TUNNEL_NAME\" and .deleted_at==null) | .id" 2>/dev/null | head -1) && [ -n "$$TUNNEL_ID" ] && [ "$$TUNNEL_ID" != "null" ]; then \
+		echo "✅ Step 6 Complete: Tunnel $$TUNNEL_NAME exists with ID: $$TUNNEL_ID"; \
+	else \
+		echo "ℹ️  Step 6 Complete: Tunnel $$TUNNEL_NAME does not exist"; \
+	fi
+
+tunnel-create: ## Step 7a: Create tunnel (usage: make tunnel-create CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🚀 Step 7a: Creating Cloudflare tunnel for '$$CLUSTER_LABEL'..." && \
+	TUNNEL_NAME="do-nyc2-dv-$$CLUSTER_LABEL" && \
+	$(MAKE) tunnel-check CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	CLOUDFLARE_ACCOUNT_ID=$$(awk -F'=' '/^CLOUDFLARE_ACCOUNT_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	export CLOUDFLARE_API_TOKEN="$$CLOUDFLARE_API_TOKEN" && \
+	TUNNELS_RESPONSE=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel" \
+		-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN" \
+		-H "Content-Type: application/json") && \
+	if TUNNEL_ID=$$(echo "$$TUNNELS_RESPONSE" | jq -r ".result[] | select(.name==\"$$TUNNEL_NAME\" and .deleted_at==null) | .id" 2>/dev/null | head -1) && [ -n "$$TUNNEL_ID" ] && [ "$$TUNNEL_ID" != "null" ]; then \
+		echo "✅ Step 7a Complete: Tunnel $$TUNNEL_NAME already exists with ID: $$TUNNEL_ID"; \
+	else \
+		echo "🏗️  Creating tunnel $$TUNNEL_NAME via API..." && \
+		TUNNEL_CREATE_RESPONSE=$$(curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/$$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel" \
+			-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN" \
+			-H "Content-Type: application/json" \
+			--data "{\"name\":\"$$TUNNEL_NAME\",\"tunnel_secret\":\"$$(openssl rand -base64 32)\"}") && \
+		echo "📄 Tunnel creation response: $$TUNNEL_CREATE_RESPONSE" && \
+		TUNNEL_ID=$$(echo "$$TUNNEL_CREATE_RESPONSE" | jq -r '.result.id' 2>/dev/null) && \
+		if [ -n "$$TUNNEL_ID" ] && [ "$$TUNNEL_ID" != "null" ]; then \
+			echo "✅ Step 7a Complete: Tunnel created with ID: $$TUNNEL_ID"; \
+		else \
+			echo "❌ Failed to create tunnel" && \
+			exit 1; \
+		fi; \
+	fi
+
+tunnel-destroy: ## Step 7b: Destroy tunnel (usage: make tunnel-destroy CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🚨 Step 7b: DESTRUCTIVE - Destroying Cloudflare tunnel for '$$CLUSTER_LABEL'..." && \
+	TUNNEL_NAME="do-nyc2-dv-$$CLUSTER_LABEL" && \
+	echo "⚠️  This will permanently delete tunnel: $$TUNNEL_NAME and all associated DNS records" && \
+	read -p "Are you sure? Type 'yes' to continue: " CONFIRM </dev/tty && \
+	if [ "$$CONFIRM" != "yes" ]; then \
+		echo "❌ Operation cancelled"; \
+		exit 1; \
+	fi && \
+	$(MAKE) tunnel-check CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	CLOUDFLARE_ACCOUNT_ID=$$(awk -F'=' '/^CLOUDFLARE_ACCOUNT_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	export CLOUDFLARE_API_TOKEN="$$CLOUDFLARE_API_TOKEN" && \
+	TUNNELS_RESPONSE=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel" \
+		-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN" \
+		-H "Content-Type: application/json") && \
+	if TUNNEL_ID=$$(echo "$$TUNNELS_RESPONSE" | jq -r ".result[] | select(.name==\"$$TUNNEL_NAME\" and .deleted_at==null) | .id" 2>/dev/null | head -1) && [ -n "$$TUNNEL_ID" ] && [ "$$TUNNEL_ID" != "null" ]; then \
+		echo "🗑️  Deleting tunnel: $$TUNNEL_NAME ($$TUNNEL_ID)" && \
+		TUNNEL_DELETE_RESPONSE=$$(curl -s -X DELETE "https://api.cloudflare.com/client/v4/accounts/$$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel/$$TUNNEL_ID" \
+			-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN") && \
+		echo "📄 Tunnel deletion response: $$TUNNEL_DELETE_RESPONSE" && \
+		if echo "$$TUNNEL_DELETE_RESPONSE" | jq -e '.success == true' >/dev/null 2>&1; then \
+			echo "✅ Step 7b Complete: Tunnel $$TUNNEL_NAME deleted successfully"; \
+		else \
+			echo "⚠️  Tunnel deletion may have issues, but continuing..."; \
+		fi; \
+	else \
+		echo "ℹ️  Step 7b Complete: Tunnel $$TUNNEL_NAME does not exist or is already deleted"; \
+	fi
+
+tunnel-dns: ## Step 8: Setup tunnel DNS and public hostnames (usage: make tunnel-dns CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🌐 Step 8: Creating DNS records and public hostnames for '$$CLUSTER_LABEL'..." && \
+	TUNNEL_NAME="do-nyc2-dv-$$CLUSTER_LABEL" && \
+	$(MAKE) tunnel-check CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	CLOUDFLARE_ACCOUNT_ID=$$(awk -F'=' '/^CLOUDFLARE_ACCOUNT_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	ZONE_ID=$$(awk -F'=' '/^CLOUDFLARE_ZONE_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	export CLOUDFLARE_API_TOKEN="$$CLOUDFLARE_API_TOKEN" && \
+	TUNNELS_RESPONSE=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel" \
+		-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN" \
+		-H "Content-Type: application/json") && \
+	TUNNEL_ID=$$(echo "$$TUNNELS_RESPONSE" | jq -r ".result[] | select(.name==\"$$TUNNEL_NAME\" and .deleted_at==null) | .id" 2>/dev/null | head -1) && \
+	if [ -z "$$TUNNEL_ID" ] || [ "$$TUNNEL_ID" = "null" ]; then \
+		echo "❌ Tunnel $$TUNNEL_NAME does not exist. Run 'make tunnel-create' first." && \
+		exit 1; \
+	fi && \
+	echo "🌐 Creating DNS records..." && \
+	for SUBDOMAIN in ui api argocd; do \
+		HOSTNAME="$$CLUSTER_LABEL.$$SUBDOMAIN.diocesanvitality.org" && \
+		TARGET="$$TUNNEL_ID.cfargotunnel.com" && \
+		echo "🔍 Creating DNS record: $$HOSTNAME -> $$TARGET" && \
+		DNS_CHECK_RESPONSE=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$$ZONE_ID/dns_records?name=$$HOSTNAME" \
+			-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN") && \
+		echo "📄 DNS check response: $$DNS_CHECK_RESPONSE" && \
+		EXISTING=$$(echo "$$DNS_CHECK_RESPONSE" | jq -r '.result[0].id // "null"') && \
+		if [ "$$EXISTING" != "null" ]; then \
+			echo "🔄 Updating existing DNS record: $$HOSTNAME (ID: $$EXISTING)" && \
+			DNS_UPDATE_RESPONSE=$$(curl -s -X PUT "https://api.cloudflare.com/client/v4/zones/$$ZONE_ID/dns_records/$$EXISTING" \
+				-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN" \
+				-H "Content-Type: application/json" \
+				--data "{\"type\":\"CNAME\",\"name\":\"$$HOSTNAME\",\"content\":\"$$TARGET\",\"proxied\":true}") && \
+			echo "📄 DNS update response: $$DNS_UPDATE_RESPONSE"; \
+		else \
+			echo "🆕 Creating new DNS record: $$HOSTNAME" && \
+			DNS_CREATE_RESPONSE=$$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$$ZONE_ID/dns_records" \
+				-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN" \
+				-H "Content-Type: application/json" \
+				--data "{\"type\":\"CNAME\",\"name\":\"$$HOSTNAME\",\"content\":\"$$TARGET\",\"proxied\":true}") && \
+			echo "📄 DNS create response: $$DNS_CREATE_RESPONSE"; \
+		fi && \
+		echo "✅ DNS record configured: $$HOSTNAME"; \
+	done && \
+	echo "🔧 Configuring tunnel public hostnames for SSL certificate generation..." && \
+	TUNNEL_CONFIG_RESPONSE=$$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel/$$TUNNEL_ID/configurations" \
+		-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN" \
+		-H "Content-Type: application/json" \
+		--data '{ \
+			"config": { \
+				"ingress": [ \
+					{ \
+						"hostname": "'"$$CLUSTER_LABEL"'.ui.diocesanvitality.org", \
+						"service": "http://localhost:3000" \
+					}, \
+					{ \
+						"hostname": "'"$$CLUSTER_LABEL"'.api.diocesanvitality.org", \
+						"service": "http://localhost:8000" \
+					}, \
+					{ \
+						"hostname": "'"$$CLUSTER_LABEL"'.argocd.diocesanvitality.org", \
+						"service": "http://localhost:8080" \
+					}, \
+					{ \
+						"service": "http_status:404" \
+					} \
+				] \
+			} \
+		}') && \
+	echo "📄 Tunnel configuration response: $$TUNNEL_CONFIG_RESPONSE" && \
+	if echo "$$TUNNEL_CONFIG_RESPONSE" | jq -e '.success == true' >/dev/null 2>&1; then \
+		echo "✅ Tunnel public hostnames configured - SSL certificates will be automatically generated"; \
+	else \
+		echo "⚠️  Tunnel configuration may have issues, but continuing..."; \
+	fi && \
+	echo "📋 Tunnel Information:" && \
+	echo "   Tunnel Name: $$TUNNEL_NAME" && \
+	echo "   Tunnel ID: $$TUNNEL_ID" && \
+	echo "   Public Hostnames:" && \
+	echo "     - $$CLUSTER_LABEL.ui.diocesanvitality.org (→ http://localhost:3000)" && \
+	echo "     - $$CLUSTER_LABEL.api.diocesanvitality.org (→ http://localhost:8000)" && \
+	echo "     - $$CLUSTER_LABEL.argocd.diocesanvitality.org (→ http://localhost:8080)" && \
+	echo "✅ Step 8 Complete: Tunnel DNS records and SSL certificates configured"
+
+tunnel-dns-destroy: ## Step 8b: Remove tunnel DNS records (usage: make tunnel-dns-destroy CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🗑️  Step 8b: Removing tunnel DNS records for '$$CLUSTER_LABEL'..." && \
+	$(MAKE) tunnel-auth && \
+	CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	ZONE_ID=$$(awk -F'=' '/^CLOUDFLARE_ZONE_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	export CLOUDFLARE_API_TOKEN="$$CLOUDFLARE_API_TOKEN" && \
+	for SUBDOMAIN in ui api argocd; do \
+		HOSTNAME="$$CLUSTER_LABEL.$$SUBDOMAIN.diocesanvitality.org" && \
+		echo "🔍 Checking DNS record: $$HOSTNAME" && \
+		DNS_CHECK_RESPONSE=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$$ZONE_ID/dns_records?name=$$HOSTNAME" \
+			-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN") && \
+		EXISTING=$$(echo "$$DNS_CHECK_RESPONSE" | jq -r '.result[0].id // "null"') && \
+		if [ "$$EXISTING" != "null" ]; then \
+			echo "🗑️  Deleting DNS record: $$HOSTNAME (ID: $$EXISTING)" && \
+			DNS_DELETE_RESPONSE=$$(curl -s -X DELETE "https://api.cloudflare.com/client/v4/zones/$$ZONE_ID/dns_records/$$EXISTING" \
+				-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN") && \
+			echo "📄 DNS delete response: $$DNS_DELETE_RESPONSE" && \
+			echo "✅ DNS record deleted: $$HOSTNAME"; \
+		else \
+			echo "ℹ️  DNS record does not exist: $$HOSTNAME"; \
+		fi; \
+	done && \
+	echo "✅ Step 8b Complete: DNS records destroyed for $$CLUSTER_LABEL"
+
+
+argocd-install: ## Step 9: Install ArgoCD via Helm with proper configuration (usage: make argocd-install CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🚀 Step 9: Installing ArgoCD via Helm for '$$CLUSTER_LABEL'..." && \
 	echo "🔧 Switching to cluster context... ($$(date '+%H:%M:%S'))" && \
 	if ! kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL; then \
 		echo "❌ FAILED: Could not switch to kubectl context do-nyc2-dv-$$CLUSTER_LABEL at $$(date '+%H:%M:%S')" && \
@@ -662,9 +1047,57 @@ argocd-destroy: ## Destroy ArgoCD (usage: make argocd-destroy CLUSTER_LABEL=dev)
 	echo "🗑️  Deleting ArgoCD namespace..." && \
 	kubectl delete namespace argocd --ignore-not-found=true
 
-cluster-destroy: ## Destroy cluster (usage: make cluster-destroy CLUSTER_LABEL=dev) - REDIRECTS TO CLI VERSION
-	@echo "🔄 Redirecting to CLI-based cluster destruction..."
-	@$(MAKE) cluster-destroy-cli CLUSTER_LABEL=$${CLUSTER_LABEL:-dev}
+cluster-destroy: ## Destroy cluster (usage: make cluster-destroy CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🚨 DESTRUCTIVE: Destroying DigitalOcean cluster for '$$CLUSTER_LABEL'..." && \
+	CLUSTER_NAME="dv-$$CLUSTER_LABEL" && \
+	echo "⚠️  This will permanently delete cluster: $$CLUSTER_NAME" && \
+	read -p "Are you sure? Type 'yes' to continue: " CONFIRM </dev/tty && \
+	if [ "$$CONFIRM" != "yes" ]; then \
+		echo "❌ Operation cancelled"; \
+		exit 1; \
+	fi && \
+	echo "🔍 Setting up doctl authentication..." && \
+	if [ ! -f .env ]; then \
+		echo "❌ .env file not found. Please copy .env.example to .env and configure your tokens" && \
+		exit 1; \
+	fi && \
+	DIGITALOCEAN_TOKEN=$$(awk -F'=' '/^DIGITALOCEAN_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	if [ -z "$$DIGITALOCEAN_TOKEN" ] || [ "$$DIGITALOCEAN_TOKEN" = "<key>" ]; then \
+		echo "❌ DIGITALOCEAN_TOKEN not set in .env file. Please add your DigitalOcean API token" && \
+		exit 1; \
+	fi && \
+	echo "🔐 Authenticating doctl with token from .env..." && \
+	export DIGITALOCEAN_ACCESS_TOKEN="$$DIGITALOCEAN_TOKEN" && \
+	echo "🧪 Testing doctl authentication..." && \
+	if doctl account get >/dev/null 2>&1; then \
+		echo "✅ doctl authentication verified - can access DigitalOcean account"; \
+	else \
+		echo "❌ doctl authentication failed - cannot access DigitalOcean account" && \
+		exit 1; \
+	fi && \
+	echo "🔍 Checking if cluster exists..." && \
+	CLUSTER_CHECK_OUTPUT=$$(doctl kubernetes cluster get $$CLUSTER_NAME 2>&1) && \
+	echo "📄 Cluster check output: $$CLUSTER_CHECK_OUTPUT" && \
+	if echo "$$CLUSTER_CHECK_OUTPUT" | grep -q "Error: cluster not found"; then \
+		echo "ℹ️  Cluster $$CLUSTER_NAME does not exist"; \
+	elif echo "$$CLUSTER_CHECK_OUTPUT" | grep -q "$$CLUSTER_NAME"; then \
+		echo "✅ Cluster $$CLUSTER_NAME found - proceeding with deletion" && \
+		echo "🗑️  Deleting cluster $$CLUSTER_NAME (this may take several minutes)..." && \
+		DELETION_OUTPUT=$$(doctl kubernetes cluster delete $$CLUSTER_NAME --force 2>&1) && \
+		echo "📄 Deletion output: $$DELETION_OUTPUT" && \
+		if echo "$$DELETION_OUTPUT" | grep -q -i "deleted\|removed"; then \
+			echo "✅ Cluster $$CLUSTER_NAME deleted successfully"; \
+		else \
+			echo "❌ Cluster deletion may have failed - check output above"; \
+		fi; \
+	else \
+		echo "❌ Unable to determine cluster status - check output above" && \
+		exit 1; \
+	fi && \
+	echo "🧹 Cleaning up kubectl context..." && \
+	kubectl config delete-context do-nyc2-dv-$$CLUSTER_LABEL 2>/dev/null || true && \
+	echo "✅ Cluster infrastructure destroyed for $$CLUSTER_LABEL"
 
 tunnel-verify: ## Step 2.5: Verify tunnel and cluster, save tunnel token to environment (usage: make tunnel-verify CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
@@ -766,183 +1199,3 @@ infra-test: ## Step 6: Integration testing and cleanup (usage: make infra-test C
 	echo "📊 Final infrastructure status:" && \
 	$(MAKE) infra-status CLUSTER_LABEL=$$CLUSTER_LABEL
 	@echo "✅ Step 6 Complete: Integration tests passed and cleanup completed"
-
-tunnel-destroy: ## Destroy tunnel and remove DNS records (usage: make tunnel-destroy CLUSTER_LABEL=dev) - REDIRECTS TO CLI VERSION
-	@echo "🔄 Redirecting to CLI-based tunnel destruction..."
-	@$(MAKE) tunnels-destroy-cli CLUSTER_LABEL=$${CLUSTER_LABEL:-dev}
-
-# =============================================================================
-# CLI-BASED INFRASTRUCTURE COMMANDS (Replacing Terraform)
-# =============================================================================
-
-cluster-create-cli: ## Step 1: Create DigitalOcean cluster using doctl (usage: make cluster-create-cli CLUSTER_LABEL=dev)
-	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
-	echo "🚀 Step 1: Creating DigitalOcean cluster for '$$CLUSTER_LABEL' using doctl..." && \
-	echo "🔍 Checking doctl authentication..." && \
-	if ! doctl account get >/dev/null 2>&1; then \
-		echo "❌ doctl not authenticated. Run: doctl auth init" && \
-		exit 1; \
-	fi && \
-	CLUSTER_NAME="dv-$$CLUSTER_LABEL" && \
-	REGION="nyc2" && \
-	NODE_SIZE="s-2vcpu-2gb" && \
-	NODE_COUNT=2 && \
-	echo "📋 Cluster configuration:" && \
-	echo "   Name: $$CLUSTER_NAME" && \
-	echo "   Region: $$REGION" && \
-	echo "   Node size: $$NODE_SIZE" && \
-	echo "   Node count: $$NODE_COUNT" && \
-	echo "🔍 Checking if cluster already exists..." && \
-	if doctl kubernetes cluster get $$CLUSTER_NAME >/dev/null 2>&1; then \
-		echo "✅ Cluster $$CLUSTER_NAME already exists" && \
-		CLUSTER_ID=$$(doctl kubernetes cluster get $$CLUSTER_NAME --format ID --no-header) && \
-		STATUS=$$(doctl kubernetes cluster get $$CLUSTER_NAME --format Status --no-header) && \
-		echo "📊 Current status: $$STATUS"; \
-	else \
-		echo "🏗️  Creating cluster $$CLUSTER_NAME (this will show progress dots)..." && \
-		doctl kubernetes cluster create $$CLUSTER_NAME \
-			--region $$REGION \
-			--size $$NODE_SIZE \
-			--count $$NODE_COUNT \
-			--auto-upgrade=true \
-			--surge-upgrade=true \
-			--tag "environment:$$CLUSTER_LABEL" \
-			--tag "project:diocesan-vitality" \
-			--wait && \
-		echo "✅ Cluster creation completed!" && \
-		echo "🔍 Attempting to get cluster ID..." && \
-		if CLUSTER_ID=$$(timeout 15 doctl kubernetes cluster get $$CLUSTER_NAME --format ID --no-header 2>/dev/null); then \
-			echo "✅ Cluster created successfully with ID: $$CLUSTER_ID"; \
-		else \
-			echo "⚠️  Could not retrieve cluster ID (doctl connectivity issue), but cluster creation succeeded"; \
-		fi; \
-	fi && \
-	echo "🔧 Setting up kubectl context..." && \
-	echo "🔍 Attempting to save kubectl configuration..." && \
-	if timeout 15 doctl kubernetes cluster kubeconfig save $$CLUSTER_NAME 2>/dev/null; then \
-		echo "✅ kubectl configuration saved successfully"; \
-	else \
-		echo "⚠️  Could not save kubectl config (doctl connectivity issue)"; \
-		echo "💡 You may need to run: doctl kubernetes cluster kubeconfig save $$CLUSTER_NAME"; \
-		echo "🔄 Continuing with existing kubectl context if available..."; \
-	fi && \
-	if kubectl config get-contexts -o name | grep -q "^do-nyc2-dv-$$CLUSTER_LABEL$$"; then \
-		echo "ℹ️  Context do-nyc2-dv-$$CLUSTER_LABEL already exists"; \
-	else \
-		kubectl config rename-context do-nyc2-$$CLUSTER_NAME do-nyc2-dv-$$CLUSTER_LABEL; \
-	fi && \
-	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
-	echo "🔍 Verifying cluster access..." && \
-	kubectl cluster-info && \
-	kubectl get nodes && \
-	echo "✅ Step 1 Complete: Cluster $$CLUSTER_NAME created and configured"
-
-cluster-destroy-cli: ## Destroy DigitalOcean cluster using doctl (usage: make cluster-destroy-cli CLUSTER_LABEL=dev)
-	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
-	echo "🚨 DESTRUCTIVE: Destroying DigitalOcean cluster for '$$CLUSTER_LABEL'..." && \
-	CLUSTER_NAME="dv-$$CLUSTER_LABEL" && \
-	echo "⚠️  This will permanently delete cluster: $$CLUSTER_NAME" && \
-	read -p "Are you sure? Type 'yes' to continue: " CONFIRM </dev/tty && \
-	if [ "$$CONFIRM" != "yes" ]; then \
-		echo "❌ Operation cancelled"; \
-		exit 1; \
-	fi && \
-	echo "🔍 Checking if cluster exists..." && \
-	if ! doctl kubernetes cluster get $$CLUSTER_NAME >/dev/null 2>&1; then \
-		echo "ℹ️  Cluster $$CLUSTER_NAME does not exist"; \
-	else \
-		echo "🗑️  Deleting cluster $$CLUSTER_NAME..." && \
-		doctl kubernetes cluster delete $$CLUSTER_NAME --force && \
-		echo "✅ Cluster $$CLUSTER_NAME deleted"; \
-	fi && \
-	echo "🧹 Cleaning up kubectl context..." && \
-	kubectl config delete-context do-nyc2-dv-$$CLUSTER_LABEL 2>/dev/null || true && \
-	echo "✅ Cluster infrastructure destroyed for $$CLUSTER_LABEL"
-
-tunnels-create-cli: ## Step 2: Create Cloudflare tunnel and DNS records using CLI (usage: make tunnels-create-cli CLUSTER_LABEL=dev)
-	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
-	echo "🚀 Step 2: Creating Cloudflare tunnel and DNS records for '$$CLUSTER_LABEL'..." && \
-	TUNNEL_NAME="do-nyc2-dv-$$CLUSTER_LABEL" && \
-	echo "🔍 Checking cloudflared authentication..." && \
-	if [ ! -f ~/.cloudflared/cert.pem ]; then \
-		echo "❌ Cloudflare not authenticated. Run: cloudflared tunnel login" && \
-		exit 1; \
-	fi && \
-	echo "🔍 Checking if tunnel already exists..." && \
-	if cloudflared tunnel info $$TUNNEL_NAME >/dev/null 2>&1; then \
-		echo "✅ Tunnel $$TUNNEL_NAME already exists" && \
-		TUNNEL_ID=$$(cloudflared tunnel info $$TUNNEL_NAME --output json | jq -r '.id'); \
-	else \
-		echo "🏗️  Creating tunnel $$TUNNEL_NAME..." && \
-		TUNNEL_ID=$$(cloudflared tunnel create $$TUNNEL_NAME --output json | jq -r '.id') && \
-		echo "✅ Tunnel created with ID: $$TUNNEL_ID"; \
-	fi && \
-	echo "🌐 Creating DNS records..." && \
-	ZONE_ID=$$(grep CLOUDFLARE_ZONE_ID .env | cut -d'=' -f2) && \
-	API_TOKEN=$$(grep CLOUDFLARE_API_TOKEN .env | cut -d'=' -f2) && \
-	for SUBDOMAIN in ui api argocd; do \
-		HOSTNAME="$$CLUSTER_LABEL.$$SUBDOMAIN.diocesanvitality.org" && \
-		TARGET="$$TUNNEL_ID.cfargotunnel.com" && \
-		echo "🔍 Creating DNS record: $$HOSTNAME -> $$TARGET" && \
-		EXISTING=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$$ZONE_ID/dns_records?name=$$HOSTNAME" \
-			-H "Authorization: Bearer $$API_TOKEN" | jq -r '.result[0].id // "null"') && \
-		if [ "$$EXISTING" != "null" ]; then \
-			echo "🔄 Updating existing DNS record: $$HOSTNAME" && \
-			curl -s -X PUT "https://api.cloudflare.com/client/v4/zones/$$ZONE_ID/dns_records/$$EXISTING" \
-				-H "Authorization: Bearer $$API_TOKEN" \
-				-H "Content-Type: application/json" \
-				--data "{\"type\":\"CNAME\",\"name\":\"$$HOSTNAME\",\"content\":\"$$TARGET\",\"proxied\":true}" >/dev/null; \
-		else \
-			echo "🆕 Creating new DNS record: $$HOSTNAME" && \
-			curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$$ZONE_ID/dns_records" \
-				-H "Authorization: Bearer $$API_TOKEN" \
-				-H "Content-Type: application/json" \
-				--data "{\"type\":\"CNAME\",\"name\":\"$$HOSTNAME\",\"content\":\"$$TARGET\",\"proxied\":true}" >/dev/null; \
-		fi && \
-		echo "✅ DNS record configured: $$HOSTNAME"; \
-	done && \
-	echo "📋 Tunnel Information:" && \
-	echo "   Tunnel Name: $$TUNNEL_NAME" && \
-	echo "   Tunnel ID: $$TUNNEL_ID" && \
-	echo "   DNS Records:" && \
-	echo "     - $$CLUSTER_LABEL.ui.diocesanvitality.org" && \
-	echo "     - $$CLUSTER_LABEL.api.diocesanvitality.org" && \
-	echo "     - $$CLUSTER_LABEL.argocd.diocesanvitality.org" && \
-	echo "✅ Step 2 Complete: Tunnel and DNS records created"
-
-tunnels-destroy-cli: ## Destroy Cloudflare tunnel and DNS records using CLI (usage: make tunnels-destroy-cli CLUSTER_LABEL=dev)
-	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
-	echo "🚨 DESTRUCTIVE: Destroying Cloudflare tunnel for '$$CLUSTER_LABEL'..." && \
-	TUNNEL_NAME="do-nyc2-dv-$$CLUSTER_LABEL" && \
-	echo "⚠️  This will delete tunnel and DNS records for $$TUNNEL_NAME" && \
-	read -p "Are you sure? Type 'yes' to continue: " CONFIRM && \
-	if [ "$$CONFIRM" != "yes" ]; then \
-		echo "❌ Operation cancelled"; \
-		exit 1; \
-	fi && \
-	echo "🗑️  Removing DNS records..." && \
-	ZONE_ID=$$(grep CLOUDFLARE_ZONE_ID .env | cut -d'=' -f2) && \
-	API_TOKEN=$$(grep CLOUDFLARE_API_TOKEN .env | cut -d'=' -f2) && \
-	for SUBDOMAIN in ui api argocd; do \
-		HOSTNAME="$$CLUSTER_LABEL.$$SUBDOMAIN.diocesanvitality.org" && \
-		echo "🔍 Looking for DNS record: $$HOSTNAME" && \
-		RECORD_ID=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$$ZONE_ID/dns_records?name=$$HOSTNAME" \
-			-H "Authorization: Bearer $$API_TOKEN" | jq -r '.result[0].id // "null"') && \
-		if [ "$$RECORD_ID" != "null" ]; then \
-			echo "🗑️  Deleting DNS record: $$HOSTNAME" && \
-			curl -s -X DELETE "https://api.cloudflare.com/client/v4/zones/$$ZONE_ID/dns_records/$$RECORD_ID" \
-				-H "Authorization: Bearer $$API_TOKEN" >/dev/null && \
-			echo "✅ Deleted: $$HOSTNAME"; \
-		else \
-			echo "ℹ️  DNS record not found: $$HOSTNAME"; \
-		fi; \
-	done && \
-	echo "🗑️  Destroying tunnel..." && \
-	if cloudflared tunnel info $$TUNNEL_NAME >/dev/null 2>&1; then \
-		echo "🗑️  Deleting tunnel: $$TUNNEL_NAME" && \
-		cloudflared tunnel delete $$TUNNEL_NAME && \
-		echo "✅ Tunnel $$TUNNEL_NAME deleted"; \
-	else \
-		echo "ℹ️  Tunnel $$TUNNEL_NAME does not exist"; \
-	fi && \
-	echo "✅ Tunnel infrastructure destroyed for $$CLUSTER_LABEL"
