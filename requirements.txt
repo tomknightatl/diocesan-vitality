@@ -1,4 +1,4 @@
-# Core dependencies for diocesan vitality pipeline
+# Core dependencies for diocesan vitality pipeline - testing CI fix
 supabase
 selenium
 webdriver-manager
