@@ -1007,7 +1007,29 @@ infra-status: ## Check infrastructure status
 	@kubectl get applications -n argocd 2>/dev/null || echo "  No applications found"
 	@echo ""
 	@echo "Tunnel status:"
-	@cd terraform/environments/dev && terraform output tunnel_info 2>/dev/null || echo "  No tunnel found"
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	TUNNEL_NAME="do-nyc2-dv-$$CLUSTER_LABEL" && \
+	if [ -f .env ]; then \
+		CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+		CLOUDFLARE_ACCOUNT_ID=$$(awk -F'=' '/^CLOUDFLARE_ACCOUNT_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+		if [ -n "$$CLOUDFLARE_API_TOKEN" ] && [ -n "$$CLOUDFLARE_ACCOUNT_ID" ]; then \
+			TUNNELS_RESPONSE=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel" \
+				-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN" \
+				-H "Content-Type: application/json" 2>/dev/null) && \
+			TUNNEL_ID=$$(echo "$$TUNNELS_RESPONSE" | jq -r ".result[] | select(.name==\"$$TUNNEL_NAME\" and .deleted_at==null) | .id" 2>/dev/null | head -1) && \
+			if [ -n "$$TUNNEL_ID" ] && [ "$$TUNNEL_ID" != "null" ]; then \
+				TUNNEL_STATUS=$$(echo "$$TUNNELS_RESPONSE" | jq -r ".result[] | select(.name==\"$$TUNNEL_NAME\" and .deleted_at==null) | .status" 2>/dev/null | head -1) && \
+				echo "  Tunnel: $$TUNNEL_NAME ($$TUNNEL_ID) - Status: $$TUNNEL_STATUS" && \
+				kubectl get pods -n cloudflare-tunnel-$$CLUSTER_LABEL 2>/dev/null | grep cloudflared | head -1 || echo "  No cloudflared pod found"; \
+			else \
+				echo "  No tunnel found: $$TUNNEL_NAME"; \
+			fi; \
+		else \
+			echo "  Cloudflare credentials not configured"; \
+		fi; \
+	else \
+		echo "  No .env file found"; \
+	fi
 
 # Removed old infra-destroy - replaced with new 8-step version above
 
