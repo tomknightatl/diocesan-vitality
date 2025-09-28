@@ -636,6 +636,8 @@ _deploy-app-of-apps: ## Deploy App-of-Apps root Application for ApplicationSets
 	kubectl get applicationsets -n argocd --no-headers 2>/dev/null | grep "$$CLUSTER_LABEL" | awk '{print "  - " $$1}' || echo "  (ApplicationSets will appear shortly)" && \
 	echo "💡 Monitor ApplicationSets: kubectl get applicationsets -n argocd"
 
+sealed-secret: sealed-secrets-create ## Alias for sealed-secrets-create target
+
 argocd-password: ## Get ArgoCD admin password
 sealed-secrets-create: ## Step 4: Create tunnel token sealed secret from environment file (usage: make sealed-secrets-create CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
@@ -1014,77 +1016,44 @@ argocd-destroy: ## Destroy ArgoCD (usage: make argocd-destroy CLUSTER_LABEL=dev)
 
 # Removed old cluster-destroy - replaced with new Step 3b version above
 
-tunnel-verify: ## Step 2.5: Verify tunnel and cluster, save tunnel token to environment (usage: make tunnel-verify CLUSTER_LABEL=dev)
+tunnel-verify: ## Generate tunnel token file for sealed secrets (usage: make tunnel-verify CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
-	echo "🔍 Step 2.5: Verifying tunnel and cluster for '$$CLUSTER_LABEL'..." && \
-	if [ "$$CLUSTER_LABEL" = "stg" ]; then ENV_DIR="staging"; else ENV_DIR="$$CLUSTER_LABEL"; fi && \
-	echo "📋 Verifying cluster status... ($$(date '+%H:%M:%S'))" && \
-	if ! kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL; then \
-		echo "❌ FAILED: Could not switch to kubectl context do-nyc2-dv-$$CLUSTER_LABEL at $$(date '+%H:%M:%S')" && \
-		echo "💡 Check if cluster exists: doctl kubernetes cluster list" && \
+	echo "🔍 Generating tunnel token for '$$CLUSTER_LABEL'..." && \
+	TUNNEL_NAME="do-nyc2-dv-$$CLUSTER_LABEL" && \
+	$(MAKE) tunnel-auth && \
+	CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	CLOUDFLARE_ACCOUNT_ID=$$(awk -F'=' '/^CLOUDFLARE_ACCOUNT_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	export CLOUDFLARE_API_TOKEN="$$CLOUDFLARE_API_TOKEN" && \
+	echo "🔧 Fetching tunnel information..." && \
+	TUNNELS_RESPONSE=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel" \
+		-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN" \
+		-H "Content-Type: application/json") && \
+	TUNNEL_ID=$$(echo "$$TUNNELS_RESPONSE" | jq -r ".result[] | select(.name==\"$$TUNNEL_NAME\" and .deleted_at==null) | .id" 2>/dev/null | head -1) && \
+	if [ -z "$$TUNNEL_ID" ] || [ "$$TUNNEL_ID" = "null" ]; then \
+		echo "❌ Tunnel $$TUNNEL_NAME does not exist. Run 'make tunnel-create CLUSTER_LABEL=$$CLUSTER_LABEL' first." && \
 		exit 1; \
 	fi && \
-	if ! kubectl get nodes --no-headers | wc -l | grep -q "[1-9]"; then \
-		echo "❌ FAILED: Cluster has no ready nodes at $$(date '+%H:%M:%S')" && \
-		echo "💡 Check cluster status: kubectl get nodes" && \
+	echo "🔍 Found tunnel: $$TUNNEL_NAME ($$TUNNEL_ID)" && \
+	echo "🔐 Generating tunnel token..." && \
+	TOKEN_RESPONSE=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel/$$TUNNEL_ID/token" \
+		-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN") && \
+	if echo "$$TOKEN_RESPONSE" | jq -e '.success == true' >/dev/null 2>&1; then \
+		TUNNEL_TOKEN=$$(echo "$$TOKEN_RESPONSE" | jq -r '.result' 2>/dev/null) && \
+		if [ -n "$$TUNNEL_TOKEN" ] && [ "$$TUNNEL_TOKEN" != "null" ]; then \
+			echo "✅ Tunnel token generated successfully" && \
+			echo "💾 Saving tunnel token to .tunnel-token-$$CLUSTER_LABEL..." && \
+			echo "TUNNEL_TOKEN_$$CLUSTER_LABEL=$$TUNNEL_TOKEN" > .tunnel-token-$$CLUSTER_LABEL && \
+			echo "✅ Tunnel token saved to .tunnel-token-$$CLUSTER_LABEL" && \
+			echo "🔍 Token preview: $$(echo "$$TUNNEL_TOKEN" | cut -c1-20)..."; \
+		else \
+			echo "❌ Failed to extract tunnel token from API response" && \
+			exit 1; \
+		fi; \
+	else \
+		echo "❌ Failed to generate tunnel token. API response:" && \
+		echo "$$TOKEN_RESPONSE" && \
 		exit 1; \
-	fi && \
-	echo "✅ Cluster verification passed ($$(date '+%H:%M:%S'))" && \
-	echo "🔍 Verifying tunnel creation... ($$(date '+%H:%M:%S'))" && \
-	cd terraform/environments/$$ENV_DIR && \
-		export $$(grep CLOUDFLARE_API_TOKEN ../../../.env | xargs) && \
-		if ! TUNNEL_OUTPUT=$$(terraform output -json tunnel_info 2>/dev/null); then \
-			echo "❌ FAILED: Could not get tunnel info from Terraform at $$(date '+%H:%M:%S')" && \
-			echo "💡 Check if tunnel was created: make tunnel-create CLUSTER_LABEL=$$CLUSTER_LABEL" && \
-			exit 1; \
-		fi && \
-		TUNNEL_ID=$$(echo "$$TUNNEL_OUTPUT" | jq -r '.id // empty') && \
-		TUNNEL_CNAME=$$(echo "$$TUNNEL_OUTPUT" | jq -r '.cname // empty') && \
-		if [ -z "$$TUNNEL_ID" ] || [ -z "$$TUNNEL_CNAME" ]; then \
-			echo "❌ FAILED: Tunnel verification failed - missing tunnel info at $$(date '+%H:%M:%S')" && \
-			echo "💡 Tunnel output: $$TUNNEL_OUTPUT" && \
-			exit 1; \
-		fi && \
-		echo "✅ Tunnel verification passed: $$TUNNEL_ID ($$(date '+%H:%M:%S'))" && \
-		echo "🔐 Extracting tunnel token from k8s-secrets... ($$(date '+%H:%M:%S'))" && \
-		CREDENTIALS_FILE="k8s-secrets/cloudflare-tunnel-$$ENV_DIR.yaml" && \
-Are you able to refactor the Step 1 code so that it quesries the cluster status and only proceeds after the cluster shows as running.		if [ ! -f "$$CREDENTIALS_FILE" ]; then \
-			echo "❌ FAILED: Could not find tunnel credentials file: $$CREDENTIALS_FILE at $$(date '+%H:%M:%S')" && \
-			echo "💡 Check if tunnel created credentials: ls -la terraform/environments/$$ENV_DIR/k8s-secrets/" && \
-			exit 1; \
-		fi && \
-		if ! CREDENTIALS_B64=$$(grep "credentials.json" "$$CREDENTIALS_FILE" | cut -d'"' -f4); then \
-			echo "❌ FAILED: Could not extract credentials from file at $$(date '+%H:%M:%S')" && \
-			echo "💡 Check file format: head -5 $$CREDENTIALS_FILE" && \
-			exit 1; \
-		fi && \
-		if ! CREDENTIALS_JSON=$$(echo "$$CREDENTIALS_B64" | base64 -d 2>/dev/null); then \
-			echo "❌ FAILED: Could not decode base64 credentials at $$(date '+%H:%M:%S')" && \
-			exit 1; \
-		fi && \
-		ACCOUNT_TAG=$$(echo "$$CREDENTIALS_JSON" | jq -r '.AccountTag') && \
-		TUNNEL_SECRET=$$(echo "$$CREDENTIALS_JSON" | jq -r '.TunnelSecret') && \
-		if [ -z "$$ACCOUNT_TAG" ] || [ -z "$$TUNNEL_SECRET" ]; then \
-			echo "❌ FAILED: Missing AccountTag or TunnelSecret at $$(date '+%H:%M:%S')" && \
-			echo "💡 Credentials JSON: $$CREDENTIALS_JSON" && \
-			exit 1; \
-		fi && \
-		TUNNEL_SECRET_B64=$$(echo -n "$$TUNNEL_SECRET" | base64 -w0) && \
-		TUNNEL_TOKEN=$$(echo "{\"a\":\"$$ACCOUNT_TAG\",\"t\":\"$$TUNNEL_ID\",\"s\":\"$$TUNNEL_SECRET_B64\"}" | base64 -w0) && \
-		if [ -z "$$TUNNEL_TOKEN" ]; then \
-			echo "❌ FAILED: Failed to generate tunnel token at $$(date '+%H:%M:%S')" && \
-			exit 1; \
-		fi && \
-		echo "💾 Saving tunnel token to environment file... ($$(date '+%H:%M:%S'))" && \
-		echo "TUNNEL_TOKEN_$$CLUSTER_LABEL=$$TUNNEL_TOKEN" > ../../../.tunnel-token-$$CLUSTER_LABEL && \
-		echo "✅ Tunnel token saved to .tunnel-token-$$CLUSTER_LABEL" && \
-		echo "🔍 Verifying token format... ($$(date '+%H:%M:%S'))" && \
-		if ! echo "$$TUNNEL_TOKEN" | base64 -d | jq . >/dev/null 2>&1; then \
-			echo "❌ FAILED: Token format verification failed at $$(date '+%H:%M:%S')" && \
-			exit 1; \
-		fi && \
-		echo "✅ Tunnel token verification passed ($$(date '+%H:%M:%S'))"
-	@echo "✅ Step 2.5 Complete: Tunnel and cluster verified, token saved"
+	fi
 
 infra-test: ## Step 6: Integration testing and cleanup (usage: make infra-test CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
