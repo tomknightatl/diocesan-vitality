@@ -135,84 +135,13 @@ infra-setup: ## Set up complete infrastructure (all 6 steps, usage: make infra-s
 	$(MAKE) infra-test CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	echo "🎉 Infrastructure setup complete for $$CLUSTER_LABEL!"
 
-cluster-create: ## Step 1: Create cluster and kubectl context (usage: make cluster-create CLUSTER_LABEL=dev)
-	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
-	echo "🚀 Step 1: Creating cluster and kubectl context for '$$CLUSTER_LABEL'..." && \
-	if ! command -v jq >/dev/null 2>&1; then \
-		echo "❌ jq is required for cluster monitoring. Install with: apt-get install jq" && \
-		exit 1; \
-	fi && \
-	START_TIME=$$(date +%s) && \
-	TIMEOUT_SECONDS=900 && \
-	if [ "$$CLUSTER_LABEL" = "stg" ]; then ENV_DIR="staging"; else ENV_DIR="$$CLUSTER_LABEL"; fi && \
-	cd terraform/environments/$$ENV_DIR && \
-		echo "⏳ Initializing Terraform... ($$(date '+%H:%M:%S'))" && \
-		export $$(grep DIGITALOCEAN_TOKEN ../../../.env | xargs) && \
-		if ! terraform init; then \
-			echo "❌ FAILED: Terraform initialization failed at $$(date '+%H:%M:%S')" && \
-			exit 1; \
-		fi && \
-		echo "🔧 Applying Terraform configuration... ($$(date '+%H:%M:%S'))" && \
-		if ! terraform apply -target=module.k8s_cluster -auto-approve; then \
-			echo "❌ FAILED: Terraform apply failed at $$(date '+%H:%M:%S')" && \
-			echo "💡 Check the error output above for details" && \
-			exit 1; \
-		fi && \
-		echo "📋 Monitoring cluster provisioning status... ($$(date '+%H:%M:%S'))" && \
-		CLUSTER_NAME="dv-$$CLUSTER_LABEL" && \
-		while true; do \
-			CURRENT_TIME=$$(date +%s) && \
-			ELAPSED=$$((CURRENT_TIME - START_TIME)) && \
-			if [ $$ELAPSED -gt $$TIMEOUT_SECONDS ]; then \
-				echo "❌ Timeout: Cluster creation exceeded 15 minutes" && \
-				exit 1; \
-			fi && \
-			STATUS=$$(doctl kubernetes cluster get $$CLUSTER_NAME -o json 2>/dev/null | jq -r '.[0].status.state // "not_found"') && \
-			if [ "$$STATUS" = "running" ]; then \
-				echo "✅ Cluster is running! (Total time: $$((ELAPSED/60))m $$((ELAPSED%60))s)" && \
-				break; \
-			elif [ "$$STATUS" = "provisioning" ]; then \
-				echo "⏳ Cluster still provisioning... ($$((ELAPSED/60))m $$((ELAPSED%60))s elapsed, $$(date '+%H:%M:%S'))" && \
-				sleep 30; \
-			elif [ "$$STATUS" = "not_found" ]; then \
-				echo "⏳ Waiting for cluster to appear in DigitalOcean... ($$((ELAPSED/60))m $$((ELAPSED%60))s elapsed)" && \
-				sleep 15; \
-			else \
-				echo "❌ Unexpected cluster status: $$STATUS" && \
-				exit 1; \
-			fi; \
-		done && \
-		echo "🔗 Configuring kubectl access... ($$(date '+%H:%M:%S'))" && \
-		doctl kubernetes cluster kubeconfig save dv-$$CLUSTER_LABEL && \
-		kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
-		echo "🔍 Verifying cluster nodes... ($$(date '+%H:%M:%S'))" && \
-		kubectl get nodes && \
-		echo "🏷️  Labeling cluster with environment label... ($$(date '+%H:%M:%S'))" && \
-		kubectl create secret generic cluster-info \
-			--from-literal=environment=$$CLUSTER_LABEL \
-			--from-literal=cluster-name=dv-$$CLUSTER_LABEL \
-			-n default --dry-run=client -o yaml | kubectl apply -f -
-	@echo "✅ Step 1 Complete: Cluster created and labeled"
+cluster-create: ## Step 1: Create cluster and kubectl context (usage: make cluster-create CLUSTER_LABEL=dev) - REDIRECTS TO CLI VERSION
+	@echo "🔄 Redirecting to CLI-based cluster creation..."
+	@$(MAKE) cluster-create-cli CLUSTER_LABEL=$${CLUSTER_LABEL:-dev}
 
-tunnel-create: ## Step 2: Create Cloudflare tunnel and DNS records (usage: make tunnel-create CLUSTER_LABEL=dev)
-	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
-	echo "🚀 Step 2: Creating Cloudflare tunnel for '$$CLUSTER_LABEL'..." && \
-	echo "🧹 Cleaning up any stale tunnel state..." && \
-	if [ "$$CLUSTER_LABEL" = "stg" ]; then ENV_DIR="staging"; else ENV_DIR="$$CLUSTER_LABEL"; fi && \
-	cd terraform/environments/$$ENV_DIR && \
-		echo "🔧 Setting up environment variables... ($$(date '+%H:%M:%S'))" && \
-		export $$(grep CLOUDFLARE_API_TOKEN ../../../.env | xargs) && \
-		echo "🧹 Cleaning up stale tunnel state... ($$(date '+%H:%M:%S'))" && \
-		if ! terraform state list | grep "module.cloudflare_tunnel" | xargs -r terraform state rm; then \
-			echo "💡 No stale tunnel state to clean" && true; \
-		fi && \
-		echo "🚀 Applying Cloudflare tunnel configuration... ($$(date '+%H:%M:%S'))" && \
-		if ! terraform apply -target=module.cloudflare_tunnel -auto-approve; then \
-			echo "❌ FAILED: Tunnel creation failed at $$(date '+%H:%M:%S')" && \
-			echo "💡 Check the error output above for details" && \
-			exit 1; \
-		fi
-	@echo "✅ Step 2 Complete: Cloudflare tunnel created for $$CLUSTER_LABEL"
+tunnel-create: ## Step 2: Create Cloudflare tunnel and DNS records (usage: make tunnel-create CLUSTER_LABEL=dev) - REDIRECTS TO CLI VERSION
+	@echo "🔄 Redirecting to CLI-based tunnel creation..."
+	@$(MAKE) tunnels-create-cli CLUSTER_LABEL=$${CLUSTER_LABEL:-dev}
 
 argocd-install: ## Step 3: Install ArgoCD via Helm with proper configuration (usage: make argocd-install CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
@@ -733,13 +662,9 @@ argocd-destroy: ## Destroy ArgoCD (usage: make argocd-destroy CLUSTER_LABEL=dev)
 	echo "🗑️  Deleting ArgoCD namespace..." && \
 	kubectl delete namespace argocd --ignore-not-found=true
 
-cluster-destroy: ## Destroy cluster (usage: make cluster-destroy CLUSTER_LABEL=dev)
-	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
-	echo "🧹 Destroying cluster for '$$CLUSTER_LABEL'..." && \
-	if [ "$$CLUSTER_LABEL" = "stg" ]; then ENV_DIR="staging"; else ENV_DIR="$$CLUSTER_LABEL"; fi && \
-	cd terraform/environments/$$ENV_DIR && \
-		export DIGITALOCEAN_TOKEN=$$(grep DIGITALOCEAN_TOKEN ../../../.env | cut -d'=' -f2) && \
-		terraform destroy -target=module.k8s_cluster -auto-approve || true
+cluster-destroy: ## Destroy cluster (usage: make cluster-destroy CLUSTER_LABEL=dev) - REDIRECTS TO CLI VERSION
+	@echo "🔄 Redirecting to CLI-based cluster destruction..."
+	@$(MAKE) cluster-destroy-cli CLUSTER_LABEL=$${CLUSTER_LABEL:-dev}
 
 tunnel-verify: ## Step 2.5: Verify tunnel and cluster, save tunnel token to environment (usage: make tunnel-verify CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
@@ -775,7 +700,7 @@ tunnel-verify: ## Step 2.5: Verify tunnel and cluster, save tunnel token to envi
 		echo "✅ Tunnel verification passed: $$TUNNEL_ID ($$(date '+%H:%M:%S'))" && \
 		echo "🔐 Extracting tunnel token from k8s-secrets... ($$(date '+%H:%M:%S'))" && \
 		CREDENTIALS_FILE="k8s-secrets/cloudflare-tunnel-$$ENV_DIR.yaml" && \
-		if [ ! -f "$$CREDENTIALS_FILE" ]; then \
+Are you able to refactor the Step 1 code so that it quesries the cluster status and only proceeds after the cluster shows as running.		if [ ! -f "$$CREDENTIALS_FILE" ]; then \
 			echo "❌ FAILED: Could not find tunnel credentials file: $$CREDENTIALS_FILE at $$(date '+%H:%M:%S')" && \
 			echo "💡 Check if tunnel created credentials: ls -la terraform/environments/$$ENV_DIR/k8s-secrets/" && \
 			exit 1; \
@@ -842,66 +767,9 @@ infra-test: ## Step 6: Integration testing and cleanup (usage: make infra-test C
 	$(MAKE) infra-status CLUSTER_LABEL=$$CLUSTER_LABEL
 	@echo "✅ Step 6 Complete: Integration tests passed and cleanup completed"
 
-tunnel-destroy: ## Destroy tunnel and remove DNS records (usage: make tunnel-destroy CLUSTER_LABEL=dev)
-	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
-	echo "🚨 DESTRUCTIVE: Destroying tunnel infrastructure for '$$CLUSTER_LABEL'..." && \
-	echo "⚠️  This will remove DNS records and tunnel resources" && \
-	read -p "Are you sure? Type 'yes' to continue: " CONFIRM && \
-	if [ "$$CONFIRM" != "yes" ]; then \
-		echo "❌ Operation cancelled"; \
-		exit 1; \
-	fi && \
-	echo "🔍 Checking Cloudflare CLI availability..." && \
-	if ! command -v cloudflared >/dev/null 2>&1; then \
-		echo "📦 Installing cloudflared CLI..." && \
-		if [ "$$(uname -m)" = "aarch64" ]; then \
-			ARCH="arm64"; \
-		else \
-			ARCH="amd64"; \
-		fi && \
-		curl -L -o cloudflared.deb "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-$$ARCH.deb" && \
-		sudo dpkg -i cloudflared.deb && \
-		rm cloudflared.deb; \
-	fi && \
-	echo "🗑️  Removing DNS records for $$CLUSTER_LABEL environment..." && \
-	ZONE_ID=$$(grep CLOUDFLARE_ZONE_ID .env 2>/dev/null | cut -d'=' -f2 || echo "") && \
-	API_TOKEN=$$(grep CLOUDFLARE_API_TOKEN .env 2>/dev/null | cut -d'=' -f2 || echo "") && \
-	if [ -z "$$ZONE_ID" ] || [ -z "$$API_TOKEN" ]; then \
-		echo "⚠️  CLOUDFLARE_ZONE_ID or CLOUDFLARE_API_TOKEN not found in .env" && \
-		echo "💡 Please manually remove these DNS records from Cloudflare dashboard:" && \
-		echo "   - $$CLUSTER_LABEL.ui.diocesanvitality.org" && \
-		echo "   - $$CLUSTER_LABEL.api.diocesanvitality.org" && \
-		echo "   - $$CLUSTER_LABEL.argocd.diocesanvitality.org"; \
-	else \
-		export CLOUDFLARE_API_TOKEN=$$API_TOKEN && \
-		for SUBDOMAIN in ui api argocd; do \
-			HOSTNAME="$$CLUSTER_LABEL.$$SUBDOMAIN.diocesanvitality.org" && \
-			echo "🔍 Looking for DNS record: $$HOSTNAME" && \
-			RECORD_ID=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$$ZONE_ID/dns_records?name=$$HOSTNAME" \
-				-H "Authorization: Bearer $$API_TOKEN" \
-				-H "Content-Type: application/json" | \
-				jq -r '.result[0].id // "null"') && \
-			if [ "$$RECORD_ID" != "null" ] && [ "$$RECORD_ID" != "" ]; then \
-				echo "🗑️  Deleting DNS record: $$HOSTNAME ($$RECORD_ID)" && \
-				curl -s -X DELETE "https://api.cloudflare.com/client/v4/zones/$$ZONE_ID/dns_records/$$RECORD_ID" \
-					-H "Authorization: Bearer $$API_TOKEN" | \
-				jq -r '.success // "false"' | grep -q "true" && \
-				echo "✅ Deleted: $$HOSTNAME" || \
-				echo "❌ Failed to delete: $$HOSTNAME"; \
-			else \
-				echo "ℹ️  DNS record not found: $$HOSTNAME"; \
-			fi; \
-		done; \
-	fi && \
-	echo "🗑️  Removing Kubernetes tunnel resources..." && \
-	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL 2>/dev/null && \
-	kubectl delete namespace cloudflare-tunnel-$$CLUSTER_LABEL --ignore-not-found=true && \
-	echo "🗑️  Removing ArgoCD applications related to tunnels..." && \
-	kubectl delete application cloudflare-tunnel-$$CLUSTER_LABEL -n argocd --ignore-not-found=true && \
-	echo "🧹 Cleaning up local tunnel files..." && \
-	rm -f .tunnel-token-$$CLUSTER_LABEL && \
-	echo "✅ Tunnel infrastructure destroyed for $$CLUSTER_LABEL environment" && \
-	echo "💡 You can now run 'make tunnels-create CLUSTER_LABEL=$$CLUSTER_LABEL' to recreate"
+tunnel-destroy: ## Destroy tunnel and remove DNS records (usage: make tunnel-destroy CLUSTER_LABEL=dev) - REDIRECTS TO CLI VERSION
+	@echo "🔄 Redirecting to CLI-based tunnel destruction..."
+	@$(MAKE) tunnels-destroy-cli CLUSTER_LABEL=$${CLUSTER_LABEL:-dev}
 
 # =============================================================================
 # CLI-BASED INFRASTRUCTURE COMMANDS (Replacing Terraform)
@@ -927,24 +795,42 @@ cluster-create-cli: ## Step 1: Create DigitalOcean cluster using doctl (usage: m
 	echo "🔍 Checking if cluster already exists..." && \
 	if doctl kubernetes cluster get $$CLUSTER_NAME >/dev/null 2>&1; then \
 		echo "✅ Cluster $$CLUSTER_NAME already exists" && \
-		CLUSTER_ID=$$(doctl kubernetes cluster get $$CLUSTER_NAME --format ID --no-header); \
+		CLUSTER_ID=$$(doctl kubernetes cluster get $$CLUSTER_NAME --format ID --no-header) && \
+		STATUS=$$(doctl kubernetes cluster get $$CLUSTER_NAME --format Status --no-header) && \
+		echo "📊 Current status: $$STATUS"; \
 	else \
-		echo "🏗️  Creating cluster $$CLUSTER_NAME..." && \
-		CLUSTER_ID=$$(doctl kubernetes cluster create $$CLUSTER_NAME \
+		echo "🏗️  Creating cluster $$CLUSTER_NAME (this will show progress dots)..." && \
+		doctl kubernetes cluster create $$CLUSTER_NAME \
 			--region $$REGION \
 			--size $$NODE_SIZE \
 			--count $$NODE_COUNT \
 			--auto-upgrade=true \
 			--surge-upgrade=true \
-			--tag "environment:$$CLUSTER_LABEL,project:diocesan-vitality" \
-			--wait \
-			--format ID \
-			--no-header) && \
-		echo "✅ Cluster created with ID: $$CLUSTER_ID"; \
+			--tag "environment:$$CLUSTER_LABEL" \
+			--tag "project:diocesan-vitality" \
+			--wait && \
+		echo "✅ Cluster creation completed!" && \
+		echo "🔍 Attempting to get cluster ID..." && \
+		if CLUSTER_ID=$$(timeout 15 doctl kubernetes cluster get $$CLUSTER_NAME --format ID --no-header 2>/dev/null); then \
+			echo "✅ Cluster created successfully with ID: $$CLUSTER_ID"; \
+		else \
+			echo "⚠️  Could not retrieve cluster ID (doctl connectivity issue), but cluster creation succeeded"; \
+		fi; \
 	fi && \
 	echo "🔧 Setting up kubectl context..." && \
-	doctl kubernetes cluster kubeconfig save $$CLUSTER_NAME && \
-	kubectl config rename-context do-nyc2-$$CLUSTER_NAME do-nyc2-dv-$$CLUSTER_LABEL && \
+	echo "🔍 Attempting to save kubectl configuration..." && \
+	if timeout 15 doctl kubernetes cluster kubeconfig save $$CLUSTER_NAME 2>/dev/null; then \
+		echo "✅ kubectl configuration saved successfully"; \
+	else \
+		echo "⚠️  Could not save kubectl config (doctl connectivity issue)"; \
+		echo "💡 You may need to run: doctl kubernetes cluster kubeconfig save $$CLUSTER_NAME"; \
+		echo "🔄 Continuing with existing kubectl context if available..."; \
+	fi && \
+	if kubectl config get-contexts -o name | grep -q "^do-nyc2-dv-$$CLUSTER_LABEL$$"; then \
+		echo "ℹ️  Context do-nyc2-dv-$$CLUSTER_LABEL already exists"; \
+	else \
+		kubectl config rename-context do-nyc2-$$CLUSTER_NAME do-nyc2-dv-$$CLUSTER_LABEL; \
+	fi && \
 	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
 	echo "🔍 Verifying cluster access..." && \
 	kubectl cluster-info && \
@@ -956,7 +842,7 @@ cluster-destroy-cli: ## Destroy DigitalOcean cluster using doctl (usage: make cl
 	echo "🚨 DESTRUCTIVE: Destroying DigitalOcean cluster for '$$CLUSTER_LABEL'..." && \
 	CLUSTER_NAME="dv-$$CLUSTER_LABEL" && \
 	echo "⚠️  This will permanently delete cluster: $$CLUSTER_NAME" && \
-	read -p "Are you sure? Type 'yes' to continue: " CONFIRM && \
+	read -p "Are you sure? Type 'yes' to continue: " CONFIRM </dev/tty && \
 	if [ "$$CONFIRM" != "yes" ]; then \
 		echo "❌ Operation cancelled"; \
 		exit 1; \
@@ -966,7 +852,7 @@ cluster-destroy-cli: ## Destroy DigitalOcean cluster using doctl (usage: make cl
 		echo "ℹ️  Cluster $$CLUSTER_NAME does not exist"; \
 	else \
 		echo "🗑️  Deleting cluster $$CLUSTER_NAME..." && \
-		doctl kubernetes cluster delete $$CLUSTER_NAME --dangerous && \
+		doctl kubernetes cluster delete $$CLUSTER_NAME --force && \
 		echo "✅ Cluster $$CLUSTER_NAME deleted"; \
 	fi && \
 	echo "🧹 Cleaning up kubectl context..." && \
