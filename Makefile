@@ -181,21 +181,15 @@ cluster-auth: ## Step 1: Authenticate with DigitalOcean (usage: make cluster-aut
 	if timeout 5 curl -s --connect-timeout 3 https://api.digitalocean.com/v2 >/dev/null 2>&1; then \
 		echo "✅ DigitalOcean API is reachable" && \
 		echo "🧪 Testing doctl authentication..." && \
-		if DIGITALOCEAN_ACCESS_TOKEN="$$DIGITALOCEAN_TOKEN" timeout 10 doctl account get >/dev/null 2>&1; then \
+		if DIGITALOCEAN_ACCESS_TOKEN="$$DIGITALOCEAN_TOKEN" timeout 5 doctl auth list >/dev/null 2>&1; then \
 			echo "✅ Step 1 Complete: doctl authentication verified - can access DigitalOcean account"; \
 		else \
-			echo "❌ doctl authentication failed - token may be invalid" && \
+			echo "❌ doctl authentication failed - token may be invalid or API is experiencing issues" && \
 			exit 1; \
 		fi; \
 	else \
-		echo "⚠️  DigitalOcean API is not reachable - this may be a temporary network issue" && \
-		echo "🔧 Proceeding with token validation only (offline mode)" && \
-		if [ -n "$$DIGITALOCEAN_TOKEN" ] && echo "$$DIGITALOCEAN_TOKEN" | grep -q "^dop_v1_"; then \
-			echo "✅ Step 1 Complete: Token format appears valid (unable to verify online)"; \
-		else \
-			echo "❌ Token format invalid - should start with 'dop_v1_'" && \
-			exit 1; \
-		fi; \
+		echo "❌ DigitalOcean API is not reachable - cannot authenticate without API access" && \
+		exit 1; \
 	fi
 
 cluster-check: ## Step 2: Check if cluster exists (usage: make cluster-check CLUSTER_LABEL=dev)
@@ -203,13 +197,13 @@ cluster-check: ## Step 2: Check if cluster exists (usage: make cluster-check CLU
 	echo "🔍 Step 2: Checking if cluster exists..." && \
 	CLUSTER_NAME="dv-$$CLUSTER_LABEL" && \
 	$(MAKE) cluster-auth && \
-	export DIGITALOCEAN_ACCESS_TOKEN=$$(awk -F'=' '/^DIGITALOCEAN_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-	CLUSTER_CHECK_OUTPUT=$$(timeout 10 doctl kubernetes cluster get $$CLUSTER_NAME 2>&1) && \
+	DIGITALOCEAN_TOKEN=$$(awk -F'=' '/^DIGITALOCEAN_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	CLUSTER_CHECK_OUTPUT=$$(DIGITALOCEAN_ACCESS_TOKEN="$$DIGITALOCEAN_TOKEN" timeout 10 doctl kubernetes cluster get $$CLUSTER_NAME 2>&1) && \
 	echo "📄 Cluster check output: $$CLUSTER_CHECK_OUTPUT" && \
 	if echo "$$CLUSTER_CHECK_OUTPUT" | grep -q "Error: cluster not found"; then \
 		echo "ℹ️  Step 2 Complete: Cluster $$CLUSTER_NAME does not exist"; \
 	elif echo "$$CLUSTER_CHECK_OUTPUT" | grep -q "$$CLUSTER_NAME"; then \
-		STATUS=$$(timeout 5 doctl kubernetes cluster get $$CLUSTER_NAME --format Status --no-header 2>/dev/null) && \
+		STATUS=$$(DIGITALOCEAN_ACCESS_TOKEN="$$DIGITALOCEAN_TOKEN" timeout 5 doctl kubernetes cluster get $$CLUSTER_NAME --format Status --no-header 2>/dev/null) && \
 		echo "✅ Step 2 Complete: Cluster $$CLUSTER_NAME exists with status: $$STATUS"; \
 	else \
 		echo "ℹ️  Step 2 Complete: Unable to determine cluster status online - may not exist or network issue"; \
