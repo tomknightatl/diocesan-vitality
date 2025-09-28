@@ -281,16 +281,16 @@ cluster-context: ## Step 4: Setup kubectl context (usage: make cluster-context C
 	echo "🔍 Verifying cluster access..." && \
 	kubectl cluster-info && \
 	kubectl get nodes && \
-	echo "✅ Step 4 Complete: kubectl context configured for $$CLUSTER_NAME"
+	echo "✅ Step e Complete: kubectl context configured for $$CLUSTER_NAME"
 
-cluster-context-destroy: ## Step 4b: Remove kubectl context (usage: make cluster-context-destroy CLUSTER_LABEL=dev)
+cluster-context-destroy: ## Step f: Remove kubectl context (usage: make cluster-context-destroy CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
-	echo "🧹 Step 4b: Cleaning up kubectl context for '$$CLUSTER_LABEL'..." && \
+	echo "🧹 Step f: Cleaning up kubectl context for '$$CLUSTER_LABEL'..." && \
 	kubectl config delete-context do-nyc2-dv-$$CLUSTER_LABEL 2>/dev/null || true && \
-	echo "✅ Step 4b Complete: kubectl context destroyed for $$CLUSTER_LABEL"
+	echo "✅ Step f Complete: kubectl context destroyed for $$CLUSTER_LABEL"
 
-tunnel-auth: ## Step 5: Authenticate with Cloudflare (usage: make tunnel-auth)
-	@echo "🔍 Step 5: Setting up Cloudflare authentication..." && \
+tunnel-auth: ## Step g: Authenticate with Cloudflare (usage: make tunnel-auth)
+	@echo "🔍 Step g: Setting up Cloudflare authentication..." && \
 	if [ ! -f .env ]; then \
 		echo "❌ .env file not found. Please copy .env.example to .env and configure your tokens" && \
 		exit 1; \
@@ -308,15 +308,15 @@ tunnel-auth: ## Step 5: Authenticate with Cloudflare (usage: make tunnel-auth)
 	echo "🔍 Verifying Cloudflare authentication..." && \
 	if curl -s -X GET "https://api.cloudflare.com/client/v4/user/tokens/verify" \
 		-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN" | jq -e '.success == true' >/dev/null 2>&1; then \
-		echo "✅ Step 5 Complete: Cloudflare API authentication verified"; \
+		echo "✅ Step g Complete: Cloudflare API authentication verified"; \
 	else \
 		echo "❌ Cloudflare API authentication failed. Please check your CLOUDFLARE_API_TOKEN in .env" && \
 		exit 1; \
 	fi
 
-tunnel-check: ## Step 6: Check if tunnel exists (usage: make tunnel-check CLUSTER_LABEL=dev)
+tunnel-check: ## Step h: Check if tunnel exists (usage: make tunnel-check CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
-	echo "🔍 Step 6: Checking if tunnel exists..." && \
+	echo "🔍 Step h: Checking if tunnel exists..." && \
 	TUNNEL_NAME="do-nyc2-dv-$$CLUSTER_LABEL" && \
 	$(MAKE) tunnel-auth && \
 	CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
@@ -327,14 +327,14 @@ tunnel-check: ## Step 6: Check if tunnel exists (usage: make tunnel-check CLUSTE
 		-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN" \
 		-H "Content-Type: application/json") && \
 	if TUNNEL_ID=$$(echo "$$TUNNELS_RESPONSE" | jq -r ".result[] | select(.name==\"$$TUNNEL_NAME\" and .deleted_at==null) | .id" 2>/dev/null | head -1) && [ -n "$$TUNNEL_ID" ] && [ "$$TUNNEL_ID" != "null" ]; then \
-		echo "✅ Step 6 Complete: Tunnel $$TUNNEL_NAME exists with ID: $$TUNNEL_ID"; \
+		echo "✅ Step h Complete: Tunnel $$TUNNEL_NAME exists with ID: $$TUNNEL_ID"; \
 	else \
-		echo "ℹ️  Step 6 Complete: Tunnel $$TUNNEL_NAME does not exist"; \
+		echo "ℹ️  Step h Complete: Tunnel $$TUNNEL_NAME does not exist"; \
 	fi
 
-tunnel-create: ## Step 7a: Create tunnel (usage: make tunnel-create CLUSTER_LABEL=dev)
+tunnel-create: ## Step i: Create tunnel (usage: make tunnel-create CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
-	echo "🚀 Step 7a: Creating Cloudflare tunnel for '$$CLUSTER_LABEL'..." && \
+	echo "🚀 Step i: Creating Cloudflare tunnel for '$$CLUSTER_LABEL'..." && \
 	TUNNEL_NAME="do-nyc2-dv-$$CLUSTER_LABEL" && \
 	$(MAKE) tunnel-check CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
@@ -344,7 +344,7 @@ tunnel-create: ## Step 7a: Create tunnel (usage: make tunnel-create CLUSTER_LABE
 		-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN" \
 		-H "Content-Type: application/json") && \
 	if TUNNEL_ID=$$(echo "$$TUNNELS_RESPONSE" | jq -r ".result[] | select(.name==\"$$TUNNEL_NAME\" and .deleted_at==null) | .id" 2>/dev/null | head -1) && [ -n "$$TUNNEL_ID" ] && [ "$$TUNNEL_ID" != "null" ]; then \
-		echo "✅ Step 7a Complete: Tunnel $$TUNNEL_NAME already exists with ID: $$TUNNEL_ID"; \
+		echo "✅ Step i Complete: Tunnel $$TUNNEL_NAME already exists with ID: $$TUNNEL_ID"; \
 	else \
 		echo "🏗️  Creating tunnel $$TUNNEL_NAME via API..." && \
 		TUNNEL_CREATE_RESPONSE=$$(curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/$$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel" \
@@ -354,16 +354,16 @@ tunnel-create: ## Step 7a: Create tunnel (usage: make tunnel-create CLUSTER_LABE
 		echo "📄 Tunnel creation response: $$TUNNEL_CREATE_RESPONSE" && \
 		TUNNEL_ID=$$(echo "$$TUNNEL_CREATE_RESPONSE" | jq -r '.result.id' 2>/dev/null) && \
 		if [ -n "$$TUNNEL_ID" ] && [ "$$TUNNEL_ID" != "null" ]; then \
-			echo "✅ Step 7a Complete: Tunnel created with ID: $$TUNNEL_ID"; \
+			echo "✅ Step i Complete: Tunnel created with ID: $$TUNNEL_ID"; \
 		else \
 			echo "❌ Failed to create tunnel" && \
 			exit 1; \
 		fi; \
 	fi
 
-tunnel-destroy: ## Step 7b: Destroy tunnel (usage: make tunnel-destroy CLUSTER_LABEL=dev)
+tunnel-destroy: ## Step j: Destroy tunnel (usage: make tunnel-destroy CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
-	echo "🚨 Step 7b: DESTRUCTIVE - Destroying Cloudflare tunnel for '$$CLUSTER_LABEL'..." && \
+	echo "🚨 Step j: DESTRUCTIVE - Destroying Cloudflare tunnel for '$$CLUSTER_LABEL'..." && \
 	TUNNEL_NAME="do-nyc2-dv-$$CLUSTER_LABEL" && \
 	echo "⚠️  This will permanently delete tunnel: $$TUNNEL_NAME and all associated DNS records" && \
 	read -p "Are you sure? Type 'yes' to continue: " CONFIRM </dev/tty && \
@@ -384,17 +384,17 @@ tunnel-destroy: ## Step 7b: Destroy tunnel (usage: make tunnel-destroy CLUSTER_L
 			-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN") && \
 		echo "📄 Tunnel deletion response: $$TUNNEL_DELETE_RESPONSE" && \
 		if echo "$$TUNNEL_DELETE_RESPONSE" | jq -e '.success == true' >/dev/null 2>&1; then \
-			echo "✅ Step 7b Complete: Tunnel $$TUNNEL_NAME deleted successfully"; \
+			echo "✅ Step j Complete: Tunnel $$TUNNEL_NAME deleted successfully"; \
 		else \
 			echo "⚠️  Tunnel deletion may have issues, but continuing..."; \
 		fi; \
 	else \
-		echo "ℹ️  Step 7b Complete: Tunnel $$TUNNEL_NAME does not exist or is already deleted"; \
+		echo "ℹ️  Step j Complete: Tunnel $$TUNNEL_NAME does not exist or is already deleted"; \
 	fi
 
-tunnel-dns: ## Step 8: Setup tunnel DNS and public hostnames (usage: make tunnel-dns CLUSTER_LABEL=dev)
+tunnel-dns: ## Step k: Setup tunnel DNS and public hostnames (usage: make tunnel-dns CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
-	echo "🌐 Step 8: Creating DNS records and public hostnames for '$$CLUSTER_LABEL'..." && \
+	echo "🌐 Step k: Creating DNS records and public hostnames for '$$CLUSTER_LABEL'..." && \
 	TUNNEL_NAME="do-nyc2-dv-$$CLUSTER_LABEL" && \
 	$(MAKE) tunnel-check CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
