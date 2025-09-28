@@ -17,25 +17,25 @@ spec:
       affinity:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            preference:
-              matchExpressions:
-              - key: doks.digitalocean.com/node-pool
-                operator: In
-                values:
-                - slow-pool
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: doks.digitalocean.com/node-pool
+                    operator: In
+                    values:
+                      - slow-pool
       containers:
-      - name: frontend
-        # IMPORTANT: Replace YOUR_DOCKERHUB_USERNAME with your actual Docker Hub username
-        # Using single repository with tags: diocesan-vitality:frontend
-        image: tomatl/diocesan-vitality:frontend-2025-09-15-22-17-53
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 80
-        resources:
-          requests:
-            memory: "32Mi"
-            cpu: "5m"
-          limits:
-            memory: "64Mi"
-            cpu: "10m"
+        - name: frontend
+          # IMPORTANT: Replace YOUR_DOCKERHUB_USERNAME with your actual Docker Hub username
+          # Using single repository with tags: diocesan-vitality:frontend
+          image: tomatl/diocesan-vitality:frontend-2025-09-28-14-41-56-dev
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "5m"
+            limits:
+              memory: "64Mi"
+              cpu: "10m"
