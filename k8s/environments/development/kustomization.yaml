@@ -11,8 +11,15 @@ patches:
   - path: development-patches.yaml
 
 images:
-  - name: tomatl/diocesan-vitality
-    newTag: develop-latest
+  - name: tomatl/diocesan-vitality:backend-2025-09-15-20-27-14
+    newName: tomatl/diocesan-vitality
+    newTag: backend-2025-09-28-14-41-56-dev
+  - name: tomatl/diocesan-vitality:frontend-2025-09-15-22-17-53
+    newName: tomatl/diocesan-vitality
+    newTag: frontend-2025-09-28-14-41-56-dev
+  - name: tomatl/diocesan-vitality:pipeline-2025-09-15-22-58-39
+    newName: tomatl/diocesan-vitality
+    newTag: pipeline-2025-09-28-14-41-56-dev
 
 commonLabels:
   environment: development
