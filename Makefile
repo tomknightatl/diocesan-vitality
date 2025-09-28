@@ -501,7 +501,7 @@ tunnel-dns-destroy: ## Step 8b: Remove tunnel DNS records (usage: make tunnel-dn
 	echo "✅ Step 8b Complete: DNS records destroyed for $$CLUSTER_LABEL"
 
 
-argocd-install: ## Step 9: Install ArgoCD via Helm with proper configuration (usage: make argocd-install CLUSTER_LABEL=dev)
+argocd-install: ## Step 9: Install ArgoCD via Helm (usage: make argocd-install CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	echo "🚀 Step 9: Installing ArgoCD via Helm for '$$CLUSTER_LABEL'..." && \
 	echo "🔧 Switching to cluster context... ($$(date '+%H:%M:%S'))" && \
@@ -563,9 +563,7 @@ argocd-install: ## Step 9: Install ArgoCD via Helm with proper configuration (us
 	@$(MAKE) _setup-argocd-password CLUSTER_LABEL=$$CLUSTER_LABEL
 	@echo "🏷️  Registering cluster with ArgoCD..."
 	@$(MAKE) _register-cluster-with-argocd CLUSTER_LABEL=$$CLUSTER_LABEL
-	@echo "🚀 Deploying App-of-Apps for ApplicationSets..."
-	@$(MAKE) _deploy-app-of-apps CLUSTER_LABEL=$$CLUSTER_LABEL
-	@echo "✅ Step 3 Complete: ArgoCD installed via Helm with App-of-Apps pattern for $$CLUSTER_LABEL"
+	@echo "✅ Step 9 Complete: ArgoCD installed via Helm for $$CLUSTER_LABEL"
 
 _register-cluster-with-argocd: ## Register current cluster with ArgoCD with proper labels
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
@@ -639,6 +637,14 @@ _deploy-app-of-apps: ## Deploy App-of-Apps root Application for ApplicationSets
 sealed-secret: sealed-secrets-create ## Alias for sealed-secrets-create target
 
 argocd-password: ## Get ArgoCD admin password
+
+argocd-apps: ## Deploy ArgoCD App-of-Apps root Application (usage: make argocd-apps CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🚀 Deploying ArgoCD App-of-Apps root Application for '$$CLUSTER_LABEL'..." && \
+	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
+	$(MAKE) _deploy-app-of-apps CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	echo "✅ ArgoCD App-of-Apps deployment complete for $$CLUSTER_LABEL"
+
 sealed-secrets-create: ## Step 4: Create tunnel token sealed secret from environment file (usage: make sealed-secrets-create CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	echo "🚀 Step 4: Creating tunnel token sealed secret for '$$CLUSTER_LABEL'..." && \
