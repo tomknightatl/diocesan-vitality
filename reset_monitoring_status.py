@@ -7,10 +7,12 @@ Usage:
     python reset_monitoring_status.py [--backend-url http://localhost:8000]
 """
 
-import requests
 import argparse
 import sys
 from datetime import datetime
+
+import requests
+
 
 def reset_extraction_status(backend_url):
     """Reset extraction status to idle"""
@@ -24,7 +26,7 @@ def reset_extraction_status(backend_url):
         "success_rate": 0,
         "started_at": None,
         "progress_percentage": 0,
-        "estimated_completion": None
+        "estimated_completion": None,
     }
 
     try:
@@ -33,6 +35,7 @@ def reset_extraction_status(backend_url):
         return response.json()
     except requests.exceptions.RequestException as e:
         raise Exception(f"Failed to reset extraction status: {e}")
+
 
 def get_current_status(backend_url):
     """Get current monitoring status"""
@@ -45,18 +48,11 @@ def get_current_status(backend_url):
     except requests.exceptions.RequestException as e:
         raise Exception(f"Failed to get current status: {e}")
 
+
 def main():
     parser = argparse.ArgumentParser(description="Reset monitoring dashboard status")
-    parser.add_argument(
-        "--backend-url",
-        default="http://localhost:8000",
-        help="Backend URL (default: http://localhost:8000)"
-    )
-    parser.add_argument(
-        "--check-only",
-        action="store_true",
-        help="Only check current status, don't reset"
-    )
+    parser.add_argument("--backend-url", default="http://localhost:8000", help="Backend URL (default: http://localhost:8000)")
+    parser.add_argument("--check-only", action="store_true", help="Only check current status, don't reset")
 
     args = parser.parse_args()
 
@@ -76,7 +72,7 @@ def main():
         if args.check_only:
             return
 
-        if extraction_status.get('status') == 'idle':
+        if extraction_status.get("status") == "idle":
             print("\n✅ Status is already idle, no reset needed.")
             return
 
@@ -92,6 +88,7 @@ def main():
     except Exception as e:
         print(f"❌ Error: {e}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

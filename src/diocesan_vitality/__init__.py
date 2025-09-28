@@ -4,7 +4,7 @@ Diocesan Vitality - Catholic Diocese and Parish Data Collection System.
 A comprehensive data collection and analysis system for U.S. Catholic dioceses and parishes.
 """
 
-from .__version__ import __version__, __version_info__, get_version, get_build_info
+from .__version__ import __version__, __version_info__, get_build_info, get_version
 
 __all__ = ["__version__", "__version_info__", "get_version", "get_build_info"]
 

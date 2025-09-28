@@ -7,9 +7,9 @@ and monitor the effects on work distribution.
 """
 
 import argparse
+import asyncio
 import subprocess
 import time
-import asyncio
 from typing import Optional
 
 from core.logger import get_logger
@@ -29,11 +29,21 @@ class PipelineScaler:
     def get_current_replicas(self) -> Optional[int]:
         """Get current number of replicas"""
         try:
-            result = subprocess.run([
-                "kubectl", "get", "deployment", self.deployment_name,
-                "-n", self.namespace,
-                "-o", "jsonpath={.spec.replicas}"
-            ], capture_output=True, text=True, check=True)
+            result = subprocess.run(
+                [
+                    "kubectl",
+                    "get",
+                    "deployment",
+                    self.deployment_name,
+                    "-n",
+                    self.namespace,
+                    "-o",
+                    "jsonpath={.spec.replicas}",
+                ],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
 
             return int(result.stdout.strip())
 
@@ -49,11 +59,12 @@ class PipelineScaler:
         try:
             logger.info(f"🔧 Scaling {self.deployment_name} to {replicas} replicas...")
 
-            result = subprocess.run([
-                "kubectl", "scale", "deployment", self.deployment_name,
-                f"--replicas={replicas}",
-                "-n", self.namespace
-            ], capture_output=True, text=True, check=True)
+            result = subprocess.run(
+                ["kubectl", "scale", "deployment", self.deployment_name, f"--replicas={replicas}", "-n", self.namespace],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
 
             logger.info(f"✅ Scaling command executed: {result.stdout.strip()}")
             return True
@@ -72,11 +83,21 @@ class PipelineScaler:
         while time.time() - start_time < timeout:
             try:
                 # Check ready replicas
-                result = subprocess.run([
-                    "kubectl", "get", "deployment", self.deployment_name,
-                    "-n", self.namespace,
-                    "-o", "jsonpath={.status.readyReplicas}"
-                ], capture_output=True, text=True, check=True)
+                result = subprocess.run(
+                    [
+                        "kubectl",
+                        "get",
+                        "deployment",
+                        self.deployment_name,
+                        "-n",
+                        self.namespace,
+                        "-o",
+                        "jsonpath={.status.readyReplicas}",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
 
                 ready_replicas = int(result.stdout.strip()) if result.stdout.strip() else 0
 
@@ -121,7 +142,7 @@ class PipelineScaler:
         while time.time() - start_time < monitor_duration:
             overview = await self.monitor.get_cluster_overview()
 
-            print("\n" + "="*50)
+            print("\n" + "=" * 50)
             print(f"⏰ Monitoring time: {int(time.time() - start_time)}s / {monitor_duration}s")
             self.monitor.print_cluster_status(overview)
 
@@ -137,12 +158,13 @@ async def main():
     parser = argparse.ArgumentParser(description="Scale pipeline deployment and monitor effects")
 
     parser.add_argument("replicas", type=int, help="Target number of replicas")
-    parser.add_argument("--namespace", "-n", default="diocesan-vitality",
-                       help="Kubernetes namespace (default: diocesan-vitality)")
-    parser.add_argument("--monitor-duration", type=int, default=120,
-                       help="How long to monitor after scaling (seconds, default: 120)")
-    parser.add_argument("--no-monitor", action="store_true",
-                       help="Don't monitor after scaling")
+    parser.add_argument(
+        "--namespace", "-n", default="diocesan-vitality", help="Kubernetes namespace (default: diocesan-vitality)"
+    )
+    parser.add_argument(
+        "--monitor-duration", type=int, default=120, help="How long to monitor after scaling (seconds, default: 120)"
+    )
+    parser.add_argument("--no-monitor", action="store_true", help="Don't monitor after scaling")
 
     args = parser.parse_args()
 

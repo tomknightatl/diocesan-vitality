@@ -8,11 +8,12 @@ failed with standard extraction methods.
 
 import sys
 import time
-from core.logger import get_logger
-from core.driver import get_protected_driver
-from extractors.ai_fallback_extractor import AIFallbackExtractor
-from core.ai_content_analyzer import get_ai_content_analyzer
+
 from config import get_genai_api_key
+from core.ai_content_analyzer import get_ai_content_analyzer
+from core.driver import get_protected_driver
+from core.logger import get_logger
+from extractors.ai_fallback_extractor import AIFallbackExtractor
 
 logger = get_logger(__name__)
 
@@ -48,9 +49,7 @@ def test_ai_content_analyzer():
         logger.info("🤖 Running AI content analysis...")
         start_time = time.time()
 
-        analysis_result = analyzer.analyze_failed_extraction(
-            driver, test_diocese, test_url
-        )
+        analysis_result = analyzer.analyze_failed_extraction(driver, test_diocese, test_url)
 
         analysis_time = time.time() - start_time
 
@@ -60,25 +59,25 @@ def test_ai_content_analyzer():
         logger.info(f"📊 Strategy: {analysis_result.get('extraction_strategy', 'unknown')}")
         logger.info(f"⛪ Parishes found: {len(analysis_result.get('parish_data', []))}")
 
-        if analysis_result.get('custom_selectors'):
+        if analysis_result.get("custom_selectors"):
             logger.info("🔧 Custom selectors generated:")
-            for i, selector in enumerate(analysis_result['custom_selectors'][:5], 1):
+            for i, selector in enumerate(analysis_result["custom_selectors"][:5], 1):
                 logger.info(f"  {i}. {selector}")
 
-        if analysis_result.get('ai_insights'):
+        if analysis_result.get("ai_insights"):
             logger.info("💡 AI insights:")
-            for insight in analysis_result['ai_insights'][:3]:
+            for insight in analysis_result["ai_insights"][:3]:
                 logger.info(f"  • {insight}")
 
         # Check if parishes were found
-        parishes = analysis_result.get('parish_data', [])
+        parishes = analysis_result.get("parish_data", [])
         if parishes:
             logger.info(f"✅ Found {len(parishes)} parishes:")
             for i, parish in enumerate(parishes[:5], 1):
-                name = parish.get('name', 'Unknown')
-                url = parish.get('url', 'No URL')
+                name = parish.get("name", "Unknown")
+                url = parish.get("url", "No URL")
                 logger.info(f"  {i}. {name}")
-                if url != 'No URL':
+                if url != "No URL":
                     logger.info(f"     🔗 {url}")
 
             return True
@@ -142,14 +141,14 @@ def test_ai_fallback_extractor():
         if parishes:
             logger.info("✅ Successfully extracted parishes:")
             for i, parish in enumerate(parishes[:5], 1):
-                name = parish.get('name', 'Unknown')
-                method = parish.get('extraction_method', 'unknown')
-                url = parish.get('url', 'No URL')
+                name = parish.get("name", "Unknown")
+                method = parish.get("extraction_method", "unknown")
+                url = parish.get("url", "No URL")
 
                 logger.info(f"  {i}. {name} ({method})")
-                if url != 'No URL':
+                if url != "No URL":
                     logger.info(f"     🔗 {url}")
-                if parish.get('address'):
+                if parish.get("address"):
                     logger.info(f"     📍 {parish['address']}")
 
             return True
@@ -174,6 +173,7 @@ def test_integration():
     # For now, we'll just verify that the AI extractor can be imported
     try:
         from parish_extractors import process_diocese_with_detailed_extraction
+
         logger.info("✅ AI Fallback Extractor successfully integrated")
         return True
     except ImportError as e:
