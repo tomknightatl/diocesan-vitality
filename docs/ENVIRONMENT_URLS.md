@@ -7,21 +7,21 @@ This document provides a comprehensive list of all service URLs across all envir
 ### **Development Environment**
 | Service | URL | Status | Notes |
 |---------|-----|--------|-------|
-| **UI (Frontend)** | https://dev.ui.diocesanvitality.org | 🔧 Pending | Service deployed, container images needed |
-| **API (Backend)** | https://dev.api.diocesanvitality.org | 🔧 Pending | Service deployed, container images needed |
-| **ArgoCD** | https://dev.argocd.diocesanvitality.org | 🔧 SSL Issue | DNS resolves, tunnel/SSL troubleshooting needed |
+| **UI (Frontend)** | https://devui.diocesanvitality.org | 🔧 Pending | Service deployed, container images needed |
+| **API (Backend)** | https://devapi.diocesanvitality.org | 🔧 Pending | Service deployed, container images needed |
+| **ArgoCD** | https://devargocd.diocesanvitality.org | 🔧 SSL Issue | DNS resolves, tunnel/SSL troubleshooting needed |
 
 ### **Staging Environment**
 | Service | URL | Status | Notes |
 |---------|-----|--------|-------|
-| **UI (Frontend)** | https://stg.ui.diocesanvitality.org | 🔧 Pending | Service deployment in progress |
-| **API (Backend)** | https://stg.api.diocesanvitality.org | 🔧 Pending | Service deployment in progress |
-| **ArgoCD** | https://stg.argocd.diocesanvitality.org | 🔧 SSL Issue | DNS resolves, tunnel/SSL troubleshooting needed |
+| **UI (Frontend)** | https://stgui.diocesanvitality.org | 🔧 Pending | Service deployment in progress |
+| **API (Backend)** | https://stgapi.diocesanvitality.org | 🔧 Pending | Service deployment in progress |
+| **ArgoCD** | https://stgargocd.diocesanvitality.org | 🔧 SSL Issue | DNS resolves, tunnel/SSL troubleshooting needed |
 
 ### **Production Environment**
 | Service | URL | Status | Notes |
 |---------|-----|--------|-------|
-| **UI (Frontend)** | https://ui.diocesanvitality.org | 🚧 Not deployed | Infrastructure pending |
+| **UI (Frontend)** | https://diocesanvitality.org | 🚧 Not deployed | Infrastructure pending |
 | **API (Backend)** | https://api.diocesanvitality.org | 🚧 Not deployed | Infrastructure pending |
 | **ArgoCD** | https://argocd.diocesanvitality.org | 🚧 Not deployed | Infrastructure pending |
 
