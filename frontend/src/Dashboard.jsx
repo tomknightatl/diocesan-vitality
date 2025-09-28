@@ -66,7 +66,10 @@ const Dashboard = () => {
       case "localhost":
       case "127.0.0.1":
         return "http://localhost:8000";
-      case "usccb.diocesevitality.org":
+      case "devui.diocesanvitality.org":
+        return "https://devapi.diocesanvitality.org";
+      case "stgui.diocesanvitality.org":
+        return "https://stgapi.diocesanvitality.org";
       case "diocesanvitality.org":
         return "https://api.diocesanvitality.org";
       default:
@@ -121,18 +124,19 @@ const Dashboard = () => {
           backendHost = "localhost:8000";
           break;
 
-        case "usccb.diocesevitality.org":
-          // The old frontend domain points to the old backend API
-          backendHost = "api.diocesevitality.org";
+        case "devui.diocesanvitality.org":
+          backendHost = "devapi.diocesanvitality.org";
+          break;
+
+        case "stgui.diocesanvitality.org":
+          backendHost = "stgapi.diocesanvitality.org";
           break;
 
         case "diocesanvitality.org":
-          // The new frontend domains point to the new backend API
           backendHost = "api.diocesanvitality.org";
           break;
 
         default:
-          // As a fallback, default to the new production backend.
           backendHost = "api.diocesanvitality.org";
       }
 

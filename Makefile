@@ -411,7 +411,7 @@ tunnel-dns: ## Step k: Setup tunnel DNS and public hostnames (usage: make tunnel
 	fi && \
 	echo "🌐 Creating DNS records..." && \
 	for SUBDOMAIN in ui api argocd; do \
-		HOSTNAME="$$CLUSTER_LABEL.$$SUBDOMAIN.diocesanvitality.org" && \
+		HOSTNAME="$$CLUSTER_LABEL$$SUBDOMAIN.diocesanvitality.org" && \
 		TARGET="$$TUNNEL_ID.cfargotunnel.com" && \
 		echo "🔍 Creating DNS record: $$HOSTNAME -> $$TARGET" && \
 		DNS_CHECK_RESPONSE=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$$ZONE_ID/dns_records?name=$$HOSTNAME" \
@@ -443,15 +443,15 @@ tunnel-dns: ## Step k: Setup tunnel DNS and public hostnames (usage: make tunnel
 			"config": { \
 				"ingress": [ \
 					{ \
-						"hostname": "'"$$CLUSTER_LABEL"'.ui.diocesanvitality.org", \
+						"hostname": "'"$$CLUSTER_LABEL"'ui.diocesanvitality.org", \
 						"service": "http://localhost:3000" \
 					}, \
 					{ \
-						"hostname": "'"$$CLUSTER_LABEL"'.api.diocesanvitality.org", \
+						"hostname": "'"$$CLUSTER_LABEL"'api.diocesanvitality.org", \
 						"service": "http://localhost:8000" \
 					}, \
 					{ \
-						"hostname": "'"$$CLUSTER_LABEL"'.argocd.diocesanvitality.org", \
+						"hostname": "'"$$CLUSTER_LABEL"'argocd.diocesanvitality.org", \
 						"service": "http://localhost:8080" \
 					}, \
 					{ \
