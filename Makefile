@@ -452,7 +452,7 @@ tunnel-dns: ## Step k: Setup tunnel DNS and public hostnames (usage: make tunnel
 					}, \
 					{ \
 						"hostname": "'"$$CLUSTER_LABEL"'argocd.diocesanvitality.org", \
-						"service": "http://localhost:8080" \
+						"service": "http://argocd-server.argocd:80" \
 					}, \
 					{ \
 						"service": "http_status:404" \
