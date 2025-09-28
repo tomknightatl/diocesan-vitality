@@ -21,10 +21,11 @@ includeClaudeAttribution: false
 **🚨 CRITICAL: Always Use Makefile Commands for Infrastructure**
 - **NEVER run direct CLI commands (doctl, cloudflared, kubectl) for infrastructure operations**
 - **ALWAYS use Makefile commands exclusively for:**
-  - Cluster creation/destruction: `make cluster-create-cli`, `make cluster-destroy-cli`
-  - Tunnel creation/destruction: `make tunnels-create-cli`, `make tunnels-destroy-cli`
+  - Cluster creation/destruction: `make cluster-create`, `make cluster-destroy`
+  - Tunnel creation/destruction: `make tunnel-create`, `make tunnel-destroy`
   - DNS record management: handled within tunnel commands
   - kubectl context management: handled within cluster commands
+- **Commands automatically handle authentication using tokens from .env file**
 - **Exception: Read-only commands (doctl kubernetes cluster list, kubectl get) are allowed for status checking**
 
 **🔄 CRITICAL: Infrastructure Commands Must Be Idempotent**
