@@ -210,11 +210,7 @@ cluster-create: ## Step c: Create cluster (usage: make cluster-create CLUSTER_LA
 	echo "🚀 Step c: Creating DigitalOcean cluster for '$$CLUSTER_LABEL'..." && \
 	CLUSTER_NAME="dv-$$CLUSTER_LABEL" && \
 	$(MAKE) cluster-check CLUSTER_LABEL=$$CLUSTER_LABEL && \
-	export DIGITALOCEAN_ACCESS_TOKEN=$$(awk -F'=' '/^DIGITALOCEAN_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-	CLUSTER_CHECK_OUTPUT=$$(doctl kubernetes cluster get $$CLUSTER_NAME 2>&1) && \
-	if echo "$$CLUSTER_CHECK_OUTPUT" | grep -q "$$CLUSTER_NAME"; then \
-		echo "✅ Step c Complete: Cluster $$CLUSTER_NAME already exists - skipping creation"; \
-	else \
+	echo "✅ Step c Complete: Cluster $$CLUSTER_NAME already exists - skipping creation" || { \
 		REGION="nyc2" && \
 		NODE_SIZE="s-2vcpu-2gb" && \
 		NODE_COUNT=2 && \
@@ -225,18 +221,11 @@ cluster-create: ## Step c: Create cluster (usage: make cluster-create CLUSTER_LA
 		echo "   Node count: $$NODE_COUNT" && \
 		echo "🏗️  Creating cluster $$CLUSTER_NAME..." && \
 		echo "🚀 Starting cluster creation (this may take 5-10 minutes)..." && \
-		doctl kubernetes cluster create $$CLUSTER_NAME \
-			--region $$REGION \
-			--size $$NODE_SIZE \
-			--count $$NODE_COUNT \
-			--auto-upgrade=true \
-			--surge-upgrade=true \
-			--tag "environment:$$CLUSTER_LABEL" \
-			--tag "project:diocesan-vitality" & \
+		$(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster create $$CLUSTER_NAME --region $$REGION --size $$NODE_SIZE --count $$NODE_COUNT --auto-upgrade=true --surge-upgrade=true --tag environment:$$CLUSTER_LABEL --tag project:diocesan-vitality" & \
 		CREATE_PID=$$! && \
 		echo "🔍 Monitoring cluster creation progress..." && \
 		while kill -0 $$CREATE_PID 2>/dev/null; do \
-			if CURRENT_STATUS=$$(doctl kubernetes cluster get $$CLUSTER_NAME --format Status --no-header 2>/dev/null); then \
+			if CURRENT_STATUS=$$($(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster get $$CLUSTER_NAME --format Status --no-header" 2>/dev/null); then \
 				echo "📊 Cluster status: $$CURRENT_STATUS ($$(date '+%H:%M:%S'))"; \
 			else \
 				echo "⏳ Cluster initializing... ($$(date '+%H:%M:%S'))"; \
@@ -246,11 +235,11 @@ cluster-create: ## Step c: Create cluster (usage: make cluster-create CLUSTER_LA
 		wait $$CREATE_PID && \
 		echo "✅ Cluster creation process completed!" && \
 		echo "🔍 Verifying final cluster status..." && \
-		FINAL_STATUS=$$(doctl kubernetes cluster get $$CLUSTER_NAME --format Status --no-header 2>/dev/null) && \
+		FINAL_STATUS=$$($(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster get $$CLUSTER_NAME --format Status --no-header" 2>/dev/null) && \
 		echo "📊 Final cluster status: $$FINAL_STATUS" && \
 		if [ "$$FINAL_STATUS" = "running" ]; then \
 			echo "✅ Step c Complete: Cluster is running and ready!"; \
-			CLUSTER_ID=$$(doctl kubernetes cluster get $$CLUSTER_NAME --format ID --no-header 2>/dev/null) && \
+			CLUSTER_ID=$$($(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster get $$CLUSTER_NAME --format ID --no-header" 2>/dev/null) && \
 			echo "🔢 Cluster ID: $$CLUSTER_ID"; \
 		else \
 			echo "⚠️  Cluster status is $$FINAL_STATUS - may still be initializing"; \
@@ -269,37 +258,20 @@ cluster-destroy: ## Step d: Destroy cluster (usage: make cluster-destroy CLUSTER
 		exit 1; \
 	fi && \
 	$(MAKE) cluster-check CLUSTER_LABEL=$$CLUSTER_LABEL && \
-	export DIGITALOCEAN_ACCESS_TOKEN=$$(awk -F'=' '/^DIGITALOCEAN_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-	CLUSTER_CHECK_OUTPUT=$$(doctl kubernetes cluster get $$CLUSTER_NAME 2>&1) && \
-	if echo "$$CLUSTER_CHECK_OUTPUT" | grep -q "Error: cluster not found"; then \
-		echo "ℹ️  Step d Complete: Cluster $$CLUSTER_NAME does not exist - nothing to destroy"; \
-	elif echo "$$CLUSTER_CHECK_OUTPUT" | grep -q "$$CLUSTER_NAME"; then \
+	echo "ℹ️  Step d Complete: Cluster $$CLUSTER_NAME does not exist - nothing to destroy" || { \
 		echo "🗑️  Deleting cluster $$CLUSTER_NAME (this may take several minutes)..." && \
-		DELETION_OUTPUT=$$(doctl kubernetes cluster delete $$CLUSTER_NAME --force 2>&1) && \
-		echo "📄 Deletion output: $$DELETION_OUTPUT" && \
-		if echo "$$DELETION_OUTPUT" | grep -q -i "deleted\|removed"; then \
-			echo "✅ Step d Complete: Cluster $$CLUSTER_NAME deleted successfully"; \
-		else \
-			echo "❌ Cluster deletion may have failed - check output above"; \
-		fi; \
-	else \
-		echo "❌ Unable to determine cluster status - check output above" && \
-		exit 1; \
-	fi
+		$(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster delete $$CLUSTER_NAME --force" && \
+		echo "✅ Step d Complete: Cluster $$CLUSTER_NAME deleted successfully"; \
+	}
 
 cluster-context: ## Step 4: Setup kubectl context (usage: make cluster-context CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	echo "🔧 Step 4: Setting up kubectl context for '$$CLUSTER_LABEL'..." && \
 	CLUSTER_NAME="dv-$$CLUSTER_LABEL" && \
 	$(MAKE) cluster-check CLUSTER_LABEL=$$CLUSTER_LABEL && \
-	export DIGITALOCEAN_ACCESS_TOKEN=$$(awk -F'=' '/^DIGITALOCEAN_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
 	echo "🔍 Attempting to save kubectl configuration..." && \
-	if doctl kubernetes cluster kubeconfig save $$CLUSTER_NAME 2>/dev/null; then \
-		echo "✅ kubectl configuration saved successfully"; \
-	else \
-		echo "⚠️  Could not save kubectl config"; \
-		echo "💡 You may need to run manually: doctl kubernetes cluster kubeconfig save $$CLUSTER_NAME"; \
-	fi && \
+	$(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster kubeconfig save $$CLUSTER_NAME" && \
+	echo "✅ kubectl configuration saved successfully" && \
 	if kubectl config get-contexts -o name | grep -q "^do-nyc2-dv-$$CLUSTER_LABEL$$"; then \
 		echo "ℹ️  Context do-nyc2-dv-$$CLUSTER_LABEL already exists"; \
 	else \
