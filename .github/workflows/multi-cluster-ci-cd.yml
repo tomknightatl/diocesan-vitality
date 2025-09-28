@@ -186,6 +186,7 @@ jobs:
   build-images:
     name: Build Multi-Arch Images
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: [determine-environment, test-suite]
     if: needs.determine-environment.outputs.target-env != 'none'
     outputs:
@@ -219,35 +220,44 @@ jobs:
 
           echo "🏷️ Generated tags for environment: ${TARGET_ENV}"
 
-      - name: Build and push images
+      - name: Build and push backend image
         run: |
-          echo "🏗️ Building multi-architecture images..."
-
-          # Backend
+          echo "🏗️ Building backend image (multi-arch)..."
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --file backend/Dockerfile \
             --tag ${{ steps.tags.outputs.backend-tag }} \
             --tag ${{ env.IMAGE_NAMESPACE }}:${{ needs.determine-environment.outputs.target-env }}-backend-latest \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
             --push backend/
+          echo "✅ Backend image built and pushed"
 
-          # Frontend
+      - name: Build and push frontend image
+        run: |
+          echo "🏗️ Building frontend image (multi-arch)..."
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --file frontend/Dockerfile \
             --tag ${{ steps.tags.outputs.frontend-tag }} \
             --tag ${{ env.IMAGE_NAMESPACE }}:${{ needs.determine-environment.outputs.target-env }}-frontend-latest \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
             --push frontend/
+          echo "✅ Frontend image built and pushed"
 
-          # Pipeline
+      - name: Build and push pipeline image
+        run: |
+          echo "🏗️ Building pipeline image (multi-arch)..."
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --file Dockerfile.pipeline \
             --tag ${{ steps.tags.outputs.pipeline-tag }} \
             --tag ${{ env.IMAGE_NAMESPACE }}:${{ needs.determine-environment.outputs.target-env }}-pipeline-latest \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
             --push .
-
-          echo "✅ Images built and pushed for ${{ needs.determine-environment.outputs.target-env }}"
+          echo "✅ Pipeline image built and pushed"
 
   # ============================================================================
   # DEPLOY TO DEVELOPMENT CLUSTER (do-nyc2-dv-dev)
