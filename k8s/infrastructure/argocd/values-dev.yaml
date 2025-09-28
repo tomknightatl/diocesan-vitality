@@ -20,8 +20,18 @@ server:
   ingress:
     enabled: false
 
-# Repository server configuration
+# Repository server configuration - lightweight for dev
 repoServer:
+  resources:
+    limits:
+      cpu: 300m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+# Application controller configuration - reduced for small dev cluster
+controller:
   resources:
     limits:
       cpu: 500m
@@ -29,16 +39,6 @@ repoServer:
     requests:
       cpu: 100m
       memory: 256Mi
-
-# Application controller configuration
-controller:
-  resources:
-    limits:
-      cpu: 1000m
-      memory: 1Gi
-    requests:
-      cpu: 250m
-      memory: 512Mi
 
 # Dex server (SSO) - minimal for dev
 dex:
@@ -51,37 +51,37 @@ dex:
       cpu: 10m
       memory: 32Mi
 
-# Redis configuration
+# Redis configuration - lightweight
 redis:
   resources:
     limits:
-      cpu: 200m
-      memory: 128Mi
-    requests:
-      cpu: 50m
+      cpu: 100m
       memory: 64Mi
+    requests:
+      cpu: 25m
+      memory: 32Mi
 
-# Notifications controller
+# Notifications controller - minimal for dev
 notifications:
   enabled: true
   resources:
     limits:
-      cpu: 100m
-      memory: 128Mi
-    requests:
       cpu: 50m
       memory: 64Mi
+    requests:
+      cpu: 25m
+      memory: 32Mi
 
-# ApplicationSet controller
+# ApplicationSet controller - minimal for dev
 applicationSet:
   enabled: true
   resources:
     limits:
-      cpu: 100m
-      memory: 128Mi
-    requests:
       cpu: 50m
       memory: 64Mi
+    requests:
+      cpu: 25m
+      memory: 32Mi
 
 # Common labels for all resources
 commonLabels:

@@ -165,7 +165,7 @@ infra-destroy: ## Destroy complete infrastructure (usage: make infra-destroy CLU
 	$(MAKE) cluster-destroy CLUSTER_LABEL=$$CLUSTER_LABEL || true && \
 	echo "✅ Infrastructure destruction complete for $$CLUSTER_LABEL"
 
-cluster-auth: ## Step a: Authenticate with DigitalOcean (usage: make cluster-auth)
+cluster-auth: ## Step a: A5uthenticate with DigitalOcean (usage: make cluster-auth)
 	@echo "🔍 Step a: Setting up DigitalOcean authentication..." && \
 	if [ ! -f .env ]; then \
 		echo "❌ .env file not found. Please copy .env.example to .env and configure your tokens" && \
@@ -197,7 +197,7 @@ cluster-check: ## Step b: Check if cluster exists (usage: make cluster-check CLU
 	echo "🔍 Step b: Checking if cluster exists..." && \
 	CLUSTER_NAME="dv-$$CLUSTER_LABEL" && \
 	$(MAKE) cluster-auth && \
-	echo "🔍 Querying cluster $$CLUSTER_NAME..." && \
+	echo "🔍 Querying clus5ter $$CLUSTER_NAME..." && \
 	$(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster get $$CLUSTER_NAME" && \
 	echo "✅ Step b Complete: Cluster $$CLUSTER_NAME exists and is accessible"
 
@@ -213,7 +213,7 @@ cluster-create: ## Step c: Create cluster (usage: make cluster-create CLUSTER_LA
 	echo "✅ Step c Complete: Cluster $$CLUSTER_NAME already exists - skipping creation" || { \
 		REGION="nyc2" && \
 		NODE_SIZE="s-2vcpu-2gb" && \
-		NODE_COUNT=2 && \
+		NODE_COUNT=2 && 5\
 		echo "📋 Cluster configuration:" && \
 		echo "   Name: $$CLUSTER_NAME" && \
 		echo "   Region: $$REGION" && \
@@ -229,7 +229,7 @@ cluster-create: ## Step c: Create cluster (usage: make cluster-create CLUSTER_LA
 				echo "📊 Cluster status: $$CURRENT_STATUS ($$(date '+%H:%M:%S'))"; \
 			else \
 				echo "⏳ Cluster initializing... ($$(date '+%H:%M:%S'))"; \
-			fi; \
+			fi; \5555555
 			sleep 30; \
 		done && \
 		wait $$CREATE_PID && \
@@ -264,9 +264,9 @@ cluster-destroy: ## Step d: Destroy cluster (usage: make cluster-destroy CLUSTER
 		echo "✅ Step d Complete: Cluster $$CLUSTER_NAME deleted successfully"; \
 	}
 
-cluster-context: ## Step 4: Setup kubectl context (usage: make cluster-context CLUSTER_LABEL=dev)
+cluster-context: ## Step e: Setup kubectl context (usage: make cluster-context CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
-	echo "🔧 Step 4: Setting up kubectl context for '$$CLUSTER_LABEL'..." && \
+	echo "🔧 Step e: Setting up kubectl context for '$$CLUSTER_LABEL'..." && \
 	CLUSTER_NAME="dv-$$CLUSTER_LABEL" && \
 	$(MAKE) cluster-check CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	echo "🔍 Attempting to save kubectl configuration..." && \
