@@ -250,9 +250,9 @@ jobs:
 
       - name: Build and push pipeline image
         run: |
-          echo "🏗️ Building pipeline image (multi-arch)..."
+          echo "🏗️ Building pipeline image (AMD64 only - Chrome compatibility)..."
           docker buildx build \
-            --platform linux/amd64,linux/arm64 \
+            --platform linux/amd64 \
             --file Dockerfile.pipeline \
             --tag ${{ steps.tags.outputs.pipeline-tag }} \
             --tag ${{ env.IMAGE_NAMESPACE }}:${{ needs.determine-environment.outputs.target-env }}-pipeline-latest \
