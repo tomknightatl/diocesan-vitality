@@ -16,18 +16,40 @@ includeClaudeAttribution: false
   3. Wait for explicit user approval before proceeding
 - **This policy applies to all kubectl commands, including those in Makefile targets**
 
-## Infrastructure Command Policy
+## Infrastructure Management Policy
 
-**🚨 CRITICAL: Do Not Re-run Infrastructure Commands**
-- **NEVER run the same infrastructure command twice in succession**
-- **Infrastructure commands like `make cluster-create` often succeed even when timeout occurs**
-- **If a command times out, check the actual infrastructure state before re-running:**
+**🚨 CRITICAL: Always Use Makefile Commands for Infrastructure**
+- **NEVER run direct CLI commands (doctl, cloudflared, kubectl) for infrastructure operations**
+- **ALWAYS use Makefile commands exclusively for:**
+  - Cluster creation/destruction: `make cluster-create-cli`, `make cluster-destroy-cli`
+  - Tunnel creation/destruction: `make tunnels-create-cli`, `make tunnels-destroy-cli`
+  - DNS record management: handled within tunnel commands
+  - kubectl context management: handled within cluster commands
+- **Exception: Read-only commands (doctl kubernetes cluster list, kubectl get) are allowed for status checking**
+
+**🔄 CRITICAL: Infrastructure Commands Must Be Idempotent**
+- **ALL Makefile infrastructure commands MUST be idempotent (safe to run multiple times)**
+- **Commands must gracefully handle existing resources:**
+  - If cluster exists → verify status, configure access, continue successfully
+  - If tunnel exists → verify configuration, skip creation, continue successfully
+  - If DNS records exist → verify configuration, skip creation, continue successfully
+  - If kubectl context exists → use existing context, continue successfully
+- **Commands must gracefully handle missing resources:**
+  - If cluster doesn't exist during destroy → report "not found", continue successfully
+  - If tunnel doesn't exist during destroy → report "not found", continue successfully
+  - If DNS records don't exist → report "not found", continue successfully
+- **Never fail with errors for expected conditions (resource exists/doesn't exist)**
+
+**⏱️ CRITICAL: Handle Infrastructure Command Timeouts Properly**
+- **NEVER re-run infrastructure commands immediately after timeout**
+- **Infrastructure commands like `make cluster-create-cli` often succeed even when timeout occurs**
+- **If a command times out, check the actual infrastructure state using read-only commands:**
   - `doctl kubernetes cluster list` - check if cluster was created
   - `kubectl get nodes` - verify cluster connectivity
   - `doctl auth list` - verify DigitalOcean authentication
 - **Common mistake pattern to avoid:**
-  1. Run `make cluster-create` in foreground → times out but cluster is created
-  2. Incorrectly assume it failed and run again in background → fails with "cluster already exists"
+  1. Run `make cluster-create-cli` in foreground → times out but cluster is created
+  2. Incorrectly assume it failed and run again → fails gracefully due to idempotent design
 
 ## ArgoCD App-of-Apps Pattern
 
