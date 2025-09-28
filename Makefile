@@ -165,8 +165,8 @@ infra-destroy: ## Destroy complete infrastructure (usage: make infra-destroy CLU
 	$(MAKE) cluster-destroy CLUSTER_LABEL=$$CLUSTER_LABEL || true && \
 	echo "✅ Infrastructure destruction complete for $$CLUSTER_LABEL"
 
-cluster-auth: ## Step 1: Authenticate with DigitalOcean (usage: make cluster-auth)
-	@echo "🔍 Step 1: Setting up DigitalOcean authentication..." && \
+cluster-auth: ## Step a: Authenticate with DigitalOcean (usage: make cluster-auth)
+	@echo "🔍 Step a: Setting up DigitalOcean authentication..." && \
 	if [ ! -f .env ]; then \
 		echo "❌ .env file not found. Please copy .env.example to .env and configure your tokens" && \
 		exit 1; \
@@ -182,7 +182,7 @@ cluster-auth: ## Step 1: Authenticate with DigitalOcean (usage: make cluster-aut
 		echo "✅ DigitalOcean API is reachable" && \
 		echo "🧪 Testing doctl authentication..." && \
 		if DIGITALOCEAN_ACCESS_TOKEN="$$DIGITALOCEAN_TOKEN" timeout 5 doctl auth list >/dev/null 2>&1; then \
-			echo "✅ Step 1 Complete: doctl authentication verified - can access DigitalOcean account"; \
+			echo "✅ Step a Complete: doctl authentication verified - can access DigitalOcean account"; \
 		else \
 			echo "❌ doctl authentication failed - token may be invalid or API is experiencing issues" && \
 			exit 1; \
@@ -192,32 +192,32 @@ cluster-auth: ## Step 1: Authenticate with DigitalOcean (usage: make cluster-aut
 		exit 1; \
 	fi
 
-cluster-check: ## Step 2: Check if cluster exists (usage: make cluster-check CLUSTER_LABEL=dev)
+cluster-check: ## Step b: Check if cluster exists (usage: make cluster-check CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
-	echo "🔍 Step 2: Checking if cluster exists..." && \
+	echo "🔍 Step b: Checking if cluster exists..." && \
 	CLUSTER_NAME="dv-$$CLUSTER_LABEL" && \
 	$(MAKE) cluster-auth && \
 	DIGITALOCEAN_TOKEN=$$(awk -F'=' '/^DIGITALOCEAN_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-	CLUSTER_CHECK_OUTPUT=$$(DIGITALOCEAN_ACCESS_TOKEN="$$DIGITALOCEAN_TOKEN" timeout 10 doctl kubernetes cluster get $$CLUSTER_NAME 2>&1) && \
+	CLUSTER_CHECK_OUTPUT=$$(DIGITALOCEAN_ACCESS_TOKEN="$$DIGITALOCEAN_TOKEN" doctl kubernetes cluster get $$CLUSTER_NAME 2>&1) && \
 	echo "📄 Cluster check output: $$CLUSTER_CHECK_OUTPUT" && \
 	if echo "$$CLUSTER_CHECK_OUTPUT" | grep -q "Error: cluster not found"; then \
-		echo "ℹ️  Step 2 Complete: Cluster $$CLUSTER_NAME does not exist"; \
+		echo "ℹ️  Step b Complete: Cluster $$CLUSTER_NAME does not exist"; \
 	elif echo "$$CLUSTER_CHECK_OUTPUT" | grep -q "$$CLUSTER_NAME"; then \
-		STATUS=$$(DIGITALOCEAN_ACCESS_TOKEN="$$DIGITALOCEAN_TOKEN" timeout 5 doctl kubernetes cluster get $$CLUSTER_NAME --format Status --no-header 2>/dev/null) && \
-		echo "✅ Step 2 Complete: Cluster $$CLUSTER_NAME exists with status: $$STATUS"; \
+		STATUS=$$(DIGITALOCEAN_ACCESS_TOKEN="$$DIGITALOCEAN_TOKEN" doctl kubernetes cluster get $$CLUSTER_NAME --format Status --no-header 2>/dev/null) && \
+		echo "✅ Step b Complete: Cluster $$CLUSTER_NAME exists with status: $$STATUS"; \
 	else \
-		echo "ℹ️  Step 2 Complete: Unable to determine cluster status online - may not exist or network issue"; \
+		echo "ℹ️  Step b Complete: Unable to determine cluster status"; \
 	fi
 
-cluster-create: ## Step 3a: Create cluster (usage: make cluster-create CLUSTER_LABEL=dev)
+cluster-create: ## Step c: Create cluster (usage: make cluster-create CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
-	echo "🚀 Step 3a: Creating DigitalOcean cluster for '$$CLUSTER_LABEL'..." && \
+	echo "🚀 Step c: Creating DigitalOcean cluster for '$$CLUSTER_LABEL'..." && \
 	CLUSTER_NAME="dv-$$CLUSTER_LABEL" && \
 	$(MAKE) cluster-check CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	export DIGITALOCEAN_ACCESS_TOKEN=$$(awk -F'=' '/^DIGITALOCEAN_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
 	CLUSTER_CHECK_OUTPUT=$$(doctl kubernetes cluster get $$CLUSTER_NAME 2>&1) && \
 	if echo "$$CLUSTER_CHECK_OUTPUT" | grep -q "$$CLUSTER_NAME"; then \
-		echo "✅ Step 3a Complete: Cluster $$CLUSTER_NAME already exists - skipping creation"; \
+		echo "✅ Step c Complete: Cluster $$CLUSTER_NAME already exists - skipping creation"; \
 	else \
 		REGION="nyc2" && \
 		NODE_SIZE="s-2vcpu-2gb" && \
@@ -253,18 +253,18 @@ cluster-create: ## Step 3a: Create cluster (usage: make cluster-create CLUSTER_L
 		FINAL_STATUS=$$(doctl kubernetes cluster get $$CLUSTER_NAME --format Status --no-header 2>/dev/null) && \
 		echo "📊 Final cluster status: $$FINAL_STATUS" && \
 		if [ "$$FINAL_STATUS" = "running" ]; then \
-			echo "✅ Step 3a Complete: Cluster is running and ready!"; \
+			echo "✅ Step c Complete: Cluster is running and ready!"; \
 			CLUSTER_ID=$$(doctl kubernetes cluster get $$CLUSTER_NAME --format ID --no-header 2>/dev/null) && \
 			echo "🔢 Cluster ID: $$CLUSTER_ID"; \
 		else \
 			echo "⚠️  Cluster status is $$FINAL_STATUS - may still be initializing"; \
-			echo "✅ Step 3a Complete: Cluster creation initiated"; \
+			echo "✅ Step c Complete: Cluster creation initiated"; \
 		fi; \
 	fi
 
-cluster-destroy: ## Step 3b: Destroy cluster (usage: make cluster-destroy CLUSTER_LABEL=dev)
+cluster-destroy: ## Step d: Destroy cluster (usage: make cluster-destroy CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
-	echo "🚨 Step 3b: DESTRUCTIVE - Destroying DigitalOcean cluster for '$$CLUSTER_LABEL'..." && \
+	echo "🚨 Step d: DESTRUCTIVE - Destroying DigitalOcean cluster for '$$CLUSTER_LABEL'..." && \
 	CLUSTER_NAME="dv-$$CLUSTER_LABEL" && \
 	echo "⚠️  This will permanently delete cluster: $$CLUSTER_NAME" && \
 	read -p "Are you sure? Type 'yes' to continue: " CONFIRM </dev/tty && \
@@ -276,13 +276,13 @@ cluster-destroy: ## Step 3b: Destroy cluster (usage: make cluster-destroy CLUSTE
 	export DIGITALOCEAN_ACCESS_TOKEN=$$(awk -F'=' '/^DIGITALOCEAN_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
 	CLUSTER_CHECK_OUTPUT=$$(doctl kubernetes cluster get $$CLUSTER_NAME 2>&1) && \
 	if echo "$$CLUSTER_CHECK_OUTPUT" | grep -q "Error: cluster not found"; then \
-		echo "ℹ️  Step 3b Complete: Cluster $$CLUSTER_NAME does not exist - nothing to destroy"; \
+		echo "ℹ️  Step d Complete: Cluster $$CLUSTER_NAME does not exist - nothing to destroy"; \
 	elif echo "$$CLUSTER_CHECK_OUTPUT" | grep -q "$$CLUSTER_NAME"; then \
 		echo "🗑️  Deleting cluster $$CLUSTER_NAME (this may take several minutes)..." && \
 		DELETION_OUTPUT=$$(doctl kubernetes cluster delete $$CLUSTER_NAME --force 2>&1) && \
 		echo "📄 Deletion output: $$DELETION_OUTPUT" && \
 		if echo "$$DELETION_OUTPUT" | grep -q -i "deleted\|removed"; then \
-			echo "✅ Step 3b Complete: Cluster $$CLUSTER_NAME deleted successfully"; \
+			echo "✅ Step d Complete: Cluster $$CLUSTER_NAME deleted successfully"; \
 		else \
 			echo "❌ Cluster deletion may have failed - check output above"; \
 		fi; \
