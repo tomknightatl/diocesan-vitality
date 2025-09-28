@@ -10,19 +10,20 @@ This module provides sophisticated capabilities to handle dynamic diocese websit
 """
 
 import json
-import time
 import re
-from typing import List, Dict, Optional, Any, Set
+import time
+from typing import Any, Dict, List, Optional, Set
 from urllib.parse import urljoin, urlparse
-from selenium.webdriver.remote.webdriver import WebDriver
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.action_chains import ActionChains
-from selenium.common.exceptions import TimeoutException, WebDriverException
 
-from core.logger import get_logger
+from selenium.common.exceptions import TimeoutException, WebDriverException
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webdriver import WebDriver
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+
 from core.circuit_breaker import circuit_breaker
+from core.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -42,12 +43,12 @@ class NetworkTrafficAnalyzer:
         try:
             # Enable performance logging
             caps = self.driver.capabilities
-            if 'goog:loggingPrefs' not in caps:
+            if "goog:loggingPrefs" not in caps:
                 logger.info("🌐 Performance logging not available, using JS injection method")
                 return self._inject_xhr_monitor()
 
             # Get performance logs
-            logs = self.driver.get_log('performance')
+            logs = self.driver.get_log("performance")
             for log in logs:
                 self._process_performance_log(log)
 
@@ -135,11 +136,11 @@ class NetworkTrafficAnalyzer:
 
     def analyze_parish_endpoints(self) -> Set[str]:
         """Analyze requests to identify potential parish data endpoints."""
-        parish_keywords = ['parish', 'church', 'location', 'directory', 'api', 'data']
+        parish_keywords = ["parish", "church", "location", "directory", "api", "data"]
 
         for request in self.captured_requests:
-            url = request.get('url', '')
-            response = request.get('response', '')
+            url = request.get("url", "")
+            response = request.get("response", "")
 
             # Check URL for parish-related keywords
             if any(keyword in url.lower() for keyword in parish_keywords):
@@ -160,17 +161,25 @@ class NetworkTrafficAnalyzer:
             return False
 
         parish_indicators = [
-            'parish', 'church', 'cathedral', 'saint', 'st.', 'holy',
-            'address', 'phone', 'mass', 'schedule', 'pastor'
+            "parish",
+            "church",
+            "cathedral",
+            "saint",
+            "st.",
+            "holy",
+            "address",
+            "phone",
+            "mass",
+            "schedule",
+            "pastor",
         ]
 
         # Look for JSON-like structures with parish data
         try:
-            if response.startswith('{') or response.startswith('['):
+            if response.startswith("{") or response.startswith("["):
                 # Likely JSON response
                 response_lower = response.lower()
-                match_count = sum(1 for indicator in parish_indicators
-                                if indicator in response_lower)
+                match_count = sum(1 for indicator in parish_indicators if indicator in response_lower)
                 return match_count >= 3
         except:
             pass
@@ -179,9 +188,9 @@ class NetworkTrafficAnalyzer:
 
     def _process_performance_log(self, log_entry: Dict):
         """Process a performance log entry."""
-        message = json.loads(log_entry['message'])
-        if message['message']['method'] in ['Network.responseReceived', 'Network.requestWillBeSent']:
-            self.captured_requests.append(message['message'])
+        message = json.loads(log_entry["message"])
+        if message["message"]["method"] in ["Network.responseReceived", "Network.requestWillBeSent"]:
+            self.captured_requests.append(message["message"])
 
 
 class JavaScriptExecutionEngine:
@@ -192,7 +201,7 @@ class JavaScriptExecutionEngine:
         self.driver = driver
         self.network_analyzer = NetworkTrafficAnalyzer(driver)
 
-    @circuit_breaker('javascript_execution')
+    @circuit_breaker("javascript_execution")
     def wait_for_dynamic_content(self, diocese_name: str, timeout: int = 20) -> Dict[str, Any]:
         """
         Advanced waiting strategy for JavaScript-heavy diocese sites.
@@ -204,11 +213,11 @@ class JavaScriptExecutionEngine:
             - api_endpoints: Discovered API endpoints
         """
         result = {
-            'content_loaded': False,
-            'method_used': None,
-            'parish_elements': [],
-            'api_endpoints': set(),
-            'loading_time': 0
+            "content_loaded": False,
+            "method_used": None,
+            "parish_elements": [],
+            "api_endpoints": set(),
+            "loading_time": 0,
         }
 
         start_time = time.time()
@@ -226,11 +235,11 @@ class JavaScriptExecutionEngine:
 
             # Step 3: Try multiple loading strategies with adaptive timeouts
             strategies = [
-                (self._wait_for_content_change, 5),      # Reduced from default
-                (self._trigger_scroll_loading, 4),       # Reduced from default
-                (self._simulate_user_interaction, 3),    # Reduced from default
-                (self._wait_for_ajax_completion, 4),     # Reduced from default
-                (self._poll_for_content_appearance, 6)   # Slightly longer for polling
+                (self._wait_for_content_change, 5),  # Reduced from default
+                (self._trigger_scroll_loading, 4),  # Reduced from default
+                (self._simulate_user_interaction, 3),  # Reduced from default
+                (self._wait_for_ajax_completion, 4),  # Reduced from default
+                (self._poll_for_content_appearance, 6),  # Slightly longer for polling
             ]
 
             total_strategy_time = sum(timeout for _, timeout in strategies)
@@ -247,8 +256,8 @@ class JavaScriptExecutionEngine:
 
                 try:
                     if strategy(strategy_timeout):
-                        result['content_loaded'] = True
-                        result['method_used'] = strategy.__name__
+                        result["content_loaded"] = True
+                        result["method_used"] = strategy.__name__
                         logger.info(f"✅ Content loaded using {strategy.__name__}")
                         break
                 except Exception as e:
@@ -257,31 +266,31 @@ class JavaScriptExecutionEngine:
 
             # Step 4: Collect network requests
             requests = self.network_analyzer.collect_requests(2)  # Reduced from 3
-            result['api_endpoints'] = self.network_analyzer.analyze_parish_endpoints()
+            result["api_endpoints"] = self.network_analyzer.analyze_parish_endpoints()
 
             # Step 4: Extract any parish elements found
-            result['parish_elements'] = self._extract_loaded_parish_elements()
+            result["parish_elements"] = self._extract_loaded_parish_elements()
 
-            result['loading_time'] = time.time() - start_time
+            result["loading_time"] = time.time() - start_time
             logger.info(f"🎯 Dynamic content loading completed in {result['loading_time']:.2f}s")
 
             return result
 
         except Exception as e:
             logger.error(f"🚀 Dynamic content loading failed: {e}")
-            result['loading_time'] = time.time() - start_time
+            result["loading_time"] = time.time() - start_time
             return result
 
     def _wait_for_content_change(self, timeout: int = 10) -> bool:
         """Wait for significant content changes in the DOM."""
         try:
-            initial_content = self.driver.find_element(By.TAG_NAME, 'body').text
+            initial_content = self.driver.find_element(By.TAG_NAME, "body").text
             initial_length = len(initial_content)
 
             wait = WebDriverWait(self.driver, timeout)
 
             def content_has_changed(driver):
-                current_content = driver.find_element(By.TAG_NAME, 'body').text
+                current_content = driver.find_element(By.TAG_NAME, "body").text
                 current_length = len(current_content)
                 # Content should increase by at least 50%
                 return current_length > initial_length * 1.5
@@ -297,7 +306,7 @@ class JavaScriptExecutionEngine:
     def _trigger_scroll_loading(self, timeout: int = 10) -> bool:
         """Trigger lazy loading by scrolling through the page."""
         try:
-            initial_elements = len(self.driver.find_elements(By.CSS_SELECTOR, 'a, div, article'))
+            initial_elements = len(self.driver.find_elements(By.CSS_SELECTOR, "a, div, article"))
 
             # Scroll to bottom
             self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
@@ -315,7 +324,7 @@ class JavaScriptExecutionEngine:
                 time.sleep(1)
 
             # Check if new elements appeared
-            final_elements = len(self.driver.find_elements(By.CSS_SELECTOR, 'a, div, article'))
+            final_elements = len(self.driver.find_elements(By.CSS_SELECTOR, "a, div, article"))
 
             if final_elements > initial_elements * 1.2:
                 logger.info(f"✅ Scroll loading triggered new content ({final_elements - initial_elements} new elements)")
@@ -334,8 +343,14 @@ class JavaScriptExecutionEngine:
 
             # Look for common interactive elements
             selectors = [
-                'button[onclick]', '.load-more', '.show-all', '#load-parishes',
-                '[data-load]', '.expand', '.toggle', 'input[type="search"]'
+                "button[onclick]",
+                ".load-more",
+                ".show-all",
+                "#load-parishes",
+                "[data-load]",
+                ".expand",
+                ".toggle",
+                'input[type="search"]',
             ]
 
             for selector in selectors:
@@ -397,10 +412,14 @@ class JavaScriptExecutionEngine:
         """Poll for specific parish-related content to appear."""
         try:
             parish_selectors = [
-                '[class*="parish"]', '[id*="parish"]',
-                '[class*="church"]', '[id*="church"]',
-                '.directory a', '.location-list a',
-                'article a', '.entry-title a'
+                '[class*="parish"]',
+                '[id*="parish"]',
+                '[class*="church"]',
+                '[id*="church"]',
+                ".directory a",
+                ".location-list a",
+                "article a",
+                ".entry-title a",
             ]
 
             end_time = time.time() + timeout
@@ -413,7 +432,7 @@ class JavaScriptExecutionEngine:
                         valid_elements = []
                         for elem in elements[:10]:  # Check first 10
                             text = elem.text.strip().lower()
-                            if any(keyword in text for keyword in ['parish', 'church', 'saint', 'st.', 'holy']):
+                            if any(keyword in text for keyword in ["parish", "church", "saint", "st.", "holy"]):
                                 valid_elements.append(elem)
 
                         if len(valid_elements) >= 2:
@@ -431,8 +450,8 @@ class JavaScriptExecutionEngine:
     def _has_new_parish_content(self) -> bool:
         """Quick check if new parish content has appeared."""
         try:
-            parish_keywords = ['parish', 'church', 'saint', 'cathedral', 'holy']
-            body_text = self.driver.find_element(By.TAG_NAME, 'body').text.lower()
+            parish_keywords = ["parish", "church", "saint", "cathedral", "holy"]
+            body_text = self.driver.find_element(By.TAG_NAME, "body").text.lower()
 
             keyword_count = sum(body_text.count(keyword) for keyword in parish_keywords)
             return keyword_count > 5  # Arbitrary threshold
@@ -448,9 +467,14 @@ class JavaScriptExecutionEngine:
         try:
             # Look for links with parish-related content
             selectors = [
-                'a[href*="parish"]', 'a[href*="church"]',
-                '.parish a', '.church a', '.location a',
-                'article a', '.entry-title a', '.directory a'
+                'a[href*="parish"]',
+                'a[href*="church"]',
+                ".parish a",
+                ".church a",
+                ".location a",
+                "article a",
+                ".entry-title a",
+                ".directory a",
             ]
 
             for selector in selectors:
@@ -458,14 +482,10 @@ class JavaScriptExecutionEngine:
                 for elem in elements:
                     try:
                         text = elem.text.strip()
-                        href = elem.get_attribute('href')
+                        href = elem.get_attribute("href")
 
                         if text and href and self._is_parish_like(text):
-                            parish_elements.append({
-                                'name': text,
-                                'url': href,
-                                'selector': selector
-                            })
+                            parish_elements.append({"name": text, "url": href, "selector": selector})
                     except:
                         continue
 
@@ -473,7 +493,7 @@ class JavaScriptExecutionEngine:
             seen = set()
             unique_elements = []
             for elem in parish_elements:
-                key = (elem['name'].lower(), elem['url'])
+                key = (elem["name"].lower(), elem["url"])
                 if key not in seen:
                     seen.add(key)
                     unique_elements.append(elem)
@@ -488,8 +508,8 @@ class JavaScriptExecutionEngine:
     def _is_parish_like(self, text: str) -> bool:
         """Check if text looks like a parish name."""
         text_lower = text.lower()
-        parish_indicators = ['parish', 'church', 'cathedral', 'saint', 'st.', 'holy', 'blessed', 'our lady']
-        exclusions = ['home', 'about', 'contact', 'news', 'events', 'calendar', 'office', 'staff']
+        parish_indicators = ["parish", "church", "cathedral", "saint", "st.", "holy", "blessed", "our lady"]
+        exclusions = ["home", "about", "contact", "news", "events", "calendar", "office", "staff"]
 
         has_indicator = any(indicator in text_lower for indicator in parish_indicators)
         has_exclusion = any(exclusion in text_lower for exclusion in exclusions)
@@ -503,23 +523,33 @@ class JavaScriptExecutionEngine:
             page_source = self.driver.page_source.lower()
 
             dynamic_indicators = [
-                'loading', 'spinner', 'progress', 'ajax', 'xhr', 'fetch',
-                'react', 'vue', 'angular', 'jquery', 'bootstrap',
-                'data-load', 'lazy-load', 'infinite-scroll',
-                'just a moment', 'please wait', 'loading content'
+                "loading",
+                "spinner",
+                "progress",
+                "ajax",
+                "xhr",
+                "fetch",
+                "react",
+                "vue",
+                "angular",
+                "jquery",
+                "bootstrap",
+                "data-load",
+                "lazy-load",
+                "infinite-scroll",
+                "just a moment",
+                "please wait",
+                "loading content",
             ]
 
             # Check for JavaScript frameworks and AJAX indicators
-            script_indicators = ['$.ajax', '$.get', '$.post', 'XMLHttpRequest', 'fetch(']
+            script_indicators = ["$.ajax", "$.get", "$.post", "XMLHttpRequest", "fetch("]
 
             has_dynamic_text = any(indicator in page_source for indicator in dynamic_indicators)
             has_script_activity = any(indicator in page_source for indicator in script_indicators)
 
             # Check for loading elements in DOM
-            loading_selectors = [
-                '.loading', '.spinner', '.progress', '.loader',
-                '[data-loading]', '[data-load]', '#loading'
-            ]
+            loading_selectors = [".loading", ".spinner", ".progress", ".loader", "[data-loading]", "[data-load]", "#loading"]
 
             has_loading_elements = False
             for selector in loading_selectors:

@@ -6,25 +6,22 @@ This example demonstrates how to export extracted data to various formats
 including CSV, JSON, and Excel.
 """
 
+import argparse
+import csv
+import json
+import logging
 import os
 import sys
-import argparse
-import json
-import csv
-import logging
-from pathlib import Path
 from datetime import datetime
-from typing import List, Dict, Any
+from pathlib import Path
+from typing import Any, Dict, List
 
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -32,8 +29,9 @@ def get_database_connection():
     """Get database connection."""
     try:
         # Import database utilities
-        sys.path.insert(0, str(project_root / 'core'))
+        sys.path.insert(0, str(project_root / "core"))
         from db import get_db_connection
+
         return get_db_connection()
     except Exception as e:
         logger.error(f"Failed to connect to database: {e}")
@@ -90,7 +88,7 @@ def fetch_parishes_data(limit: int = None, diocese_id: int = None) -> List[Dict[
             parish = dict(zip(columns, row))
             # Convert datetime objects to strings
             for key, value in parish.items():
-                if hasattr(value, 'isoformat'):
+                if hasattr(value, "isoformat"):
                     parish[key] = value.isoformat()
             parishes.append(parish)
 
@@ -113,7 +111,7 @@ def export_to_csv(data: List[Dict[str, Any]], output_file: Path) -> bool:
             logger.warning("No data to export")
             return False
 
-        with open(output_file, 'w', newline='', encoding='utf-8') as csvfile:
+        with open(output_file, "w", newline="", encoding="utf-8") as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=data[0].keys())
             writer.writeheader()
             writer.writerows(data)
@@ -133,12 +131,12 @@ def export_to_json(data: List[Dict[str, Any]], output_file: Path) -> bool:
             "metadata": {
                 "exported_at": datetime.now().isoformat(),
                 "total_records": len(data),
-                "source": "Diocesan Vitality Data Export"
+                "source": "Diocesan Vitality Data Export",
             },
-            "parishes": data
+            "parishes": data,
         }
 
-        with open(output_file, 'w', encoding='utf-8') as jsonfile:
+        with open(output_file, "w", encoding="utf-8") as jsonfile:
             json.dump(export_data, jsonfile, indent=2, ensure_ascii=False)
 
         logger.info(f"✅ JSON export completed: {output_file}")
@@ -167,31 +165,31 @@ def export_to_excel(data: List[Dict[str, Any]], output_file: Path) -> bool:
         df = pd.DataFrame(data)
 
         # Export to Excel with multiple sheets
-        with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
+        with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
             # Main data sheet
-            df.to_excel(writer, sheet_name='Parishes', index=False)
+            df.to_excel(writer, sheet_name="Parishes", index=False)
 
             # Summary sheet
             summary_data = {
-                'Metric': [
-                    'Total Parishes',
-                    'Unique Dioceses',
-                    'Parishes with Websites',
-                    'Parishes with Email',
-                    'Parishes with Phone',
-                    'Export Date'
+                "Metric": [
+                    "Total Parishes",
+                    "Unique Dioceses",
+                    "Parishes with Websites",
+                    "Parishes with Email",
+                    "Parishes with Phone",
+                    "Export Date",
                 ],
-                'Value': [
+                "Value": [
                     len(df),
-                    df['diocese_id'].nunique() if 'diocese_id' in df.columns else 0,
-                    df['website_url'].notna().sum() if 'website_url' in df.columns else 0,
-                    df['email'].notna().sum() if 'email' in df.columns else 0,
-                    df['phone'].notna().sum() if 'phone' in df.columns else 0,
-                    datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                ]
+                    df["diocese_id"].nunique() if "diocese_id" in df.columns else 0,
+                    df["website_url"].notna().sum() if "website_url" in df.columns else 0,
+                    df["email"].notna().sum() if "email" in df.columns else 0,
+                    df["phone"].notna().sum() if "phone" in df.columns else 0,
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                ],
             }
             summary_df = pd.DataFrame(summary_data)
-            summary_df.to_excel(writer, sheet_name='Summary', index=False)
+            summary_df.to_excel(writer, sheet_name="Summary", index=False)
 
         logger.info(f"✅ Excel export completed: {output_file}")
         return True
@@ -221,33 +219,18 @@ Supported Formats:
 
 Note: Excel format requires 'pandas' and 'openpyxl' packages:
       pip install pandas openpyxl
-        """
+        """,
     )
 
     parser.add_argument(
-        "--format",
-        choices=["csv", "json", "excel", "all"],
-        default="csv",
-        help="Export format (default: csv)"
+        "--format", choices=["csv", "json", "excel", "all"], default="csv", help="Export format (default: csv)"
     )
 
-    parser.add_argument(
-        "--output",
-        required=True,
-        help="Output file path (without extension for 'all' format)"
-    )
+    parser.add_argument("--output", required=True, help="Output file path (without extension for 'all' format)")
 
-    parser.add_argument(
-        "--limit",
-        type=int,
-        help="Limit number of records to export"
-    )
+    parser.add_argument("--limit", type=int, help="Limit number of records to export")
 
-    parser.add_argument(
-        "--diocese-id",
-        type=int,
-        help="Export data for specific diocese only"
-    )
+    parser.add_argument("--diocese-id", type=int, help="Export data for specific diocese only")
 
     args = parser.parse_args()
 
@@ -255,7 +238,7 @@ Note: Excel format requires 'pandas' and 'openpyxl' packages:
     logger.info("=" * 50)
 
     # Check prerequisites
-    required_vars = ['SUPABASE_URL', 'SUPABASE_KEY']
+    required_vars = ["SUPABASE_URL", "SUPABASE_KEY"]
     missing_vars = [var for var in required_vars if not os.getenv(var)]
 
     if missing_vars:
@@ -279,24 +262,20 @@ Note: Excel format requires 'pandas' and 'openpyxl' packages:
 
     # Export based on format
     if args.format == "csv":
-        output_file = output_path.with_suffix('.csv')
+        output_file = output_path.with_suffix(".csv")
         success = export_to_csv(data, output_file)
 
     elif args.format == "json":
-        output_file = output_path.with_suffix('.json')
+        output_file = output_path.with_suffix(".json")
         success = export_to_json(data, output_file)
 
     elif args.format == "excel":
-        output_file = output_path.with_suffix('.xlsx')
+        output_file = output_path.with_suffix(".xlsx")
         success = export_to_excel(data, output_file)
 
     elif args.format == "all":
         # Export to all formats
-        formats = [
-            ('.csv', export_to_csv),
-            ('.json', export_to_json),
-            ('.xlsx', export_to_excel)
-        ]
+        formats = [(".csv", export_to_csv), (".json", export_to_json), (".xlsx", export_to_excel)]
 
         for ext, export_func in formats:
             output_file = output_path.with_suffix(ext)

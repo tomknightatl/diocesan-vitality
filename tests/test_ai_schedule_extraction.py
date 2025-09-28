@@ -4,8 +4,9 @@ Test script for AI-enhanced schedule extraction.
 """
 
 import json
-from core.schedule_ai_extractor import ScheduleAIExtractor
+
 from core.logger import get_logger
+from core.schedule_ai_extractor import ScheduleAIExtractor
 
 logger = get_logger(__name__)
 
@@ -14,9 +15,9 @@ def test_adoration_extraction():
     """Test adoration schedule extraction."""
     print("Testing Adoration Schedule Extraction")
     print("=" * 40)
-    
+
     extractor = ScheduleAIExtractor()
-    
+
     # Test case 1: Clear weekly adoration schedule
     test_content_1 = """
     <h2>Eucharistic Adoration</h2>
@@ -27,11 +28,9 @@ def test_adoration_extraction():
     </ul>
     <p>Come and spend time with our Lord in quiet prayer and reflection.</p>
     """
-    
-    result = extractor.extract_schedule_from_content(
-        test_content_1, "https://test1.com", "adoration"
-    )
-    
+
+    result = extractor.extract_schedule_from_content(test_content_1, "https://test1.com", "adoration")
+
     print("Test 1 - Clear Weekly Schedule:")
     print(json.dumps(result, indent=2))
     print(f"Has Weekly Schedule: {result.get('has_weekly_schedule')}")
@@ -49,11 +48,9 @@ def test_adoration_extraction():
         </ul>
     </div>
     """
-    
-    result = extractor.extract_schedule_from_content(
-        test_content_2, "https://test2.com", "adoration"
-    )
-    
+
+    result = extractor.extract_schedule_from_content(test_content_2, "https://test2.com", "adoration")
+
     print("Test 2 - Perpetual Adoration:")
     print(json.dumps(result, indent=2))
     print(f"Is Perpetual: {result.get('is_perpetual')}")
@@ -64,9 +61,9 @@ def test_reconciliation_extraction():
     """Test reconciliation schedule extraction."""
     print("Testing Reconciliation Schedule Extraction")
     print("=" * 40)
-    
+
     extractor = ScheduleAIExtractor()
-    
+
     # Test case 1: Standard confession schedule
     test_content_1 = """
     <h2>Sacrament of Reconciliation</h2>
@@ -77,11 +74,9 @@ def test_reconciliation_extraction():
         <p>Or by appointment - please call the parish office.</p>
     </div>
     """
-    
-    result = extractor.extract_schedule_from_content(
-        test_content_1, "https://test3.com", "reconciliation"
-    )
-    
+
+    result = extractor.extract_schedule_from_content(test_content_1, "https://test3.com", "reconciliation")
+
     print("Test 3 - Standard Confession Schedule:")
     print(json.dumps(result, indent=2))
     print(f"Has Weekly Schedule: {result.get('has_weekly_schedule')}")
@@ -96,11 +91,9 @@ def test_reconciliation_extraction():
         <p>Please contact Fr. Smith at the parish office to schedule.</p>
     </div>
     """
-    
-    result = extractor.extract_schedule_from_content(
-        test_content_2, "https://test4.com", "reconciliation"
-    )
-    
+
+    result = extractor.extract_schedule_from_content(test_content_2, "https://test4.com", "reconciliation")
+
     print("Test 4 - Appointment Only:")
     print(json.dumps(result, indent=2))
     print(f"Has Weekly Schedule: {result.get('has_weekly_schedule')}")
@@ -112,9 +105,9 @@ def test_no_schedule_content():
     """Test content with no schedule information."""
     print("Testing Content With No Schedule")
     print("=" * 40)
-    
+
     extractor = ScheduleAIExtractor()
-    
+
     test_content = """
     <h1>Welcome to St. Mary's Parish</h1>
     <p>We are a vibrant Catholic community located in downtown Springfield.</p>
@@ -126,11 +119,9 @@ def test_no_schedule_content():
         <li>Adult Education</li>
     </ul>
     """
-    
-    result = extractor.extract_schedule_from_content(
-        test_content, "https://test5.com", "adoration"
-    )
-    
+
+    result = extractor.extract_schedule_from_content(test_content, "https://test5.com", "adoration")
+
     print("Test 5 - No Schedule Content:")
     print(json.dumps(result, indent=2))
     print(f"Schedule Found: {result.get('schedule_found')}")
@@ -139,7 +130,7 @@ def test_no_schedule_content():
 
 if __name__ == "__main__":
     test_adoration_extraction()
-    print("\n" + "="*60 + "\n")
+    print("\n" + "=" * 60 + "\n")
     test_reconciliation_extraction()
-    print("\n" + "="*60 + "\n")
+    print("\n" + "=" * 60 + "\n")
     test_no_schedule_content()

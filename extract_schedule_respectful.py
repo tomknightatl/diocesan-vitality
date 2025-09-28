@@ -7,25 +7,21 @@ including robots.txt compliance, rate limiting, and blocking detection.
 """
 
 import argparse
-import time
 import json
+import time
 from datetime import datetime, timezone
 from urllib.parse import urlparse
+
 import requests
 from bs4 import BeautifulSoup
 
 import config
-from core.logger import get_logger
 from core.db import get_supabase_client
-from core.schedule_keywords import load_keywords_from_database
+from core.logger import get_logger
 from core.schedule_ai_extractor import ScheduleAIExtractor, save_ai_schedule_results
+from core.schedule_keywords import load_keywords_from_database
+from extract_schedule import choose_best_url, get_parishes_to_process, get_sitemap_urls, get_suppression_urls
 from respectful_automation import RespectfulAutomation, create_blocking_report
-from extract_schedule import (
-    get_parishes_to_process,
-    get_suppression_urls,
-    get_sitemap_urls,
-    choose_best_url
-)
 
 logger = get_logger(__name__)
 
@@ -45,16 +41,22 @@ class MonitoringClient:
                 "message": message,
                 "level": level,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
-                "parish_id": parish_id
+                "parish_id": parish_id,
             }
             self.session.post(f"{self.base_url}/api/monitoring/log", json=data)
         except Exception as e:
             # Silently fail - don't let monitoring break the main process
             pass
 
-    def update_extraction_status(self, status: str, current_diocese: str = None,
-                                parishes_processed: int = 0, total_parishes: int = 0,
-                                success_rate: float = 0.0, progress_percentage: float = 0.0):
+    def update_extraction_status(
+        self,
+        status: str,
+        current_diocese: str = None,
+        parishes_processed: int = 0,
+        total_parishes: int = 0,
+        success_rate: float = 0.0,
+        progress_percentage: float = 0.0,
+    ):
         """Update extraction status in the monitoring API."""
         try:
             data = {
@@ -64,12 +66,12 @@ class MonitoringClient:
                 "total_parishes": total_parishes,
                 "success_rate": success_rate,
                 "progress_percentage": progress_percentage,
-                "timestamp": datetime.now(timezone.utc).isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
-            if status == "running" and not hasattr(self, '_start_time'):
+            if status == "running" and not hasattr(self, "_start_time"):
                 self._start_time = datetime.now(timezone.utc).isoformat()
                 data["started_at"] = self._start_time
-            elif hasattr(self, '_start_time'):
+            elif hasattr(self, "_start_time"):
                 data["started_at"] = self._start_time
 
             self.session.post(f"{self.base_url}/api/monitoring/extraction_status", json=data)
@@ -77,9 +79,9 @@ class MonitoringClient:
             # Silently fail - don't let monitoring break the main process
             pass
 
-    def update_performance_metrics(self, parishes_per_minute: float = 0.0,
-                                  queue_size: int = 0, total_requests: int = 0,
-                                  successful_requests: int = 0):
+    def update_performance_metrics(
+        self, parishes_per_minute: float = 0.0, queue_size: int = 0, total_requests: int = 0, successful_requests: int = 0
+    ):
         """Update performance metrics in the monitoring API."""
         try:
             data = {
@@ -88,15 +90,16 @@ class MonitoringClient:
                 "pool_utilization": 0.0,  # Not applicable for this script
                 "total_requests": total_requests,
                 "successful_requests": successful_requests,
-                "timestamp": datetime.now(timezone.utc).isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
             self.session.post(f"{self.base_url}/api/monitoring/performance_metrics", json=data)
         except Exception as e:
             # Silently fail - don't let monitoring break the main process
             pass
 
-    def report_error(self, error_message: str, error_type: str = "extraction_error",
-                    diocese: str = None, parish_id: int = None):
+    def report_error(
+        self, error_message: str, error_type: str = "extraction_error", diocese: str = None, parish_id: int = None
+    ):
         """Report an error to the monitoring API."""
         try:
             data = {
@@ -104,7 +107,7 @@ class MonitoringClient:
                 "type": error_type,
                 "diocese": diocese,
                 "parish_id": parish_id,
-                "timestamp": datetime.now(timezone.utc).isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
             self.session.post(f"{self.base_url}/api/monitoring/report_error", json=data)
         except Exception as e:
@@ -116,44 +119,43 @@ def update_parish_blocking_data(supabase, parish_id: int, blocking_info: dict, r
     """Update parish record with blocking detection data."""
     try:
         # Create human-readable status description
-        if blocking_info.get('is_blocked'):
-            if blocking_info.get('blocking_type') == '403_forbidden':
-                status_description = 'Parish website actively blocking automated access (403 Forbidden)'
-            elif blocking_info.get('blocking_type') == 'rate_limited':
-                status_description = 'Parish website rate limiting requests (429 Too Many Requests)'
-            elif blocking_info.get('blocking_type') == 'cloudflare_protection':
-                status_description = 'Parish website using Cloudflare bot protection'
-            elif blocking_info.get('blocking_type') == 'robots_txt_disallowed':
-                status_description = 'Parish website disallows automated access via robots.txt'
+        if blocking_info.get("is_blocked"):
+            if blocking_info.get("blocking_type") == "403_forbidden":
+                status_description = "Parish website actively blocking automated access (403 Forbidden)"
+            elif blocking_info.get("blocking_type") == "rate_limited":
+                status_description = "Parish website rate limiting requests (429 Too Many Requests)"
+            elif blocking_info.get("blocking_type") == "cloudflare_protection":
+                status_description = "Parish website using Cloudflare bot protection"
+            elif blocking_info.get("blocking_type") == "robots_txt_disallowed":
+                status_description = "Parish website disallows automated access via robots.txt"
             else:
                 status_description = f'Parish website blocking access ({blocking_info.get("blocking_type", "unknown")})'
         else:
-            status_description = 'Parish website accessible to automated requests'
+            status_description = "Parish website accessible to automated requests"
 
         # Update parish record
         update_data = {
-            'is_blocked': blocking_info.get('is_blocked', False),
-            'blocking_type': blocking_info.get('blocking_type'),
-            'blocking_evidence': {
-                'evidence_list': blocking_info.get('evidence', []),
-                'headers': blocking_info.get('headers', {})
+            "is_blocked": blocking_info.get("is_blocked", False),
+            "blocking_type": blocking_info.get("blocking_type"),
+            "blocking_evidence": {
+                "evidence_list": blocking_info.get("evidence", []),
+                "headers": blocking_info.get("headers", {}),
             },
-            'status_code': blocking_info.get('status_code'),
-            'robots_txt_check': robots_info,
-            'respectful_automation_used': True,
-            'status_description': status_description,
-            'extracted_at': datetime.now(timezone.utc).isoformat()
+            "status_code": blocking_info.get("status_code"),
+            "robots_txt_check": robots_info,
+            "respectful_automation_used": True,
+            "status_description": status_description,
+            "extracted_at": datetime.now(timezone.utc).isoformat(),
         }
 
-        supabase.table('Parishes').update(update_data).eq('id', parish_id).execute()
+        supabase.table("Parishes").update(update_data).eq("id", parish_id).execute()
         logger.info(f"✅ Updated parish {parish_id} blocking data: {status_description}")
 
     except Exception as e:
         logger.error(f"❌ Failed to update parish {parish_id} blocking data: {e}")
 
 
-def extract_content_with_respectful_automation(url: str, automation: RespectfulAutomation,
-                                             suppression_urls: set) -> tuple:
+def extract_content_with_respectful_automation(url: str, automation: RespectfulAutomation, suppression_urls: set) -> tuple:
     """
     Extract content from a URL using respectful automation practices.
 
@@ -167,7 +169,7 @@ def extract_content_with_respectful_automation(url: str, automation: RespectfulA
     """
     if url in suppression_urls:
         logger.info(f"🚫 Skipping suppressed URL: {url}")
-        return "", {'success': False, 'error': 'suppressed_url'}
+        return "", {"success": False, "error": "suppressed_url"}
 
     try:
         response, info = automation.respectful_get(url, timeout=15)
@@ -176,37 +178,37 @@ def extract_content_with_respectful_automation(url: str, automation: RespectfulA
             logger.warning(f"⚠️ Could not fetch {url}: {info.get('error', 'Unknown error')}")
             return "", info
 
-        if info['blocking_info']['is_blocked']:
+        if info["blocking_info"]["is_blocked"]:
             logger.warning(f"🚫 Website is blocking access: {url} - {info['blocking_info']['blocking_type']}")
             return "", info
 
         # Parse content
-        soup = BeautifulSoup(response.content, 'html.parser')
+        soup = BeautifulSoup(response.content, "html.parser")
 
         # Remove irrelevant elements
-        for element in soup(['script', 'style', 'nav', 'footer', 'header', 'aside']):
+        for element in soup(["script", "style", "nav", "footer", "header", "aside"]):
             element.decompose()
 
         # Extract text content
-        text_content = soup.get_text(separator=' ', strip=True)
+        text_content = soup.get_text(separator=" ", strip=True)
 
         # Basic cleaning
-        lines = [line.strip() for line in text_content.split('\n')]
+        lines = [line.strip() for line in text_content.split("\n")]
         cleaned_lines = [line for line in lines if line and len(line) > 10]
 
-        content = '\n'.join(cleaned_lines)
+        content = "\n".join(cleaned_lines)
         logger.info(f"✅ Successfully extracted {len(content)} characters from {url}")
 
         return content, info
 
     except Exception as e:
         logger.error(f"❌ Error extracting content from {url}: {e}")
-        return "", {'success': False, 'error': str(e)}
+        return "", {"success": False, "error": str(e)}
 
 
-def process_parish_with_blocking_detection(parish_url: str, parish_id: int,
-                                         supabase, automation: RespectfulAutomation,
-                                         suppression_urls: set, max_pages: int = 10) -> dict:
+def process_parish_with_blocking_detection(
+    parish_url: str, parish_id: int, supabase, automation: RespectfulAutomation, suppression_urls: set, max_pages: int = 10
+) -> dict:
     """
     Process a parish website with respectful automation and blocking detection.
 
@@ -229,31 +231,31 @@ def process_parish_with_blocking_detection(parish_url: str, parish_id: int,
     response, info = automation.respectful_get(parish_url, timeout=10)
 
     # Update parish blocking data regardless of success/failure
-    blocking_info = info.get('blocking_info', {})
-    robots_info = info.get('robots_info', {})
+    blocking_info = info.get("blocking_info", {})
+    robots_info = info.get("robots_info", {})
 
     update_parish_blocking_data(supabase, parish_id, blocking_info, robots_info)
 
     # If blocked, return early
-    if blocking_info.get('is_blocked'):
+    if blocking_info.get("is_blocked"):
         logger.warning(f"  🚫 [{parish_id}] Website is blocking access: {blocking_info.get('blocking_type')}")
         return {
-            'parish_id': parish_id,
-            'success': False,
-            'error': 'blocked',
-            'blocking_info': blocking_info,
-            'robots_info': robots_info
+            "parish_id": parish_id,
+            "success": False,
+            "error": "blocked",
+            "blocking_info": blocking_info,
+            "robots_info": robots_info,
         }
 
     # If request failed for other reasons
     if not response:
         logger.error(f"  ❌ [{parish_id}] Request failed: {info.get('error', 'Unknown error')}")
         return {
-            'parish_id': parish_id,
-            'success': False,
-            'error': info.get('error', 'request_failed'),
-            'blocking_info': blocking_info,
-            'robots_info': robots_info
+            "parish_id": parish_id,
+            "success": False,
+            "error": info.get("error", "request_failed"),
+            "blocking_info": blocking_info,
+            "robots_info": robots_info,
         }
 
     logger.info(f"  ✅ [{parish_id}] No blocking detected (HTTP {response.status_code})")
@@ -270,7 +272,7 @@ def process_parish_with_blocking_detection(parish_url: str, parish_id: int,
         logger.info(f"  🔍 [{parish_id}] Found {len(urls_to_check)} URLs to check for schedule content")
 
         # Find candidate pages
-        candidate_pages = {'reconciliation': [], 'adoration': []}
+        candidate_pages = {"reconciliation": [], "adoration": []}
         pages_checked = 0
 
         for url in urls_to_check:
@@ -278,9 +280,7 @@ def process_parish_with_blocking_detection(parish_url: str, parish_id: int,
                 break
 
             try:
-                content, url_info = extract_content_with_respectful_automation(
-                    url, automation, suppression_urls
-                )
+                content, url_info = extract_content_with_respectful_automation(url, automation, suppression_urls)
 
                 if not content:
                     continue
@@ -288,13 +288,13 @@ def process_parish_with_blocking_detection(parish_url: str, parish_id: int,
                 page_text = content.lower()
 
                 # Check for reconciliation keywords
-                if any(kw in page_text for kw in ['reconciliation', 'confession', 'penance']):
-                    candidate_pages['reconciliation'].append(url)
+                if any(kw in page_text for kw in ["reconciliation", "confession", "penance"]):
+                    candidate_pages["reconciliation"].append(url)
                     logger.info(f"  📝 [{parish_id}] Found reconciliation candidate: {url}")
 
                 # Check for adoration keywords
-                if any(kw in page_text for kw in ['adoration', 'exposition', 'blessed sacrament']):
-                    candidate_pages['adoration'].append(url)
+                if any(kw in page_text for kw in ["adoration", "exposition", "blessed sacrament"]):
+                    candidate_pages["adoration"].append(url)
                     logger.info(f"  ⛪ [{parish_id}] Found adoration candidate: {url}")
 
                 pages_checked += 1
@@ -308,44 +308,30 @@ def process_parish_with_blocking_detection(parish_url: str, parish_id: int,
         extraction_results = {}
 
         # Process reconciliation pages
-        if candidate_pages['reconciliation']:
+        if candidate_pages["reconciliation"]:
             best_recon_url = choose_best_url(
-                candidate_pages['reconciliation'],
-                recon_kw, recon_neg,
-                urlparse(parish_url).netloc
+                candidate_pages["reconciliation"], recon_kw, recon_neg, urlparse(parish_url).netloc
             )
 
             logger.info(f"  🤖 [{parish_id}] Analyzing reconciliation page with AI: {best_recon_url}")
-            recon_content, _ = extract_content_with_respectful_automation(
-                best_recon_url, automation, suppression_urls
-            )
+            recon_content, _ = extract_content_with_respectful_automation(best_recon_url, automation, suppression_urls)
 
             if recon_content:
-                recon_result = ai_extractor.extract_schedule_from_content(
-                    recon_content, best_recon_url, "reconciliation"
-                )
-                recon_result['parish_id'] = parish_id
-                extraction_results['reconciliation'] = recon_result
+                recon_result = ai_extractor.extract_schedule_from_content(recon_content, best_recon_url, "reconciliation")
+                recon_result["parish_id"] = parish_id
+                extraction_results["reconciliation"] = recon_result
 
         # Process adoration pages
-        if candidate_pages['adoration']:
-            best_ador_url = choose_best_url(
-                candidate_pages['adoration'],
-                ador_kw, ador_neg,
-                urlparse(parish_url).netloc
-            )
+        if candidate_pages["adoration"]:
+            best_ador_url = choose_best_url(candidate_pages["adoration"], ador_kw, ador_neg, urlparse(parish_url).netloc)
 
             logger.info(f"  🤖 [{parish_id}] Analyzing adoration page with AI: {best_ador_url}")
-            ador_content, _ = extract_content_with_respectful_automation(
-                best_ador_url, automation, suppression_urls
-            )
+            ador_content, _ = extract_content_with_respectful_automation(best_ador_url, automation, suppression_urls)
 
             if ador_content:
-                ador_result = ai_extractor.extract_schedule_from_content(
-                    ador_content, best_ador_url, "adoration"
-                )
-                ador_result['parish_id'] = parish_id
-                extraction_results['adoration'] = ador_result
+                ador_result = ai_extractor.extract_schedule_from_content(ador_content, best_ador_url, "adoration")
+                ador_result["parish_id"] = parish_id
+                extraction_results["adoration"] = ador_result
 
         # Save AI results if any found
         if extraction_results:
@@ -355,22 +341,22 @@ def process_parish_with_blocking_detection(parish_url: str, parish_id: int,
         logger.info(f"  ✅ [{parish_id}] Completed processing - found {len(extraction_results)} schedule types")
 
         return {
-            'parish_id': parish_id,
-            'success': True,
-            'schedules_found': len(extraction_results),
-            'extraction_results': extraction_results,
-            'blocking_info': blocking_info,
-            'robots_info': robots_info
+            "parish_id": parish_id,
+            "success": True,
+            "schedules_found": len(extraction_results),
+            "extraction_results": extraction_results,
+            "blocking_info": blocking_info,
+            "robots_info": robots_info,
         }
 
     except Exception as e:
         logger.error(f"  ❌ [{parish_id}] Error during schedule extraction: {e}")
         return {
-            'parish_id': parish_id,
-            'success': False,
-            'error': str(e),
-            'blocking_info': blocking_info,
-            'robots_info': robots_info
+            "parish_id": parish_id,
+            "success": False,
+            "error": str(e),
+            "blocking_info": blocking_info,
+            "robots_info": robots_info,
         }
 
 
@@ -417,12 +403,12 @@ def main(num_parishes: int = None, parish_id: int = None, max_pages_per_parish: 
             )
 
             # Update statistics
-            if result['blocking_info'].get('is_blocked'):
+            if result["blocking_info"].get("is_blocked"):
                 blocked_count += 1
             else:
                 accessible_count += 1
 
-            if result.get('schedules_found', 0) > 0:
+            if result.get("schedules_found", 0) > 0:
                 schedule_found_count += 1
 
             logger.info(f"✅ [{processed_count}/{total_parishes}] Completed parish {p_id}")
@@ -440,18 +426,12 @@ def main(num_parishes: int = None, parish_id: int = None, max_pages_per_parish: 
     logger.info(f"📅 Schedules found: {schedule_found_count} ({schedule_found_count/processed_count*100:.1f}%)")
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description="Respectful parish website analysis with blocking detection"
-    )
-    parser.add_argument("--num_parishes", type=int,
-                       help="Number of parishes to process (default: all)")
-    parser.add_argument("--parish_id", type=int,
-                       help="Specific parish ID to process")
-    parser.add_argument("--max_pages_per_parish", type=int, default=10,
-                       help="Maximum pages to analyze per parish")
-    parser.add_argument("--diocese_id", type=int,
-                       help="Filter parishes to specific diocese ID")
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Respectful parish website analysis with blocking detection")
+    parser.add_argument("--num_parishes", type=int, help="Number of parishes to process (default: all)")
+    parser.add_argument("--parish_id", type=int, help="Specific parish ID to process")
+    parser.add_argument("--max_pages_per_parish", type=int, default=10, help="Maximum pages to analyze per parish")
+    parser.add_argument("--diocese_id", type=int, help="Filter parishes to specific diocese ID")
 
     args = parser.parse_args()
 
@@ -459,5 +439,5 @@ if __name__ == '__main__':
         num_parishes=args.num_parishes,
         parish_id=args.parish_id,
         max_pages_per_parish=args.max_pages_per_parish,
-        diocese_id=args.diocese_id
+        diocese_id=args.diocese_id,
     )

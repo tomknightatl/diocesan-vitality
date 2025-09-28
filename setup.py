@@ -6,12 +6,14 @@ A comprehensive data collection and analysis system for U.S. Catholic dioceses a
 """
 
 import os
-from setuptools import setup, find_packages
+
+from setuptools import find_packages, setup
 
 # Read the contents of README file
 this_directory = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(this_directory, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
+
 
 # Read requirements
 def read_requirements(filename):
@@ -19,6 +21,7 @@ def read_requirements(filename):
     requirements_path = os.path.join(this_directory, filename)
     with open(requirements_path, encoding="utf-8") as f:
         return [line.strip() for line in f if line.strip() and not line.startswith("#")]
+
 
 # Version management - use centralized version
 def get_version():
@@ -31,6 +34,7 @@ def get_version():
         exec(f.read(), version_vars)
 
     return version_vars.get("__version__", "0.9.0")
+
 
 # Main requirements
 install_requires = read_requirements("requirements.txt")
@@ -165,7 +169,8 @@ setup(
 )
 
 # Post-installation message
-print("""
+print(
+    """
 🎉 Diocesan Vitality installed successfully!
 
 📚 Getting Started:
@@ -183,4 +188,5 @@ print("""
 
 🆘 Support:
    https://github.com/tomknightatl/diocesan-vitality/issues
-""")
+"""
+)
