@@ -648,7 +648,7 @@ sealed-secrets-create: ## Step 4: Create tunnel token sealed secret from environ
 		echo "💡 Ensure tunnel verification has been run: make tunnel-verify CLUSTER_LABEL=$$CLUSTER_LABEL"; \
 		exit 1; \
 	fi && \
-	TUNNEL_TOKEN=$$(grep "TUNNEL_TOKEN_$$CLUSTER_LABEL" .tunnel-token-$$CLUSTER_LABEL | cut -d'=' -f2) && \
+	TUNNEL_TOKEN=$$(grep "TUNNEL_TOKEN_$$CLUSTER_LABEL" .tunnel-token-$$CLUSTER_LABEL | cut -d'=' -f2-) && \
 	if [ -z "$$TUNNEL_TOKEN" ]; then \
 		echo "❌ Could not extract tunnel token from environment file"; \
 		echo "💡 Ensure tunnel verification has been run: make tunnel-verify CLUSTER_LABEL=$$CLUSTER_LABEL"; \
@@ -1041,6 +1041,13 @@ tunnel-verify: ## Generate tunnel token file for sealed secrets (usage: make tun
 		TUNNEL_TOKEN=$$(echo "$$TOKEN_RESPONSE" | jq -r '.result' 2>/dev/null) && \
 		if [ -n "$$TUNNEL_TOKEN" ] && [ "$$TUNNEL_TOKEN" != "null" ]; then \
 			echo "✅ Tunnel token generated successfully" && \
+			echo "🔍 Adding base64 padding if needed..." && \
+			TOKEN_LEN=$$(echo -n "$$TUNNEL_TOKEN" | wc -c) && \
+			PADDING_NEEDED=$$((4 - TOKEN_LEN % 4)) && \
+			if [ $$PADDING_NEEDED -ne 4 ]; then \
+				PADDING=$$(printf '%*s' $$PADDING_NEEDED '' | tr ' ' '=') && \
+				TUNNEL_TOKEN="$$TUNNEL_TOKEN$$PADDING"; \
+			fi && \
 			echo "💾 Saving tunnel token to .tunnel-token-$$CLUSTER_LABEL..." && \
 			echo "TUNNEL_TOKEN_$$CLUSTER_LABEL=$$TUNNEL_TOKEN" > .tunnel-token-$$CLUSTER_LABEL && \
 			echo "✅ Tunnel token saved to .tunnel-token-$$CLUSTER_LABEL" && \
