@@ -10,13 +10,25 @@ RUN apt-get update && apt-get install -y \
     gpg \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Chrome with architecture detection
+# Install Chrome/Chromium based on architecture
 RUN ARCH=$(dpkg --print-architecture) && \
-    wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/googlechrome-linux-keyring.gpg && \
-    echo "deb [arch=${ARCH} signed-by=/usr/share/keyrings/googlechrome-linux-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list && \
-    apt-get update && \
-    apt-get install -y google-chrome-stable && \
-    rm -rf /var/lib/apt/lists/*
+    if [ "$ARCH" = "amd64" ]; then \
+        echo "Installing Google Chrome for AMD64..."; \
+        wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/googlechrome-linux-keyring.gpg && \
+        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/googlechrome-linux-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list && \
+        apt-get update && \
+        apt-get install -y google-chrome-stable && \
+        rm -rf /var/lib/apt/lists/*; \
+    elif [ "$ARCH" = "arm64" ]; then \
+        echo "Installing Chromium for ARM64..."; \
+        apt-get update && \
+        apt-get install -y chromium-browser && \
+        rm -rf /var/lib/apt/lists/* && \
+        ln -sf /usr/bin/chromium-browser /usr/bin/google-chrome; \
+    else \
+        echo "Unsupported architecture: $ARCH"; \
+        exit 1; \
+    fi
 
 # ChromeDriver will be managed by webdriver-manager at runtime
 # This avoids version compatibility issues
