@@ -31,7 +31,7 @@ spec:
               topologyKey: "kubernetes.io/hostname" # Ensures no 2 pipeline pods on same node
       containers:
         - name: pipeline
-          image: tomatl/diocesan-vitality:pipeline-2025-09-28-14-41-56-dev
+          image: tomatl/diocesan-vitality:dev-pipeline-latest
           imagePullPolicy: Always
           resources:
             requests:

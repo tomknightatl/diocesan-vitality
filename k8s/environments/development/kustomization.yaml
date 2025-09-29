@@ -10,16 +10,8 @@ resources:
 patches:
   - path: development-patches.yaml
 
-images:
-  - name: tomatl/diocesan-vitality:backend-2025-09-15-20-27-14
-    newName: tomatl/diocesan-vitality
-    newTag: backend-latest
-  - name: tomatl/diocesan-vitality:frontend-2025-09-15-22-17-53
-    newName: tomatl/diocesan-vitality
-    newTag: frontend-latest
-  - name: tomatl/diocesan-vitality:pipeline-2025-09-15-22-58-39
-    newName: tomatl/diocesan-vitality
-    newTag: pipeline-latest
+# Images will use dev-*-latest tags from base deployments
+# These tags are automatically updated by CI/CD pipeline
 
 commonLabels:
   environment: development
