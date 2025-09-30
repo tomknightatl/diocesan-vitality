@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Any, Dict, Optional, Tuple
 
 # Version information - updated automatically by semantic-release
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 __version_info__ = tuple(int(i) for i in __version__.split("."))
 
 # Build metadata - populated during CI/CD build process
@@ -22,7 +22,10 @@ BUILD_INFO = {
     "build_date": os.getenv("BUILD_DATE", datetime.utcnow().isoformat()),
     "build_number": os.getenv("GITHUB_RUN_NUMBER", "unknown"),
     "docker_tags": {
-        "backend": f"tomatl/diocesan-vitality:backend-{__version__}",
+        "backend": "tomatl/diocesan-vitality:backend-2.0.0",
+        "frontend": "tomatl/diocesan-vitality:frontend-2.0.0",
+        "pipeline": "tomatl/diocesan-vitality:pipeline-2.0.0",
+    }",
         "frontend": f"tomatl/diocesan-vitality:frontend-{__version__}",
         "pipeline": f"tomatl/diocesan-vitality:pipeline-{__version__}",
     },
