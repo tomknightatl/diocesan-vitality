@@ -79,6 +79,54 @@ includeClaudeAttribution: false
 - **NEVER claim a command "timed out" unless it actually reached the specified timeout duration**
 - **When commands fail quickly, analyze the actual error message rather than assuming timeout**
 
+## CI/CD Pipeline and Branch Strategy
+
+**🚀 Automated Deployment Pipeline**
+- **Branch-to-Environment Mapping:**
+  - `develop` branch → Development cluster (`CLUSTER_LABEL=dev`)
+  - `staging` branch → Staging cluster (`CLUSTER_LABEL=stg`)
+  - `main` branch → Production cluster (`CLUSTER_LABEL=prd`)
+- **GitOps Workflow:**
+  - Push to `develop` → Auto-deploys to dev environment via ArgoCD
+  - Push to `staging` → Auto-deploys to staging environment via ArgoCD
+  - Push to `main` → Requires manual approval, then deploys to production
+- **Pipeline Stages:**
+  1. Code Quality: Linting and formatting checks
+  2. Tests: Unit and integration tests
+  3. Build: Multi-platform Docker images (linux/amd64, linux/arm64)
+  4. Deploy: GitOps-based deployment via ArgoCD ApplicationSets
+  5. Smoke Tests: Post-deployment verification
+
+**📋 Complete CI/CD Documentation:** See [docs/CI_CD_PIPELINE.md](docs/CI_CD_PIPELINE.md)
+
+## Monitoring and Live System Access
+
+**🌐 Production System:**
+- **Frontend:** https://ui.diocesanvitality.org
+- **Dashboard:** https://ui.diocesanvitality.org/dashboard
+- **Backend API:** https://api.diocesanvitality.org
+- **ArgoCD:** https://argocd.diocesanvitality.org
+
+**🧪 Development System:**
+- **Frontend:** https://devui.diocesanvitality.org
+- **Dashboard:** https://devui.diocesanvitality.org/dashboard
+- **Backend API:** https://devapi.diocesanvitality.org
+- **ArgoCD:** https://devargocd.diocesanvitality.org
+
+**📊 Monitoring Commands:**
+```bash
+# Check cluster status
+kubectl config use-context do-nyc2-dv-dev
+kubectl get pods -n diocesan-vitality-dev
+kubectl get applicationsets -n argocd
+
+# Check infrastructure status
+make infra-status CLUSTER_LABEL=dev
+
+# Monitor ArgoCD applications
+kubectl get applications -n argocd -w
+```
+
 ## Development Commands
 
 ### Quick Development Setup
@@ -340,9 +388,69 @@ make monitor-check              # Monitoring integration
 ### CRITICAL: ArgoCD-Managed Resources
 - **NEVER directly patch, edit, or modify Kubernetes objects that are deployed by ArgoCD Applications**
 - **ALWAYS use GitOps principles**: modify the source manifests in the repository, then let ArgoCD sync the changes
-- **To change ArgoCD-managed resources**: 
+- **To change ArgoCD-managed resources**:
   1. Update the corresponding YAML manifests in the `k8s/` directory
   2. Commit changes to git (with user permission)
   3. Let ArgoCD automatically sync the changes, or manually trigger a sync
 - **ArgoCD Applications create and manage**: namespaces, deployments, services, configmaps, secrets, and other Kubernetes resources
 - **Exception**: Only manually modify Kubernetes objects in emergency situations and immediately update the source manifests to match
+
+## Common Troubleshooting Scenarios
+
+### Infrastructure Command Timeouts
+**Symptom:** `make cluster-create` or similar command times out after 30+ minutes
+**Resolution:**
+1. **Don't panic or re-run immediately** - cluster may still be creating successfully
+2. Check actual cluster state: `doctl kubernetes cluster list`
+3. If cluster exists with "running" status → Success! Continue with `make cluster-context`
+4. If cluster is "provisioning" → Wait a few more minutes, check again
+5. Only re-run if cluster truly doesn't exist
+
+### ArgoCD Application Not Syncing
+**Symptom:** Application shows "OutOfSync" status for extended period
+**Resolution:**
+```bash
+# Check application status
+kubectl get application <app-name> -n argocd -o yaml
+
+# Common fixes:
+# 1. Verify correct branch in ApplicationSet
+kubectl get applicationset -n argocd <appset-name> -o yaml | grep targetRevision
+
+# 2. Manually trigger sync if needed (with user permission)
+kubectl patch application <app-name> -n argocd --type merge -p '{"operation":{"initiatedBy":{"username":"admin"},"sync":{"syncStrategy":{"hook":{},"apply":{"force":false}}}}}'
+
+# 3. Check ArgoCD logs for errors
+kubectl logs -n argocd deployment/argocd-application-controller
+```
+
+### Sealed Secrets Not Decrypting
+**Symptom:** Pods failing with missing secret data
+**Resolution:**
+1. Verify sealed-secrets controller is running: `kubectl get pods -n kube-system -l app.kubernetes.io/name=sealed-secrets`
+2. Check SealedSecret resource exists: `kubectl get sealedsecrets -n <namespace>`
+3. Verify secret was created: `kubectl get secret <secret-name> -n <namespace>`
+4. Re-create sealed secret if needed: `make sealed-secrets-create CLUSTER_LABEL=<env>`
+
+### Tunnel Not Connecting
+**Symptom:** URLs not accessible, cloudflared pod logs show connection errors
+**Resolution:**
+1. Check tunnel pod status: `kubectl get pods -n cloudflare-tunnel-<env>`
+2. View tunnel logs: `kubectl logs -n cloudflare-tunnel-<env> deployment/cloudflared`
+3. Verify tunnel token secret exists: `kubectl get secret cloudflared-token -n cloudflare-tunnel-<env>`
+4. Verify tunnel exists in Cloudflare: Check output of `make tunnel-check CLUSTER_LABEL=<env>`
+5. Re-create tunnel token if needed: `make tunnel-verify CLUSTER_LABEL=<env>` then `make sealed-secrets-create CLUSTER_LABEL=<env>`
+
+### Docker Build Platform Issues
+**Symptom:** `docker buildx` fails with platform errors
+**Resolution:**
+```bash
+# Ensure buildx is properly set up
+docker buildx create --use --name multiplatform --driver docker-container
+
+# Verify buildx builder
+docker buildx inspect multiplatform --bootstrap
+
+# If issues persist, use single platform for testing
+docker build -f backend/Dockerfile -t tomatl/diocesan-vitality:backend-test backend/
+```
