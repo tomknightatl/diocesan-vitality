@@ -279,6 +279,11 @@ jobs:
         with:
           version: "v1.28.0"
 
+      - name: Set up kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+
       - name: Configure kubectl for development cluster
         env:
           DEV_KUBECONFIG: ${{ secrets.DEV_KUBECONFIG }}
@@ -298,9 +303,26 @@ jobs:
         run: |
           echo "🚀 Deploying to development cluster do-nyc2-dv-dev..."
 
+          # Extract just the tag portion from the full image names
+          BACKEND_TAG=${BACKEND_IMAGE##*:}
+          FRONTEND_TAG=${FRONTEND_IMAGE##*:}
+          PIPELINE_TAG=${PIPELINE_IMAGE##*:}
+
+          echo "📋 Image tags to deploy:"
+          echo "  Backend: $BACKEND_TAG"
+          echo "  Frontend: $FRONTEND_TAG"
+          echo "  Pipeline: $PIPELINE_TAG"
+
           # Update kustomization with new image tags
           cd k8s/environments/development
-          sed -i "s|newTag: .*|newTag: ${BACKEND_IMAGE##*:}|g" kustomization.yaml
+
+          # Use kustomize edit to update images properly
+          kustomize edit set image tomatl/diocesan-vitality:backend=tomatl/diocesan-vitality:$BACKEND_TAG
+          kustomize edit set image tomatl/diocesan-vitality:frontend=tomatl/diocesan-vitality:$FRONTEND_TAG
+          kustomize edit set image tomatl/diocesan-vitality:pipeline=tomatl/diocesan-vitality:$PIPELINE_TAG
+
+          echo "📝 Updated kustomization.yaml:"
+          cat kustomization.yaml
 
           # Apply development manifests
           kubectl apply -k .
@@ -336,6 +358,11 @@ jobs:
         with:
           version: "v1.28.0"
 
+      - name: Set up kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+
       - name: Configure kubectl for staging cluster
         env:
           STAGING_KUBECONFIG: ${{ secrets.STAGING_KUBECONFIG }}
@@ -355,9 +382,26 @@ jobs:
         run: |
           echo "🚀 Deploying to staging cluster do-nyc2-dv-stg..."
 
+          # Extract just the tag portion from the full image names
+          BACKEND_TAG=${BACKEND_IMAGE##*:}
+          FRONTEND_TAG=${FRONTEND_IMAGE##*:}
+          PIPELINE_TAG=${PIPELINE_IMAGE##*:}
+
+          echo "📋 Image tags to deploy:"
+          echo "  Backend: $BACKEND_TAG"
+          echo "  Frontend: $FRONTEND_TAG"
+          echo "  Pipeline: $PIPELINE_TAG"
+
           # Update kustomization with new image tags
           cd k8s/environments/staging
-          sed -i "s|newTag: .*|newTag: ${BACKEND_IMAGE##*:}|g" kustomization.yaml
+
+          # Use kustomize edit to update images properly
+          kustomize edit set image tomatl/diocesan-vitality:backend=tomatl/diocesan-vitality:$BACKEND_TAG
+          kustomize edit set image tomatl/diocesan-vitality:frontend=tomatl/diocesan-vitality:$FRONTEND_TAG
+          kustomize edit set image tomatl/diocesan-vitality:pipeline=tomatl/diocesan-vitality:$PIPELINE_TAG
+
+          echo "📝 Updated kustomization.yaml:"
+          cat kustomization.yaml
 
           # Apply staging manifests
           kubectl apply -k .

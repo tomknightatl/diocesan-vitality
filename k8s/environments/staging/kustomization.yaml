@@ -11,8 +11,12 @@ patches:
   - path: staging-patches.yaml
 
 images:
-  - name: tomatl/diocesan-vitality
-    newTag: staging-latest
+  - name: tomatl/diocesan-vitality:backend
+    newTag: staging-backend-latest
+  - name: tomatl/diocesan-vitality:frontend
+    newTag: staging-frontend-latest
+  - name: tomatl/diocesan-vitality:pipeline
+    newTag: staging-pipeline-latest
 
 commonLabels:
   environment: staging
