@@ -34,6 +34,8 @@ spec:
       containers:
         - name: frontend
           env:
+            - name: NAMESPACE
+              value: "diocesan-vitality-stg"
             - name: REACT_APP_ENVIRONMENT
               value: "staging"
             - name: REACT_APP_API_URL
