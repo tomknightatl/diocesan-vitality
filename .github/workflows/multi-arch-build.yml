@@ -1,8 +1,9 @@
-name: Multi-Architecture Build and Deploy
+name: Multi-Architecture Build and Deploy (DISABLED)
 
 on:
-  push:
-    branches: [main, develop, staging]
+  # DISABLED: This workflow conflicts with multi-cluster-ci-cd.yml
+  # push:
+  #   branches: [main, develop, staging]
   workflow_dispatch:
     inputs:
       environment:
