@@ -5,11 +5,13 @@ Provides smart element detection with multiple selector strategies and adaptive 
 """
 
 import time
-from typing import List, Optional, Tuple, Union, Any
+from typing import Any, List, Optional, Tuple, Union
+
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException
+from selenium.webdriver.support.ui import WebDriverWait
+
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -26,11 +28,7 @@ class ElementWaitStrategy:
         self.base_timeout = base_timeout
 
     def smart_element_wait(
-        self,
-        selectors: List[str],
-        timeout: float = None,
-        condition: str = "presence",
-        log_attempts: bool = True
+        self, selectors: List[str], timeout: float = None, condition: str = "presence", log_attempts: bool = True
     ) -> Optional[Any]:
         """
         Try multiple selectors with progressive timeouts and different conditions.
@@ -81,12 +79,12 @@ class ElementWaitStrategy:
         for i, selector in enumerate(selectors):
             # Base timeout increases with complexity and position
             complexity_factor = len(selector) / 50  # Longer selectors get more time
-            position_factor = i / len(selectors)    # Later selectors get more time
+            position_factor = i / len(selectors)  # Later selectors get more time
 
             # Progressive timeout: 20% to 100% of max_timeout
             progress_timeout = max_timeout * (0.2 + 0.8 * position_factor + complexity_factor * 0.1)
             progress_timeout = min(progress_timeout, max_timeout)  # Cap at max_timeout
-            progress_timeout = max(progress_timeout, 1.0)         # Minimum 1 second
+            progress_timeout = max(progress_timeout, 1.0)  # Minimum 1 second
 
             timeouts.append(round(progress_timeout, 1))
 
@@ -106,11 +104,7 @@ class ElementWaitStrategy:
             raise ValueError(f"Unknown condition: {condition}")
 
     def smart_elements_wait(
-        self,
-        selectors: List[str],
-        timeout: float = None,
-        min_count: int = 1,
-        log_attempts: bool = True
+        self, selectors: List[str], timeout: float = None, min_count: int = 1, log_attempts: bool = True
     ) -> List[Any]:
         """
         Find multiple elements with smart waiting and fallback strategies.
@@ -130,12 +124,12 @@ class ElementWaitStrategy:
         for i, (selector, selector_timeout) in enumerate(zip(selectors, timeout_progression)):
             try:
                 if log_attempts:
-                    logger.debug(f"🔍 Searching for elements {i+1}/{len(selectors)}: '{selector}' (timeout: {selector_timeout}s)")
+                    logger.debug(
+                        f"🔍 Searching for elements {i+1}/{len(selectors)}: '{selector}' (timeout: {selector_timeout}s)"
+                    )
 
                 # Wait for at least one element to be present
-                WebDriverWait(self.driver, selector_timeout).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, selector))
-                )
+                WebDriverWait(self.driver, selector_timeout).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
 
                 # Get all matching elements
                 elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
@@ -206,12 +200,9 @@ class ElementWaitStrategy:
         # Enhanced form selectors with priority
         enhanced_selectors = []
         for selector in form_selectors:
-            enhanced_selectors.extend([
-                selector,
-                f"{selector} form",
-                f"form {selector}",
-                f"[action*='{selector.replace('.', '').replace('#', '')}']"
-            ])
+            enhanced_selectors.extend(
+                [selector, f"{selector} form", f"form {selector}", f"[action*='{selector.replace('.', '').replace('#', '')}']"]
+            )
 
         # Remove duplicates while preserving order
         unique_selectors = []
@@ -239,25 +230,40 @@ def create_parish_extraction_selectors() -> List[str]:
     """
     return [
         # High-probability selectors (specific parish patterns)
-        ".parish-card", ".parish-item", ".parish-entry",
-        ".church-card", ".church-item", ".church-entry",
-        ".location-card", ".location-item",
-
+        ".parish-card",
+        ".parish-item",
+        ".parish-entry",
+        ".church-card",
+        ".church-item",
+        ".church-entry",
+        ".location-card",
+        ".location-item",
         # Medium-probability selectors (general content patterns)
-        "[class*='parish']", "[class*='church']", "[class*='location']",
-        ".directory-item", ".listing-item", ".result-item",
-
+        "[class*='parish']",
+        "[class*='church']",
+        "[class*='location']",
+        ".directory-item",
+        ".listing-item",
+        ".result-item",
         # Navigation and link patterns
-        "a[href*='parish']", "a[href*='church']", "a[href*='location']",
-        "li a[href*='/']", ".menu-item a", ".nav-item a",
-
+        "a[href*='parish']",
+        "a[href*='church']",
+        "a[href*='location']",
+        "li a[href*='/']",
+        ".menu-item a",
+        ".nav-item a",
         # Table and list patterns
-        "table tr", "ul li", "ol li",
-        ".row", ".item", ".entry",
-
+        "table tr",
+        "ul li",
+        "ol li",
+        ".row",
+        ".item",
+        ".entry",
         # Low-probability selectors (very general)
-        "div[class]", "article", "section",
-        "a[href]"  # Last resort
+        "div[class]",
+        "article",
+        "section",
+        "a[href]",  # Last resort
     ]
 
 
@@ -265,19 +271,29 @@ def create_map_interaction_selectors() -> List[str]:
     """Create selectors for interactive map elements with progressive complexity."""
     return [
         # Specific map selectors
-        "#map", ".map", ".parish-map", ".church-map",
-        "[id*='map']", "[class*='map']",
-
+        "#map",
+        ".map",
+        ".parish-map",
+        ".church-map",
+        "[id*='map']",
+        "[class*='map']",
         # Google Maps patterns
-        ".gm-style", ".google-map", "[id*='google-map']",
-
+        ".gm-style",
+        ".google-map",
+        "[id*='google-map']",
         # Interactive elements within maps
-        ".marker", ".pin", ".point", ".location-marker",
-        "[class*='marker']", "[class*='pin']",
-
+        ".marker",
+        ".pin",
+        ".point",
+        ".location-marker",
+        "[class*='marker']",
+        "[class*='pin']",
         # Map containers and wrappers
-        ".map-container", ".map-wrapper", ".interactive-map",
-        "[data-map]", "[data-location]"
+        ".map-container",
+        ".map-wrapper",
+        ".interactive-map",
+        "[data-map]",
+        "[data-location]",
     ]
 
 
@@ -285,17 +301,24 @@ def create_search_form_selectors() -> List[str]:
     """Create selectors for search forms with progressive complexity."""
     return [
         # Specific search forms
-        "#search-form", ".search-form", ".parish-search", ".church-search",
-        "form[action*='search']", "form[action*='parish']",
-
+        "#search-form",
+        ".search-form",
+        ".parish-search",
+        ".church-search",
+        "form[action*='search']",
+        "form[action*='parish']",
         # Input-based detection
-        "input[type='search']", "input[placeholder*='search']",
-        "input[name*='search']", "input[id*='search']",
-
+        "input[type='search']",
+        "input[placeholder*='search']",
+        "input[name*='search']",
+        "input[id*='search']",
         # Submit buttons
-        "button[type='submit']", "input[type='submit']",
-        "button:contains('Search')", "input[value*='Search']",
-
+        "button[type='submit']",
+        "input[type='submit']",
+        "button:contains('Search')",
+        "input[value*='Search']",
         # General form patterns
-        "form", ".form", "[role='search']"
+        "form",
+        ".form",
+        "[role='search']",
     ]

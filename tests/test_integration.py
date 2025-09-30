@@ -1,9 +1,11 @@
 """
 Integration tests for the diocesan vitality pipeline.
 """
+
 import os
-import pytest
 import sys
+
+import pytest
 
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -12,14 +14,10 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 def test_environment_variables():
     """Test that required environment variables are available."""
     # Core testing variables
-    assert os.getenv('TESTING') is not None
+    assert os.getenv("TESTING") is not None
 
     # Optional variables (should not fail if missing in test environment)
-    env_vars_to_check = [
-        'SUPABASE_URL',
-        'SUPABASE_KEY',
-        'GENAI_API_KEY'
-    ]
+    env_vars_to_check = ["SUPABASE_URL", "SUPABASE_KEY", "GENAI_API_KEY"]
 
     missing_vars = []
     for var in env_vars_to_check:
@@ -32,17 +30,18 @@ def test_environment_variables():
 
 def test_database_connection():
     """Test database connectivity if DATABASE_URL is provided."""
-    db_url = os.getenv('DATABASE_URL')
+    db_url = os.getenv("DATABASE_URL")
 
     if not db_url:
         pytest.skip("DATABASE_URL not provided - skipping database tests")
 
     # Basic URL validation
-    assert 'postgresql' in db_url or 'postgres' in db_url
+    assert "postgresql" in db_url or "postgres" in db_url
 
     # Test connection if psycopg2 is available
     try:
         import psycopg2
+
         conn = psycopg2.connect(db_url)
         cursor = conn.cursor()
         cursor.execute("SELECT 1;")
@@ -58,16 +57,12 @@ def test_database_connection():
 
 def test_web_scraping_dependencies():
     """Test that web scraping dependencies are available."""
-    required_packages = [
-        'selenium',
-        'beautifulsoup4',
-        'requests'
-    ]
+    required_packages = ["selenium", "beautifulsoup4", "requests"]
 
     missing_packages = []
     for package in required_packages:
         try:
-            __import__(package.replace('-', '_'))
+            __import__(package.replace("-", "_"))
         except ImportError:
             missing_packages.append(package)
 
@@ -79,6 +74,7 @@ def test_ai_dependencies():
     """Test that AI/ML dependencies are available."""
     try:
         import google.generativeai
+
         assert True
     except ImportError:
         pytest.skip("Google GenerativeAI not available")
@@ -101,13 +97,10 @@ def test_async_webdriver_capabilities():
 def test_circuit_breaker_integration():
     """Test circuit breaker integration."""
     try:
-        from core.circuit_breaker import circuit_manager, CircuitBreakerConfig
+        from core.circuit_breaker import CircuitBreakerConfig, circuit_manager
 
         # Test circuit breaker configuration
-        config = CircuitBreakerConfig(
-            failure_threshold=3,
-            recovery_timeout=10
-        )
+        config = CircuitBreakerConfig(failure_threshold=3, recovery_timeout=10)
 
         assert config.failure_threshold == 3
         assert config.recovery_timeout == 10
@@ -120,8 +113,8 @@ def test_extraction_capabilities():
     """Test that extraction modules are importable."""
     try:
         # Test core extraction modules
-        import core.extraction_optimizer
         import core.ai_content_analyzer
+        import core.extraction_optimizer
 
         # Test basic extractor imports
         from extractors.enhanced_ai_fallback_extractor import EnhancedAIFallbackExtractor
@@ -164,6 +157,7 @@ def test_configuration_loading():
     """Test that configuration can be loaded."""
     try:
         import config
+
         assert True
     except ImportError:
         pytest.skip("Config module not available")
@@ -173,11 +167,7 @@ def test_dockerfile_exists():
     """Test that required Dockerfiles exist."""
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-    dockerfiles = [
-        'backend/Dockerfile',
-        'frontend/Dockerfile',
-        'Dockerfile.pipeline'
-    ]
+    dockerfiles = ["backend/Dockerfile", "frontend/Dockerfile", "Dockerfile.pipeline"]
 
     for dockerfile in dockerfiles:
         path = os.path.join(project_root, dockerfile)

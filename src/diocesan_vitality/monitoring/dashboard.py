@@ -6,8 +6,8 @@ This module provides the monitoring dashboard functionality.
 Currently serves as a placeholder for future dashboard implementation.
 """
 
-import sys
 import argparse
+import sys
 
 
 def main():

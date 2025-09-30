@@ -10,41 +10,41 @@ Implements respectful web scraping practices including:
 - Blocking detection and reporting
 """
 
-import time
-import random
-import requests
-from urllib.robotparser import RobotFileParser
-from urllib.parse import urljoin, urlparse
-from typing import Dict, Optional, Tuple
 import json
+import random
+import time
+from typing import Dict, Optional, Tuple
+from urllib.parse import urljoin, urlparse
+from urllib.robotparser import RobotFileParser
+
+import requests
 
 from core.logger import get_logger
 
 logger = get_logger(__name__)
+
 
 class RespectfulAutomation:
     """Implements respectful automation practices for web scraping."""
 
     def __init__(self):
         self.session = requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (compatible; Parish Directory Research;)'
-        })
+        self.session.headers.update({"User-Agent": "Mozilla/5.0 (compatible; Parish Directory Research;)"})
 
         # Rate limiting: minimum time between requests per domain
         self.domain_last_request = {}
         self.min_delay_seconds = 2.0  # 2 second minimum between requests
-        self.random_delay_max = 3.0   # Up to 3 additional random seconds
+        self.random_delay_max = 3.0  # Up to 3 additional random seconds
 
         # Robots.txt cache
         self.robots_cache = {}
 
-    def can_fetch_url(self, url: str, user_agent: str = '*') -> Dict:
+    def can_fetch_url(self, url: str, user_agent: str = "*") -> Dict:
         """Check if URL can be fetched according to robots.txt."""
         try:
             parsed_url = urlparse(url)
             base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
-            robots_url = urljoin(base_url, '/robots.txt')
+            robots_url = urljoin(base_url, "/robots.txt")
 
             # Check cache first
             if base_url in self.robots_cache:
@@ -68,28 +68,23 @@ class RespectfulAutomation:
             if rp:
                 can_fetch = rp.can_fetch(user_agent, url)
                 crawl_delay = rp.crawl_delay(user_agent)
-                return {
-                    'allowed': can_fetch,
-                    'crawl_delay': crawl_delay,
-                    'robots_url': robots_url,
-                    'has_robots_txt': True
-                }
+                return {"allowed": can_fetch, "crawl_delay": crawl_delay, "robots_url": robots_url, "has_robots_txt": True}
             else:
                 return {
-                    'allowed': True,  # Assume allowed if no robots.txt
-                    'crawl_delay': None,
-                    'robots_url': robots_url,
-                    'has_robots_txt': False
+                    "allowed": True,  # Assume allowed if no robots.txt
+                    "crawl_delay": None,
+                    "robots_url": robots_url,
+                    "has_robots_txt": False,
                 }
 
         except Exception as e:
             logger.warning(f"Error checking robots.txt for {url}: {e}")
             return {
-                'allowed': True,  # Default to allowed on error
-                'crawl_delay': None,
-                'robots_url': None,
-                'has_robots_txt': False,
-                'error': str(e)
+                "allowed": True,  # Default to allowed on error
+                "crawl_delay": None,
+                "robots_url": None,
+                "has_robots_txt": False,
+                "error": str(e),
             }
 
     def respectful_delay(self, domain: str, crawl_delay: Optional[float] = None):
@@ -119,65 +114,56 @@ class RespectfulAutomation:
     def detect_blocking_mechanisms(self, response: requests.Response, url: str) -> Dict:
         """Detect various blocking mechanisms from HTTP response."""
         blocking_info = {
-            'is_blocked': False,
-            'blocking_type': None,
-            'evidence': [],
-            'status_code': response.status_code,
-            'headers': dict(response.headers)
+            "is_blocked": False,
+            "blocking_type": None,
+            "evidence": [],
+            "status_code": response.status_code,
+            "headers": dict(response.headers),
         }
 
         # Check status codes that indicate blocking
         if response.status_code == 403:
-            blocking_info.update({
-                'is_blocked': True,
-                'blocking_type': '403_forbidden',
-                'evidence': ['HTTP 403 Forbidden status']
-            })
+            blocking_info.update(
+                {"is_blocked": True, "blocking_type": "403_forbidden", "evidence": ["HTTP 403 Forbidden status"]}
+            )
         elif response.status_code == 429:
-            blocking_info.update({
-                'is_blocked': True,
-                'blocking_type': 'rate_limited',
-                'evidence': ['HTTP 429 Too Many Requests']
-            })
+            blocking_info.update(
+                {"is_blocked": True, "blocking_type": "rate_limited", "evidence": ["HTTP 429 Too Many Requests"]}
+            )
         elif response.status_code == 503:
-            blocking_info.update({
-                'is_blocked': True,
-                'blocking_type': 'service_unavailable',
-                'evidence': ['HTTP 503 Service Unavailable']
-            })
+            blocking_info.update(
+                {"is_blocked": True, "blocking_type": "service_unavailable", "evidence": ["HTTP 503 Service Unavailable"]}
+            )
 
         # Check headers for bot detection services
         suspicious_headers = {
-            'cf-ray': 'cloudflare_protection',
-            'server': 'cloudflare',
-            'x-sucuri-id': 'sucuri_firewall',
-            'x-served-by': 'cdn_blocking'
+            "cf-ray": "cloudflare_protection",
+            "server": "cloudflare",
+            "x-sucuri-id": "sucuri_firewall",
+            "x-served-by": "cdn_blocking",
         }
 
         for header, service in suspicious_headers.items():
             if header in response.headers:
-                blocking_info['evidence'].append(f'{service}: {response.headers[header]}')
+                blocking_info["evidence"].append(f"{service}: {response.headers[header]}")
 
         # Check response content for blocking indicators
         try:
             content = response.text.lower()
             blocking_patterns = [
-                ('cloudflare', 'attention required'),
-                ('cloudflare', 'checking your browser'),
-                ('bot_detection', 'access denied'),
-                ('captcha', 'prove you are human'),
-                ('firewall', 'blocked by security policy'),
-                ('ddos_protection', 'ddos protection by'),
+                ("cloudflare", "attention required"),
+                ("cloudflare", "checking your browser"),
+                ("bot_detection", "access denied"),
+                ("captcha", "prove you are human"),
+                ("firewall", "blocked by security policy"),
+                ("ddos_protection", "ddos protection by"),
             ]
 
             for pattern_type, pattern in blocking_patterns:
                 if pattern in content:
-                    if not blocking_info['is_blocked']:
-                        blocking_info.update({
-                            'is_blocked': True,
-                            'blocking_type': pattern_type
-                        })
-                    blocking_info['evidence'].append(f'Content pattern: {pattern}')
+                    if not blocking_info["is_blocked"]:
+                        blocking_info.update({"is_blocked": True, "blocking_type": pattern_type})
+                    blocking_info["evidence"].append(f"Content pattern: {pattern}")
 
         except Exception as e:
             logger.debug(f"Error analyzing content for blocking patterns: {e}")
@@ -191,15 +177,15 @@ class RespectfulAutomation:
 
         # Check robots.txt compliance
         robots_check = self.can_fetch_url(url)
-        if not robots_check['allowed']:
+        if not robots_check["allowed"]:
             return None, {
-                'error': 'robots_txt_disallowed',
-                'message': f'Access disallowed by robots.txt',
-                'robots_info': robots_check
+                "error": "robots_txt_disallowed",
+                "message": f"Access disallowed by robots.txt",
+                "robots_info": robots_check,
             }
 
         # Implement respectful delay
-        self.respectful_delay(domain, robots_check.get('crawl_delay'))
+        self.respectful_delay(domain, robots_check.get("crawl_delay"))
 
         try:
             # Make the request
@@ -208,49 +194,39 @@ class RespectfulAutomation:
             # Detect blocking mechanisms
             blocking_info = self.detect_blocking_mechanisms(response, url)
 
-            return response, {
-                'success': True,
-                'blocking_info': blocking_info,
-                'robots_info': robots_check,
-                'domain': domain
-            }
+            return response, {"success": True, "blocking_info": blocking_info, "robots_info": robots_check, "domain": domain}
 
         except requests.exceptions.RequestException as e:
-            return None, {
-                'error': 'request_failed',
-                'message': str(e),
-                'robots_info': robots_check,
-                'domain': domain
-            }
+            return None, {"error": "request_failed", "message": str(e), "robots_info": robots_check, "domain": domain}
 
 
 def create_blocking_report(blocking_info: Dict, url: str, diocese_name: str) -> Dict:
     """Create a standardized blocking report for database storage."""
     report = {
-        'diocese_name': diocese_name,
-        'url': url,
-        'timestamp': time.time(),
-        'is_blocked': blocking_info.get('is_blocked', False),
-        'blocking_type': blocking_info.get('blocking_type'),
-        'status_code': blocking_info.get('status_code'),
-        'evidence': blocking_info.get('evidence', []),
-        'user_agent': 'USCCB Parish Directory Research'
+        "diocese_name": diocese_name,
+        "url": url,
+        "timestamp": time.time(),
+        "is_blocked": blocking_info.get("is_blocked", False),
+        "blocking_type": blocking_info.get("blocking_type"),
+        "status_code": blocking_info.get("status_code"),
+        "evidence": blocking_info.get("evidence", []),
+        "user_agent": "USCCB Parish Directory Research",
     }
 
     # Add human-readable status
-    if report['is_blocked']:
-        if report['blocking_type'] == '403_forbidden':
-            report['status_description'] = 'Diocese website actively blocking automated access (403 Forbidden)'
-        elif report['blocking_type'] == 'rate_limited':
-            report['status_description'] = 'Diocese website rate limiting requests (429 Too Many Requests)'
-        elif report['blocking_type'] == 'cloudflare_protection':
-            report['status_description'] = 'Diocese website using Cloudflare bot protection'
-        elif report['blocking_type'] == 'captcha':
-            report['status_description'] = 'Diocese website requiring CAPTCHA verification'
+    if report["is_blocked"]:
+        if report["blocking_type"] == "403_forbidden":
+            report["status_description"] = "Diocese website actively blocking automated access (403 Forbidden)"
+        elif report["blocking_type"] == "rate_limited":
+            report["status_description"] = "Diocese website rate limiting requests (429 Too Many Requests)"
+        elif report["blocking_type"] == "cloudflare_protection":
+            report["status_description"] = "Diocese website using Cloudflare bot protection"
+        elif report["blocking_type"] == "captcha":
+            report["status_description"] = "Diocese website requiring CAPTCHA verification"
         else:
-            report['status_description'] = f'Diocese website blocking access ({report["blocking_type"]})'
+            report["status_description"] = f'Diocese website blocking access ({report["blocking_type"]})'
     else:
-        report['status_description'] = 'Diocese website accessible to automated requests'
+        report["status_description"] = "Diocese website accessible to automated requests"
 
     return report
 
@@ -260,9 +236,9 @@ def test_respectful_automation():
     automation = RespectfulAutomation()
 
     test_urls = [
-        'https://usccb.org/',  # Should be accessible
-        'https://dioceseoflaredo.org/',  # Known to block
-        'https://nonexistent-diocese-test.org/'  # Should fail
+        "https://usccb.org/",  # Should be accessible
+        "https://dioceseoflaredo.org/",  # Known to block
+        "https://nonexistent-diocese-test.org/",  # Should fail
     ]
 
     print("🔍 Testing Respectful Automation:")
@@ -275,7 +251,7 @@ def test_respectful_automation():
 
         if response:
             print(f"✅ Success: {response.status_code}")
-            if info['blocking_info']['is_blocked']:
+            if info["blocking_info"]["is_blocked"]:
                 print(f"⚠️ Blocking detected: {info['blocking_info']['blocking_type']}")
                 print(f"   Evidence: {info['blocking_info']['evidence']}")
             else:
@@ -285,5 +261,5 @@ def test_respectful_automation():
             print(f"   Message: {info['message']}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_respectful_automation()

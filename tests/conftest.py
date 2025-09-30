@@ -6,12 +6,13 @@ for the entire test suite.
 """
 
 import os
-import sys
-import pytest
-import tempfile
 import shutil
+import sys
+import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
+
+import pytest
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
@@ -20,24 +21,12 @@ sys.path.insert(0, str(project_root))
 
 def pytest_configure(config):
     """Configure pytest with custom markers."""
-    config.addinivalue_line(
-        "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
-    )
-    config.addinivalue_line(
-        "markers", "database: marks tests that require database connection"
-    )
-    config.addinivalue_line(
-        "markers", "api: marks tests that test API endpoints"
-    )
-    config.addinivalue_line(
-        "markers", "integration: marks tests that test component integration"
-    )
-    config.addinivalue_line(
-        "markers", "performance: marks tests that measure performance"
-    )
-    config.addinivalue_line(
-        "markers", "external: marks tests that require external services"
-    )
+    config.addinivalue_line("markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')")
+    config.addinivalue_line("markers", "database: marks tests that require database connection")
+    config.addinivalue_line("markers", "api: marks tests that test API endpoints")
+    config.addinivalue_line("markers", "integration: marks tests that test component integration")
+    config.addinivalue_line("markers", "performance: marks tests that measure performance")
+    config.addinivalue_line("markers", "external: marks tests that require external services")
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -53,7 +42,7 @@ def test_environment():
         "GENAI_API_KEY": "test_genai_key",
         "SEARCH_API_KEY": "test_search_key",
         "SEARCH_CX": "test_search_cx",
-        "DATABASE_URL": "postgresql://test:test@localhost:5432/test_db"
+        "DATABASE_URL": "postgresql://test:test@localhost:5432/test_db",
     }
 
     original_values = {}
@@ -95,7 +84,7 @@ def sample_parish_data():
         "phone": "(555) 123-4567",
         "email": "test@testparish.org",
         "website_url": "https://testparish.org",
-        "diocese_id": 1
+        "diocese_id": 1,
     }
 
 
@@ -107,7 +96,7 @@ def sample_diocese_data():
         "name": "Test Diocese",
         "state": "Test State",
         "website_url": "https://testdiocese.org",
-        "parishes_directory_url": "https://testdiocese.org/parishes"
+        "parishes_directory_url": "https://testdiocese.org/parishes",
     }
 
 
@@ -123,7 +112,7 @@ def mock_database():
     mock_cursor.fetchall.return_value = []
     mock_cursor.execute.return_value = None
 
-    with patch('core.db.get_db_connection', return_value=mock_conn):
+    with patch("core.db.get_db_connection", return_value=mock_conn):
         yield mock_conn
 
 
@@ -145,7 +134,7 @@ def mock_webdriver():
     mock_driver.find_element.return_value = mock_element
     mock_driver.find_elements.return_value = [mock_element]
 
-    with patch('selenium.webdriver.Chrome', return_value=mock_driver):
+    with patch("selenium.webdriver.Chrome", return_value=mock_driver):
         yield mock_driver
 
 
@@ -155,14 +144,10 @@ def mock_ai_service():
     mock_response = {
         "content": "Test AI response",
         "confidence": 0.95,
-        "extracted_data": {
-            "parish_name": "AI Extracted Parish",
-            "address": "AI Extracted Address",
-            "phone": "(555) 987-6543"
-        }
+        "extracted_data": {"parish_name": "AI Extracted Parish", "address": "AI Extracted Address", "phone": "(555) 987-6543"},
     }
 
-    with patch('core.ai_content_analyzer.analyze_content', return_value=mock_response):
+    with patch("core.ai_content_analyzer.analyze_content", return_value=mock_response):
         yield mock_response
 
 
@@ -182,12 +167,7 @@ def mock_http_response():
 @pytest.fixture
 def circuit_breaker_config():
     """Provide circuit breaker configuration for tests."""
-    return {
-        "failure_threshold": 3,
-        "success_threshold": 2,
-        "timeout": 10,
-        "expected_exception": Exception
-    }
+    return {"failure_threshold": 3, "success_threshold": 2, "timeout": 10, "expected_exception": Exception}
 
 
 @pytest.fixture
@@ -220,7 +200,7 @@ def sample_mass_schedule():
         "time": "09:00:00",
         "mass_type": "Regular",
         "language": "English",
-        "special_notes": "Family Mass"
+        "special_notes": "Family Mass",
     }
 
 
@@ -229,14 +209,10 @@ def sample_extraction_result():
     """Provide sample extraction result data."""
     return {
         "success": True,
-        "parish_data": {
-            "name": "Extracted Parish",
-            "address": "456 Extracted Ave",
-            "phone": "(555) 456-7890"
-        },
+        "parish_data": {"name": "Extracted Parish", "address": "456 Extracted Ave", "phone": "(555) 456-7890"},
         "extraction_time": 2.5,
         "source_url": "https://extractedparish.org",
-        "extraction_method": "ai_analysis"
+        "extraction_method": "ai_analysis",
     }
 
 
@@ -267,6 +243,7 @@ def pytest_runtest_setup(item):
         try:
             # Try to import database utilities
             from core.db import get_db_connection
+
             conn = get_db_connection()
             if conn:
                 conn.close()

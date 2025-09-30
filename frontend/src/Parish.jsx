@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import { Container, Spinner, Alert, Card, Table, Badge } from 'react-bootstrap';
+import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { Container, Spinner, Alert, Card, Table, Badge } from "react-bootstrap";
 
 function Parish() {
   const { search } = useLocation();
   const queryParams = new URLSearchParams(search);
-  const id = queryParams.get('id');
+  const id = queryParams.get("id");
 
   const [parish, setParish] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -14,7 +14,7 @@ function Parish() {
   useEffect(() => {
     const fetchParishDetails = async () => {
       if (!id) {
-        setError('Parish ID not provided.');
+        setError("Parish ID not provided.");
         setLoading(false);
         return;
       }
@@ -23,7 +23,7 @@ function Parish() {
       try {
         const response = await fetch(`/api/parish?parish_id=${id}`);
         if (!response.ok) {
-          throw new Error('Network response was not ok');
+          throw new Error("Network response was not ok");
         }
         const result = await response.json();
         if (result.error) {
@@ -45,7 +45,9 @@ function Parish() {
   }
 
   if (error) {
-    return <Alert variant="danger">Error fetching parish details: {error}</Alert>;
+    return (
+      <Alert variant="danger">Error fetching parish details: {error}</Alert>
+    );
   }
 
   if (!parish) {
@@ -53,13 +55,15 @@ function Parish() {
   }
 
   const formatFactType = (factType) => {
-    return factType.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+    return factType
+      .replace(/([A-Z])/g, " $1")
+      .replace(/^./, (str) => str.toUpperCase());
   };
 
   const parseScheduleData = (factValue) => {
     try {
       return JSON.parse(factValue);
-    } catch (e) {
+    } catch {
       return null;
     }
   };
@@ -102,7 +106,14 @@ function Parish() {
           )}
           {getWebsiteUrl(parish) && (
             <Card.Text>
-              <strong>Website:</strong> <a href={getWebsiteUrl(parish)} target="_blank" rel="noopener noreferrer">{getWebsiteUrl(parish)}</a>
+              <strong>Website:</strong>{" "}
+              <a
+                href={getWebsiteUrl(parish)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {getWebsiteUrl(parish)}
+              </a>
             </Card.Text>
           )}
           {parish.diocese_name && (
@@ -136,22 +147,47 @@ function Parish() {
                           {parsedData && parsedData.days_offered && (
                             <div>
                               <small className="text-muted">
-                                <strong>Days:</strong> {parsedData.days_offered.join(', ')}<br/>
-                                {parsedData.times && <><strong>Times:</strong> {parsedData.times.join(', ')}<br/></>}
-                                {parsedData.frequency && <><strong>Frequency:</strong> {parsedData.frequency}</>}
+                                <strong>Days:</strong>{" "}
+                                {parsedData.days_offered.join(", ")}
+                                <br />
+                                {parsedData.times && (
+                                  <>
+                                    <strong>Times:</strong>{" "}
+                                    {parsedData.times.join(", ")}
+                                    <br />
+                                  </>
+                                )}
+                                {parsedData.frequency && (
+                                  <>
+                                    <strong>Frequency:</strong>{" "}
+                                    {parsedData.frequency}
+                                  </>
+                                )}
                               </small>
                             </div>
                           )}
                         </div>
                       </td>
                       <td>
-                        <Badge bg={schedule.confidence_score >= 90 ? 'success' : schedule.confidence_score >= 70 ? 'warning' : 'secondary'}>
+                        <Badge
+                          bg={
+                            schedule.confidence_score >= 90
+                              ? "success"
+                              : schedule.confidence_score >= 70
+                                ? "warning"
+                                : "secondary"
+                          }
+                        >
                           {schedule.confidence_score}%
                         </Badge>
                       </td>
                       <td>
                         <small>
-                          <a href={schedule.fact_source_url} target="_blank" rel="noopener noreferrer">
+                          <a
+                            href={schedule.fact_source_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
                             {schedule.extraction_method}
                           </a>
                         </small>
@@ -162,7 +198,9 @@ function Parish() {
               </tbody>
             </Table>
           ) : (
-            <Alert variant="info">No schedule information available for this parish.</Alert>
+            <Alert variant="info">
+              No schedule information available for this parish.
+            </Alert>
           )}
         </Card.Body>
       </Card>

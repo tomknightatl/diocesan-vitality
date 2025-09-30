@@ -17,36 +17,36 @@ spec:
       affinity:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            preference:
-              matchExpressions:
-              - key: doks.digitalocean.com/node-pool
-                operator: In
-                values:
-                - slow-pool
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: doks.digitalocean.com/node-pool
+                    operator: In
+                    values:
+                      - slow-pool
       containers:
-      - name: backend
-        # IMPORTANT: Replace YOUR_DOCKERHUB_USERNAME with your actual Docker Hub username
-        # Using single repository with tags: diocesan-vitality:backend
-        image: tomatl/diocesan-vitality:backend-2025-09-15-20-27-14
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 8000
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "5m"
-          limits:
-            memory: "128Mi"
-            cpu: "25m"
-        env:
-        - name: SUPABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: diocesan-vitality-secrets
-              key: supabase-url
-        - name: SUPABASE_KEY
-          valueFrom:
-            secretKeyRef:
-              name: diocesan-vitality-secrets
-              key: supabase-key
+        - name: backend
+          # IMPORTANT: Replace YOUR_DOCKERHUB_USERNAME with your actual Docker Hub username
+          # Using single repository with tags: diocesan-vitality:backend
+          image: tomatl/diocesan-vitality:backend
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "5m"
+            limits:
+              memory: "128Mi"
+              cpu: "25m"
+          env:
+            - name: SUPABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: diocesan-vitality-secrets
+                  key: supabase-url
+            - name: SUPABASE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: diocesan-vitality-secrets
+                  key: supabase-key

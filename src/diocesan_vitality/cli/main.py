@@ -3,14 +3,14 @@
 Main CLI entry point for Diocesan Vitality.
 """
 
-import sys
 import argparse
+import sys
 from typing import List, Optional
 
-from ..pipeline.runner import main as pipeline_main
-from ..pipeline.extract import main as extract_main
-from ..monitoring.dashboard import main as monitor_main
 from ..__version__ import __version__, print_version_info
+from ..monitoring.dashboard import main as monitor_main
+from ..pipeline.extract import main as extract_main
+from ..pipeline.runner import main as pipeline_main
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -27,109 +27,46 @@ Examples:
   diocesan-vitality monitor                      Start monitoring dashboard
 
 For more information, visit: https://diocesanvitality.org/docs
-        """
+        """,
     )
 
-    parser.add_argument(
-        "--version", "-v",
-        action="store_true",
-        help="Show version information"
-    )
+    parser.add_argument("--version", "-v", action="store_true", help="Show version information")
 
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Show detailed version information"
-    )
+    parser.add_argument("--verbose", action="store_true", help="Show detailed version information")
 
     # Add subcommands
-    subparsers = parser.add_subparsers(
-        dest="command",
-        help="Available commands",
-        metavar="COMMAND"
-    )
+    subparsers = parser.add_subparsers(dest="command", help="Available commands", metavar="COMMAND")
 
     # Pipeline command
     pipeline_parser = subparsers.add_parser(
-        "pipeline",
-        help="Run the data extraction pipeline",
-        description="Execute the main data collection pipeline"
+        "pipeline", help="Run the data extraction pipeline", description="Execute the main data collection pipeline"
     )
     pipeline_parser.add_argument(
-        "--max-parishes-per-diocese",
-        type=int,
-        default=50,
-        help="Maximum parishes to process per diocese (default: 50)"
+        "--max-parishes-per-diocese", type=int, default=50, help="Maximum parishes to process per diocese (default: 50)"
     )
-    pipeline_parser.add_argument(
-        "--diocese-id",
-        type=int,
-        help="Process specific diocese ID only"
-    )
-    pipeline_parser.add_argument(
-        "--skip-dioceses",
-        action="store_true",
-        help="Skip diocese extraction phase"
-    )
-    pipeline_parser.add_argument(
-        "--skip-parishes",
-        action="store_true",
-        help="Skip parish extraction phase"
-    )
-    pipeline_parser.add_argument(
-        "--skip-schedules",
-        action="store_true",
-        help="Skip schedule extraction phase"
-    )
+    pipeline_parser.add_argument("--diocese-id", type=int, help="Process specific diocese ID only")
+    pipeline_parser.add_argument("--skip-dioceses", action="store_true", help="Skip diocese extraction phase")
+    pipeline_parser.add_argument("--skip-parishes", action="store_true", help="Skip parish extraction phase")
+    pipeline_parser.add_argument("--skip-schedules", action="store_true", help="Skip schedule extraction phase")
 
     # Extract command
     extract_parser = subparsers.add_parser(
-        "extract",
-        help="Run specific extraction tasks",
-        description="Execute specific data extraction operations"
+        "extract", help="Run specific extraction tasks", description="Execute specific data extraction operations"
     )
-    extract_parser.add_argument(
-        "--diocese-id",
-        type=int,
-        required=True,
-        help="Diocese ID to extract"
-    )
-    extract_parser.add_argument(
-        "--pool-size",
-        type=int,
-        default=6,
-        help="Number of concurrent workers (default: 6)"
-    )
-    extract_parser.add_argument(
-        "--batch-size",
-        type=int,
-        default=12,
-        help="Batch size for processing (default: 12)"
-    )
+    extract_parser.add_argument("--diocese-id", type=int, required=True, help="Diocese ID to extract")
+    extract_parser.add_argument("--pool-size", type=int, default=6, help="Number of concurrent workers (default: 6)")
+    extract_parser.add_argument("--batch-size", type=int, default=12, help="Batch size for processing (default: 12)")
 
     # Monitor command
     monitor_parser = subparsers.add_parser(
-        "monitor",
-        help="Start monitoring dashboard",
-        description="Launch the monitoring and observability dashboard"
+        "monitor", help="Start monitoring dashboard", description="Launch the monitoring and observability dashboard"
     )
-    monitor_parser.add_argument(
-        "--port",
-        type=int,
-        default=8000,
-        help="Port to run dashboard on (default: 8000)"
-    )
-    monitor_parser.add_argument(
-        "--host",
-        default="0.0.0.0",
-        help="Host to bind to (default: 0.0.0.0)"
-    )
+    monitor_parser.add_argument("--port", type=int, default=8000, help="Port to run dashboard on (default: 8000)")
+    monitor_parser.add_argument("--host", default="0.0.0.0", help="Host to bind to (default: 0.0.0.0)")
 
     # Quickstart command
     quickstart_parser = subparsers.add_parser(
-        "quickstart",
-        help="Quick setup and test run",
-        description="Perform quick setup and run a test extraction"
+        "quickstart", help="Quick setup and test run", description="Perform quick setup and run a test extraction"
     )
 
     return parser
@@ -219,7 +156,7 @@ def handle_quickstart(args: argparse.Namespace) -> None:
         diocese_id=None,
         skip_dioceses=False,
         skip_parishes=False,
-        skip_schedules=True  # Skip schedules for quickstart
+        skip_schedules=True,  # Skip schedules for quickstart
     )
 
     print("Starting test pipeline with 5 parishes per diocese...")

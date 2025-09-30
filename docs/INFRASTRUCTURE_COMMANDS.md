@@ -1,14 +1,27 @@
- # Infrastructure Setup Commands
+# Infrastructure Setup Commands
 
 Simple commands to set up the infrastructure in 5 steps.
+
+## Environment Naming Reference
+
+All infrastructure commands use standardized naming across the stack:
+
+| Environment | Make Variable       | Cluster Name | kubectl Context  | Namespace                   | ArgoCD URL                              |
+| ----------- | ------------------- | ------------ | ---------------- | --------------------------- | --------------------------------------- |
+| Development | `CLUSTER_LABEL=dev` | `dv-dev`     | `do-nyc2-dv-dev` | `diocesan-vitality-dev`     | https://dev.argocd.diocesanvitality.org |
+| Staging     | `CLUSTER_LABEL=stg` | `dv-stg`     | `do-nyc2-dv-stg` | `diocesan-vitality-staging` | https://stg.argocd.diocesanvitality.org |
+| Production  | `CLUSTER_LABEL=prd` | `dv-prd`     | `do-nyc2-dv-prd` | `diocesan-vitality`         | https://prd.argocd.diocesanvitality.org |
+
+**Example**: `make cluster-create CLUSTER_LABEL=dev` creates cluster `dv-dev` with context `do-nyc2-dv-dev`
 
 ## Prerequisites
 
 Ensure `.env` file contains:
+
 ```
 DIGITALOCEAN_TOKEN=<your_do_token>
 CLOUDFLARE_API_TOKEN=<your_cf_token>
-CLOUDFLARE_ACCOUNT_ID=<your_cf_account_-destroyid>
+CLOUDFLARE_ACCOUNT_ID=<your_cf_account_id>
 CLOUDFLARE_ZONE_ID=<your_cf_zone_id>
 
 # ArgoCD Admin Passwords (one per environment)
@@ -26,7 +39,7 @@ make infra-setup
 # For staging environment
 make infra-setup CLUSTER_LABEL=stg
 
-# For production environment  
+# For production environment
 make infra-setup CLUSTER_LABEL=prd
 ```
 
@@ -54,10 +67,11 @@ make sealed-secrets-create CLUSTER_LABEL=dev
 The system now supports environment-specific deployments:
 
 - **CLUSTER_LABEL=dev**: Development environment
-- **CLUSTER_LABEL=stg**: Staging environment  
+- **CLUSTER_LABEL=stg**: Staging environment
 - **CLUSTER_LABEL=prd**: Production environment
 
 Each environment:
+
 - Creates a cluster with proper labeling
 - Deploys only applications targeting that environment
 - Uses environment-specific ArgoCD passwords
@@ -68,6 +82,7 @@ Each environment:
 Step 5 creates secure sealed secrets for Cloudflare tunnel authentication using tokens from the Cloudflare Web UI:
 
 **What it does:**
+
 1. Waits for sealed-secrets controller to be ready (deployed in Step 4)
 2. Uses tunnel token from Cloudflare Web UI (not credentials.json)
 3. Creates a sealed secret using `kubeseal` CLI with correct kubectl context
@@ -75,12 +90,14 @@ Step 5 creates secure sealed secrets for Cloudflare tunnel authentication using 
 5. Waits for the tunnel application to sync and become healthy
 
 **Security Benefits:**
+
 - Tunnel tokens are encrypted and safe to store in Git
 - Only the target cluster can decrypt the sealed secret
 - Follows GitOps principles - all configuration in repository
 - Uses Cloudflare's recommended token-based authentication
 
 **Requirements:**
+
 - `kubeseal` CLI must be installed
 - Sealed-secrets controller must be running (automatic after Step 4)
 - Git repository access for committing sealed secrets
@@ -90,23 +107,25 @@ Step 5 creates secure sealed secrets for Cloudflare tunnel authentication using 
 If tunnel pods show `CrashLoopBackOff` or authentication errors:
 
 1. **Get fresh token from Cloudflare Web UI:**
+
    ```bash
    # Navigate to Cloudflare Dashboard > Zero Trust > Networks > Tunnels
    # Click your tunnel > Configure > Copy the token from the Docker command
    ```
 
 2. **Create sealed secret manually:**
+
    ```bash
    # Ensure correct kubectl context
    kubectl config use-context do-nyc2-dv-dev
-   
+
    # Create sealed secret (replace TOKEN with actual token)
    echo -n "TOKEN_HERE" | kubectl create secret generic cloudflared-token \
      --dry-run=client --from-file=tunnel-token=/dev/stdin \
      --namespace=cloudflare-tunnel-dev -o yaml | \
      kubeseal -o yaml --namespace=cloudflare-tunnel-dev > \
      k8s/infrastructure/cloudflare-tunnel/environments/dev/cloudflared-token-sealedsecret.yaml
-   
+
    # Commit and push
    git add k8s/infrastructure/cloudflare-tunnel/environments/dev/
    git commit -m "Update tunnel token sealed secret"
@@ -150,6 +169,7 @@ make argocd-password
 ## ArgoCD Password Management
 
 The system automatically:
+
 1. Installs ArgoCD with a random initial password
 2. Installs ArgoCD CLI if not present
 3. Logs in with the initial password
@@ -157,8 +177,9 @@ The system automatically:
 5. Saves the custom password to `.argocd-admin-password`
 
 **Environment-specific passwords:**
+
 - `ARGOCD_ADMIN_PASSWORD_DEV` - Development environment
-- `ARGOCD_ADMIN_PASSWORD_STG` - Staging environment  
+- `ARGOCD_ADMIN_PASSWORD_STG` - Staging environment
 - `ARGOCD_ADMIN_PASSWORD_PRD` - Production environment
 
 If no custom password is found in `.env`, the initial random password is preserved.
