@@ -444,11 +444,11 @@ tunnel-dns: ## Step k: Setup tunnel DNS and public hostnames (usage: make tunnel
 				"ingress": [ \
 					{ \
 						"hostname": "'"$$CLUSTER_LABEL"'ui.diocesanvitality.org", \
-						"service": "http://localhost:3000" \
+						"service": "http://frontend-service.diocesan-vitality-'"$$CLUSTER_LABEL"'.svc.cluster.local:80" \
 					}, \
 					{ \
 						"hostname": "'"$$CLUSTER_LABEL"'api.diocesanvitality.org", \
-						"service": "http://localhost:8000" \
+						"service": "http://backend-service.diocesan-vitality-'"$$CLUSTER_LABEL"'.svc.cluster.local:8000" \
 					}, \
 					{ \
 						"hostname": "'"$$CLUSTER_LABEL"'argocd.diocesanvitality.org", \
@@ -470,9 +470,9 @@ tunnel-dns: ## Step k: Setup tunnel DNS and public hostnames (usage: make tunnel
 	echo "   Tunnel Name: $$TUNNEL_NAME" && \
 	echo "   Tunnel ID: $$TUNNEL_ID" && \
 	echo "   Public Hostnames:" && \
-	echo "     - $$CLUSTER_LABEL.ui.diocesanvitality.org (→ http://localhost:3000)" && \
-	echo "     - $$CLUSTER_LABEL.api.diocesanvitality.org (→ http://localhost:8000)" && \
-	echo "     - $$CLUSTER_LABEL.argocd.diocesanvitality.org (→ http://localhost:8080)" && \
+	echo "     - $$CLUSTER_LABEL.ui.diocesanvitality.org (→ frontend-service.diocesan-vitality-$$CLUSTER_LABEL.svc.cluster.local:80)" && \
+	echo "     - $$CLUSTER_LABEL.api.diocesanvitality.org (→ backend-service.diocesan-vitality-$$CLUSTER_LABEL.svc.cluster.local:8000)" && \
+	echo "     - $$CLUSTER_LABEL.argocd.diocesanvitality.org (→ argocd-server.argocd:80)" && \
 	echo "✅ Step 8 Complete: Tunnel DNS records and SSL certificates configured"
 
 tunnel-dns-destroy: ## Step 8b: Remove tunnel DNS records (usage: make tunnel-dns-destroy CLUSTER_LABEL=dev)
@@ -729,17 +729,7 @@ _create-application-sealed-secret: ## Create application secrets sealed secret
 	fi && \
 	echo "💾 Committing application sealed secret to repository..." && \
 	git add k8s/environments/$$CLUSTER_LABEL/ && \
-	git commit -m "Add application sealed secret for diocesan-vitality-$$CLUSTER_LABEL
-
-🔐 Sealed Secret Contents:
-- supabase-url: Database connection URL
-- supabase-key: Database API key
-- genai-api-key: Google Gemini AI API key
-- search-api-key: Google Custom Search API key
-- search-cx: Google Custom Search CX ID
-
-✅ All secrets encrypted with cluster-specific key
-🔄 ArgoCD will auto-deploy when synced" && \
+	git commit -m "Add application sealed secret for diocesan-vitality-$$CLUSTER_LABEL - Contains encrypted supabase-url, supabase-key, genai-api-key, search-api-key, search-cx" && \
 	git push && \
 	echo "✅ Application sealed secret created and committed"
 
@@ -749,20 +739,19 @@ _commit-sealed-secrets: ## Commit all sealed secrets to repository
 	git add k8s/infrastructure/cloudflare-tunnel/environments/$$CLUSTER_LABEL/ || true && \
 	git add k8s/environments/$$CLUSTER_LABEL/ && \
 	echo "💾 Committing sealed secrets to repository..." && \
-	git commit -m "🔐 Add sealed secrets for $$CLUSTER_LABEL environment
-
-✅ Tunnel Secret:
-- cloudflared-token: Encrypted tunnel token for Cloudflare tunnel
-
-✅ Application Secrets:
-- supabase-url: Database connection URL
-- supabase-key: Database API key
-- genai-api-key: Google Gemini AI API key
-- search-api-key: Google Custom Search API key
-- search-cx: Google Custom Search CX ID
-
-🔒 All secrets encrypted with cluster-specific sealed-secrets key
-🚀 ArgoCD will auto-deploy when synced from GitOps repository" && \
+	git commit -m "🔐 Add sealed secrets for $$CLUSTER_LABEL environment" \
+		-m "✅ Tunnel Secret:" \
+		-m "- cloudflared-token: Encrypted tunnel token for Cloudflare tunnel" \
+		-m "" \
+		-m "✅ Application Secrets:" \
+		-m "- supabase-url: Database connection URL" \
+		-m "- supabase-key: Database API key" \
+		-m "- genai-api-key: Google Gemini AI API key" \
+		-m "- search-api-key: Google Custom Search API key" \
+		-m "- search-cx: Google Custom Search CX ID" \
+		-m "" \
+		-m "🔒 All secrets encrypted with cluster-specific sealed-secrets key" \
+		-m "🚀 ArgoCD will auto-deploy when synced from GitOps repository" && \
 	git push && \
 	echo "✅ All sealed secrets committed and pushed to repository"
 
