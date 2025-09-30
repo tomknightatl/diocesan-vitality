@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+spec:
+  template:
+    spec:
+      containers:
+        - name: backend
+          env:
+            - name: ENVIRONMENT
+              value: "production"
+            - name: DATABASE_URL
+              value: "${PRODUCTION_DATABASE_URL}"
+            - name: SUPABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: diocesan-vitality-secrets
+                  key: supabase-url
+            - name: SUPABASE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: diocesan-vitality-secrets
+                  key: supabase-key
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+spec:
+  template:
+    spec:
+      containers:
+        - name: frontend
+          env:
+            - name: NAMESPACE
+              value: "diocesan-vitality"
+            - name: REACT_APP_ENVIRONMENT
+              value: "production"
+            - name: REACT_APP_API_URL
+              value: "https://api.diocesanvitality.org"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pipeline-deployment
+spec:
+  template:
+    spec:
+      containers:
+        - name: pipeline
+          env:
+            - name: ENVIRONMENT
+              value: "production"
+            - name: DATABASE_URL
+              value: "${PRODUCTION_DATABASE_URL}"
+            - name: SUPABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: diocesan-vitality-secrets
+                  key: supabase-url
+            - name: SUPABASE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: diocesan-vitality-secrets
+                  key: supabase-key
+            - name: GENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: diocesan-vitality-secrets
+                  key: genai-api-key
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "2000m"

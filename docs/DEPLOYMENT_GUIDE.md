@@ -7,6 +7,7 @@ Run the commands in this document on a x86_64 machine. (Because Docker has known
 ## 📋 Overview
 
 The deployment process follows GitOps best practices:
+
 1. **Build** new Docker images with timestamped tags
 2. **Update** Kubernetes manifests with new image tags
 3. **Commit** changes to Git
@@ -35,8 +36,9 @@ git push origin main
 ```
 
 **What happens automatically:**
+
 1. 🔍 **Change Detection**: GitHub Actions detects changes in `backend/`, `frontend/`, or pipeline files
-2. 🏗️ **Multi-Arch Build**: Builds images for both ARM64 and AMD64 architectures  
+2. 🏗️ **Multi-Arch Build**: Builds images for both ARM64 and AMD64 architectures
 3. 📤 **Push to Registry**: Automatically pushes images to Docker Hub
 4. 📝 **Update Manifests**: Updates Kubernetes deployment files with new image tags
 5. 🔄 **GitOps Trigger**: Commits updated manifests back to repository for ArgoCD sync
@@ -66,7 +68,8 @@ gh workflow run docker-build-push.yml -f force_build=true
 ### 📋 Setup Requirements
 
 **Repository Secrets (required):**
-- `DOCKER_USERNAME`: Your Docker Hub username  
+
+- `DOCKER_USERNAME`: Your Docker Hub username
 - `DOCKER_PASSWORD`: Your Docker Hub password or access token
 
 **Add secrets at:** `https://github.com/your-username/diocesan-vitality/settings/secrets/actions`
@@ -79,10 +82,10 @@ gh workflow run docker-build-push.yml -f force_build=true
 
 This project supports both **Docker Hub** and **GitHub Container Registry (GHCR)**:
 
-| Registry | Use Case | Access |
-|----------|----------|--------|
-| **Docker Hub** (`tomatl/diocesan-vitality`) | Production deployments, public images | Docker Hub account |
-| **GitHub Container Registry** (`ghcr.io/tomknightatl/diocesan-vitality`) | Development, private/internal use | GitHub PAT token |
+| Registry                                                                 | Use Case                              | Access             |
+| ------------------------------------------------------------------------ | ------------------------------------- | ------------------ |
+| **Docker Hub** (`tomatl/diocesan-vitality`)                              | Production deployments, public images | Docker Hub account |
+| **GitHub Container Registry** (`ghcr.io/tomknightatl/diocesan-vitality`) | Development, private/internal use     | GitHub PAT token   |
 
 ### Step 1: Build Images with Timestamp
 
@@ -93,6 +96,7 @@ For comprehensive Docker commands and deployment scripts, see the **[📝 Comman
 Choose your target registry:
 
 #### Docker Hub (Production)
+
 ```bash
 # Generate timestamp
 TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)
@@ -100,29 +104,34 @@ TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)
 # Enable buildx for multi-arch builds
 docker buildx create --use --name multi-arch-builder 2>/dev/null || docker buildx use multi-arch-builder
 
-# Build multi-arch images for both ARM64 (development) and AMD64 (production)
-echo "🏗️ Building multi-arch backend image..."
+# Set environment (development, staging, or production)
+ENV="development"  # Change to staging or production as needed
+
+# Build multi-arch images with environment-prefixed tags
+echo "🏗️ Building multi-arch backend image for $ENV..."
 docker buildx build --platform linux/amd64,linux/arm64 \
   -f backend/Dockerfile \
-  -t tomatl/diocesan-vitality:backend-$TIMESTAMP \
+  -t tomatl/diocesan-vitality:${ENV}-backend-${TIMESTAMP} \
   --push backend/
 
-echo "🏗️ Building multi-arch frontend image..."
+echo "🏗️ Building multi-arch frontend image for $ENV..."
 docker buildx build --platform linux/amd64,linux/arm64 \
   -f frontend/Dockerfile \
-  -t tomatl/diocesan-vitality:frontend-$TIMESTAMP \
+  -t tomatl/diocesan-vitality:${ENV}-frontend-${TIMESTAMP} \
   --push frontend/
 
-echo "🏗️ Building multi-arch pipeline image..."
+echo "🏗️ Building multi-arch pipeline image for $ENV..."
 docker buildx build --platform linux/amd64,linux/arm64 \
   -f Dockerfile.pipeline \
-  -t tomatl/diocesan-vitality:pipeline-$TIMESTAMP \
+  -t tomatl/diocesan-vitality:${ENV}-pipeline-${TIMESTAMP} \
   --push .
 
-echo "✅ All multi-arch images built and pushed to Docker Hub with timestamp: $TIMESTAMP"
+echo "✅ All multi-arch images built and pushed to Docker Hub"
+echo "📋 Image tags: ${ENV}-{backend,frontend,pipeline}-${TIMESTAMP}"
 ```
 
 #### GitHub Container Registry (Development/Internal)
+
 ```bash
 # Generate timestamp
 TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)
@@ -153,6 +162,7 @@ echo "✅ All multi-arch images built and pushed to GHCR with timestamp: $TIMEST
 ```
 
 **Single Architecture Build (Alternative):**
+
 ```bash
 # Generate timestamp and build images for current architecture only
 TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)
@@ -165,18 +175,18 @@ docker build -f Dockerfile.pipeline -t tomatl/diocesan-vitality:pipeline-$TIMEST
 
 ### Step 2: Push Images to Docker Hub (Single-Arch Only)
 
-*Note: Multi-arch builds automatically push during build with `--push` flag*
+_Note: Multi-arch builds automatically push during build with `--push` flag_
 
 ```bash
 # Push all images to Docker Hub (only needed for single-arch builds)
 echo "📤 Pushing backend image..."
-docker push tomatl/diocesan-vitality:backend-$TIMESTAMP
+docker push tomatl/diocesan-vitality:${ENV}-backend-${TIMESTAMP}
 
 echo "📤 Pushing frontend image..."
-docker push tomatl/diocesan-vitality:frontend-$TIMESTAMP
+docker push tomatl/diocesan-vitality:${ENV}-frontend-${TIMESTAMP}
 
 echo "📤 Pushing pipeline image..."
-docker push tomatl/diocesan-vitality:pipeline-$TIMESTAMP
+docker push tomatl/diocesan-vitality:${ENV}-pipeline-${TIMESTAMP}
 
 echo "🎉 All images pushed to Docker Hub with timestamp: $TIMESTAMP"
 ```
@@ -268,26 +278,30 @@ echo "✅ Deployment initiated! ArgoCD will sync automatically."
 The system supports two deployment strategies:
 
 ### Legacy Deployment (Single Worker Type)
+
 Uses `k8s/pipeline-deployment.yaml` with all pipeline steps in one worker type.
 
 ### Specialized Workers (Recommended)
+
 Uses separate deployments for optimized resource allocation:
 
-| Worker Type | File | Resources | Replicas | Purpose |
-|-------------|------|-----------|----------|---------|
-| Discovery | `discovery-deployment.yaml` | 512Mi/200m CPU | 1 | Steps 1-2: Diocese + Parish directory discovery |
-| Extraction | `extraction-deployment.yaml` | 2.2Gi/800m CPU | 2-5 (HPA) | Step 3: Parish detail extraction |
-| Schedule | `schedule-deployment.yaml` | 1.5Gi/600m CPU | 1-3 (HPA) | Step 4: Mass schedule extraction |
-| Reporting | `reporting-deployment.yaml` | 512Mi/200m CPU | 1 | Step 5: Analytics and reporting |
+| Worker Type | File                         | Resources      | Replicas  | Purpose                                         |
+| ----------- | ---------------------------- | -------------- | --------- | ----------------------------------------------- |
+| Discovery   | `discovery-deployment.yaml`  | 512Mi/200m CPU | 1         | Steps 1-2: Diocese + Parish directory discovery |
+| Extraction  | `extraction-deployment.yaml` | 2.2Gi/800m CPU | 2-5 (HPA) | Step 3: Parish detail extraction                |
+| Schedule    | `schedule-deployment.yaml`   | 1.5Gi/600m CPU | 1-3 (HPA) | Step 4: Mass schedule extraction                |
+| Reporting   | `reporting-deployment.yaml`  | 512Mi/200m CPU | 1         | Step 5: Analytics and reporting                 |
 
 ### Migration to Specialized Workers
 
 **Step 1: Scale down legacy deployment**
+
 ```bash
 kubectl scale deployment pipeline-deployment --replicas=0 -n diocesan-vitality
 ```
 
 **Step 2: Deploy specialized workers**
+
 ```bash
 kubectl apply -f k8s/discovery-deployment.yaml
 kubectl apply -f k8s/extraction-deployment.yaml
@@ -298,12 +312,14 @@ kubectl apply -f k8s/reporting-deployment.yaml
 ```
 
 **Step 3: Verify deployment**
+
 ```bash
 kubectl get pods -n diocesan-vitality -l worker-type
 kubectl get hpa -n diocesan-vitality
 ```
 
 ### Benefits of Specialized Workers
+
 - **Resource Efficiency**: Right-sized resources per task type
 - **Independent Scaling**: Scale extraction workers without affecting discovery
 - **Better Fault Isolation**: WebDriver issues don't affect parish discovery
@@ -314,11 +330,13 @@ kubectl get hpa -n diocesan-vitality
 This project supports both ARM64 (development on Raspberry Pi/Apple Silicon) and AMD64 (production deployment) architectures.
 
 ### Why Multi-Arch?
+
 - **Development Flexibility**: Build on ARM64 (Raspberry Pi, Mac M1/M2) and AMD64 (traditional x86)
 - **Production Compatibility**: Deploy to x86 clusters while developing on ARM
 - **Future-Proof**: Ready for ARM64 server adoption
 
 ### Architecture Considerations
+
 - **Pipeline Image**: Requires Chrome/Chromium for web scraping - multi-arch build handles architecture-specific browser installation
 - **Backend/Frontend**: Platform-agnostic Python and Node.js applications work on both architectures
 
@@ -331,6 +349,7 @@ In addition to production deployments, you can deploy to a development cluster f
 ### Development Deployment Workflow
 
 #### Option 1: Automatic via GitHub Actions
+
 ```bash
 # Push to develop branch triggers automatic development deployment
 git checkout develop
@@ -345,6 +364,7 @@ git push origin develop
 ```
 
 #### Option 2: Manual Development Deployment
+
 ```bash
 # Build and push development images (see previous section)
 DEV_TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)-dev
@@ -388,13 +408,13 @@ kubectl logs deployment/extraction-deployment -n diocesan-vitality-dev --follow
 
 ### Development vs Production Environments
 
-| **Development** | **Production** |
-|----------------|----------------|
+| **Development**                             | **Production**                              |
+| ------------------------------------------- | ------------------------------------------- |
 | `kubectl config use-context do-nyc2-dv-dev` | `kubectl config use-context do-nyc2-dv-prd` |
-| `diocesan-vitality-dev` namespace | `diocesan-vitality` namespace |
-| ArgoCD syncs from `develop` branch | ArgoCD syncs from `main` branch |
-| `k8s/environments/development/` | `k8s/environments/production/` |
-| Development image tags (`-dev` suffix) | Production image tags (timestamps only) |
+| `diocesan-vitality-dev` namespace           | `diocesan-vitality` namespace               |
+| ArgoCD syncs from `develop` branch          | ArgoCD syncs from `main` branch             |
+| `k8s/environments/development/`             | `k8s/environments/production/`              |
+| Development image tags (`-dev` suffix)      | Production image tags (timestamps only)     |
 
 ## 📊 Monitoring Deployment
 
@@ -470,6 +490,7 @@ git push origin main
 For the complete deployment script and all deployment commands, see the **[📝 Commands Guide - Complete Deployment Script](COMMANDS.md#complete-deployment-script)**.
 
 The script handles:
+
 - Timestamped image building
 - Docker Hub pushing
 - Kubernetes manifest updates
