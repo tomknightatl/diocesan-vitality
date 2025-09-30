@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- CHANGELOG_PLACEHOLDER -->
 
+## [2.0.0](https://github.com/tomknightatl/diocesan-vitality/compare/v1.0.0...v2.0.0) (2025-09-30)
+
+### ⚠ BREAKING CHANGES
+
+* Replace Terraform with doctl and cloudflared CLI
+
+- Remove terraform/ directory completely
+- Add cluster-create-cli and cluster-destroy-cli using doctl
+- Add tunnels-create-cli and tunnels-destroy-cli using cloudflared CLI
+- Remove duplicate tunnel-destroy target causing Makefile conflicts
+- CLI commands are simpler, more direct, and easier to debug
+- Include comprehensive error handling and safety confirmations
+
+New Commands:
+- make cluster-create-cli CLUSTER_LABEL=dev
+- make cluster-destroy-cli CLUSTER_LABEL=dev
+- make tunnels-create-cli CLUSTER_LABEL=dev
+- make tunnels-destroy-cli CLUSTER_LABEL=dev
+
+This eliminates complex Terraform state management and makes
+infrastructure operations more transparent and reliable.
+
+* Refactor infrastructure to use CLI tools instead of Terraform ([5bb82a8](https://github.com/tomknightatl/diocesan-vitality/commit/5bb82a899ee6959a4b3ca2eae9a17573a33e2304))
+
+### 🐛 Bug Fixes
+
+* add flake8 configuration to allow CI pipeline to pass ([aec1270](https://github.com/tomknightatl/diocesan-vitality/commit/aec1270a04c27f6b5e9c95939ec650391a4313fb))
+* add missing time and json imports in enhanced_ai_fallback_extractor ([1ba13b6](https://github.com/tomknightatl/diocesan-vitality/commit/1ba13b6878ad6394208defc8c3aa4399709994e9))
+* add setup.cfg for flake8 configuration ([42ffe17](https://github.com/tomknightatl/diocesan-vitality/commit/42ffe17288ca48e95cd2123d297874c21ece1e32))
+* disable duplicate CI workflow to resolve conflicts ([4349b9c](https://github.com/tomknightatl/diocesan-vitality/commit/4349b9c3cf9a0e701799a3fa7efb4cc562e25b76))
+* expand flake8 ignore list to allow CI pipeline to pass ([812e778](https://github.com/tomknightatl/diocesan-vitality/commit/812e778057ec6b76de60fed7fd53c02457aefff6))
+* remove undefined setState calls in Dashboard.jsx ([6fbc0b8](https://github.com/tomknightatl/diocesan-vitality/commit/6fbc0b80eece688f7c7b8c4e3ad3f3c018bdae93))
+* resolve code formatting and syntax issues for CI pipeline ([972a2cb](https://github.com/tomknightatl/diocesan-vitality/commit/972a2cb5bbb1ddf75cd08059fc30cec382f39342))
+* update tunnel configuration to route ArgoCD to correct service ([24a3953](https://github.com/tomknightatl/diocesan-vitality/commit/24a3953a7896e882621fca0ad84d49b18e92faa9))
+
 ## 1.0.0 (2025-09-21)
 
 ### ✨ Features
