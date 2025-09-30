@@ -313,6 +313,10 @@ jobs:
           echo "✅ Development manifests updated"
 
       - name: Commit and push changes
+        env:
+          BACKEND_IMAGE: ${{ needs.build-images.outputs.backend-tag }}
+          FRONTEND_IMAGE: ${{ needs.build-images.outputs.frontend-tag }}
+          PIPELINE_IMAGE: ${{ needs.build-images.outputs.pipeline-tag }}
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
@@ -322,14 +326,13 @@ jobs:
           if git diff --staged --quiet; then
             echo "ℹ️  No changes to commit"
           else
-            git commit -m "🚀 Deploy to development: $(date +%Y-%m-%d-%H-%M-%S)
-
-Images:
-- Backend: ${{ needs.build-images.outputs.backend-tag }}
-- Frontend: ${{ needs.build-images.outputs.frontend-tag }}
-- Pipeline: ${{ needs.build-images.outputs.pipeline-tag }}
-
-ArgoCD will auto-sync these changes to cluster do-nyc2-dv-dev"
+            git commit -m "🚀 Deploy to development: $(date +%Y-%m-%d-%H-%M-%S)" \
+              -m "Images:" \
+              -m "- Backend: $BACKEND_IMAGE" \
+              -m "- Frontend: $FRONTEND_IMAGE" \
+              -m "- Pipeline: $PIPELINE_IMAGE" \
+              -m "" \
+              -m "ArgoCD will auto-sync these changes to cluster do-nyc2-dv-dev"
 
             git push origin develop
             echo "✅ Changes pushed to develop branch"
@@ -401,6 +404,10 @@ ArgoCD will auto-sync these changes to cluster do-nyc2-dv-dev"
           echo "✅ Staging manifests updated"
 
       - name: Commit and push changes
+        env:
+          BACKEND_IMAGE: ${{ needs.build-images.outputs.backend-tag }}
+          FRONTEND_IMAGE: ${{ needs.build-images.outputs.frontend-tag }}
+          PIPELINE_IMAGE: ${{ needs.build-images.outputs.pipeline-tag }}
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
@@ -410,14 +417,13 @@ ArgoCD will auto-sync these changes to cluster do-nyc2-dv-dev"
           if git diff --staged --quiet; then
             echo "ℹ️  No changes to commit"
           else
-            git commit -m "🚀 Deploy to staging: $(date +%Y-%m-%d-%H-%M-%S)
-
-Images:
-- Backend: ${{ needs.build-images.outputs.backend-tag }}
-- Frontend: ${{ needs.build-images.outputs.frontend-tag }}
-- Pipeline: ${{ needs.build-images.outputs.pipeline-tag }}
-
-ArgoCD will auto-sync these changes to cluster do-nyc2-dv-stg"
+            git commit -m "🚀 Deploy to staging: $(date +%Y-%m-%d-%H-%M-%S)" \
+              -m "Images:" \
+              -m "- Backend: $BACKEND_IMAGE" \
+              -m "- Frontend: $FRONTEND_IMAGE" \
+              -m "- Pipeline: $PIPELINE_IMAGE" \
+              -m "" \
+              -m "ArgoCD will auto-sync these changes to cluster do-nyc2-dv-stg"
 
             git push origin main
             echo "✅ Changes pushed to main branch"
@@ -490,6 +496,10 @@ ArgoCD will auto-sync these changes to cluster do-nyc2-dv-stg"
           echo "✅ Production manifests updated"
 
       - name: Commit and push changes
+        env:
+          BACKEND_IMAGE: ${{ needs.build-images.outputs.backend-tag }}
+          FRONTEND_IMAGE: ${{ needs.build-images.outputs.frontend-tag }}
+          PIPELINE_IMAGE: ${{ needs.build-images.outputs.pipeline-tag }}
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
@@ -499,15 +509,14 @@ ArgoCD will auto-sync these changes to cluster do-nyc2-dv-stg"
           if git diff --staged --quiet; then
             echo "ℹ️  No changes to commit"
           else
-            git commit -m "🚀 Deploy to production: $(date +%Y-%m-%d-%H-%M-%S)
-
-🎉 Production Release:
-- Backend: ${{ needs.build-images.outputs.backend-tag }}
-- Frontend: ${{ needs.build-images.outputs.frontend-tag }}
-- Pipeline: ${{ needs.build-images.outputs.pipeline-tag }}
-
-✅ All tests passed, staging verified
-ArgoCD will auto-sync these changes to cluster do-nyc2-dv-prd"
+            git commit -m "🚀 Deploy to production: $(date +%Y-%m-%d-%H-%M-%S)" \
+              -m "🎉 Production Release:" \
+              -m "- Backend: $BACKEND_IMAGE" \
+              -m "- Frontend: $FRONTEND_IMAGE" \
+              -m "- Pipeline: $PIPELINE_IMAGE" \
+              -m "" \
+              -m "✅ All tests passed, staging verified" \
+              -m "ArgoCD will auto-sync these changes to cluster do-nyc2-dv-prd"
 
             git push origin main
             echo "✅ Changes pushed to main branch"
