@@ -289,7 +289,7 @@ black . --line-length=127 --exclude="venv|node_modules"
 
 # Linting (Flake8)
 make lint             # Run Python linting
-flake8 . --exclude=venv,node_modules --max-line-length=88 --extend-ignore=E203,W503
+flake8 . --exclude=venv,node_modules --max-line-length=127 --extend-ignore=E203,W503
 
 # Frontend linting
 cd frontend && npm run lint
@@ -299,6 +299,23 @@ make clean            # Clean cache and temporary files
 make kill-chrome      # Kill stuck Chrome processes
 make restart          # Restart all services
 make ports            # Check development port usage
+```
+
+### Testing Commands
+```bash
+# Run all tests
+pytest                           # Full test suite
+pytest tests/unit/              # Unit tests only
+pytest tests/integration/       # Integration tests only
+pytest -v --tb=short           # Verbose with short traceback
+
+# Quick development checks
+make test-quick                 # Essential checks (db, ai, env)
+make env-check                  # Environment configuration
+make db-check                   # Database connectivity
+make ai-check                   # AI API connectivity
+make webdriver-check            # Chrome WebDriver
+make monitor-check              # Monitoring integration
 ```
 
 ### Important Documentation References
