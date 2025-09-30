@@ -1,0 +1,32 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: diocesan-vitality
+
+resources:
+  - ../../application/base
+  - namespace.yaml
+
+patches:
+  - path: production-patches.yaml
+
+# Images - updated automatically by CI/CD pipeline
+images:
+  - name: tomatl/diocesan-vitality:backend
+    newTag: production-backend-latest
+  - name: tomatl/diocesan-vitality:frontend
+    newTag: production-frontend-latest
+  - name: tomatl/diocesan-vitality:pipeline
+    newTag: production-pipeline-latest
+
+commonLabels:
+  environment: production
+  cluster: do-nyc2-dv-prd
+
+replicas:
+  - name: backend-deployment
+    count: 2
+  - name: frontend-deployment
+    count: 2
+  - name: pipeline-deployment
+    count: 1
