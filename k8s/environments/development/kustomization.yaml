@@ -6,6 +6,7 @@ namespace: diocesan-vitality-dev
 resources:
   - ../../application/base
   - namespace.yaml
+  - diocesan-vitality-secrets-sealedsecret.yaml
 
 patches:
   - path: development-patches.yaml
