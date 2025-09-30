@@ -645,9 +645,28 @@ argocd-apps: ## Deploy ArgoCD App-of-Apps root Application (usage: make argocd-a
 	$(MAKE) _deploy-app-of-apps CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	echo "✅ ArgoCD App-of-Apps deployment complete for $$CLUSTER_LABEL"
 
-sealed-secrets-create: ## Step 4: Create tunnel token sealed secret from environment file (usage: make sealed-secrets-create CLUSTER_LABEL=dev)
+sealed-secrets-create: ## Step 4: Create sealed secrets for tunnel and application (usage: make sealed-secrets-create CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
-	echo "🚀 Step 4: Creating tunnel token sealed secret for '$$CLUSTER_LABEL'..." && \
+	echo "🚀 Step 4: Creating sealed secrets for '$$CLUSTER_LABEL'..." && \
+	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
+	echo "🔧 Installing kubeseal CLI if needed..." && \
+	$(MAKE) _install-kubeseal && \
+	echo "⏳ Waiting for sealed-secrets controller to be ready..." && \
+	kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=sealed-secrets -n kube-system --timeout=300s && \
+	echo "" && \
+	echo "🔐 PART 1: Creating tunnel token sealed secret..." && \
+	$(MAKE) _create-tunnel-sealed-secret CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	echo "" && \
+	echo "🔐 PART 2: Creating application secrets sealed secret..." && \
+	$(MAKE) _create-application-sealed-secret CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	echo "" && \
+	echo "💾 Committing all sealed secrets to repository..." && \
+	$(MAKE) _commit-sealed-secrets CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	echo "" && \
+	echo "✅ Step 4 Complete: All sealed secrets created for $$CLUSTER_LABEL"
+
+_create-tunnel-sealed-secret: ## Create tunnel token sealed secret
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	echo "🔍 Loading tunnel token from environment file..." && \
 	if [ ! -f ".tunnel-token-$$CLUSTER_LABEL" ]; then \
 		echo "❌ Could not find tunnel token file: .tunnel-token-$$CLUSTER_LABEL"; \
@@ -665,12 +684,6 @@ sealed-secrets-create: ## Step 4: Create tunnel token sealed secret from environ
 	TUNNEL_INFO=$$(echo "$$TUNNEL_TOKEN" | base64 -d) && \
 	TUNNEL_ID=$$(echo "$$TUNNEL_INFO" | jq -r '.t // "unknown"') && \
 	echo "✅ Tunnel ID: $$TUNNEL_ID" && \
-	echo "✅ Tunnel token loaded: $$(echo "$$TUNNEL_TOKEN" | cut -c1-20)..." && \
-	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
-	echo "🔧 Installing kubeseal CLI if needed..." && \
-	$(MAKE) _install-kubeseal && \
-	echo "⏳ Waiting for sealed-secrets controller to be ready..." && \
-	kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=sealed-secrets -n kube-system --timeout=300s && \
 	echo "🔐 Creating sealed secret from tunnel token..." && \
 	echo -n "$$TUNNEL_TOKEN" | kubectl create secret generic cloudflared-token \
 		--dry-run=client --from-file=tunnel-token=/dev/stdin \
@@ -679,13 +692,79 @@ sealed-secrets-create: ## Step 4: Create tunnel token sealed secret from environ
 		k8s/infrastructure/cloudflare-tunnel/environments/$$CLUSTER_LABEL/cloudflared-token-sealedsecret.yaml && \
 	echo "🔧 Updating kustomization to include sealed secret..." && \
 	$(MAKE) _update-kustomization-for-sealed-secret CLUSTER_LABEL=$$CLUSTER_LABEL && \
-	echo "💾 Committing sealed secret to repository..." && \
-	git add k8s/infrastructure/cloudflare-tunnel/environments/$$CLUSTER_LABEL/ && \
-	git commit -m "Add tunnel token sealed secret for cloudflare-tunnel-$$CLUSTER_LABEL (tunnel: $$TUNNEL_ID)" && \
+	echo "✅ Tunnel sealed secret created: $$TUNNEL_ID"
+
+_create-application-sealed-secret: ## Create application secrets sealed secret
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🔍 Loading application secrets from .env file..." && \
+	if [ ! -f ".env" ]; then \
+		echo "❌ .env file not found. Please copy .env.example to .env and configure your secrets"; \
+		exit 1; \
+	fi && \
+	SUPABASE_URL=$$(grep "^SUPABASE_URL=" .env | cut -d'=' -f2- | tr -d '"') && \
+	SUPABASE_KEY=$$(grep "^SUPABASE_KEY=" .env | cut -d'=' -f2- | tr -d '"') && \
+	GENAI_API_KEY=$$(grep "^GENAI_API_KEY=" .env | cut -d'=' -f2- | tr -d '"') && \
+	SEARCH_API_KEY=$$(grep "^SEARCH_API_KEY=" .env | cut -d'=' -f2- | tr -d '"') && \
+	SEARCH_CX=$$(grep "^SEARCH_CX=" .env | cut -d'=' -f2- | tr -d '"') && \
+	if [ -z "$$SUPABASE_URL" ] || [ -z "$$SUPABASE_KEY" ] || [ -z "$$GENAI_API_KEY" ] || [ -z "$$SEARCH_API_KEY" ] || [ -z "$$SEARCH_CX" ]; then \
+		echo "❌ Missing required secrets in .env file. Required:"; \
+		echo "   SUPABASE_URL, SUPABASE_KEY, GENAI_API_KEY, SEARCH_API_KEY, SEARCH_CX"; \
+		exit 1; \
+	fi && \
+	echo "✅ Loaded application secrets from .env file" && \
+	echo "🔐 Creating sealed secret for application..." && \
+	kubectl create secret generic diocesan-vitality-secrets \
+		--from-literal=supabase-url="$$SUPABASE_URL" \
+		--from-literal=supabase-key="$$SUPABASE_KEY" \
+		--from-literal=genai-api-key="$$GENAI_API_KEY" \
+		--from-literal=search-api-key="$$SEARCH_API_KEY" \
+		--from-literal=search-cx="$$SEARCH_CX" \
+		--namespace=diocesan-vitality-$$CLUSTER_LABEL \
+		--dry-run=client -o yaml | \
+	kubeseal -o yaml --namespace=diocesan-vitality-$$CLUSTER_LABEL > \
+		k8s/environments/$$CLUSTER_LABEL/diocesan-vitality-secrets-sealedsecret.yaml && \
+	echo "🔧 Adding sealed secret to kustomization..." && \
+	if ! grep -q "diocesan-vitality-secrets-sealedsecret.yaml" k8s/environments/$$CLUSTER_LABEL/kustomization.yaml; then \
+		sed -i '/- namespace.yaml/a\  - diocesan-vitality-secrets-sealedsecret.yaml' k8s/environments/$$CLUSTER_LABEL/kustomization.yaml; \
+	fi && \
+	echo "💾 Committing application sealed secret to repository..." && \
+	git add k8s/environments/$$CLUSTER_LABEL/ && \
+	git commit -m "Add application sealed secret for diocesan-vitality-$$CLUSTER_LABEL
+
+🔐 Sealed Secret Contents:
+- supabase-url: Database connection URL
+- supabase-key: Database API key
+- genai-api-key: Google Gemini AI API key
+- search-api-key: Google Custom Search API key
+- search-cx: Google Custom Search CX ID
+
+✅ All secrets encrypted with cluster-specific key
+🔄 ArgoCD will auto-deploy when synced" && \
 	git push && \
-	echo "⏳ Waiting for tunnel application to sync and become healthy..." && \
-	sleep 30 && \
-	echo "✅ Step 5 Complete: Tunnel token sealed secret created for $$CLUSTER_LABEL (tunnel: $$TUNNEL_ID)"
+	echo "✅ Application sealed secret created and committed"
+
+_commit-sealed-secrets: ## Commit all sealed secrets to repository
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "📝 Staging all sealed secret files..." && \
+	git add k8s/infrastructure/cloudflare-tunnel/environments/$$CLUSTER_LABEL/ || true && \
+	git add k8s/environments/$$CLUSTER_LABEL/ && \
+	echo "💾 Committing sealed secrets to repository..." && \
+	git commit -m "🔐 Add sealed secrets for $$CLUSTER_LABEL environment
+
+✅ Tunnel Secret:
+- cloudflared-token: Encrypted tunnel token for Cloudflare tunnel
+
+✅ Application Secrets:
+- supabase-url: Database connection URL
+- supabase-key: Database API key
+- genai-api-key: Google Gemini AI API key
+- search-api-key: Google Custom Search API key
+- search-cx: Google Custom Search CX ID
+
+🔒 All secrets encrypted with cluster-specific sealed-secrets key
+🚀 ArgoCD will auto-deploy when synced from GitOps repository" && \
+	git push && \
+	echo "✅ All sealed secrets committed and pushed to repository"
 
 argocd-verify: ## Step 6: Verify ArgoCD server is accessible at its URL (usage: make argocd-verify CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
