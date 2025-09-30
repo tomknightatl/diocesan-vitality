@@ -46,6 +46,11 @@ on:
         default: false
         type: boolean
 
+# Required for GitOps: Allow workflow to commit and push changes
+permissions:
+  contents: write
+  pull-requests: read
+
 env:
   REGISTRY: docker.io
   IMAGE_NAMESPACE: tomatl/diocesan-vitality
