@@ -13,11 +13,11 @@ patches:
 # Images - updated automatically by CI/CD pipeline
 images:
   - name: tomatl/diocesan-vitality:backend
-    newTag: development-backend-latest
+    newTag: development-backend-2025-09-30-13-07-00
   - name: tomatl/diocesan-vitality:frontend
-    newTag: development-frontend-latest
+    newTag: development-frontend-2025-09-30-13-07-00
   - name: tomatl/diocesan-vitality:pipeline
-    newTag: development-pipeline-latest
+    newTag: development-pipeline-2025-09-30-13-07-00
 
 commonLabels:
   environment: development
