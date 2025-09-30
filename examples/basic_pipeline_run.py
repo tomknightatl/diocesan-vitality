@@ -6,9 +6,9 @@ This example demonstrates how to run the Diocesan Vitality pipeline
 with basic configuration for beginners.
 """
 
+import logging
 import os
 import sys
-import logging
 from pathlib import Path
 
 # Add the project root to Python path
@@ -16,20 +16,13 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
 def check_prerequisites():
     """Check if required environment variables are set."""
-    required_vars = [
-        'SUPABASE_URL',
-        'SUPABASE_KEY',
-        'GENAI_API_KEY'
-    ]
+    required_vars = ["SUPABASE_URL", "SUPABASE_KEY", "GENAI_API_KEY"]
 
     missing_vars = []
     for var in required_vars:
@@ -61,9 +54,10 @@ def run_basic_pipeline():
         # Set conservative parameters for the example
         original_argv = sys.argv
         sys.argv = [
-            'run_pipeline.py',
-            '--max_parishes_per_diocese', '5',  # Process only 5 parishes per diocese
-            '--skip_reporting'  # Skip reporting for faster execution
+            "run_pipeline.py",
+            "--max_parishes_per_diocese",
+            "5",  # Process only 5 parishes per diocese
+            "--skip_reporting",  # Skip reporting for faster execution
         ]
 
         logger.info("📊 Running pipeline with conservative settings:")

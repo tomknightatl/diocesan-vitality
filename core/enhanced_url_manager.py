@@ -14,22 +14,22 @@ to dramatically improve extraction success rates by:
 
 import re
 import time
-import requests
-from datetime import datetime, timezone, timedelta
-from typing import List, Dict, Optional, Tuple, Set
-from urllib.parse import urlparse, urljoin, urlunparse
-from dataclasses import dataclass, field
 from collections import defaultdict
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
+from typing import Dict, List, Optional, Set, Tuple
+from urllib.parse import urljoin, urlparse, urlunparse
 
-from supabase import Client
+import requests
 
-from core.logger import get_logger
-from core.db import get_supabase_client
-from core.ml_url_predictor import get_ml_url_predictor
 from core.adaptive_timeout_manager import get_adaptive_timeout_manager
-from core.intelligent_cache_manager import get_cache_manager, ContentType
-from core.robust_error_handler import get_error_handler, ErrorContext
+from core.db import get_supabase_client
+from core.intelligent_cache_manager import ContentType, get_cache_manager
 from core.intelligent_url_filter import get_url_filter
+from core.logger import get_logger
+from core.ml_url_predictor import get_ml_url_predictor
+from core.robust_error_handler import ErrorContext, get_error_handler
+from supabase import Client
 
 logger = get_logger(__name__)
 
@@ -37,6 +37,7 @@ logger = get_logger(__name__)
 @dataclass
 class URLCandidate:
     """Enhanced URL candidate with success tracking and optimization metadata."""
+
     url: str
     parish_id: int
     priority_score: float = 0.0
@@ -44,18 +45,19 @@ class URLCandidate:
     last_success: Optional[str] = None
     protocol_verified: bool = False
     dns_resolvable: bool = False
-    content_type: str = 'unknown'
+    content_type: str = "unknown"
     estimated_timeout: float = 30.0
 
 
 @dataclass
 class ExtractionContext:
     """Context for dynamic extraction optimization."""
+
     parish_id: int
     parish_url: str
     previous_successes: List[str] = field(default_factory=list)
     page_scan_limit: int = 200
-    timeout_strategy: str = 'adaptive'
+    timeout_strategy: str = "adaptive"
     priority_urls: List[str] = field(default_factory=list)
 
 
@@ -82,7 +84,9 @@ class EnhancedURLManager:
         self._cache_timestamp = 0
         self._cache_ttl = 300  # 5 minutes
 
-        logger.info("🔗 Enhanced URL Manager initialized with ML prediction, adaptive timeouts, intelligent caching, and error handling")
+        logger.info(
+            "🔗 Enhanced URL Manager initialized with ML prediction, adaptive timeouts, intelligent caching, and error handling"
+        )
 
     def get_extraction_context(self, parish_id: int, base_url: str) -> ExtractionContext:
         """
@@ -115,16 +119,17 @@ class EnhancedURLManager:
             previous_successes=previous_successes,
             page_scan_limit=page_scan_limit,
             timeout_strategy=timeout_strategy,
-            priority_urls=priority_urls
+            priority_urls=priority_urls,
         )
 
-        logger.info(f"🔗 Context created: {len(priority_urls)} priority URLs, "
-                   f"scan limit: {page_scan_limit}, timeout: {timeout_strategy}")
+        logger.info(
+            f"🔗 Context created: {len(priority_urls)} priority URLs, "
+            f"scan limit: {page_scan_limit}, timeout: {timeout_strategy}"
+        )
 
         return context
 
-    def get_optimized_url_candidates(self, context: ExtractionContext,
-                                   discovered_urls: List[str]) -> List[URLCandidate]:
+    def get_optimized_url_candidates(self, context: ExtractionContext, discovered_urls: List[str]) -> List[URLCandidate]:
         """
         Get prioritized and optimized URL candidates for extraction using ML prediction.
 
@@ -135,23 +140,19 @@ class EnhancedURLManager:
         Returns:
             List of optimized URLCandidate objects in priority order
         """
-        error_context = ErrorContext(
-            operation="url_prediction",
-            url=context.parish_url,
-            parish_id=context.parish_id
-        )
+        error_context = ErrorContext(operation="url_prediction", url=context.parish_url, parish_id=context.parish_id)
 
         return self.error_handler.handle_with_fallback(
             "url_prediction",
             self._get_optimized_candidates_with_ml,
             error_context,
             extraction_context=context,
-            discovered_urls=discovered_urls
+            discovered_urls=discovered_urls,
         )
 
-    def _get_optimized_candidates_with_ml(self, error_context: ErrorContext,
-                                        extraction_context: ExtractionContext,
-                                        discovered_urls: List[str]) -> List[URLCandidate]:
+    def _get_optimized_candidates_with_ml(
+        self, error_context: ErrorContext, extraction_context: ExtractionContext, discovered_urls: List[str]
+    ) -> List[URLCandidate]:
         """Internal method with ML-based URL optimization."""
         logger.info(f"🔗 Optimizing {len(discovered_urls)} discovered URLs with ML prediction")
 
@@ -163,8 +164,7 @@ class EnhancedURLManager:
         ml_confidence_dict = {}
         try:
             ml_predictions = self.ml_predictor.predict_successful_urls(
-                domain,
-                base_patterns=extraction_context.priority_urls[:10]  # Use top priority URLs as patterns
+                domain, base_patterns=extraction_context.priority_urls[:10]  # Use top priority URLs as patterns
             )
             ml_confidence_dict = dict(ml_predictions[:50])  # Top 50 for filtering
             logger.info(f"🧠 ML predictor generated {len(ml_predictions)} URL predictions")
@@ -175,9 +175,7 @@ class EnhancedURLManager:
         # Filter URLs intelligently - this is the key optimization
         max_urls_to_process = min(40, len(discovered_urls))  # Limit processing to top 40 URLs
         filtered_urls, url_analyses = url_filter.filter_urls(
-            discovered_urls,
-            max_urls=max_urls_to_process,
-            ml_predictions=ml_confidence_dict
+            discovered_urls, max_urls=max_urls_to_process, ml_predictions=ml_confidence_dict
         )
 
         logger.info(f"🔍 URL filtering reduced {len(discovered_urls)} URLs to {len(filtered_urls)} high-quality candidates")
@@ -190,8 +188,9 @@ class EnhancedURLManager:
         for url in ml_predicted_urls:
             if url not in processed_urls:
                 confidence = ml_confidence_dict.get(url, 0.5)
-                candidate = self._create_url_candidate(url, extraction_context.parish_id,
-                                                     priority_boost=20.0 * confidence, is_ml_predicted=True)
+                candidate = self._create_url_candidate(
+                    url, extraction_context.parish_id, priority_boost=20.0 * confidence, is_ml_predicted=True
+                )
                 if candidate:
                     # Add URL analysis insights to the candidate
                     analysis = url_analyses.get(url)
@@ -203,8 +202,7 @@ class EnhancedURLManager:
         # Priority 1: Previously successful URLs (golden URLs)
         for url in extraction_context.previous_successes:
             if url not in processed_urls:
-                candidate = self._create_url_candidate(url, extraction_context.parish_id,
-                                                     priority_boost=15.0, is_golden=True)
+                candidate = self._create_url_candidate(url, extraction_context.parish_id, priority_boost=15.0, is_golden=True)
                 if candidate:
                     candidates.append(candidate)
                     processed_urls.add(url)
@@ -212,8 +210,7 @@ class EnhancedURLManager:
         # Priority 2: Context priority URLs (smart discovery)
         for url in extraction_context.priority_urls:
             if url not in processed_urls:
-                candidate = self._create_url_candidate(url, extraction_context.parish_id,
-                                                     priority_boost=5.0)
+                candidate = self._create_url_candidate(url, extraction_context.parish_id, priority_boost=5.0)
                 if candidate:
                     candidates.append(candidate)
                     processed_urls.add(url)
@@ -228,12 +225,9 @@ class EnhancedURLManager:
                     if analysis:
                         candidate.estimated_timeout = analysis.estimated_processing_time
                         # Boost priority based on URL quality
-                        quality_boost = {
-                            'excellent': 5.0,
-                            'good': 3.0,
-                            'fair': 1.0,
-                            'poor': 0.0
-                        }.get(analysis.quality.value, 0.0)
+                        quality_boost = {"excellent": 5.0, "good": 3.0, "fair": 1.0, "poor": 0.0}.get(
+                            analysis.quality.value, 0.0
+                        )
                         candidate.priority_score += quality_boost
                     candidates.append(candidate)
                     processed_urls.add(url)
@@ -254,15 +248,17 @@ class EnhancedURLManager:
                 return self._success_cache[parish_id]
 
             # Query ParishData for successful extractions
-            response = self.supabase.table('ParishData').select(
-                'fact_source_url'
-            ).eq('parish_id', parish_id).in_(
-                'fact_type', ['ReconciliationSchedule', 'AdorationSchedule']
-            ).execute()
+            response = (
+                self.supabase.table("ParishData")
+                .select("fact_source_url")
+                .eq("parish_id", parish_id)
+                .in_("fact_type", ["ReconciliationSchedule", "AdorationSchedule"])
+                .execute()
+            )
 
             successful_urls = []
             for record in response.data:
-                url = record.get('fact_source_url')
+                url = record.get("fact_source_url")
                 if url and url not in successful_urls:
                     successful_urls.append(url)
 
@@ -276,8 +272,7 @@ class EnhancedURLManager:
             logger.error(f"🔗 Error fetching successful URLs for parish {parish_id}: {e}")
             return []
 
-    def _calculate_dynamic_page_limit(self, parish_id: int,
-                                    previous_successes: List[str]) -> int:
+    def _calculate_dynamic_page_limit(self, parish_id: int, previous_successes: List[str]) -> int:
         """Calculate dynamic page scan limit based on success history."""
         base_limit = 50
 
@@ -287,9 +282,9 @@ class EnhancedURLManager:
 
         # For new parishes, check complexity indicators
         try:
-            discovered_count = self.supabase.table('DiscoveredUrls').select(
-                'url', count='exact'
-            ).eq('parish_id', parish_id).execute()
+            discovered_count = (
+                self.supabase.table("DiscoveredUrls").select("url", count="exact").eq("parish_id", parish_id).execute()
+            )
 
             if discovered_count.count and discovered_count.count > 100:
                 return min(base_limit * 2, 150)  # Complex site, higher limit
@@ -299,8 +294,7 @@ class EnhancedURLManager:
 
         return base_limit
 
-    def _get_priority_urls(self, parish_id: int, base_url: str,
-                          previous_successes: List[str]) -> List[str]:
+    def _get_priority_urls(self, parish_id: int, base_url: str, previous_successes: List[str]) -> List[str]:
         """Generate priority URLs using smart discovery patterns."""
         priority_urls = []
 
@@ -313,28 +307,40 @@ class EnhancedURLManager:
 
         # Common schedule page patterns
         patterns = [
-            '/reconciliation', '/confession', '/confessions', '/penance',
-            '/adoration', '/eucharistic-adoration', '/blessed-sacrament',
-            '/mass-times', '/mass-schedule', '/liturgy', '/worship',
-            '/schedule', '/schedules', '/hours', '/times',
-            '/sacraments', '/services', '/parish-life', '/ministries'
+            "/reconciliation",
+            "/confession",
+            "/confessions",
+            "/penance",
+            "/adoration",
+            "/eucharistic-adoration",
+            "/blessed-sacrament",
+            "/mass-times",
+            "/mass-schedule",
+            "/liturgy",
+            "/worship",
+            "/schedule",
+            "/schedules",
+            "/hours",
+            "/times",
+            "/sacraments",
+            "/services",
+            "/parish-life",
+            "/ministries",
         ]
 
         for pattern in patterns:
             # Generate both HTTP and HTTPS variants
-            for scheme in ['https', 'http']:
+            for scheme in ["https", "http"]:
                 candidate_url = f"{scheme}://{domain}{pattern}"
                 if candidate_url not in priority_urls:
                     priority_urls.append(candidate_url)
 
         # Also check previously discovered URLs for this parish
         try:
-            discovered = self.supabase.table('DiscoveredUrls').select(
-                'url'
-            ).eq('parish_id', parish_id).execute()
+            discovered = self.supabase.table("DiscoveredUrls").select("url").eq("parish_id", parish_id).execute()
 
             for record in discovered.data:
-                url = record['url']
+                url = record["url"]
                 if self._is_schedule_relevant_url(url) and url not in priority_urls:
                     priority_urls.append(url)
 
@@ -343,31 +349,29 @@ class EnhancedURLManager:
 
         return priority_urls
 
-    def _determine_timeout_strategy(self, base_url: str,
-                                  previous_successes: List[str]) -> str:
+    def _determine_timeout_strategy(self, base_url: str, previous_successes: List[str]) -> str:
         """Determine optimal timeout strategy based on URL patterns."""
         domain = urlparse(base_url).netloc.lower()
 
         # Fast domains (typically load quickly)
-        fast_patterns = ['archatl.com', 'wordpress.com', 'squarespace.com']
+        fast_patterns = ["archatl.com", "wordpress.com", "squarespace.com"]
         if any(pattern in domain for pattern in fast_patterns):
-            return 'fast'
+            return "fast"
 
         # Complex sites (may need more time)
-        complex_patterns = ['wix.com', 'weebly.com', 'shopify.com']
+        complex_patterns = ["wix.com", "weebly.com", "shopify.com"]
         if any(pattern in domain for pattern in complex_patterns):
-            return 'extended'
+            return "extended"
 
         # Sites with previous successes can use moderate timeouts
         if previous_successes:
-            return 'moderate'
+            return "moderate"
 
-        return 'adaptive'
+        return "adaptive"
 
-    def _create_url_candidate(self, url: str, parish_id: int,
-                            priority_boost: float = 0.0,
-                            is_golden: bool = False,
-                            is_ml_predicted: bool = False) -> Optional[URLCandidate]:
+    def _create_url_candidate(
+        self, url: str, parish_id: int, priority_boost: float = 0.0, is_golden: bool = False, is_ml_predicted: bool = False
+    ) -> Optional[URLCandidate]:
         """Create a URL candidate with enhanced scoring."""
         try:
             # Basic URL validation
@@ -394,9 +398,7 @@ class EnhancedURLManager:
 
             # Get estimated timeout using adaptive timeout manager
             estimated_timeout = self.timeout_manager.get_optimal_timeout(
-                url,
-                operation_type='page_load',
-                context={'parish_id': parish_id, 'is_golden': is_golden}
+                url, operation_type="page_load", context={"parish_id": parish_id, "is_golden": is_golden}
             )
 
             candidate = URLCandidate(
@@ -404,7 +406,7 @@ class EnhancedURLManager:
                 parish_id=parish_id,
                 priority_score=total_score,
                 success_history=success_count,
-                estimated_timeout=estimated_timeout
+                estimated_timeout=estimated_timeout,
             )
 
             return candidate
@@ -419,25 +421,25 @@ class EnhancedURLManager:
         score = 0.0
 
         # High-value schedule indicators
-        high_value_terms = ['reconciliation', 'confession', 'adoration', 'eucharistic']
+        high_value_terms = ["reconciliation", "confession", "adoration", "eucharistic"]
         for term in high_value_terms:
             if term in url_lower:
                 score += 5.0
 
         # Medium-value schedule indicators
-        medium_value_terms = ['mass', 'times', 'schedule', 'hours', 'worship', 'liturgy']
+        medium_value_terms = ["mass", "times", "schedule", "hours", "worship", "liturgy"]
         for term in medium_value_terms:
             if term in url_lower:
                 score += 3.0
 
         # General religious indicators
-        general_terms = ['parish', 'church', 'catholic', 'sacrament', 'ministry']
+        general_terms = ["parish", "church", "catholic", "sacrament", "ministry"]
         for term in general_terms:
             if term in url_lower:
                 score += 1.0
 
         # Penalize low-value pages
-        low_value_terms = ['contact', 'about', 'history', 'staff', 'donate', 'news']
+        low_value_terms = ["contact", "about", "history", "staff", "donate", "news"]
         for term in low_value_terms:
             if term in url_lower:
                 score -= 2.0
@@ -447,9 +449,13 @@ class EnhancedURLManager:
     def _get_url_success_count(self, url: str, parish_id: int) -> int:
         """Get number of successful extractions for this URL."""
         try:
-            response = self.supabase.table('ParishData').select(
-                'id', count='exact'
-            ).eq('parish_id', parish_id).eq('fact_source_url', url).execute()
+            response = (
+                self.supabase.table("ParishData")
+                .select("id", count="exact")
+                .eq("parish_id", parish_id)
+                .eq("fact_source_url", url)
+                .execute()
+            )
 
             return response.count or 0
 
@@ -462,18 +468,11 @@ class EnhancedURLManager:
         verified = []
 
         for candidate in candidates:
-            error_context = ErrorContext(
-                operation="url_verification",
-                url=candidate.url,
-                parish_id=candidate.parish_id
-            )
+            error_context = ErrorContext(operation="url_verification", url=candidate.url, parish_id=candidate.parish_id)
 
             try:
                 verified_candidate = self.error_handler.handle_with_fallback(
-                    "url_verification",
-                    self._verify_single_candidate,
-                    error_context,
-                    candidate=candidate
+                    "url_verification", self._verify_single_candidate, error_context, candidate=candidate
                 )
 
                 if verified_candidate and verified_candidate.dns_resolvable:
@@ -493,39 +492,23 @@ class EnhancedURLManager:
 
         # Use cache manager for DNS resolution
         cache_key = f"dns_resolution:{domain}"
-        candidate.dns_resolvable = self.cache_manager.get(
-            cache_key,
-            default=None
-        )
+        candidate.dns_resolvable = self.cache_manager.get(cache_key, default=None)
 
         if candidate.dns_resolvable is None:
             # Perform DNS resolution check
             candidate.dns_resolvable = self._check_dns_resolution(domain)
             # Cache result with 1 hour TTL
-            self.cache_manager.set(
-                cache_key,
-                candidate.dns_resolvable,
-                ttl=3600.0,
-                content_type=ContentType.DNS_RESULT
-            )
+            self.cache_manager.set(cache_key, candidate.dns_resolvable, ttl=3600.0, content_type=ContentType.DNS_RESULT)
 
         # Protocol verification with intelligent caching
         if candidate.dns_resolvable:
             protocol_cache_key = f"protocol_verification:{candidate.url}"
-            verified_url = self.cache_manager.get(
-                protocol_cache_key,
-                default=None
-            )
+            verified_url = self.cache_manager.get(protocol_cache_key, default=None)
 
             if verified_url is None:
                 verified_url = self._verify_and_fix_protocol_with_timeout(candidate)
                 # Cache result with 30 minute TTL
-                self.cache_manager.set(
-                    protocol_cache_key,
-                    verified_url,
-                    ttl=1800.0,
-                    content_type=ContentType.URL_VERIFICATION
-                )
+                self.cache_manager.set(protocol_cache_key, verified_url, ttl=1800.0, content_type=ContentType.URL_VERIFICATION)
 
             if verified_url != candidate.url:
                 candidate.url = verified_url
@@ -537,6 +520,7 @@ class EnhancedURLManager:
         """Quick DNS resolution check."""
         try:
             import socket
+
             socket.gethostbyname(domain)
             return True
         except socket.gaierror:
@@ -548,39 +532,23 @@ class EnhancedURLManager:
 
         # Get adaptive timeout for verification
         verification_timeout = self.timeout_manager.get_optimal_timeout(
-            candidate.url,
-            operation_type='head_request',
-            context={'parish_id': candidate.parish_id}
+            candidate.url, operation_type="head_request", context={"parish_id": candidate.parish_id}
         )
 
         # Try HTTPS first, then HTTP
-        for scheme in ['https', 'http']:
-            test_url = urlunparse((scheme, parsed.netloc, parsed.path,
-                                 parsed.params, parsed.query, parsed.fragment))
+        for scheme in ["https", "http"]:
+            test_url = urlunparse((scheme, parsed.netloc, parsed.path, parsed.params, parsed.query, parsed.fragment))
             try:
                 response = requests.head(
-                    test_url,
-                    timeout=min(verification_timeout, 10.0),  # Cap at 10s for verification
-                    allow_redirects=True
+                    test_url, timeout=min(verification_timeout, 10.0), allow_redirects=True  # Cap at 10s for verification
                 )
                 if response.status_code < 400:
                     # Record successful response for timeout optimization
-                    self.timeout_manager.record_response(
-                        test_url,
-                        'head_request',
-                        response.elapsed.total_seconds(),
-                        True
-                    )
+                    self.timeout_manager.record_response(test_url, "head_request", response.elapsed.total_seconds(), True)
                     return test_url
             except Exception as e:
                 # Record failed response for timeout optimization
-                self.timeout_manager.record_response(
-                    test_url,
-                    'head_request',
-                    verification_timeout,
-                    False,
-                    str(e)
-                )
+                self.timeout_manager.record_response(test_url, "head_request", verification_timeout, False, str(e))
                 continue
 
         # If both fail, return original
@@ -596,30 +564,31 @@ class EnhancedURLManager:
         url_lower = url.lower()
 
         relevant_terms = [
-            'reconciliation', 'confession', 'adoration', 'eucharistic',
-            'mass', 'times', 'schedule', 'hours', 'worship', 'liturgy',
-            'sacrament', 'parish', 'church'
+            "reconciliation",
+            "confession",
+            "adoration",
+            "eucharistic",
+            "mass",
+            "times",
+            "schedule",
+            "hours",
+            "worship",
+            "liturgy",
+            "sacrament",
+            "parish",
+            "church",
         ]
 
         return any(term in url_lower for term in relevant_terms)
 
-    def get_timeout_for_url(self, url: str, strategy: str, operation_type: str = 'page_load', context: Dict = None) -> float:
+    def get_timeout_for_url(self, url: str, strategy: str, operation_type: str = "page_load", context: Dict = None) -> float:
         """Get optimized timeout for URL using adaptive timeout management."""
         # Use adaptive timeout manager for intelligent timeout calculation
-        return self.timeout_manager.get_optimal_timeout(
-            url,
-            operation_type=operation_type,
-            context=context or {}
-        )
+        return self.timeout_manager.get_optimal_timeout(url, operation_type=operation_type, context=context or {})
 
     def get_timeout_for_url_legacy(self, url: str, strategy: str) -> float:
         """Legacy timeout method for backward compatibility."""
-        base_timeouts = {
-            'fast': 15.0,
-            'moderate': 30.0,
-            'extended': 60.0,
-            'adaptive': 30.0
-        }
+        base_timeouts = {"fast": 15.0, "moderate": 30.0, "extended": 60.0, "adaptive": 30.0}
 
         timeout = base_timeouts.get(strategy, 30.0)
 
@@ -627,11 +596,11 @@ class EnhancedURLManager:
         domain = urlparse(url).netloc.lower()
 
         # Known slow patterns
-        if any(pattern in domain for pattern in ['wix.com', 'weebly.com']):
+        if any(pattern in domain for pattern in ["wix.com", "weebly.com"]):
             timeout *= 1.5
 
         # Known fast patterns
-        elif any(pattern in domain for pattern in ['archatl.com', 'wordpress.com']):
+        elif any(pattern in domain for pattern in ["archatl.com", "wordpress.com"]):
             timeout *= 0.8
 
         return min(timeout, 90.0)  # Never exceed 90 seconds

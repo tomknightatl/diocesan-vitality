@@ -11,15 +11,16 @@ When standard extraction methods fail, this system uses GenAI to:
 
 import json
 import re
-from typing import List, Dict, Optional, Tuple, Any
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
+
+import google.generativeai as genai
+from selenium.common.exceptions import TimeoutException, WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
-from selenium.common.exceptions import WebDriverException, TimeoutException
-import google.generativeai as genai
 
-from core.logger import get_logger
 from core.circuit_breaker import circuit_breaker
+from core.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -31,20 +32,32 @@ class AIContentAnalyzer:
         """Initialize the AI content analyzer."""
         self.genai_api_key = genai_api_key
         genai.configure(api_key=genai_api_key)
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        self.model = genai.GenerativeModel("gemini-1.5-flash")
 
         # Common parish indicators for validation
         self.parish_indicators = [
-            'parish', 'church', 'cathedral', 'chapel', 'mission',
-            'saint', 'st.', 'holy', 'blessed', 'our lady', 'sacred heart',
-            'catholic church', 'mass times', 'contact', 'address', 'phone'
+            "parish",
+            "church",
+            "cathedral",
+            "chapel",
+            "mission",
+            "saint",
+            "st.",
+            "holy",
+            "blessed",
+            "our lady",
+            "sacred heart",
+            "catholic church",
+            "mass times",
+            "contact",
+            "address",
+            "phone",
         ]
 
         logger.info("🤖 AI Content Analyzer initialized")
 
-    @circuit_breaker('ai_content_analysis')
-    def analyze_failed_extraction(self, driver: WebDriver, diocese_name: str,
-                                 url: str) -> Dict[str, Any]:
+    @circuit_breaker("ai_content_analysis")
+    def analyze_failed_extraction(self, driver: WebDriver, diocese_name: str, url: str) -> Dict[str, Any]:
         """
         Analyze a parish directory page when standard extraction fails.
 
@@ -64,9 +77,7 @@ class AIContentAnalyzer:
             content_snippets = self._extract_content_snippets(driver)
 
             # Step 3: Generate AI analysis prompt
-            analysis_result = self._generate_ai_analysis(
-                diocese_name, url, dom_analysis, content_snippets
-            )
+            analysis_result = self._generate_ai_analysis(diocese_name, url, dom_analysis, content_snippets)
 
             # Step 4: Apply AI-generated selectors
             parish_data = self._apply_ai_selectors(driver, analysis_result, url)
@@ -74,21 +85,21 @@ class AIContentAnalyzer:
             logger.info(f"🤖 AI analysis completed: found {len(parish_data)} parishes")
 
             return {
-                'custom_selectors': analysis_result.get('selectors', []),
-                'extraction_strategy': analysis_result.get('strategy', 'unknown'),
-                'parish_data': parish_data,
-                'confidence': analysis_result.get('confidence', 0.0),
-                'ai_insights': analysis_result.get('insights', [])
+                "custom_selectors": analysis_result.get("selectors", []),
+                "extraction_strategy": analysis_result.get("strategy", "unknown"),
+                "parish_data": parish_data,
+                "confidence": analysis_result.get("confidence", 0.0),
+                "ai_insights": analysis_result.get("insights", []),
             }
 
         except Exception as e:
             logger.error(f"🤖 AI content analysis failed: {e}")
             return {
-                'custom_selectors': [],
-                'extraction_strategy': 'failed',
-                'parish_data': [],
-                'confidence': 0.0,
-                'error': str(e)
+                "custom_selectors": [],
+                "extraction_strategy": "failed",
+                "parish_data": [],
+                "confidence": 0.0,
+                "error": str(e),
             }
 
     def _analyze_dom_structure(self, driver: WebDriver) -> Dict[str, Any]:
@@ -96,41 +107,52 @@ class AIContentAnalyzer:
         try:
             # Get page structure overview
             structure = {
-                'title': driver.title,
-                'url': driver.current_url,
-                'links_count': len(driver.find_elements(By.TAG_NAME, 'a')),
-                'parish_related_elements': [],
-                'cms_indicators': [],
-                'layout_type': 'unknown'
+                "title": driver.title,
+                "url": driver.current_url,
+                "links_count": len(driver.find_elements(By.TAG_NAME, "a")),
+                "parish_related_elements": [],
+                "cms_indicators": [],
+                "layout_type": "unknown",
             }
 
             # Look for parish-related elements
             parish_elements = []
             for selector in [
-                "a[href*='parish']", "[class*='parish']", "[id*='parish']",
-                "a[href*='church']", "[class*='church']", "[id*='church']",
-                ".content a", ".main a", "#content a", ".parish-list a"
+                "a[href*='parish']",
+                "[class*='parish']",
+                "[id*='parish']",
+                "a[href*='church']",
+                "[class*='church']",
+                "[id*='church']",
+                ".content a",
+                ".main a",
+                "#content a",
+                ".parish-list a",
             ]:
                 try:
                     elements = driver.find_elements(By.CSS_SELECTOR, selector)
                     if elements:
-                        parish_elements.extend([{
-                            'selector': selector,
-                            'count': len(elements),
-                            'sample_texts': [elem.text.strip()[:50] for elem in elements[:3] if elem.text.strip()]
-                        }])
+                        parish_elements.extend(
+                            [
+                                {
+                                    "selector": selector,
+                                    "count": len(elements),
+                                    "sample_texts": [elem.text.strip()[:50] for elem in elements[:3] if elem.text.strip()],
+                                }
+                            ]
+                        )
                 except:
                     continue
 
-            structure['parish_related_elements'] = parish_elements
+            structure["parish_related_elements"] = parish_elements
 
             # Detect CMS patterns
             cms_indicators = []
             cms_patterns = {
-                'wordpress': ['.wp-content', '.wp-block', '#wp-content'],
-                'drupal': ['.region-content', '.field-item', '#drupal'],
-                'squarespace': ['.sqs-block', '.content-wrapper'],
-                'custom': ['.container', '.content', '#main']
+                "wordpress": [".wp-content", ".wp-block", "#wp-content"],
+                "drupal": [".region-content", ".field-item", "#drupal"],
+                "squarespace": [".sqs-block", ".content-wrapper"],
+                "custom": [".container", ".content", "#main"],
             }
 
             for cms, selectors in cms_patterns.items():
@@ -142,13 +164,13 @@ class AIContentAnalyzer:
                     except:
                         continue
 
-            structure['cms_indicators'] = cms_indicators
+            structure["cms_indicators"] = cms_indicators
 
             return structure
 
         except Exception as e:
             logger.warning(f"🤖 DOM structure analysis failed: {e}")
-            return {'error': str(e)}
+            return {"error": str(e)}
 
     def _extract_content_snippets(self, driver: WebDriver) -> List[str]:
         """Extract relevant content snippets for AI analysis."""
@@ -156,20 +178,18 @@ class AIContentAnalyzer:
 
         try:
             # Check if page has dynamic loading indicators
-            loading_indicators = [
-                'loading', 'just a moment', 'please wait', 'loading content',
-                'spinner', 'loader'
-            ]
+            loading_indicators = ["loading", "just a moment", "please wait", "loading content", "spinner", "loader"]
 
-            page_text = driver.find_element(By.TAG_NAME, 'body').text.lower()
+            page_text = driver.find_element(By.TAG_NAME, "body").text.lower()
             has_loading = any(indicator in page_text for indicator in loading_indicators)
 
             if has_loading:
                 logger.info("🤖 Detected dynamic loading, waiting for content...")
                 # Wait for dynamic content to load
-                from selenium.webdriver.support.ui import WebDriverWait
-                from selenium.webdriver.support import expected_conditions as EC
                 import time
+
+                from selenium.webdriver.support import expected_conditions as EC
+                from selenium.webdriver.support.ui import WebDriverWait
 
                 # Wait up to 10 seconds for content to appear
                 wait = WebDriverWait(driver, 10)
@@ -183,7 +203,7 @@ class AIContentAnalyzer:
                     time.sleep(2)
 
                     # Check if content has changed
-                    new_text = driver.find_element(By.TAG_NAME, 'body').text.lower()
+                    new_text = driver.find_element(By.TAG_NAME, "body").text.lower()
                     if len(new_text) > initial_length * 1.5:  # Content significantly expanded
                         logger.info("🤖 Dynamic content loaded successfully")
                     else:
@@ -193,13 +213,26 @@ class AIContentAnalyzer:
 
             # Get main content areas
             content_selectors = [
-                'main', '.main', '#main', '.content', '#content',
-                '.container', '.wrapper', 'article', '.article',
-                '.parish-list', '.church-list', '.directory',
+                "main",
+                ".main",
+                "#main",
+                ".content",
+                "#content",
+                ".container",
+                ".wrapper",
+                "article",
+                ".article",
+                ".parish-list",
+                ".church-list",
+                ".directory",
                 # WordPress-specific selectors
-                '.entry-content', '.post-content', '.page-content',
+                ".entry-content",
+                ".post-content",
+                ".page-content",
                 # Common CMS selectors
-                '.vc_column', '.elementor-widget', '.et_pb_text'
+                ".vc_column",
+                ".elementor-widget",
+                ".et_pb_text",
             ]
 
             for selector in content_selectors:
@@ -207,8 +240,7 @@ class AIContentAnalyzer:
                     elements = driver.find_elements(By.CSS_SELECTOR, selector)
                     for elem in elements[:2]:  # Limit to first 2 matches
                         text = elem.text.strip()
-                        if len(text) > 50 and any(indicator.lower() in text.lower()
-                                                 for indicator in self.parish_indicators):
+                        if len(text) > 50 and any(indicator.lower() in text.lower() for indicator in self.parish_indicators):
                             snippets.append(text[:1000])  # Limit snippet length
                 except:
                     continue
@@ -217,7 +249,7 @@ class AIContentAnalyzer:
             try:
                 page_source = driver.page_source
                 # Extract a relevant portion of HTML
-                if 'parish' in page_source.lower() or 'church' in page_source.lower():
+                if "parish" in page_source.lower() or "church" in page_source.lower():
                     # Find the most relevant section
                     soup_like_content = self._extract_relevant_html_section(page_source)
                     if soup_like_content:
@@ -237,29 +269,29 @@ class AIContentAnalyzer:
         html_lower = html_source.lower()
 
         # Find sections with high parish keyword density
-        parish_keywords = ['parish', 'church', 'catholic', 'saint', 'st.']
+        parish_keywords = ["parish", "church", "catholic", "saint", "st."]
 
         # Look for div or section tags with parish content
         patterns = [
             r'<div[^>]*class="[^"]*parish[^"]*"[^>]*>.*?</div>',
             r'<div[^>]*class="[^"]*church[^"]*"[^>]*>.*?</div>',
-            r'<main[^>]*>.*?</main>',
-            r'<section[^>]*>.*?</section>'
+            r"<main[^>]*>.*?</main>",
+            r"<section[^>]*>.*?</section>",
         ]
 
         for pattern in patterns:
             matches = re.findall(pattern, html_source, re.IGNORECASE | re.DOTALL)
             for match in matches:
                 if len(match) < 2000:  # Reasonable size
-                    keyword_count = sum(1 for keyword in parish_keywords
-                                      if keyword in match.lower())
+                    keyword_count = sum(1 for keyword in parish_keywords if keyword in match.lower())
                     if keyword_count >= 2:
                         return match[:1500]  # Truncate for API limits
 
         return ""
 
-    def _generate_ai_analysis(self, diocese_name: str, url: str,
-                             dom_analysis: Dict, content_snippets: List[str]) -> Dict[str, Any]:
+    def _generate_ai_analysis(
+        self, diocese_name: str, url: str, dom_analysis: Dict, content_snippets: List[str]
+    ) -> Dict[str, Any]:
         """Generate AI analysis of the page structure and content."""
 
         prompt = f"""
@@ -318,37 +350,31 @@ Be specific and actionable. Focus on elements that actually exist on this page.
             response = self.model.generate_content(prompt)
 
             # Parse JSON response
-            json_match = re.search(r'\{.*\}', response.text, re.DOTALL)
+            json_match = re.search(r"\{.*\}", response.text, re.DOTALL)
             if json_match:
                 analysis = json.loads(json_match.group())
                 return analysis
             else:
                 logger.warning("🤖 AI response not in expected JSON format")
                 return {
-                    'selectors': [],
-                    'strategy': 'failed_parsing',
-                    'confidence': 0.0,
-                    'insights': ['Failed to parse AI response'],
-                    'raw_response': response.text
+                    "selectors": [],
+                    "strategy": "failed_parsing",
+                    "confidence": 0.0,
+                    "insights": ["Failed to parse AI response"],
+                    "raw_response": response.text,
                 }
 
         except Exception as e:
             logger.error(f"🤖 AI analysis generation failed: {e}")
-            return {
-                'selectors': [],
-                'strategy': 'ai_failed',
-                'confidence': 0.0,
-                'error': str(e)
-            }
+            return {"selectors": [], "strategy": "ai_failed", "confidence": 0.0, "error": str(e)}
 
-    def _apply_ai_selectors(self, driver: WebDriver, analysis: Dict,
-                           base_url: str) -> List[Dict[str, Any]]:
+    def _apply_ai_selectors(self, driver: WebDriver, analysis: Dict, base_url: str) -> List[Dict[str, Any]]:
         """Apply AI-generated selectors to extract parish data."""
         parishes = []
 
         try:
             # Try CSS selectors first
-            for selector in analysis.get('selectors', []):
+            for selector in analysis.get("selectors", []):
                 try:
                     elements = driver.find_elements(By.CSS_SELECTOR, selector)
                     for elem in elements:
@@ -360,7 +386,7 @@ Be specific and actionable. Focus on elements that actually exist on this page.
                     continue
 
             # Try XPath expressions
-            for xpath in analysis.get('xpath_expressions', []):
+            for xpath in analysis.get("xpath_expressions", []):
                 try:
                     elements = driver.find_elements(By.XPATH, xpath)
                     for elem in elements:
@@ -375,7 +401,7 @@ Be specific and actionable. Focus on elements that actually exist on this page.
             unique_parishes = []
             seen_names = set()
             for parish in parishes:
-                name_key = parish.get('name', '').lower().strip()
+                name_key = parish.get("name", "").lower().strip()
                 if name_key and name_key not in seen_names:
                     seen_names.add(name_key)
                     unique_parishes.append(parish)
@@ -397,30 +423,32 @@ Be specific and actionable. Focus on elements that actually exist on this page.
                 return None
 
             # Extract name
-            parish_data['name'] = text
+            parish_data["name"] = text
 
             # Get URL if it's a link
-            if element.tag_name.lower() == 'a':
-                href = element.get_attribute('href')
+            if element.tag_name.lower() == "a":
+                href = element.get_attribute("href")
                 if href:
-                    parish_data['url'] = urljoin(base_url, href)
+                    parish_data["url"] = urljoin(base_url, href)
 
             # Look for additional data in parent/sibling elements
             try:
-                parent = element.find_element(By.XPATH, '..')
+                parent = element.find_element(By.XPATH, "..")
                 parent_text = parent.text.strip()
 
                 # Extract address patterns
-                address_pattern = r'\d+[^,\n]*(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Lane|Ln|Circle|Cir)[^,\n]*'
+                address_pattern = (
+                    r"\d+[^,\n]*(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Lane|Ln|Circle|Cir)[^,\n]*"
+                )
                 address_match = re.search(address_pattern, parent_text, re.IGNORECASE)
                 if address_match:
-                    parish_data['address'] = address_match.group().strip()
+                    parish_data["address"] = address_match.group().strip()
 
                 # Extract phone patterns
-                phone_pattern = r'\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}'
+                phone_pattern = r"\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}"
                 phone_match = re.search(phone_pattern, parent_text)
                 if phone_match:
-                    parish_data['phone'] = phone_match.group().strip()
+                    parish_data["phone"] = phone_match.group().strip()
             except:
                 pass
 
@@ -432,24 +460,51 @@ Be specific and actionable. Focus on elements that actually exist on this page.
 
     def _validate_parish_data(self, parish_data: Dict[str, Any]) -> bool:
         """Validate that extracted data represents a real parish."""
-        name = parish_data.get('name', '').lower()
+        name = parish_data.get("name", "").lower()
 
         # Must have a name
         if not name or len(name.strip()) < 3:
             return False
 
         # Should contain parish indicators
-        has_parish_indicator = any(indicator in name for indicator in [
-            'parish', 'church', 'cathedral', 'chapel', 'mission',
-            'saint', 'st.', 'holy', 'blessed', 'our lady', 'sacred'
-        ])
+        has_parish_indicator = any(
+            indicator in name
+            for indicator in [
+                "parish",
+                "church",
+                "cathedral",
+                "chapel",
+                "mission",
+                "saint",
+                "st.",
+                "holy",
+                "blessed",
+                "our lady",
+                "sacred",
+            ]
+        )
 
         # Exclude obvious non-parishes
         exclusion_terms = [
-            'office', 'department', 'ministry', 'bishop', 'chancellor',
-            'tribunal', 'education', 'finance', 'human resources',
-            'development', 'communications', 'vocations', 'youth',
-            'home', 'about', 'contact', 'news', 'events', 'calendar'
+            "office",
+            "department",
+            "ministry",
+            "bishop",
+            "chancellor",
+            "tribunal",
+            "education",
+            "finance",
+            "human resources",
+            "development",
+            "communications",
+            "vocations",
+            "youth",
+            "home",
+            "about",
+            "contact",
+            "news",
+            "events",
+            "calendar",
         ]
 
         has_exclusion = any(term in name for term in exclusion_terms)

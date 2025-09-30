@@ -1,3 +1,4 @@
+# Core dependencies for diocesan vitality pipeline - testing skipped test suite
 supabase
 selenium
 webdriver-manager

@@ -7,8 +7,9 @@ It's separate from the more complex BaseExtractor in parish_extraction_core.py
 to avoid circular dependencies.
 """
 
-from typing import List, Dict, Any
 from abc import ABC, abstractmethod
+from typing import Any, Dict, List
+
 from selenium.webdriver.remote.webdriver import WebDriver
 
 
@@ -34,8 +35,7 @@ class BaseExtractor(ABC):
         pass
 
     @abstractmethod
-    def extract(self, driver: WebDriver, diocese_name: str, url: str,
-               max_parishes: int = None) -> List[Dict[str, Any]]:
+    def extract(self, driver: WebDriver, diocese_name: str, url: str, max_parishes: int = None) -> List[Dict[str, Any]]:
         """
         Extract parish data from the page.
 
@@ -57,7 +57,4 @@ class BaseExtractor(ABC):
         Returns:
             Dictionary with extractor information
         """
-        return {
-            'extractor_name': self.extractor_name,
-            'type': 'base_extractor'
-        }
+        return {"extractor_name": self.extractor_name, "type": "base_extractor"}

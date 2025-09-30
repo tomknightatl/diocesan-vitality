@@ -2,10 +2,12 @@
 """
 Test script to verify monitoring API integration
 """
-import requests
-import time
 import json
+import time
 from datetime import datetime, timezone
+
+import requests
+
 
 class MonitoringClient:
     """Client for sending updates to the monitoring API."""
@@ -22,7 +24,7 @@ class MonitoringClient:
                 "message": message,
                 "level": level,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
-                "parish_id": parish_id
+                "parish_id": parish_id,
             }
             response = self.session.post(f"{self.base_url}/api/monitoring/log", json=data)
             print(f"✅ Sent log: {message} (Status: {response.status_code})")
@@ -31,9 +33,15 @@ class MonitoringClient:
             print(f"❌ Failed to send log: {e}")
             return False
 
-    def update_extraction_status(self, status: str, current_diocese: str = None,
-                                parishes_processed: int = 0, total_parishes: int = 0,
-                                success_rate: float = 0.0, progress_percentage: float = 0.0):
+    def update_extraction_status(
+        self,
+        status: str,
+        current_diocese: str = None,
+        parishes_processed: int = 0,
+        total_parishes: int = 0,
+        success_rate: float = 0.0,
+        progress_percentage: float = 0.0,
+    ):
         """Update extraction status in the monitoring API."""
         try:
             data = {
@@ -44,7 +52,7 @@ class MonitoringClient:
                 "success_rate": success_rate,
                 "progress_percentage": progress_percentage,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
-                "started_at": datetime.now(timezone.utc).isoformat()
+                "started_at": datetime.now(timezone.utc).isoformat(),
             }
             response = self.session.post(f"{self.base_url}/api/monitoring/extraction_status", json=data)
             print(f"✅ Updated extraction status: {status} (Status: {response.status_code})")
@@ -52,6 +60,7 @@ class MonitoringClient:
         except Exception as e:
             print(f"❌ Failed to update extraction status: {e}")
             return False
+
 
 def main():
     """Test the monitoring integration."""
@@ -69,7 +78,7 @@ def main():
         parishes_processed=0,
         total_parishes=105,
         success_rate=0.0,
-        progress_percentage=0.0
+        progress_percentage=0.0,
     )
 
     # Test 3: Simulate some progress
@@ -85,8 +94,8 @@ def main():
             current_diocese="Archdiocese of Atlanta (Test)",
             parishes_processed=i,
             total_parishes=5,
-            success_rate=(i/5) * 100,
-            progress_percentage=(i/5) * 100
+            success_rate=(i / 5) * 100,
+            progress_percentage=(i / 5) * 100,
         )
 
         if i == 3:
@@ -100,10 +109,11 @@ def main():
         parishes_processed=5,
         total_parishes=5,
         success_rate=100.0,
-        progress_percentage=100.0
+        progress_percentage=100.0,
     )
 
     print("🎉 Monitoring test completed! Check the dashboard at http://127.0.0.1:5173/dashboard")
+
 
 if __name__ == "__main__":
     main()

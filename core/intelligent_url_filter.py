@@ -8,9 +8,9 @@ on low-probability URLs before they reach the verification stage.
 
 import re
 import urllib.parse
-from typing import List, Tuple, Dict, Set
 from dataclasses import dataclass
 from enum import Enum
+from typing import Dict, List, Set, Tuple
 
 from core.logger import get_logger
 
@@ -19,16 +19,18 @@ logger = get_logger(__name__)
 
 class URLQuality(Enum):
     """URL quality levels for processing prioritization."""
-    EXCELLENT = "excellent"      # Very high probability of success
-    GOOD = "good"               # Good probability of success
-    FAIR = "fair"               # Moderate probability of success
-    POOR = "poor"               # Low probability of success
-    SKIP = "skip"               # Should be skipped entirely
+
+    EXCELLENT = "excellent"  # Very high probability of success
+    GOOD = "good"  # Good probability of success
+    FAIR = "fair"  # Moderate probability of success
+    POOR = "poor"  # Low probability of success
+    SKIP = "skip"  # Should be skipped entirely
 
 
 @dataclass
 class URLAnalysis:
     """Analysis result for a single URL."""
+
     url: str
     quality: URLQuality
     confidence_score: float
@@ -54,71 +56,108 @@ class IntelligentURLFilter:
         # High-value URL patterns
         self.high_value_patterns = [
             # Schedule-related patterns
-            r'(?i)(reconciliation|confession|adoration|eucharistic)',
-            r'(?i)(schedule|times|hours|worship)',
-            r'(?i)(mass.*times|liturgy.*schedule)',
-            r'(?i)(sacrament|prayer|devotion)',
-
+            r"(?i)(reconciliation|confession|adoration|eucharistic)",
+            r"(?i)(schedule|times|hours|worship)",
+            r"(?i)(mass.*times|liturgy.*schedule)",
+            r"(?i)(sacrament|prayer|devotion)",
             # Common CMS schedule paths
-            r'/schedule', r'/times', r'/worship', r'/mass',
-            r'/liturgy', r'/sacraments', r'/reconciliation',
-            r'/adoration', r'/confession', r'/prayer'
+            r"/schedule",
+            r"/times",
+            r"/worship",
+            r"/mass",
+            r"/liturgy",
+            r"/sacraments",
+            r"/reconciliation",
+            r"/adoration",
+            r"/confession",
+            r"/prayer",
         ]
 
         # Medium-value patterns
         self.medium_value_patterns = [
-            r'(?i)(parish|church|catholic)',
-            r'(?i)(ministry|ministries|faith)',
-            r'(?i)(events|calendar|bulletin)',
-            r'/about', r'/ministries', r'/events'
+            r"(?i)(parish|church|catholic)",
+            r"(?i)(ministry|ministries|faith)",
+            r"(?i)(events|calendar|bulletin)",
+            r"/about",
+            r"/ministries",
+            r"/events",
         ]
 
         # Low-value patterns (still worth checking but lower priority)
         self.low_value_patterns = [
-            r'(?i)(community|news|announcements)',
-            r'(?i)(education|school|youth)',
-            r'/news', r'/community', r'/education'
+            r"(?i)(community|news|announcements)",
+            r"(?i)(education|school|youth)",
+            r"/news",
+            r"/community",
+            r"/education",
         ]
 
         # Blacklisted patterns (skip entirely)
         self.blacklisted_patterns = [
             # Administrative/technical pages
-            r'(?i)(admin|wp-admin|login|register|signup)',
-            r'(?i)(forgot.*password|reset.*password)',
-            r'(?i)(privacy.*policy|terms.*service|legal)',
-            r'(?i)(sitemap|robots\.txt|favicon\.ico)',
-
+            r"(?i)(admin|wp-admin|login|register|signup)",
+            r"(?i)(forgot.*password|reset.*password)",
+            r"(?i)(privacy.*policy|terms.*service|legal)",
+            r"(?i)(sitemap|robots\.txt|favicon\.ico)",
             # File types that won't contain schedules
-            r'\.(pdf|jpg|jpeg|png|gif|svg|ico|css|js|xml|json)$',
-            r'\.(doc|docx|xls|xlsx|ppt|pptx|zip|rar)$',
-
+            r"\.(pdf|jpg|jpeg|png|gif|svg|ico|css|js|xml|json)$",
+            r"\.(doc|docx|xls|xlsx|ppt|pptx|zip|rar)$",
             # Contact/donation pages
-            r'(?i)(contact|phone|email|address)',
-            r'(?i)(donat|giving|tithe|contribution)',
-            r'(?i)(staff|clergy|personnel|directory)',
-
+            r"(?i)(contact|phone|email|address)",
+            r"(?i)(donat|giving|tithe|contribution)",
+            r"(?i)(staff|clergy|personnel|directory)",
             # Social media and external links
-            r'(?i)(facebook|twitter|instagram|youtube)',
-            r'(?i)(linkedin|pinterest|social)',
-
+            r"(?i)(facebook|twitter|instagram|youtube)",
+            r"(?i)(linkedin|pinterest|social)",
             # Generic CMS pages
-            r'(?i)(search|404|error|not.*found)',
-            r'(?i)(maintenance|coming.*soon|under.*construction)'
+            r"(?i)(search|404|error|not.*found)",
+            r"(?i)(maintenance|coming.*soon|under.*construction)",
         ]
 
         # Domain-specific blacklists
         self.blacklisted_domains = {
-            'facebook.com', 'twitter.com', 'instagram.com', 'youtube.com',
-            'linkedin.com', 'pinterest.com', 'google.com', 'bing.com',
-            'yahoo.com', 'microsoft.com', 'apple.com'
+            "facebook.com",
+            "twitter.com",
+            "instagram.com",
+            "youtube.com",
+            "linkedin.com",
+            "pinterest.com",
+            "google.com",
+            "bing.com",
+            "yahoo.com",
+            "microsoft.com",
+            "apple.com",
         }
 
         # File extension blacklist
         self.blacklisted_extensions = {
-            '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
-            '.jpg', '.jpeg', '.png', '.gif', '.svg', '.ico', '.webp',
-            '.css', '.js', '.json', '.xml', '.txt', '.zip', '.rar',
-            '.mp3', '.mp4', '.avi', '.mov', '.wav', '.wmv'
+            ".pdf",
+            ".doc",
+            ".docx",
+            ".xls",
+            ".xlsx",
+            ".ppt",
+            ".pptx",
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".gif",
+            ".svg",
+            ".ico",
+            ".webp",
+            ".css",
+            ".js",
+            ".json",
+            ".xml",
+            ".txt",
+            ".zip",
+            ".rar",
+            ".mp3",
+            ".mp4",
+            ".avi",
+            ".mov",
+            ".wav",
+            ".wmv",
         }
 
     def analyze_urls(self, urls: List[str], ml_predictions: Dict[str, float] = None) -> List[URLAnalysis]:
@@ -217,7 +256,7 @@ class IntelligentURLFilter:
             estimated_time *= 0.8  # ML-predicted URLs process faster
 
         # URL structure analysis
-        path_depth = len([p for p in parsed.path.split('/') if p])
+        path_depth = len([p for p in parsed.path.split("/") if p])
         if path_depth <= 2:
             confidence_score += 10.0
             reasons.append("Simple URL structure")
@@ -253,11 +292,12 @@ class IntelligentURLFilter:
             quality=quality,
             confidence_score=min(confidence_score, 100.0),
             reasons=reasons,
-            estimated_processing_time=estimated_time
+            estimated_processing_time=estimated_time,
         )
 
-    def filter_urls(self, urls: List[str], max_urls: int = 50,
-                   ml_predictions: Dict[str, float] = None) -> Tuple[List[str], Dict[str, URLAnalysis]]:
+    def filter_urls(
+        self, urls: List[str], max_urls: int = 50, ml_predictions: Dict[str, float] = None
+    ) -> Tuple[List[str], Dict[str, URLAnalysis]]:
         """
         Filter URLs and return the top candidates for processing.
 
@@ -312,12 +352,7 @@ class IntelligentURLFilter:
             List of batches (lists of URLAnalysis)
         """
         # Group by quality level
-        quality_groups = {
-            URLQuality.EXCELLENT: [],
-            URLQuality.GOOD: [],
-            URLQuality.FAIR: [],
-            URLQuality.POOR: []
-        }
+        quality_groups = {URLQuality.EXCELLENT: [], URLQuality.GOOD: [], URLQuality.FAIR: [], URLQuality.POOR: []}
 
         for analysis in analyses:
             if analysis.quality in quality_groups:
@@ -336,7 +371,7 @@ class IntelligentURLFilter:
 
             # Create batches
             for i in range(0, len(group), batch_size):
-                batch = group[i:i + batch_size]
+                batch = group[i : i + batch_size]
                 batches.append(batch)
 
         self.logger.info(f"🔍 Created {len(batches)} priority batches for processing")
