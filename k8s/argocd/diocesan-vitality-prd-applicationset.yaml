@@ -23,7 +23,7 @@ spec:
         path: k8s/environments/production
       destination:
         server: "{{server}}"
-        namespace: "diocesan-vitality-prd"
+        namespace: "diocesan-vitality"
       syncPolicy:
         automated:
           prune: true
