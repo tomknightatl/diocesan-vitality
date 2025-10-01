@@ -4,9 +4,10 @@ FROM python:3.11-slim
 # Set the working directory in the container
 WORKDIR /app
 
-# Install dependencies
+# Install dependencies with cache mount for faster builds
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application code
 COPY . .
