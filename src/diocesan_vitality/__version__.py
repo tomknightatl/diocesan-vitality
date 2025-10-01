@@ -22,10 +22,7 @@ BUILD_INFO = {
     "build_date": os.getenv("BUILD_DATE", datetime.utcnow().isoformat()),
     "build_number": os.getenv("GITHUB_RUN_NUMBER", "unknown"),
     "docker_tags": {
-        "backend": "tomatl/diocesan-vitality:backend-2.0.0",
-        "frontend": "tomatl/diocesan-vitality:frontend-2.0.0",
-        "pipeline": "tomatl/diocesan-vitality:pipeline-2.0.0",
-    }",
+        "backend": f"tomatl/diocesan-vitality:backend-{__version__}",
         "frontend": f"tomatl/diocesan-vitality:frontend-{__version__}",
         "pipeline": f"tomatl/diocesan-vitality:pipeline-{__version__}",
     },
