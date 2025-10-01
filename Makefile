@@ -198,7 +198,7 @@ cluster-auth: ## Step a: A5uthenticate with DigitalOcean (usage: make cluster-au
 		echo "❌ .env file not found. Please copy .env.example to .env and configure your tokens" && \
 		exit 1; \
 	fi && \
-	DIGITALOCEAN_TOKEN=$$(awk -F'=' '/^DIGITALOCEAN_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	DIGITALOCEAN_TOKEN=$$(sed -n 's/^DIGITALOCEAN_TOKEN=//p' .env | tr -d '\r\n"'"'"'') && \
 	if [ -z "$$DIGITALOCEAN_TOKEN" ] || [ "$$DIGITALOCEAN_TOKEN" = "<key>" ]; then \
 		echo "❌ DIGITALOCEAN_TOKEN not set in .env file. Please add your DigitalOcean API token" && \
 		exit 1; \
@@ -229,7 +229,7 @@ cluster-check: ## Step b: Check if cluster exists (usage: make cluster-check CLU
 	echo "✅ Step b Complete: Cluster $$CLUSTER_NAME exists and is accessible"
 
 _doctl-exec: ## Internal helper to execute doctl commands with authentication
-	@DIGITALOCEAN_TOKEN=$$(awk -F'=' '/^DIGITALOCEAN_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	@DIGITALOCEAN_TOKEN=$$(sed -n 's/^DIGITALOCEAN_TOKEN=//p' .env | tr -d '\r\n"'"'"'"'') && \
 	DIGITALOCEAN_ACCESS_TOKEN="$$DIGITALOCEAN_TOKEN" timeout 900 doctl $(DOCTL_CMD)
 
 cluster-create: ## Step c: Create cluster (usage: make cluster-create CLUSTER_LABEL=dev)
@@ -337,9 +337,9 @@ tunnel-auth: ## Step g: Authenticate with Cloudflare (usage: make tunnel-auth)
 		echo "❌ .env file not found. Please copy .env.example to .env and configure your tokens" && \
 		exit 1; \
 	fi && \
-	CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-	CLOUDFLARE_ACCOUNT_ID=$$(awk -F'=' '/^CLOUDFLARE_ACCOUNT_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-	ZONE_ID=$$(awk -F'=' '/^CLOUDFLARE_ZONE_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	CLOUDFLARE_API_TOKEN=$$(sed -n 's/^CLOUDFLARE_API_TOKEN=//p' .env | tr -d '\r\n"'"'"'') && \
+	CLOUDFLARE_ACCOUNT_ID=$$(sed -n 's/^CLOUDFLARE_ACCOUNT_ID=//p' .env | tr -d '\r\n"'"'"'') && \
+	ZONE_ID=$$(sed -n 's/^CLOUDFLARE_ZONE_ID=//p' .env | tr -d '\r\n"'"'"'') && \
 	if [ -z "$$CLOUDFLARE_API_TOKEN" ] || [ -z "$$CLOUDFLARE_ACCOUNT_ID" ] || [ -z "$$ZONE_ID" ]; then \
 		echo "❌ Missing Cloudflare credentials in .env file" && \
 		echo "Required: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_ZONE_ID" && \
@@ -361,8 +361,8 @@ tunnel-check: ## Step h: Check if tunnel exists (usage: make tunnel-check CLUSTE
 	echo "🔍 Step h: Checking if tunnel exists..." && \
 	TUNNEL_NAME="do-nyc2-dv-$$CLUSTER_LABEL" && \
 	$(MAKE) tunnel-auth && \
-	CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-	CLOUDFLARE_ACCOUNT_ID=$$(awk -F'=' '/^CLOUDFLARE_ACCOUNT_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	CLOUDFLARE_API_TOKEN=$$(sed -n 's/^CLOUDFLARE_API_TOKEN=//p' .env | tr -d '\r\n"'"'"'') && \
+	CLOUDFLARE_ACCOUNT_ID=$$(sed -n 's/^CLOUDFLARE_ACCOUNT_ID=//p' .env | tr -d '\r\n"'"'"'') && \
 	export CLOUDFLARE_API_TOKEN="$$CLOUDFLARE_API_TOKEN" && \
 	echo "🔧 Fetching tunnels via API..." && \
 	TUNNELS_RESPONSE=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel" \
@@ -379,8 +379,8 @@ tunnel-create: ## Step i: Create tunnel (usage: make tunnel-create CLUSTER_LABEL
 	echo "🚀 Step i: Creating Cloudflare tunnel for '$$CLUSTER_LABEL'..." && \
 	TUNNEL_NAME="do-nyc2-dv-$$CLUSTER_LABEL" && \
 	$(MAKE) tunnel-check CLUSTER_LABEL=$$CLUSTER_LABEL && \
-	CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-	CLOUDFLARE_ACCOUNT_ID=$$(awk -F'=' '/^CLOUDFLARE_ACCOUNT_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	CLOUDFLARE_API_TOKEN=$$(sed -n 's/^CLOUDFLARE_API_TOKEN=//p' .env | tr -d '\r\n"'"'"'') && \
+	CLOUDFLARE_ACCOUNT_ID=$$(sed -n 's/^CLOUDFLARE_ACCOUNT_ID=//p' .env | tr -d '\r\n"'"'"'') && \
 	export CLOUDFLARE_API_TOKEN="$$CLOUDFLARE_API_TOKEN" && \
 	TUNNELS_RESPONSE=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel" \
 		-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN" \
@@ -417,8 +417,8 @@ tunnel-destroy: ## Step j: Destroy tunnel (usage: make tunnel-destroy CLUSTER_LA
 		fi; \
 	fi && \
 	$(MAKE) tunnel-auth && \
-	CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-	CLOUDFLARE_ACCOUNT_ID=$$(awk -F'=' '/^CLOUDFLARE_ACCOUNT_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	CLOUDFLARE_API_TOKEN=$$(sed -n 's/^CLOUDFLARE_API_TOKEN=//p' .env | tr -d '\r\n"'"'"'') && \
+	CLOUDFLARE_ACCOUNT_ID=$$(sed -n 's/^CLOUDFLARE_ACCOUNT_ID=//p' .env | tr -d '\r\n"'"'"'') && \
 	export CLOUDFLARE_API_TOKEN="$$CLOUDFLARE_API_TOKEN" && \
 	echo "🔍 Checking if tunnel exists..." && \
 	TUNNELS_RESPONSE=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel" \
@@ -443,9 +443,9 @@ tunnel-dns: ## Step k: Setup tunnel DNS and public hostnames (usage: make tunnel
 	echo "🌐 Step k: Creating DNS records and public hostnames for '$$CLUSTER_LABEL'..." && \
 	TUNNEL_NAME="do-nyc2-dv-$$CLUSTER_LABEL" && \
 	$(MAKE) tunnel-check CLUSTER_LABEL=$$CLUSTER_LABEL && \
-	CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-	CLOUDFLARE_ACCOUNT_ID=$$(awk -F'=' '/^CLOUDFLARE_ACCOUNT_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-	ZONE_ID=$$(awk -F'=' '/^CLOUDFLARE_ZONE_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	CLOUDFLARE_API_TOKEN=$$(sed -n 's/^CLOUDFLARE_API_TOKEN=//p' .env | tr -d '\r\n"'"'"'') && \
+	CLOUDFLARE_ACCOUNT_ID=$$(sed -n 's/^CLOUDFLARE_ACCOUNT_ID=//p' .env | tr -d '\r\n"'"'"'') && \
+	ZONE_ID=$$(sed -n 's/^CLOUDFLARE_ZONE_ID=//p' .env | tr -d '\r\n"'"'"'') && \
 	export CLOUDFLARE_API_TOKEN="$$CLOUDFLARE_API_TOKEN" && \
 	TUNNELS_RESPONSE=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel" \
 		-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN" \
@@ -525,8 +525,8 @@ tunnel-dns-destroy: ## Step 8b: Remove tunnel DNS records (usage: make tunnel-dn
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	echo "🗑️  Step 8b: Removing tunnel DNS records for '$$CLUSTER_LABEL'..." && \
 	$(MAKE) tunnel-auth && \
-	CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-	ZONE_ID=$$(awk -F'=' '/^CLOUDFLARE_ZONE_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	CLOUDFLARE_API_TOKEN=$$(sed -n 's/^CLOUDFLARE_API_TOKEN=//p' .env | tr -d '\r\n"'"'"'') && \
+	ZONE_ID=$$(sed -n 's/^CLOUDFLARE_ZONE_ID=//p' .env | tr -d '\r\n"'"'"'') && \
 	export CLOUDFLARE_API_TOKEN="$$CLOUDFLARE_API_TOKEN" && \
 	DELETED_COUNT=0 && \
 	SKIPPED_COUNT=0 && \
@@ -1135,8 +1135,8 @@ infra-status: ## Check infrastructure status
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	TUNNEL_NAME="do-nyc2-dv-$$CLUSTER_LABEL" && \
 	if [ -f .env ]; then \
-		CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-		CLOUDFLARE_ACCOUNT_ID=$$(awk -F'=' '/^CLOUDFLARE_ACCOUNT_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+		CLOUDFLARE_API_TOKEN=$$(sed -n 's/^CLOUDFLARE_API_TOKEN=//p' .env | tr -d '\r\n"'"'"'') && \
+		CLOUDFLARE_ACCOUNT_ID=$$(sed -n 's/^CLOUDFLARE_ACCOUNT_ID=//p' .env | tr -d '\r\n"'"'"'') && \
 		if [ -n "$$CLOUDFLARE_API_TOKEN" ] && [ -n "$$CLOUDFLARE_ACCOUNT_ID" ]; then \
 			TUNNELS_RESPONSE=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel" \
 				-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN" \
@@ -1174,8 +1174,8 @@ tunnel-verify: ## Generate tunnel token file for sealed secrets (usage: make tun
 	echo "🔍 Generating tunnel token for '$$CLUSTER_LABEL'..." && \
 	TUNNEL_NAME="do-nyc2-dv-$$CLUSTER_LABEL" && \
 	$(MAKE) tunnel-auth && \
-	CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-	CLOUDFLARE_ACCOUNT_ID=$$(awk -F'=' '/^CLOUDFLARE_ACCOUNT_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	CLOUDFLARE_API_TOKEN=$$(sed -n 's/^CLOUDFLARE_API_TOKEN=//p' .env | tr -d '\r\n"'"'"'') && \
+	CLOUDFLARE_ACCOUNT_ID=$$(sed -n 's/^CLOUDFLARE_ACCOUNT_ID=//p' .env | tr -d '\r\n"'"'"'') && \
 	export CLOUDFLARE_API_TOKEN="$$CLOUDFLARE_API_TOKEN" && \
 	echo "🔧 Fetching tunnel information..." && \
 	TUNNELS_RESPONSE=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel" \
