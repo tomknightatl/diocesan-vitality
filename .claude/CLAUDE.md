@@ -330,6 +330,48 @@ See `docs/DATABASE.md` for complete schema documentation.
 - **Quality-Weighted ML Training**: Success-based URL discovery optimization
 
 ### Code Quality Standards
+
+#### Python Code Style (Black & Flake8 Compliance)
+**MANDATORY: All Python code written by Claude must comply with Black and flake8 standards**
+
+- **Line Length**: 127 characters maximum (Black format)
+- **Import Organization**: 
+  - Standard library imports first
+  - Third-party imports second  
+  - Local imports last
+  - Separate groups with blank lines
+- **String Quotes**: Use double quotes for strings (Black default)
+- **Trailing Commas**: Include trailing commas in multi-line structures
+- **Whitespace**: Follow PEP 8 whitespace rules
+- **Flake8 Ignored Rules**: E203 (whitespace before ':'), W503 (line break before binary operator)
+
+**Example compliant code structure:**
+```python
+import os
+import sys
+from typing import Dict, List, Optional
+
+import requests
+from selenium import webdriver
+
+from core.database import get_connection
+from core.utils import logger
+
+
+def extract_parish_data(
+    url: str,
+    timeout: int = 30,
+    retry_count: int = 3,
+) -> Optional[Dict[str, str]]:
+    """Extract parish data from URL with proper error handling."""
+    try:
+        response = requests.get(url, timeout=timeout)
+        return {"status": "success", "data": response.text}
+    except Exception as e:
+        logger.error(f"Failed to extract data from {url}: {e}")
+        return None
+```
+
 ```bash
 # Code formatting (Black)
 make format            # Format all Python code

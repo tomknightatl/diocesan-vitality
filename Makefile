@@ -212,16 +212,19 @@ cluster-create: ## Step c: Create cluster (usage: make cluster-create CLUSTER_LA
 	$(MAKE) cluster-check CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	echo "✅ Step c Complete: Cluster $$CLUSTER_NAME already exists - skipping creation" || { \
 		REGION="nyc2" && \
-		NODE_SIZE="s-2vcpu-2gb" && \
-		NODE_COUNT=2 && 5\
-		echo "📋 Cluster configuration:" && \
+		K8S_VERSION="1.33.1-do.3" && \
+		echo "📋 Cluster configuration (matching production):" && \
 		echo "   Name: $$CLUSTER_NAME" && \
 		echo "   Region: $$REGION" && \
-		echo "   Node size: $$NODE_SIZE" && \
-		echo "   Node count: $$NODE_COUNT" && \
-		echo "🏗️  Creating cluster $$CLUSTER_NAME..." && \
+		echo "   Kubernetes version: $$K8S_VERSION" && \
+		echo "   Node pools:" && \
+		echo "     - slow-pool: s-1vcpu-2gb (1 node)" && \
+		echo "     - fast-pool: s-2vcpu-4gb (1 node)" && \
+		echo "   Auto-upgrade: false" && \
+		echo "   HA Control Plane: false" && \
+		echo "🏗️  Creating cluster $$CLUSTER_NAME with dual node pools..." && \
 		echo "🚀 Starting cluster creation (this may take 5-10 minutes)..." && \
-		$(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster create $$CLUSTER_NAME --region $$REGION --size $$NODE_SIZE --count $$NODE_COUNT --auto-upgrade=true --surge-upgrade=true --tag environment:$$CLUSTER_LABEL --tag project:diocesan-vitality" & \
+		$(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster create $$CLUSTER_NAME --region $$REGION --version $$K8S_VERSION --node-pool 'name=slow-pool;size=s-1vcpu-2gb;count=1' --node-pool 'name=fast-pool;size=s-2vcpu-4gb;count=1' --auto-upgrade=false --ha=false --tag environment:$$CLUSTER_LABEL --tag project:diocesan-vitality" & \
 		CREATE_PID=$$! && \
 		echo "🔍 Monitoring cluster creation progress..." && \
 		while kill -0 $$CREATE_PID 2>/dev/null; do \

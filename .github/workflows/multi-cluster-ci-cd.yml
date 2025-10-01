@@ -551,7 +551,6 @@ jobs:
         build-backend,
         build-frontend,
         build-pipeline,
-        deploy-staging,
       ]
     if: needs.determine-environment.outputs.should-deploy-production == 'true'
     environment: production
