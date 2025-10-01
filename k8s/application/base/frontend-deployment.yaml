@@ -32,6 +32,9 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 80
+          env:
+            - name: NAMESPACE
+              value: "diocesan-vitality"
           resources:
             requests:
               memory: "32Mi"
