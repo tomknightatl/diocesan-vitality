@@ -114,13 +114,16 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install black isort flake8 mypy pytest
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          # Only install linting tools needed for this job, not full requirements.txt
+          pip install flake8
+          echo "✅ Linting dependencies installed"
 
       - name: Install Frontend dependencies
         run: |
           cd frontend
-          npm ci
+          # npm ci with cache is already fast, but we can make it faster
+          npm ci --prefer-offline --no-audit
+          echo "✅ Frontend dependencies installed"
 
       - name: Python Code Quality
         run: |
@@ -188,18 +191,45 @@ jobs:
           echo "✅ Tests temporarily skipped - proceeding to Docker build"
 
   # ============================================================================
-  # BUILD IMAGES
+  # GENERATE IMAGE TAGS (Shared by all build jobs)
   # ============================================================================
-  build-images:
-    name: Build Multi-Arch Images
+  generate-tags:
+    name: Generate Image Tags
     runs-on: ubuntu-latest
-    timeout-minutes: 30
     needs: [determine-environment, test-suite]
     if: needs.determine-environment.outputs.target-env != 'none'
     outputs:
+      timestamp: ${{ steps.tags.outputs.timestamp }}
+      target-env: ${{ steps.tags.outputs.target-env }}
       backend-tag: ${{ steps.tags.outputs.backend-tag }}
       frontend-tag: ${{ steps.tags.outputs.frontend-tag }}
       pipeline-tag: ${{ steps.tags.outputs.pipeline-tag }}
+    steps:
+      - name: Generate image tags
+        id: tags
+        run: |
+          TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)
+          TARGET_ENV="${{ needs.determine-environment.outputs.target-env }}"
+
+          echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
+          echo "target-env=$TARGET_ENV" >> $GITHUB_OUTPUT
+          echo "backend-tag=${{ env.IMAGE_NAMESPACE }}:${TARGET_ENV}-backend-${TIMESTAMP}" >> $GITHUB_OUTPUT
+          echo "frontend-tag=${{ env.IMAGE_NAMESPACE }}:${TARGET_ENV}-frontend-${TIMESTAMP}" >> $GITHUB_OUTPUT
+          echo "pipeline-tag=${{ env.IMAGE_NAMESPACE }}:${TARGET_ENV}-pipeline-${TIMESTAMP}" >> $GITHUB_OUTPUT
+
+          echo "🏷️ Generated tags for environment: ${TARGET_ENV}"
+          echo "   Backend: ${TARGET_ENV}-backend-${TIMESTAMP}"
+          echo "   Frontend: ${TARGET_ENV}-frontend-${TIMESTAMP}"
+          echo "   Pipeline: ${TARGET_ENV}-pipeline-${TIMESTAMP}"
+
+  # ============================================================================
+  # BUILD BACKEND IMAGE (Parallel Job 1/3)
+  # ============================================================================
+  build-backend:
+    name: Build Backend Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [generate-tags]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -214,57 +244,103 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Generate image tags
-        id: tags
-        run: |
-          TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)
-          TARGET_ENV="${{ needs.determine-environment.outputs.target-env }}"
-          BRANCH=$(echo ${GITHUB_REF#refs/heads/} | sed 's/[^a-zA-Z0-9]/-/g')
-
-          echo "backend-tag=${{ env.IMAGE_NAMESPACE }}:${TARGET_ENV}-backend-${TIMESTAMP}" >> $GITHUB_OUTPUT
-          echo "frontend-tag=${{ env.IMAGE_NAMESPACE }}:${TARGET_ENV}-frontend-${TIMESTAMP}" >> $GITHUB_OUTPUT
-          echo "pipeline-tag=${{ env.IMAGE_NAMESPACE }}:${TARGET_ENV}-pipeline-${TIMESTAMP}" >> $GITHUB_OUTPUT
-
-          echo "🏷️ Generated tags for environment: ${TARGET_ENV}"
-
       - name: Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: backend
+          file: backend/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ needs.generate-tags.outputs.backend-tag }}
+            ${{ env.IMAGE_NAMESPACE }}:${{ needs.generate-tags.outputs.target-env }}-backend-latest
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      - name: Build summary
         run: |
-          echo "🏗️ Building backend image (multi-arch)..."
-          docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            --file backend/Dockerfile \
-            --tag ${{ steps.tags.outputs.backend-tag }} \
-            --tag ${{ env.IMAGE_NAMESPACE }}:${{ needs.determine-environment.outputs.target-env }}-backend-latest \
-            --cache-from type=gha \
-            --cache-to type=gha,mode=max \
-            --push backend/
-          echo "✅ Backend image built and pushed"
+          echo "✅ Backend image built successfully"
+          echo "📦 Image: ${{ needs.generate-tags.outputs.backend-tag }}"
+
+  # ============================================================================
+  # BUILD FRONTEND IMAGE (Parallel Job 2/3)
+  # ============================================================================
+  build-frontend:
+    name: Build Frontend Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [generate-tags]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: frontend
+          file: frontend/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ needs.generate-tags.outputs.frontend-tag }}
+            ${{ env.IMAGE_NAMESPACE }}:${{ needs.generate-tags.outputs.target-env }}-frontend-latest
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+      - name: Build summary
         run: |
-          echo "🏗️ Building frontend image (multi-arch)..."
-          docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            --file frontend/Dockerfile \
-            --tag ${{ steps.tags.outputs.frontend-tag }} \
-            --tag ${{ env.IMAGE_NAMESPACE }}:${{ needs.determine-environment.outputs.target-env }}-frontend-latest \
-            --cache-from type=gha \
-            --cache-to type=gha,mode=max \
-            --push frontend/
-          echo "✅ Frontend image built and pushed"
+          echo "✅ Frontend image built successfully"
+          echo "📦 Image: ${{ needs.generate-tags.outputs.frontend-tag }}"
+
+  # ============================================================================
+  # BUILD PIPELINE IMAGE (Parallel Job 3/3)
+  # ============================================================================
+  build-pipeline:
+    name: Build Pipeline Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [generate-tags]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and push pipeline image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.pipeline
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ needs.generate-tags.outputs.pipeline-tag }}
+            ${{ env.IMAGE_NAMESPACE }}:${{ needs.generate-tags.outputs.target-env }}-pipeline-latest
+          cache-from: type=gha,scope=pipeline
+          cache-to: type=gha,mode=max,scope=pipeline
+
+      - name: Build summary
         run: |
-          echo "🏗️ Building pipeline image (AMD64 only - Chrome compatibility)..."
-          docker buildx build \
-            --platform linux/amd64 \
-            --file Dockerfile.pipeline \
-            --tag ${{ steps.tags.outputs.pipeline-tag }} \
-            --tag ${{ env.IMAGE_NAMESPACE }}:${{ needs.determine-environment.outputs.target-env }}-pipeline-latest \
-            --cache-from type=gha \
-            --cache-to type=gha,mode=max \
-            --push .
-          echo "✅ Pipeline image built and pushed"
+          echo "✅ Pipeline image built successfully"
+          echo "📦 Image: ${{ needs.generate-tags.outputs.pipeline-tag }}"
 
   # ============================================================================
   # DEPLOY TO DEVELOPMENT CLUSTER (do-nyc2-dv-dev) - GitOps
@@ -272,7 +348,14 @@ jobs:
   deploy-development:
     name: Update Development Manifests (GitOps)
     runs-on: ubuntu-latest
-    needs: [determine-environment, build-images]
+    needs:
+      [
+        determine-environment,
+        generate-tags,
+        build-backend,
+        build-frontend,
+        build-pipeline,
+      ]
     if: needs.determine-environment.outputs.should-deploy-dev == 'true'
     steps:
       - name: Checkout
@@ -288,9 +371,9 @@ jobs:
 
       - name: Update development manifests with new images
         env:
-          BACKEND_IMAGE: ${{ needs.build-images.outputs.backend-tag }}
-          FRONTEND_IMAGE: ${{ needs.build-images.outputs.frontend-tag }}
-          PIPELINE_IMAGE: ${{ needs.build-images.outputs.pipeline-tag }}
+          BACKEND_IMAGE: ${{ needs.generate-tags.outputs.backend-tag }}
+          FRONTEND_IMAGE: ${{ needs.generate-tags.outputs.frontend-tag }}
+          PIPELINE_IMAGE: ${{ needs.generate-tags.outputs.pipeline-tag }}
         run: |
           echo "📝 Updating development manifests for ArgoCD..."
 
@@ -319,9 +402,9 @@ jobs:
 
       - name: Commit and push changes
         env:
-          BACKEND_IMAGE: ${{ needs.build-images.outputs.backend-tag }}
-          FRONTEND_IMAGE: ${{ needs.build-images.outputs.frontend-tag }}
-          PIPELINE_IMAGE: ${{ needs.build-images.outputs.pipeline-tag }}
+          BACKEND_IMAGE: ${{ needs.generate-tags.outputs.backend-tag }}
+          FRONTEND_IMAGE: ${{ needs.generate-tags.outputs.frontend-tag }}
+          PIPELINE_IMAGE: ${{ needs.generate-tags.outputs.pipeline-tag }}
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
@@ -350,9 +433,9 @@ jobs:
           echo "🔄 ArgoCD will automatically sync changes to do-nyc2-dv-dev cluster"
           echo ""
           echo "📦 Deployed Images:"
-          echo "   Backend: ${{ needs.build-images.outputs.backend-tag }}"
-          echo "   Frontend: ${{ needs.build-images.outputs.frontend-tag }}"
-          echo "   Pipeline: ${{ needs.build-images.outputs.pipeline-tag }}"
+          echo "   Backend: ${{ needs.generate-tags.outputs.backend-tag }}"
+          echo "   Frontend: ${{ needs.generate-tags.outputs.frontend-tag }}"
+          echo "   Pipeline: ${{ needs.generate-tags.outputs.pipeline-tag }}"
           echo ""
           echo "🔍 Monitor deployment in ArgoCD UI:"
           echo "   https://dev.argocd.diocesanvitality.org"
@@ -363,7 +446,14 @@ jobs:
   deploy-staging:
     name: Update Staging Manifests (GitOps)
     runs-on: ubuntu-latest
-    needs: [determine-environment, build-images]
+    needs:
+      [
+        determine-environment,
+        generate-tags,
+        build-backend,
+        build-frontend,
+        build-pipeline,
+      ]
     if: needs.determine-environment.outputs.should-deploy-staging == 'true'
     steps:
       - name: Checkout
@@ -379,9 +469,9 @@ jobs:
 
       - name: Update staging manifests with new images
         env:
-          BACKEND_IMAGE: ${{ needs.build-images.outputs.backend-tag }}
-          FRONTEND_IMAGE: ${{ needs.build-images.outputs.frontend-tag }}
-          PIPELINE_IMAGE: ${{ needs.build-images.outputs.pipeline-tag }}
+          BACKEND_IMAGE: ${{ needs.generate-tags.outputs.backend-tag }}
+          FRONTEND_IMAGE: ${{ needs.generate-tags.outputs.frontend-tag }}
+          PIPELINE_IMAGE: ${{ needs.generate-tags.outputs.pipeline-tag }}
         run: |
           echo "📝 Updating staging manifests for ArgoCD..."
 
@@ -410,9 +500,9 @@ jobs:
 
       - name: Commit and push changes
         env:
-          BACKEND_IMAGE: ${{ needs.build-images.outputs.backend-tag }}
-          FRONTEND_IMAGE: ${{ needs.build-images.outputs.frontend-tag }}
-          PIPELINE_IMAGE: ${{ needs.build-images.outputs.pipeline-tag }}
+          BACKEND_IMAGE: ${{ needs.generate-tags.outputs.backend-tag }}
+          FRONTEND_IMAGE: ${{ needs.generate-tags.outputs.frontend-tag }}
+          PIPELINE_IMAGE: ${{ needs.generate-tags.outputs.pipeline-tag }}
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
@@ -441,9 +531,9 @@ jobs:
           echo "🔄 ArgoCD will automatically sync changes to do-nyc2-dv-stg cluster"
           echo ""
           echo "📦 Deployed Images:"
-          echo "   Backend: ${{ needs.build-images.outputs.backend-tag }}"
-          echo "   Frontend: ${{ needs.build-images.outputs.frontend-tag }}"
-          echo "   Pipeline: ${{ needs.build-images.outputs.pipeline-tag }}"
+          echo "   Backend: ${{ needs.generate-tags.outputs.backend-tag }}"
+          echo "   Frontend: ${{ needs.generate-tags.outputs.frontend-tag }}"
+          echo "   Pipeline: ${{ needs.generate-tags.outputs.pipeline-tag }}"
           echo ""
           echo "🔍 Monitor deployment in ArgoCD UI:"
           echo "   https://stg.argocd.diocesanvitality.org"
@@ -454,7 +544,15 @@ jobs:
   deploy-production:
     name: Update Production Manifests (GitOps)
     runs-on: ubuntu-latest
-    needs: [determine-environment, build-images, deploy-staging]
+    needs:
+      [
+        determine-environment,
+        generate-tags,
+        build-backend,
+        build-frontend,
+        build-pipeline,
+        deploy-staging,
+      ]
     if: needs.determine-environment.outputs.should-deploy-production == 'true'
     environment: production
     steps:
@@ -471,9 +569,9 @@ jobs:
 
       - name: Update production manifests with new images
         env:
-          BACKEND_IMAGE: ${{ needs.build-images.outputs.backend-tag }}
-          FRONTEND_IMAGE: ${{ needs.build-images.outputs.frontend-tag }}
-          PIPELINE_IMAGE: ${{ needs.build-images.outputs.pipeline-tag }}
+          BACKEND_IMAGE: ${{ needs.generate-tags.outputs.backend-tag }}
+          FRONTEND_IMAGE: ${{ needs.generate-tags.outputs.frontend-tag }}
+          PIPELINE_IMAGE: ${{ needs.generate-tags.outputs.pipeline-tag }}
         run: |
           echo "📝 Updating production manifests for ArgoCD..."
 
@@ -502,9 +600,9 @@ jobs:
 
       - name: Commit and push changes
         env:
-          BACKEND_IMAGE: ${{ needs.build-images.outputs.backend-tag }}
-          FRONTEND_IMAGE: ${{ needs.build-images.outputs.frontend-tag }}
-          PIPELINE_IMAGE: ${{ needs.build-images.outputs.pipeline-tag }}
+          BACKEND_IMAGE: ${{ needs.generate-tags.outputs.backend-tag }}
+          FRONTEND_IMAGE: ${{ needs.generate-tags.outputs.frontend-tag }}
+          PIPELINE_IMAGE: ${{ needs.generate-tags.outputs.pipeline-tag }}
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
@@ -534,9 +632,9 @@ jobs:
           echo "🔄 ArgoCD will automatically sync changes to do-nyc2-dv-prd cluster"
           echo ""
           echo "🎉 Production Images:"
-          echo "   Backend: ${{ needs.build-images.outputs.backend-tag }}"
-          echo "   Frontend: ${{ needs.build-images.outputs.frontend-tag }}"
-          echo "   Pipeline: ${{ needs.build-images.outputs.pipeline-tag }}"
+          echo "   Backend: ${{ needs.generate-tags.outputs.backend-tag }}"
+          echo "   Frontend: ${{ needs.generate-tags.outputs.frontend-tag }}"
+          echo "   Pipeline: ${{ needs.generate-tags.outputs.pipeline-tag }}"
           echo ""
           echo "🔍 Monitor deployment in ArgoCD UI:"
           echo "   https://prd.argocd.diocesanvitality.org"
