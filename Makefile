@@ -224,13 +224,13 @@ cluster-check: ## Step b: Check if cluster exists (usage: make cluster-check CLU
 	echo "🔍 Step b: Checking if cluster exists..." && \
 	CLUSTER_NAME="dv-$$CLUSTER_LABEL" && \
 	$(MAKE) cluster-auth && \
-	echo "🔍 Querying clus5ter $$CLUSTER_NAME..." && \
+	echo "🔍 Querying cluster $$CLUSTER_NAME..." && \
 	$(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster get $$CLUSTER_NAME" && \
 	echo "✅ Step b Complete: Cluster $$CLUSTER_NAME exists and is accessible"
 
 _doctl-exec: ## Internal helper to execute doctl commands with authentication
 	@DIGITALOCEAN_TOKEN=$$(awk -F'=' '/^DIGITALOCEAN_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-	DIGITALOCEAN_ACCESS_TOKEN="$$DIGITALOCEAN_TOKEN" timeout 15 doctl $(DOCTL_CMD)
+	DIGITALOCEAN_ACCESS_TOKEN="$$DIGITALOCEAN_TOKEN" timeout 900 doctl $(DOCTL_CMD)
 
 cluster-create: ## Step c: Create cluster (usage: make cluster-create CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
@@ -239,7 +239,15 @@ cluster-create: ## Step c: Create cluster (usage: make cluster-create CLUSTER_LA
 	$(MAKE) cluster-check CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	echo "✅ Step c Complete: Cluster $$CLUSTER_NAME already exists - skipping creation" || { \
 		REGION="nyc2" && \
-		K8S_VERSION="1.33.1-do.3" && \
+		echo "🔍 Checking available Kubernetes versions..." && \
+		AVAILABLE_VERSIONS=$$($(MAKE) _doctl-exec DOCTL_CMD="kubernetes options versions --format Slug --no-header" 2>/dev/null) && \
+		REQUESTED_MINOR="1.33" && \
+		K8S_VERSION=$$(echo "$$AVAILABLE_VERSIONS" | grep "^$$REQUESTED_MINOR" | head -1) && \
+		if [ -z "$$K8S_VERSION" ]; then \
+			echo "⚠️  Warning: No version matching $$REQUESTED_MINOR found, using latest available" && \
+			K8S_VERSION=$$(echo "$$AVAILABLE_VERSIONS" | head -1); \
+		fi && \
+		echo "✅ Selected Kubernetes version: $$K8S_VERSION" && \
 		echo "📋 Cluster configuration (matching production):" && \
 		echo "   Name: $$CLUSTER_NAME" && \
 		echo "   Region: $$REGION" && \
@@ -259,7 +267,7 @@ cluster-create: ## Step c: Create cluster (usage: make cluster-create CLUSTER_LA
 				echo "📊 Cluster status: $$CURRENT_STATUS ($$(date '+%H:%M:%S'))"; \
 			else \
 				echo "⏳ Cluster initializing... ($$(date '+%H:%M:%S'))"; \
-			fi; \5555555
+			fi; \
 			sleep 30; \
 		done && \
 		wait $$CREATE_PID && \
@@ -275,7 +283,7 @@ cluster-create: ## Step c: Create cluster (usage: make cluster-create CLUSTER_LA
 			echo "⚠️  Cluster status is $$FINAL_STATUS - may still be initializing"; \
 			echo "✅ Step c Complete: Cluster creation initiated"; \
 		fi; \
-	fi
+	}
 
 cluster-destroy: ## Step d: Destroy cluster (usage: make cluster-destroy CLUSTER_LABEL=dev [FORCE=yes])
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
