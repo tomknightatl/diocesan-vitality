@@ -114,13 +114,16 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install black isort flake8 mypy pytest
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          # Only install linting tools needed for this job, not full requirements.txt
+          pip install flake8
+          echo "✅ Linting dependencies installed"
 
       - name: Install Frontend dependencies
         run: |
           cd frontend
-          npm ci
+          # npm ci with cache is already fast, but we can make it faster
+          npm ci --prefer-offline --no-audit
+          echo "✅ Frontend dependencies installed"
 
       - name: Python Code Quality
         run: |
