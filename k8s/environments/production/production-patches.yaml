@@ -24,11 +24,11 @@ spec:
                   key: supabase-key
           resources:
             requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
               memory: "512Mi"
               cpu: "500m"
-            limits:
-              memory: "1Gi"
-              cpu: "1000m"
 ---
 apiVersion: apps/v1
 kind: Deployment

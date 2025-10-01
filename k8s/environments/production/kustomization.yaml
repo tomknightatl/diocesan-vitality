@@ -25,7 +25,7 @@ commonLabels:
 
 replicas:
   - name: backend-deployment
-    count: 2
+    count: 1
   - name: frontend-deployment
     count: 2
   - name: pipeline-deployment

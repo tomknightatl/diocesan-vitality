@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Any, Dict, Optional, Tuple
 
 # Version information - updated automatically by semantic-release
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 __version_info__ = tuple(int(i) for i in __version__.split("."))
 
 # Build metadata - populated during CI/CD build process
