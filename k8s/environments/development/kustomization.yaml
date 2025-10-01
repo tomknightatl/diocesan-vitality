@@ -4,33 +4,33 @@ kind: Kustomization
 namespace: diocesan-vitality-dev
 
 resources:
-  - ../../application/base
-  - namespace.yaml
-  - diocesan-vitality-secrets-sealedsecret.yaml
+- ../../application/base
+- namespace.yaml
+- diocesan-vitality-secrets-sealedsecret.yaml
 
 patches:
-  - path: development-patches.yaml
+- path: development-patches.yaml
 
 # Images - updated automatically by CI/CD pipeline
 images:
-  - name: tomatl/diocesan-vitality:backend
-    newName: tomatl/diocesan-vitality
-    newTag: development-backend-2025-10-01-22-34-40
-  - name: tomatl/diocesan-vitality:frontend
-    newName: tomatl/diocesan-vitality
-    newTag: development-frontend-2025-10-01-22-34-40
-  - name: tomatl/diocesan-vitality:pipeline
-    newName: tomatl/diocesan-vitality
-    newTag: development-pipeline-2025-10-01-22-34-40
+- name: tomatl/diocesan-vitality:backend
+  newName: tomatl/diocesan-vitality
+  newTag: development-backend-2025-10-01-23-34-50
+- name: tomatl/diocesan-vitality:frontend
+  newName: tomatl/diocesan-vitality
+  newTag: development-frontend-2025-10-01-23-34-50
+- name: tomatl/diocesan-vitality:pipeline
+  newName: tomatl/diocesan-vitality
+  newTag: development-pipeline-2025-10-01-23-34-50
 
 commonLabels:
   cluster: do-nyc2-dv-dev
   environment: development
 
 replicas:
-  - count: 1
-    name: backend-deployment
-  - count: 1
-    name: frontend-deployment
-  - count: 1
-    name: pipeline-deployment
+- count: 1
+  name: backend-deployment
+- count: 1
+  name: frontend-deployment
+- count: 1
+  name: pipeline-deployment
