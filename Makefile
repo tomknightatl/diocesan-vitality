@@ -145,24 +145,51 @@ infra-setup: ## Set up complete infrastructure (8 core steps, usage: make infra-
 	$(MAKE) infra-test CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	echo "🎉 Complete infrastructure setup finished for $$CLUSTER_LABEL!"
 
-infra-destroy: ## Destroy complete infrastructure (usage: make infra-destroy CLUSTER_LABEL=dev)
+infra-destroy: ## Destroy complete infrastructure (usage: make infra-destroy CLUSTER_LABEL=dev [FORCE=yes])
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	FORCE=$${FORCE:-no} && \
+	CLUSTER_NAME="dv-$$CLUSTER_LABEL" && \
 	echo "🚨 DESTRUCTIVE: Destroying complete infrastructure for '$$CLUSTER_LABEL'..." && \
 	echo "⚠️  This will permanently delete:" && \
-	echo "   - DigitalOcean cluster: dv-$$CLUSTER_LABEL" && \
+	echo "   - DigitalOcean cluster: $$CLUSTER_NAME" && \
 	echo "   - Cloudflare tunnel: do-nyc2-dv-$$CLUSTER_LABEL" && \
 	echo "   - DNS records for $$CLUSTER_LABEL.{ui,api,argocd}.diocesanvitality.org" && \
 	echo "   - kubectl context: do-nyc2-dv-$$CLUSTER_LABEL" && \
-	read -p "Are you sure? Type 'yes' to continue: " CONFIRM </dev/tty && \
-	if [ "$$CONFIRM" != "yes" ]; then \
-		echo "❌ Operation cancelled"; \
-		exit 1; \
+	if [ "$$FORCE" != "yes" ]; then \
+		read -p "Are you sure? Type 'yes' to continue: " CONFIRM </dev/tty && \
+		if [ "$$CONFIRM" != "yes" ]; then \
+			echo "❌ Operation cancelled"; \
+			exit 1; \
+		fi; \
+	else \
+		echo "⚡ FORCE=yes detected - skipping confirmation"; \
 	fi && \
-	echo "🗑️  Executing infrastructure destruction in reverse order..." && \
-	$(MAKE) tunnel-dns-destroy CLUSTER_LABEL=$$CLUSTER_LABEL || true && \
-	$(MAKE) tunnel-destroy CLUSTER_LABEL=$$CLUSTER_LABEL || true && \
+	echo "🗑️  Executing infrastructure destruction (optimized order: Cluster → Context → Tunnel → DNS)..." && \
+	echo "" && \
+	echo "📍 Step 1/4: Destroying cluster..." && \
+	$(MAKE) cluster-destroy CLUSTER_LABEL=$$CLUSTER_LABEL FORCE=yes || true && \
+	echo "" && \
+	echo "📍 Step 2/4: Cleaning kubectl context..." && \
 	$(MAKE) cluster-context-destroy CLUSTER_LABEL=$$CLUSTER_LABEL || true && \
-	$(MAKE) cluster-destroy CLUSTER_LABEL=$$CLUSTER_LABEL || true && \
+	echo "" && \
+	echo "📍 Step 3/4: Destroying Cloudflare tunnel..." && \
+	$(MAKE) tunnel-destroy CLUSTER_LABEL=$$CLUSTER_LABEL FORCE=yes || true && \
+	echo "" && \
+	echo "📍 Step 4/4: Destroying DNS records..." && \
+	$(MAKE) tunnel-dns-destroy CLUSTER_LABEL=$$CLUSTER_LABEL || true && \
+	echo "" && \
+	echo "🔍 Verifying infrastructure destruction..." && \
+	if $(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster get $$CLUSTER_NAME" 2>/dev/null | grep -q "$$CLUSTER_NAME"; then \
+		echo "⚠️  Warning: Cluster $$CLUSTER_NAME still exists!"; \
+	else \
+		echo "✅ Cluster $$CLUSTER_NAME confirmed deleted"; \
+	fi && \
+	if kubectl config get-contexts -o name 2>/dev/null | grep -q "^do-nyc2-dv-$$CLUSTER_LABEL$$"; then \
+		echo "⚠️  Warning: kubectl context still exists!"; \
+	else \
+		echo "✅ kubectl context confirmed removed"; \
+	fi && \
+	echo "" && \
 	echo "✅ Infrastructure destruction complete for $$CLUSTER_LABEL"
 
 cluster-auth: ## Step a: A5uthenticate with DigitalOcean (usage: make cluster-auth)
@@ -250,22 +277,26 @@ cluster-create: ## Step c: Create cluster (usage: make cluster-create CLUSTER_LA
 		fi; \
 	fi
 
-cluster-destroy: ## Step d: Destroy cluster (usage: make cluster-destroy CLUSTER_LABEL=dev)
+cluster-destroy: ## Step d: Destroy cluster (usage: make cluster-destroy CLUSTER_LABEL=dev [FORCE=yes])
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	FORCE=$${FORCE:-no} && \
 	echo "🚨 Step d: DESTRUCTIVE - Destroying DigitalOcean cluster for '$$CLUSTER_LABEL'..." && \
 	CLUSTER_NAME="dv-$$CLUSTER_LABEL" && \
 	echo "⚠️  This will permanently delete cluster: $$CLUSTER_NAME" && \
-	read -p "Are you sure? Type 'yes' to continue: " CONFIRM </dev/tty && \
-	if [ "$$CONFIRM" != "yes" ]; then \
-		echo "❌ Operation cancelled"; \
-		exit 1; \
+	if [ "$$FORCE" != "yes" ]; then \
+		read -p "Are you sure? Type 'yes' to continue: " CONFIRM </dev/tty && \
+		if [ "$$CONFIRM" != "yes" ]; then \
+			echo "❌ Operation cancelled"; \
+			exit 1; \
+		fi; \
 	fi && \
-	$(MAKE) cluster-check CLUSTER_LABEL=$$CLUSTER_LABEL && \
-	echo "ℹ️  Step d Complete: Cluster $$CLUSTER_NAME does not exist - nothing to destroy" || { \
+	if $(MAKE) cluster-check CLUSTER_LABEL=$$CLUSTER_LABEL 2>/dev/null; then \
 		echo "🗑️  Deleting cluster $$CLUSTER_NAME (this may take several minutes)..." && \
 		$(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster delete $$CLUSTER_NAME --force" && \
 		echo "✅ Step d Complete: Cluster $$CLUSTER_NAME deleted successfully"; \
-	}
+	else \
+		echo "ℹ️  Step d Complete: Cluster $$CLUSTER_NAME does not exist - nothing to destroy"; \
+	fi
 
 cluster-context: ## Step e: Setup kubectl context (usage: make cluster-context CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
@@ -364,32 +395,36 @@ tunnel-create: ## Step i: Create tunnel (usage: make tunnel-create CLUSTER_LABEL
 		fi; \
 	fi
 
-tunnel-destroy: ## Step j: Destroy tunnel (usage: make tunnel-destroy CLUSTER_LABEL=dev)
+tunnel-destroy: ## Step j: Destroy tunnel (usage: make tunnel-destroy CLUSTER_LABEL=dev [FORCE=yes])
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	FORCE=$${FORCE:-no} && \
 	echo "🚨 Step j: DESTRUCTIVE - Destroying Cloudflare tunnel for '$$CLUSTER_LABEL'..." && \
 	TUNNEL_NAME="do-nyc2-dv-$$CLUSTER_LABEL" && \
-	echo "⚠️  This will permanently delete tunnel: $$TUNNEL_NAME and all associated DNS records" && \
-	read -p "Are you sure? Type 'yes' to continue: " CONFIRM </dev/tty && \
-	if [ "$$CONFIRM" != "yes" ]; then \
-		echo "❌ Operation cancelled"; \
-		exit 1; \
+	echo "⚠️  This will permanently delete tunnel: $$TUNNEL_NAME" && \
+	if [ "$$FORCE" != "yes" ]; then \
+		read -p "Are you sure? Type 'yes' to continue: " CONFIRM </dev/tty && \
+		if [ "$$CONFIRM" != "yes" ]; then \
+			echo "❌ Operation cancelled"; \
+			exit 1; \
+		fi; \
 	fi && \
-	$(MAKE) tunnel-check CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	$(MAKE) tunnel-auth && \
 	CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
 	CLOUDFLARE_ACCOUNT_ID=$$(awk -F'=' '/^CLOUDFLARE_ACCOUNT_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
 	export CLOUDFLARE_API_TOKEN="$$CLOUDFLARE_API_TOKEN" && \
+	echo "🔍 Checking if tunnel exists..." && \
 	TUNNELS_RESPONSE=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel" \
 		-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN" \
 		-H "Content-Type: application/json") && \
 	if TUNNEL_ID=$$(echo "$$TUNNELS_RESPONSE" | jq -r ".result[] | select(.name==\"$$TUNNEL_NAME\" and .deleted_at==null) | .id" 2>/dev/null | head -1) && [ -n "$$TUNNEL_ID" ] && [ "$$TUNNEL_ID" != "null" ]; then \
-		echo "🗑️  Deleting tunnel: $$TUNNEL_NAME ($$TUNNEL_ID)" && \
+		echo "🗑️  Deleting tunnel: $$TUNNEL_NAME (ID: $$TUNNEL_ID)" && \
 		TUNNEL_DELETE_RESPONSE=$$(curl -s -X DELETE "https://api.cloudflare.com/client/v4/accounts/$$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel/$$TUNNEL_ID" \
 			-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN") && \
-		echo "📄 Tunnel deletion response: $$TUNNEL_DELETE_RESPONSE" && \
 		if echo "$$TUNNEL_DELETE_RESPONSE" | jq -e '.success == true' >/dev/null 2>&1; then \
-			echo "✅ Step j Complete: Tunnel $$TUNNEL_NAME deleted successfully"; \
+			echo "✅ Step j Complete: Tunnel $$TUNNEL_NAME ($$TUNNEL_ID) deleted successfully"; \
 		else \
-			echo "⚠️  Tunnel deletion may have issues, but continuing..."; \
+			echo "⚠️  Warning: Tunnel deletion response indicates issues"; \
+			echo "📄 Response: $$TUNNEL_DELETE_RESPONSE"; \
 		fi; \
 	else \
 		echo "ℹ️  Step j Complete: Tunnel $$TUNNEL_NAME does not exist or is already deleted"; \
@@ -485,22 +520,33 @@ tunnel-dns-destroy: ## Step 8b: Remove tunnel DNS records (usage: make tunnel-dn
 	CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
 	ZONE_ID=$$(awk -F'=' '/^CLOUDFLARE_ZONE_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
 	export CLOUDFLARE_API_TOKEN="$$CLOUDFLARE_API_TOKEN" && \
+	DELETED_COUNT=0 && \
+	SKIPPED_COUNT=0 && \
 	for SUBDOMAIN in ui api argocd; do \
 		HOSTNAME="$$CLUSTER_LABEL.$$SUBDOMAIN.diocesanvitality.org" && \
-		echo "🔍 Checking DNS record: $$HOSTNAME" && \
+		echo "  🔍 Checking: $$HOSTNAME..." && \
 		DNS_CHECK_RESPONSE=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$$ZONE_ID/dns_records?name=$$HOSTNAME" \
 			-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN") && \
 		EXISTING=$$(echo "$$DNS_CHECK_RESPONSE" | jq -r '.result[0].id // "null"') && \
 		if [ "$$EXISTING" != "null" ]; then \
-			echo "🗑️  Deleting DNS record: $$HOSTNAME (ID: $$EXISTING)" && \
+			echo "  🗑️  Deleting: $$HOSTNAME (ID: $$EXISTING)" && \
 			DNS_DELETE_RESPONSE=$$(curl -s -X DELETE "https://api.cloudflare.com/client/v4/zones/$$ZONE_ID/dns_records/$$EXISTING" \
 				-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN") && \
-			echo "📄 DNS delete response: $$DNS_DELETE_RESPONSE" && \
-			echo "✅ DNS record deleted: $$HOSTNAME"; \
+			if echo "$$DNS_DELETE_RESPONSE" | jq -e '.success == true' >/dev/null 2>&1; then \
+				echo "  ✅ Deleted: $$HOSTNAME" && \
+				DELETED_COUNT=$$((DELETED_COUNT + 1)); \
+			else \
+				echo "  ⚠️  Warning: Deletion may have failed for $$HOSTNAME"; \
+			fi; \
 		else \
-			echo "ℹ️  DNS record does not exist: $$HOSTNAME"; \
+			echo "  ℹ️  Not found: $$HOSTNAME" && \
+			SKIPPED_COUNT=$$((SKIPPED_COUNT + 1)); \
 		fi; \
 	done && \
+	echo "" && \
+	echo "📊 DNS Destruction Summary:" && \
+	echo "   Deleted: $$DELETED_COUNT records" && \
+	echo "   Skipped: $$SKIPPED_COUNT records (already deleted)" && \
 	echo "✅ Step 8b Complete: DNS records destroyed for $$CLUSTER_LABEL"
 
 
