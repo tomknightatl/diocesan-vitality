@@ -230,44 +230,62 @@ jobs:
 
           echo "🏷️ Generated tags for environment: ${TARGET_ENV}"
 
-      - name: Build and push backend image
+      - name: Build and push all images in parallel
         run: |
-          echo "🏗️ Building backend image (multi-arch)..."
-          docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            --file backend/Dockerfile \
-            --tag ${{ steps.tags.outputs.backend-tag }} \
-            --tag ${{ env.IMAGE_NAMESPACE }}:${{ needs.determine-environment.outputs.target-env }}-backend-latest \
-            --cache-from type=gha \
-            --cache-to type=gha,mode=max \
-            --push backend/
-          echo "✅ Backend image built and pushed"
+          echo "🏗️ Building all images in parallel (multi-arch)..."
 
-      - name: Build and push frontend image
-        run: |
-          echo "🏗️ Building frontend image (multi-arch)..."
-          docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            --file frontend/Dockerfile \
-            --tag ${{ steps.tags.outputs.frontend-tag }} \
-            --tag ${{ env.IMAGE_NAMESPACE }}:${{ needs.determine-environment.outputs.target-env }}-frontend-latest \
-            --cache-from type=gha \
-            --cache-to type=gha,mode=max \
-            --push frontend/
-          echo "✅ Frontend image built and pushed"
+          # Start all builds in background
+          (
+            echo "🏗️ Building backend image..."
+            docker buildx build \
+              --platform linux/amd64,linux/arm64 \
+              --file backend/Dockerfile \
+              --tag ${{ steps.tags.outputs.backend-tag }} \
+              --tag ${{ env.IMAGE_NAMESPACE }}:${{ needs.determine-environment.outputs.target-env }}-backend-latest \
+              --cache-from type=gha \
+              --cache-to type=gha,mode=max \
+              --push backend/ && echo "✅ Backend image built and pushed"
+          ) &
+          BACKEND_PID=$!
 
-      - name: Build and push pipeline image
-        run: |
-          echo "🏗️ Building pipeline image (AMD64 only - Chrome compatibility)..."
-          docker buildx build \
-            --platform linux/amd64 \
-            --file Dockerfile.pipeline \
-            --tag ${{ steps.tags.outputs.pipeline-tag }} \
-            --tag ${{ env.IMAGE_NAMESPACE }}:${{ needs.determine-environment.outputs.target-env }}-pipeline-latest \
-            --cache-from type=gha \
-            --cache-to type=gha,mode=max \
-            --push .
-          echo "✅ Pipeline image built and pushed"
+          (
+            echo "🏗️ Building frontend image..."
+            docker buildx build \
+              --platform linux/amd64,linux/arm64 \
+              --file frontend/Dockerfile \
+              --tag ${{ steps.tags.outputs.frontend-tag }} \
+              --tag ${{ env.IMAGE_NAMESPACE }}:${{ needs.determine-environment.outputs.target-env }}-frontend-latest \
+              --cache-from type=gha \
+              --cache-to type=gha,mode=max \
+              --push frontend/ && echo "✅ Frontend image built and pushed"
+          ) &
+          FRONTEND_PID=$!
+
+          (
+            echo "🏗️ Building pipeline image..."
+            docker buildx build \
+              --platform linux/amd64 \
+              --file Dockerfile.pipeline \
+              --tag ${{ steps.tags.outputs.pipeline-tag }} \
+              --tag ${{ env.IMAGE_NAMESPACE }}:${{ needs.determine-environment.outputs.target-env }}-pipeline-latest \
+              --cache-from type=gha \
+              --cache-to type=gha,mode=max \
+              --push . && echo "✅ Pipeline image built and pushed"
+          ) &
+          PIPELINE_PID=$!
+
+          # Wait for all builds to complete and check for failures
+          FAILED=0
+          wait $BACKEND_PID || FAILED=1
+          wait $FRONTEND_PID || FAILED=1
+          wait $PIPELINE_PID || FAILED=1
+
+          if [ $FAILED -eq 1 ]; then
+            echo "❌ One or more image builds failed"
+            exit 1
+          fi
+
+          echo "✅ All images built and pushed successfully in parallel"
 
   # ============================================================================
   # DEPLOY TO DEVELOPMENT CLUSTER (do-nyc2-dv-dev) - GitOps
