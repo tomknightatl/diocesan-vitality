@@ -793,7 +793,7 @@ _create-application-sealed-secret: ## Create application secrets sealed secret
 	fi && \
 	echo "💾 Committing application sealed secret to repository..." && \
 	git add k8s/environments/$$CLUSTER_LABEL/ && \
-	PRE_COMMIT_ALLOW_NO_CONFIG=1 git commit -m "Add application sealed secret for diocesan-vitality-$$CLUSTER_LABEL - Contains encrypted supabase-url, supabase-key, genai-api-key, search-api-key, search-cx" && \
+	PRE_COMMIT_ALLOW_NO_CONFIG=1 git commit -m "Add application sealed secret for diocesan-vitality-$$CLUSTER_LABEL [skip ci]" -m "Contains encrypted supabase-url, supabase-key, genai-api-key, search-api-key, search-cx" && \
 	git pull --rebase && \
 	git push && \
 	echo "✅ Application sealed secret created and committed"
@@ -804,7 +804,7 @@ _commit-sealed-secrets: ## Commit all sealed secrets to repository
 	git add k8s/infrastructure/cloudflare-tunnel/environments/$$CLUSTER_LABEL/ || true && \
 	git add k8s/environments/$$CLUSTER_LABEL/ && \
 	echo "💾 Committing sealed secrets to repository..." && \
-	PRE_COMMIT_ALLOW_NO_CONFIG=1 git commit -m "🔐 Add sealed secrets for $$CLUSTER_LABEL environment" \
+	PRE_COMMIT_ALLOW_NO_CONFIG=1 git commit -m "🔐 Add sealed secrets for $$CLUSTER_LABEL environment [skip ci]" \
 		-m "✅ Tunnel Secret:" \
 		-m "- cloudflared-token: Encrypted tunnel token for Cloudflare tunnel" \
 		-m "" \
@@ -838,7 +838,7 @@ _cleanup-sealed-secrets: ## Delete sealed secrets from repository after cluster 
 		echo "ℹ️  No sealed secrets to clean up"; \
 	else \
 		echo "💾 Committing sealed secret cleanup..." && \
-		PRE_COMMIT_ALLOW_NO_CONFIG=1 git commit -m "🧹 Remove sealed secrets for $$CLUSTER_LABEL after cluster destroy" \
+		PRE_COMMIT_ALLOW_NO_CONFIG=1 git commit -m "🧹 Remove sealed secrets for $$CLUSTER_LABEL after cluster destroy [skip ci]" \
 			-m "These sealed secrets were encrypted with the old cluster's certificate" \
 			-m "and cannot be decrypted by a new cluster's sealed-secrets controller." \
 			-m "" \
