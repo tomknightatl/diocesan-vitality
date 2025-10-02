@@ -882,9 +882,11 @@ _create-application-sealed-secret: ## Create application secrets sealed secret
 	SUPABASE_KEY_VAR="SUPABASE_KEY" && \
 	if [ "$$CLUSTER_LABEL" != "prd" ]; then \
 		ENV_SUFFIX=$$(echo $$CLUSTER_LABEL | tr '[:lower:]' '[:upper:]') && \
-		SUPABASE_URL_ENV=$$(grep "^SUPABASE_URL_$$ENV_SUFFIX=" .env 2>/dev/null | cut -d'=' -f2- | tr -d '"') && \
-		SUPABASE_KEY_ENV=$$(grep "^SUPABASE_KEY_$$ENV_SUFFIX=" .env 2>/dev/null | cut -d'=' -f2- | tr -d '"') && \
-		if [ -n "$$SUPABASE_URL_ENV" ] && [ -n "$$SUPABASE_KEY_ENV" ]; then \
+		SUPABASE_URL_ENV=$$(grep "^SUPABASE_URL_$$ENV_SUFFIX=" .env 2>/dev/null | cut -d'=' -f2- | tr -d '"' | sed 's/^[[:space:]]*//;s/[[:space:]]*$$//') && \
+		SUPABASE_KEY_ENV=$$(grep "^SUPABASE_KEY_$$ENV_SUFFIX=" .env 2>/dev/null | cut -d'=' -f2- | tr -d '"' | sed 's/^[[:space:]]*//;s/[[:space:]]*$$//') && \
+		if [ -n "$$SUPABASE_URL_ENV" ] && [ -n "$$SUPABASE_KEY_ENV" ] && \
+		   ! echo "$$SUPABASE_URL_ENV" | grep -qE '^<.*>$$|^your-|^replace-|^placeholder' && \
+		   ! echo "$$SUPABASE_KEY_ENV" | grep -qE '^<.*>$$|^your-|^replace-|^placeholder'; then \
 			echo "ℹ️  Using environment-specific database credentials (SUPABASE_URL_$$ENV_SUFFIX, SUPABASE_KEY_$$ENV_SUFFIX)"; \
 			SUPABASE_URL="$$SUPABASE_URL_ENV" && \
 			SUPABASE_KEY="$$SUPABASE_KEY_ENV"; \
