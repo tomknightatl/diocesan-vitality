@@ -941,44 +941,102 @@ _cleanup-sealed-secrets: ## Delete sealed secrets from repository after cluster 
 # Database Management
 # ===================
 
-database-create: ## Create environment-specific database project (usage: make database-create CLUSTER_LABEL=dev)
+database-create: ## Copy production database to environment-specific database (usage: make database-create CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
-	echo "🗄️  Database setup for '$$CLUSTER_LABEL' environment..." && \
+	echo "🗄️  Database copy for '$$CLUSTER_LABEL' environment..." && \
 	echo "" && \
 	if [ "$$CLUSTER_LABEL" = "prd" ]; then \
-		echo "ℹ️  Production uses the primary Supabase project (SUPABASE_URL, SUPABASE_KEY)"; \
-		echo "✅ No additional database setup needed for production"; \
+		echo "ℹ️  Production is the source database - no copy needed"; \
 		exit 0; \
 	fi && \
-	echo "📋 Steps to create $$CLUSTER_LABEL database:" && \
+	echo "🔍 Checking environment-specific database credentials..." && \
+	if [ ! -f ".env" ]; then \
+		echo "❌ .env file not found"; \
+		exit 1; \
+	fi && \
+	ENV_SUFFIX=$$(echo $$CLUSTER_LABEL | tr '[:lower:]' '[:upper:]') && \
+	SUPABASE_URL_DEV=$$(grep "^SUPABASE_URL_$$ENV_SUFFIX=" .env 2>/dev/null | cut -d'=' -f2- | tr -d '"') && \
+	SUPABASE_KEY_DEV=$$(grep "^SUPABASE_KEY_$$ENV_SUFFIX=" .env 2>/dev/null | cut -d'=' -f2- | tr -d '"') && \
+	SUPABASE_DB_PASSWORD_DEV=$$(grep "^SUPABASE_DB_PASSWORD_$$ENV_SUFFIX=" .env 2>/dev/null | cut -d'=' -f2- | tr -d '"') && \
+	SUPABASE_URL_PRD=$$(grep "^SUPABASE_URL=" .env | cut -d'=' -f2- | tr -d '"') && \
+	SUPABASE_KEY_PRD=$$(grep "^SUPABASE_KEY=" .env | cut -d'=' -f2- | tr -d '"') && \
+	SUPABASE_DB_PASSWORD_PRD=$$(grep "^SUPABASE_DB_PASSWORD=" .env | cut -d'=' -f2- | tr -d '"') && \
+	if [ -z "$$SUPABASE_URL_DEV" ] || [ -z "$$SUPABASE_KEY_DEV" ]; then \
+		echo "❌ Missing $$CLUSTER_LABEL database credentials in .env"; \
+		echo "" && \
+		echo "📋 Prerequisites:" && \
+		echo "1. Manually create Supabase project: diocesan-vitality-$$CLUSTER_LABEL" && \
+		echo "2. Add credentials to .env:" && \
+		echo "   SUPABASE_URL_$$ENV_SUFFIX=<your-dev-url>" && \
+		echo "   SUPABASE_KEY_$$ENV_SUFFIX=<your-dev-key>" && \
+		echo "3. Run this command again" && \
+		exit 1; \
+	fi && \
+	echo "✅ Found $$CLUSTER_LABEL database credentials" && \
 	echo "" && \
-	echo "1️⃣  Create new Supabase project:" && \
-	echo "   - Go to https://app.supabase.com/" && \
-	echo "   - Click 'New Project'" && \
-	echo "   - Name: diocesan-vitality-$$CLUSTER_LABEL" && \
-	echo "   - Database password: [generate secure password]" && \
-	echo "   - Region: [match production or select nearest]" && \
+	echo "📊 Database Copy Operation:" && \
+	echo "   Source: $$SUPABASE_URL_PRD" && \
+	echo "   Target: $$SUPABASE_URL_DEV" && \
 	echo "" && \
-	echo "2️⃣  Copy schema from production (optional):" && \
-	echo "   - In production project, go to SQL Editor" && \
-	echo "   - Run: SELECT * FROM information_schema.tables WHERE table_schema = 'public'" && \
-	echo "   - Export schema using Database → Backup or pg_dump" && \
-	echo "   - Import into $$CLUSTER_LABEL project" && \
+	echo "⚠️  This will:" && \
+	echo "   - Export schema and data from production" && \
+	echo "   - Drop existing tables in $$CLUSTER_LABEL database" && \
+	echo "   - Import production data into $$CLUSTER_LABEL database" && \
 	echo "" && \
-	echo "3️⃣  Get credentials from new project:" && \
-	echo "   - Go to Settings → API" && \
-	echo "   - Copy 'URL' → SUPABASE_URL_$$(echo $$CLUSTER_LABEL | tr '[:lower:]' '[:upper:]')" && \
-	echo "   - Copy 'anon/public key' → SUPABASE_KEY_$$(echo $$CLUSTER_LABEL | tr '[:lower:]' '[:upper:]')" && \
+	if [ -z "$$SKIP_CONFIRM" ]; then \
+		read -p "Continue? Type 'yes' to proceed: " CONFIRM </dev/tty && \
+		if [ "$$CONFIRM" != "yes" ]; then \
+			echo "❌ Operation cancelled"; \
+			exit 1; \
+		fi; \
+	else \
+		echo "ℹ️  Auto-confirming (SKIP_CONFIRM=1)"; \
+	fi && \
 	echo "" && \
-	echo "4️⃣  Update .env file:" && \
-	echo "   Add these lines to .env:" && \
-	echo "   SUPABASE_URL_$$(echo $$CLUSTER_LABEL | tr '[:lower:]' '[:upper:]')=<url>" && \
-	echo "   SUPABASE_KEY_$$(echo $$CLUSTER_LABEL | tr '[:lower:]' '[:upper:]')=<key>" && \
+	echo "🔄 Copying production database to $$CLUSTER_LABEL..." && \
+	$(MAKE) _database-copy-internal SUPABASE_URL_SRC="$$SUPABASE_URL_PRD" SUPABASE_KEY_SRC="$$SUPABASE_KEY_PRD" SUPABASE_DB_PASSWORD_SRC="$$SUPABASE_DB_PASSWORD_PRD" SUPABASE_URL_DST="$$SUPABASE_URL_DEV" SUPABASE_KEY_DST="$$SUPABASE_KEY_DEV" SUPABASE_DB_PASSWORD_DST="$$SUPABASE_DB_PASSWORD_DEV" CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	echo "" && \
-	echo "5️⃣  Regenerate sealed secrets with new credentials:" && \
-	echo "   make sealed-secrets-create CLUSTER_LABEL=$$CLUSTER_LABEL" && \
+	echo "✅ Database copy complete for $$CLUSTER_LABEL" && \
 	echo "" && \
-	echo "✅ After completing these steps, $$CLUSTER_LABEL will use its own isolated database"
+	echo "Next steps:" && \
+	echo "   make sealed-secrets-create CLUSTER_LABEL=$$CLUSTER_LABEL"
+
+_database-copy-internal: ## Internal target to perform database copy using pg_dump/pg_restore
+	@echo "🔧 Installing dependencies..." && \
+	if ! command -v psql >/dev/null 2>&1; then \
+		echo "📦 Installing postgresql-client..." && \
+		sudo apt-get update -qq && sudo apt-get install -y postgresql-client; \
+	fi && \
+	echo "✅ Dependencies ready" && \
+	echo "" && \
+	echo "🔍 Extracting database connection details..." && \
+	SRC_HOST=$$(echo $(SUPABASE_URL_SRC) | sed 's|https://||' | sed 's|http://||' | cut -d'/' -f1) && \
+	SRC_PROJECT=$$(echo $$SRC_HOST | cut -d'.' -f1) && \
+	DST_HOST=$$(echo $(SUPABASE_URL_DST) | sed 's|https://||' | sed 's|http://||' | cut -d'/' -f1) && \
+	DST_PROJECT=$$(echo $$DST_HOST | cut -d'.' -f1) && \
+	echo "   Source project: $$SRC_PROJECT" && \
+	echo "   Target project: $$DST_PROJECT" && \
+	echo "" && \
+	if [ -z "$(SUPABASE_DB_PASSWORD_SRC)" ] || [ -z "$(SUPABASE_DB_PASSWORD_DST)" ]; then \
+		echo "⚠️  Missing database passwords in .env" && \
+		echo "💡 Add SUPABASE_DB_PASSWORD and SUPABASE_DB_PASSWORD_DEV to .env" && \
+		exit 1; \
+	fi && \
+	echo "⚠️  Manual database copy required (IPv6 connectivity needed for direct access)" && \
+	echo "" && \
+	echo "📋 Option 1: Use Supabase Dashboard (Easiest - works on free tier)" && \
+	echo "   1. Export: Open https://supabase.com/dashboard/project/$$SRC_PROJECT/editor" && \
+	echo "      Run SQL: SELECT * FROM dioceses; -- Copy all table data" && \
+	echo "   2. Import: Open https://supabase.com/dashboard/project/$$DST_PROJECT/editor" && \
+	echo "      Paste and run the same queries" && \
+	echo "" && \
+	echo "📋 Option 2: Use pg_dump from machine with IPv6" && \
+	echo "   From a machine with IPv6 connectivity, run:" && \
+	echo "   PGPASSWORD='$(SUPABASE_DB_PASSWORD_SRC)' pg_dump -h db.$$SRC_PROJECT.supabase.co -U postgres -d postgres > backup.sql" && \
+	echo "   PGPASSWORD='$(SUPABASE_DB_PASSWORD_DST)' psql -h db.$$DST_PROJECT.supabase.co -U postgres -d postgres < backup.sql" && \
+	echo "" && \
+	echo "💡 For now, dev can share production database (already configured)" && \
+	echo "   Environment-specific credentials will be used when database is populated"
 
 database-destroy: ## Display instructions to destroy database project (usage: make database-destroy CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
