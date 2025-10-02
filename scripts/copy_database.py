@@ -24,10 +24,14 @@ def main():
     dst_client: Client = create_client(dst_url, dst_key)
 
     # Tables to copy (capitalized as they appear in production)
+    # Note: ParishScheduleSummary is a view, not a table - skipping it
     tables = [
         'Dioceses',
+        'DiocesesParishDirectory',
         'Parishes',
-        'ParishScheduleSummary',
+        'ParishData',
+        'DiscoveredUrls',
+        'ScheduleKeywords',
         'pipeline_workers',
         'diocese_work_assignments'
     ]

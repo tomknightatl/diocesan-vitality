@@ -1038,6 +1038,177 @@ _database-copy-internal: ## Internal target to perform database copy using pg_du
 	echo "💡 For now, dev can share production database (already configured)" && \
 	echo "   Environment-specific credentials will be used when database is populated"
 
+database-copy-prd-to-dev: ## Copy production database to dev using Python script (usage: make database-copy-prd-to-dev)
+	@echo "🔄 Copying production database to dev..." && \
+	echo "" && \
+	if [ ! -f ".env" ]; then \
+		echo "❌ .env file not found"; \
+		exit 1; \
+	fi && \
+	export SUPABASE_URL_PRD=$$(grep "^SUPABASE_URL=" .env | cut -d'=' -f2- | tr -d '"') && \
+	export SUPABASE_KEY_PRD=$$(grep "^SUPABASE_KEY=" .env | cut -d'=' -f2- | tr -d '"') && \
+	export SUPABASE_URL_DEV=$$(grep "^SUPABASE_URL_DEV=" .env | cut -d'=' -f2- | tr -d '"') && \
+	export SUPABASE_KEY_DEV=$$(grep "^SUPABASE_KEY_DEV=" .env | cut -d'=' -f2- | tr -d '"') && \
+	if [ -z "$$SUPABASE_URL_DEV" ] || [ -z "$$SUPABASE_KEY_DEV" ]; then \
+		echo "❌ Missing dev database credentials in .env"; \
+		exit 1; \
+	fi && \
+	echo "📊 Database Copy Operation:" && \
+	echo "   Source: $$SUPABASE_URL_PRD" && \
+	echo "   Target: $$SUPABASE_URL_DEV" && \
+	echo "" && \
+	python3 scripts/copy_database.py
+
+database-schema-refresh: ## Extract current production schema to sql/initial_schema.sql (usage: make database-schema-refresh)
+	@echo "🔄 Extracting schema from production database..." && \
+	echo "" && \
+	if [ ! -f ".env" ]; then \
+		echo "❌ .env file not found"; \
+		exit 1; \
+	fi && \
+	SUPABASE_DB_PASSWORD=$$(grep "^SUPABASE_DB_PASSWORD=" .env | cut -d'=' -f2- | tr -d '"') && \
+	echo "   Host: aws-0-us-east-2.pooler.supabase.com:5432 (production pooler)" && \
+	echo "   Using PostgreSQL 17 client via connection pooler" && \
+	echo "" && \
+	if [ -f sql/initial_schema.sql ]; then \
+		cp sql/initial_schema.sql sql/initial_schema.sql.backup && \
+		echo "💾 Backed up existing schema to sql/initial_schema.sql.backup"; \
+	fi && \
+	PGPASSWORD="$$SUPABASE_DB_PASSWORD" pg_dump \
+		-h aws-0-us-east-2.pooler.supabase.com \
+		-p 5432 \
+		-U postgres.nzcwtjloonumxpsqzarq \
+		-d postgres \
+		--schema-only \
+		--no-owner \
+		--no-acl \
+		--schema=public \
+		-f sql/initial_schema.sql && \
+	echo "" && \
+	echo "✅ Schema exported successfully to sql/initial_schema.sql" && \
+	echo "   Lines: $$(wc -l < sql/initial_schema.sql)" && \
+	echo "" && \
+	echo "📊 Tables extracted:" && \
+	grep -i "CREATE TABLE" sql/initial_schema.sql | sed 's/CREATE TABLE public\./  - /' | sed 's/ (.*$$//'
+
+database-init-dev: ## Initialize dev database with production schema and data (usage: make database-init-dev)
+	@echo "🚀 Initializing dev database from production..." && \
+	echo "" && \
+	if [ ! -f ".env" ]; then \
+		echo "❌ .env file not found"; \
+		exit 1; \
+	fi && \
+	SUPABASE_DB_PASSWORD_DEV=$$(grep "^SUPABASE_DB_PASSWORD_DEV=" .env | cut -d'=' -f2- | tr -d '"') && \
+	echo "⚠️  WARNING: This will DELETE ALL DATA in dev database!" && \
+	echo "" && \
+	echo "Step 1/4: Dropping existing dev schema..." && \
+	PGPASSWORD="$$SUPABASE_DB_PASSWORD_DEV" psql \
+		-h aws-1-us-east-2.pooler.supabase.com \
+		-p 5432 \
+		-U postgres.derftxlibiidgcdafxrx \
+		-d postgres \
+		-c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" > /dev/null 2>&1 && \
+	echo "✅ Dev schema dropped and recreated" && \
+	echo "" && \
+	echo "Step 2/4: Applying production schema to dev..." && \
+	PGPASSWORD="$$SUPABASE_DB_PASSWORD_DEV" psql \
+		-h aws-1-us-east-2.pooler.supabase.com \
+		-p 5432 \
+		-U postgres.derftxlibiidgcdafxrx \
+		-d postgres \
+		-f sql/initial_schema.sql > /dev/null 2>&1 && \
+	echo "✅ Schema applied to dev" && \
+	echo "" && \
+	echo "Step 3/4: Granting permissions..." && \
+	PGPASSWORD="$$SUPABASE_DB_PASSWORD_DEV" psql \
+		-h aws-1-us-east-2.pooler.supabase.com \
+		-p 5432 \
+		-U postgres.derftxlibiidgcdafxrx \
+		-d postgres \
+		-c "GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role; \
+		    GRANT ALL ON SCHEMA public TO anon, authenticated, service_role; \
+		    GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role; \
+		    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role; \
+		    GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated, service_role; \
+		    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role; \
+		    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role; \
+		    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon, authenticated, service_role;" > /dev/null 2>&1 && \
+	echo "✅ Permissions granted" && \
+	echo "" && \
+	echo "Step 4/4: Copying production data to dev..." && \
+	python3 scripts/copy_database.py && \
+	echo "" && \
+	echo "🎉 Dev database initialized successfully!"
+
+database-schema-export: ## Export production database schema to SQL file (usage: make database-schema-export)
+	@echo "📤 Exporting production database schema..." && \
+	echo "" && \
+	if [ ! -f ".env" ]; then \
+		echo "❌ .env file not found"; \
+		exit 1; \
+	fi && \
+	SUPABASE_URL_PRD=$$(grep "^SUPABASE_URL=" .env | cut -d'=' -f2- | tr -d '"') && \
+	SUPABASE_DB_PASSWORD_PRD=$$(grep "^SUPABASE_DB_PASSWORD=" .env | cut -d'=' -f2- | tr -d '"') && \
+	if [ -z "$$SUPABASE_URL_PRD" ] || [ -z "$$SUPABASE_DB_PASSWORD_PRD" ]; then \
+		echo "❌ Missing production database credentials in .env"; \
+		exit 1; \
+	fi && \
+	SRC_HOST=$$(echo $$SUPABASE_URL_PRD | sed 's|https://||' | sed 's|http://||' | cut -d'/' -f1) && \
+	SRC_PROJECT=$$(echo $$SRC_HOST | cut -d'.' -f1) && \
+	echo "📊 Schema Export:" && \
+	echo "   Source: $$SUPABASE_URL_PRD ($$SRC_PROJECT)" && \
+	echo "   Output: sql/exported_schema.sql" && \
+	echo "" && \
+	echo "⚠️  Note: Requires IPv6 connectivity to Supabase" && \
+	echo "🔧 Exporting schema (structure only, no data)..." && \
+	PGPASSWORD="$$SUPABASE_DB_PASSWORD_PRD" pg_dump -h db.$$SRC_PROJECT.supabase.co -U postgres -d postgres --schema-only > sql/exported_schema.sql && \
+	echo "" && \
+	echo "✅ Schema exported successfully!" && \
+	echo "💡 Now run: make database-schema-import"
+
+database-schema-import: ## Import schema from exported SQL file to dev database (usage: make database-schema-import)
+	@echo "📥 Importing schema to dev database..." && \
+	echo "" && \
+	if [ ! -f "sql/exported_schema.sql" ]; then \
+		echo "❌ Schema file not found: sql/exported_schema.sql"; \
+		echo "💡 Run: make database-schema-export first"; \
+		exit 1; \
+	fi && \
+	if [ ! -f ".env" ]; then \
+		echo "❌ .env file not found"; \
+		exit 1; \
+	fi && \
+	SUPABASE_URL_DEV=$$(grep "^SUPABASE_URL_DEV=" .env | cut -d'=' -f2- | tr -d '"') && \
+	SUPABASE_DB_PASSWORD_DEV=$$(grep "^SUPABASE_DB_PASSWORD_DEV=" .env | cut -d'=' -f2- | tr -d '"') && \
+	if [ -z "$$SUPABASE_URL_DEV" ] || [ -z "$$SUPABASE_DB_PASSWORD_DEV" ]; then \
+		echo "❌ Missing dev database credentials in .env"; \
+		exit 1; \
+	fi && \
+	DST_HOST=$$(echo $$SUPABASE_URL_DEV | sed 's|https://||' | sed 's|http://||' | cut -d'/' -f1) && \
+	DST_PROJECT=$$(echo $$DST_HOST | cut -d'.' -f1) && \
+	echo "📊 Schema Import:" && \
+	echo "   Target: $$SUPABASE_URL_DEV ($$DST_PROJECT)" && \
+	echo "   Source: sql/exported_schema.sql" && \
+	echo "" && \
+	echo "⚠️  Note: Requires IPv6 connectivity to Supabase" && \
+	echo "🔧 Importing schema..." && \
+	PGPASSWORD="$$SUPABASE_DB_PASSWORD_DEV" psql -h db.$$DST_PROJECT.supabase.co -U postgres -d postgres -f sql/exported_schema.sql && \
+	echo "" && \
+	echo "✅ Schema imported successfully!" && \
+	echo "💡 Now you can run: make database-copy-prd-to-dev"
+
+database-init: ## Initialize database schema for dev environment using SQL files (usage: make database-init)
+	@echo "🗄️  Initializing dev database schema from SQL files..." && \
+	echo "" && \
+	echo "⚠️  Note: This command requires IPv6 connectivity" && \
+	echo "💡 Alternative: Copy sql/initial_schema.sql content to Supabase dashboard SQL editor" && \
+	echo "" && \
+	echo "📋 Manual steps:" && \
+	echo "1. Open: https://supabase.com/dashboard/project/$$(grep "^SUPABASE_URL_DEV=" .env | cut -d'=' -f2- | tr -d '"' | sed 's|https://||' | cut -d'.' -f1)/sql/new" && \
+	echo "2. Copy contents of sql/initial_schema.sql" && \
+	echo "3. Paste and click 'Run'" && \
+	echo "4. Repeat for each file in sql/migrations/ (in alphabetical order)"
+
 database-destroy: ## Display instructions to destroy database project (usage: make database-destroy CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	echo "🗑️  Database cleanup for '$$CLUSTER_LABEL' environment..." && \
