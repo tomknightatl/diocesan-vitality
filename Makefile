@@ -301,6 +301,8 @@ cluster-destroy: ## Step d: Destroy cluster (usage: make cluster-destroy CLUSTER
 	if $(MAKE) cluster-check CLUSTER_LABEL=$$CLUSTER_LABEL 2>/dev/null; then \
 		echo "🗑️  Deleting cluster $$CLUSTER_NAME (this may take several minutes)..." && \
 		$(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster delete $$CLUSTER_NAME --force" && \
+		echo "🧹 Cleaning up sealed secrets from repository..." && \
+		$(MAKE) _cleanup-sealed-secrets CLUSTER_LABEL=$$CLUSTER_LABEL && \
 		echo "✅ Step d Complete: Cluster $$CLUSTER_NAME deleted successfully"; \
 	else \
 		echo "ℹ️  Step d Complete: Cluster $$CLUSTER_NAME does not exist - nothing to destroy"; \
@@ -814,6 +816,32 @@ _commit-sealed-secrets: ## Commit all sealed secrets to repository
 		-m "🚀 ArgoCD will auto-deploy when synced from GitOps repository" && \
 	git push && \
 	echo "✅ All sealed secrets committed and pushed to repository"
+
+_cleanup-sealed-secrets: ## Delete sealed secrets from repository after cluster destroy
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🧹 Cleaning up sealed secrets for $$CLUSTER_LABEL environment..." && \
+	TUNNEL_SECRET="k8s/infrastructure/cloudflare-tunnel/environments/$$CLUSTER_LABEL/cloudflared-token-sealedsecret.yaml" && \
+	APP_SECRET="k8s/environments/$$CLUSTER_LABEL/diocesan-vitality-secrets-sealedsecret.yaml" && \
+	if [ -f "$$TUNNEL_SECRET" ]; then \
+		echo "🗑️  Removing tunnel sealed secret: $$TUNNEL_SECRET" && \
+		git rm "$$TUNNEL_SECRET" || rm -f "$$TUNNEL_SECRET"; \
+	fi && \
+	if [ -f "$$APP_SECRET" ]; then \
+		echo "🗑️  Removing application sealed secret: $$APP_SECRET" && \
+		git rm "$$APP_SECRET" || rm -f "$$APP_SECRET"; \
+	fi && \
+	if git diff --cached --quiet; then \
+		echo "ℹ️  No sealed secrets to clean up"; \
+	else \
+		echo "💾 Committing sealed secret cleanup..." && \
+		PRE_COMMIT_ALLOW_NO_CONFIG=1 git commit -m "🧹 Remove sealed secrets for $$CLUSTER_LABEL after cluster destroy" \
+			-m "These sealed secrets were encrypted with the old cluster's certificate" \
+			-m "and cannot be decrypted by a new cluster's sealed-secrets controller." \
+			-m "" \
+			-m "Run 'make sealed-secrets-create CLUSTER_LABEL=$$CLUSTER_LABEL' to regenerate" && \
+		git push && \
+		echo "✅ Sealed secrets cleaned up and changes pushed"; \
+	fi
 
 argocd-verify: ## Step 6: Verify ArgoCD server is accessible at its URL (usage: make argocd-verify CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
