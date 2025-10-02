@@ -5,6 +5,8 @@ metadata:
 spec:
   replicas: 1 # HPA will manage this
   revisionHistoryLimit: 1
+  strategy:
+    type: Recreate # Terminate old pod before creating new one (avoids anti-affinity conflicts)
   selector:
     matchLabels:
       app: pipeline
@@ -21,14 +23,16 @@ spec:
         doks.digitalocean.com/node-pool: fast-pool
       affinity:
         podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            - labelSelector:
-                matchExpressions:
-                  - key: app
-                    operator: In
-                    values:
-                      - pipeline
-              topologyKey: "kubernetes.io/hostname" # Ensures no 2 pipeline pods on same node
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - pipeline
+                topologyKey: "kubernetes.io/hostname" # Prefer not to run 2 pipeline pods on same node
       containers:
         - name: pipeline
           image: tomatl/diocesan-vitality:pipeline
