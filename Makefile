@@ -143,6 +143,15 @@ infra-setup: ## Set up complete infrastructure (8 core steps, usage: make infra-
 	$(MAKE) argocd-apps CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	$(MAKE) sealed-secrets-create CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	$(MAKE) tunnel-test CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	if [ "$$CLUSTER_LABEL" = "dev" ]; then \
+		echo "🗄️  Initializing dev database..." && \
+		echo "   Step 1: Extracting production schema to sql/initial_schema.sql" && \
+		$(MAKE) database-schema-refresh && \
+		echo "   Step 2: Applying schema and copying data to dev database" && \
+		$(MAKE) database-init-dev; \
+	fi && \
+	echo "🔍 Running final infrastructure verification..." && \
+	$(MAKE) infra-verify CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	echo "🎉 Complete infrastructure setup finished for $$CLUSTER_LABEL!"
 
 infra-destroy: ## Destroy complete infrastructure (usage: make infra-destroy CLUSTER_LABEL=dev [FORCE=yes])
@@ -191,6 +200,41 @@ infra-destroy: ## Destroy complete infrastructure (usage: make infra-destroy CLU
 	fi && \
 	echo "" && \
 	echo "✅ Infrastructure destruction complete for $$CLUSTER_LABEL"
+
+infra-verify: ## Verify infrastructure is working (usage: make infra-verify CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🔍 Verifying infrastructure for '$$CLUSTER_LABEL'..." && \
+	echo "" && \
+	echo "Testing URLs:" && \
+	echo "  UI:     https://$$CLUSTER_LABEL.ui.diocesanvitality.org" && \
+	echo "  API:    https://$$CLUSTER_LABEL.api.diocesanvitality.org" && \
+	echo "  ArgoCD: https://$$CLUSTER_LABEL.argocd.diocesanvitality.org" && \
+	echo "" && \
+	UI_STATUS=$$(curl -s -o /dev/null -w "%{http_code}" https://$$CLUSTER_LABEL.ui.diocesanvitality.org 2>/dev/null || echo "000") && \
+	API_STATUS=$$(curl -s -o /dev/null -w "%{http_code}" https://$$CLUSTER_LABEL.api.diocesanvitality.org/health 2>/dev/null || echo "000") && \
+	ARGOCD_STATUS=$$(curl -s -o /dev/null -w "%{http_code}" https://$$CLUSTER_LABEL.argocd.diocesanvitality.org 2>/dev/null || echo "000") && \
+	echo "Results:" && \
+	if [ "$$UI_STATUS" = "200" ] || [ "$$UI_STATUS" = "301" ] || [ "$$UI_STATUS" = "302" ]; then \
+		echo "  ✅ UI: $$UI_STATUS"; \
+	else \
+		echo "  ⚠️  UI: $$UI_STATUS (may still be deploying)"; \
+	fi && \
+	if [ "$$API_STATUS" = "200" ]; then \
+		echo "  ✅ API: $$API_STATUS"; \
+	else \
+		echo "  ⚠️  API: $$API_STATUS (may still be deploying)"; \
+	fi && \
+	if [ "$$ARGOCD_STATUS" = "200" ] || [ "$$ARGOCD_STATUS" = "307" ]; then \
+		echo "  ✅ ArgoCD: $$ARGOCD_STATUS"; \
+	else \
+		echo "  ⚠️  ArgoCD: $$ARGOCD_STATUS (may still be deploying)"; \
+	fi && \
+	echo "" && \
+	if [ "$$UI_STATUS" != "000" ] && [ "$$API_STATUS" != "000" ] && [ "$$ARGOCD_STATUS" != "000" ]; then \
+		echo "✅ Infrastructure verification complete - all services responding"; \
+	else \
+		echo "⚠️  Some services may still be deploying. Run 'make infra-verify CLUSTER_LABEL=$$CLUSTER_LABEL' again in a few minutes"; \
+	fi
 
 cluster-auth: ## Step a: A5uthenticate with DigitalOcean (usage: make cluster-auth)
 	@echo "🔍 Step a: Setting up DigitalOcean authentication..." && \
