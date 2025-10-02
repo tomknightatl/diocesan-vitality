@@ -423,7 +423,13 @@ const Dashboard = () => {
                       </Col>
                       <Col md={2} className="text-center">
                         <Badge bg="info">
-                          {workers.filter((w) => w.status === "running").length}{" "}
+                          {
+                            workers.filter(
+                              (w) =>
+                                w.worker_status === "active" ||
+                                w.worker_status === "recent",
+                            ).length
+                          }{" "}
                           active
                         </Badge>
                       </Col>
@@ -453,7 +459,11 @@ const Dashboard = () => {
 
                   {/* Active Workers */}
                   {workers
-                    .filter((w) => w.status === "running")
+                    .filter(
+                      (w) =>
+                        w.worker_status === "active" ||
+                        w.worker_status === "recent",
+                    )
                     .map((worker) => (
                       <div
                         key={worker.worker_id}
@@ -475,7 +485,7 @@ const Dashboard = () => {
                                 className="me-2"
                                 style={{ fontSize: "1.2em" }}
                               >
-                                {getWorkerStatusIcon(worker.status)}
+                                {getWorkerStatusIcon(worker.worker_status)}
                               </span>
                               <div>
                                 <h6 className="mb-0">{worker.worker_id}</h6>
@@ -523,8 +533,11 @@ const Dashboard = () => {
                     ))}
 
                   {/* No Workers Message */}
-                  {workers.filter((w) => w.status === "running").length ===
-                    0 && (
+                  {workers.filter(
+                    (w) =>
+                      w.worker_status === "active" ||
+                      w.worker_status === "recent",
+                  ).length === 0 && (
                     <div className="text-center py-4">
                       <div className="text-muted">
                         <i
@@ -543,12 +556,19 @@ const Dashboard = () => {
               </div>
 
               {/* Recent & Inactive Workers */}
-              {workers.filter((w) => w.status !== "running").length > 0 && (
+              {workers.filter(
+                (w) =>
+                  w.worker_status !== "active" && w.worker_status !== "recent",
+              ).length > 0 && (
                 <div className="mb-3">
                   <h6 className="text-muted mb-3">Recent & Inactive Workers</h6>
                   <div className="worker-list">
                     {workers
-                      .filter((w) => w.status !== "running")
+                      .filter(
+                        (w) =>
+                          w.worker_status !== "active" &&
+                          w.worker_status !== "recent",
+                      )
                       .map((worker) => (
                         <div
                           key={worker.worker_id}
@@ -562,7 +582,7 @@ const Dashboard = () => {
                                   className="me-2"
                                   style={{ fontSize: "1.2em" }}
                                 >
-                                  {getWorkerStatusIcon(worker.status)}
+                                  {getWorkerStatusIcon(worker.worker_status)}
                                 </span>
                                 <div>
                                   <h6 className="mb-0 text-muted">
@@ -576,8 +596,10 @@ const Dashboard = () => {
                               </div>
                             </Col>
                             <Col md={2} className="text-center">
-                              <Badge bg={getWorkerStatusBadge(worker.status)}>
-                                {worker.status}
+                              <Badge
+                                bg={getWorkerStatusBadge(worker.worker_status)}
+                              >
+                                {worker.worker_status}
                               </Badge>
                               <small className="text-muted d-block">
                                 Worker Status
