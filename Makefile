@@ -750,7 +750,8 @@ _create-tunnel-sealed-secret: ## Create tunnel token sealed secret
 	echo -n "$$TUNNEL_TOKEN" | kubectl create secret generic cloudflared-token \
 		--dry-run=client --from-file=tunnel-token=/dev/stdin \
 		--namespace=cloudflare-tunnel-$$CLUSTER_LABEL -o yaml | \
-	kubeseal -o yaml --namespace=cloudflare-tunnel-$$CLUSTER_LABEL > \
+	kubeseal --controller-namespace=kube-system --controller-name=sealed-secrets-controller \
+		-o yaml --namespace=cloudflare-tunnel-$$CLUSTER_LABEL > \
 		k8s/infrastructure/cloudflare-tunnel/environments/$$CLUSTER_LABEL/cloudflared-token-sealedsecret.yaml && \
 	echo "🔧 Updating kustomization to include sealed secret..." && \
 	$(MAKE) _update-kustomization-for-sealed-secret CLUSTER_LABEL=$$CLUSTER_LABEL && \
@@ -783,7 +784,8 @@ _create-application-sealed-secret: ## Create application secrets sealed secret
 		--from-literal=search-cx="$$SEARCH_CX" \
 		--namespace=diocesan-vitality-$$CLUSTER_LABEL \
 		--dry-run=client -o yaml | \
-	kubeseal -o yaml --namespace=diocesan-vitality-$$CLUSTER_LABEL > \
+	kubeseal --controller-namespace=kube-system --controller-name=sealed-secrets-controller \
+		-o yaml --namespace=diocesan-vitality-$$CLUSTER_LABEL > \
 		k8s/environments/$$CLUSTER_LABEL/diocesan-vitality-secrets-sealedsecret.yaml && \
 	echo "🔧 Adding sealed secret to kustomization..." && \
 	if ! grep -q "diocesan-vitality-secrets-sealedsecret.yaml" k8s/environments/$$CLUSTER_LABEL/kustomization.yaml; then \
