@@ -834,17 +834,37 @@ _create-application-sealed-secret: ## Create application secrets sealed secret
 		echo "❌ .env file not found. Please copy .env.example to .env and configure your secrets"; \
 		exit 1; \
 	fi && \
-	SUPABASE_URL=$$(grep "^SUPABASE_URL=" .env | cut -d'=' -f2- | tr -d '"') && \
-	SUPABASE_KEY=$$(grep "^SUPABASE_KEY=" .env | cut -d'=' -f2- | tr -d '"') && \
+	SUPABASE_URL_VAR="SUPABASE_URL" && \
+	SUPABASE_KEY_VAR="SUPABASE_KEY" && \
+	if [ "$$CLUSTER_LABEL" != "prd" ]; then \
+		ENV_SUFFIX=$$(echo $$CLUSTER_LABEL | tr '[:lower:]' '[:upper:]') && \
+		SUPABASE_URL_ENV=$$(grep "^SUPABASE_URL_$$ENV_SUFFIX=" .env 2>/dev/null | cut -d'=' -f2- | tr -d '"') && \
+		SUPABASE_KEY_ENV=$$(grep "^SUPABASE_KEY_$$ENV_SUFFIX=" .env 2>/dev/null | cut -d'=' -f2- | tr -d '"') && \
+		if [ -n "$$SUPABASE_URL_ENV" ] && [ -n "$$SUPABASE_KEY_ENV" ]; then \
+			echo "ℹ️  Using environment-specific database credentials (SUPABASE_URL_$$ENV_SUFFIX, SUPABASE_KEY_$$ENV_SUFFIX)"; \
+			SUPABASE_URL="$$SUPABASE_URL_ENV" && \
+			SUPABASE_KEY="$$SUPABASE_KEY_ENV"; \
+		else \
+			echo "⚠️  No environment-specific credentials found, falling back to production database"; \
+			echo "💡 To use isolated $$CLUSTER_LABEL database, run: make database-create CLUSTER_LABEL=$$CLUSTER_LABEL"; \
+			SUPABASE_URL=$$(grep "^SUPABASE_URL=" .env | cut -d'=' -f2- | tr -d '"') && \
+			SUPABASE_KEY=$$(grep "^SUPABASE_KEY=" .env | cut -d'=' -f2- | tr -d '"'); \
+		fi; \
+	else \
+		SUPABASE_URL=$$(grep "^SUPABASE_URL=" .env | cut -d'=' -f2- | tr -d '"') && \
+		SUPABASE_KEY=$$(grep "^SUPABASE_KEY=" .env | cut -d'=' -f2- | tr -d '"'); \
+	fi && \
 	GENAI_API_KEY=$$(grep "^GENAI_API_KEY=" .env | cut -d'=' -f2- | tr -d '"') && \
 	SEARCH_API_KEY=$$(grep "^SEARCH_API_KEY=" .env | cut -d'=' -f2- | tr -d '"') && \
 	SEARCH_CX=$$(grep "^SEARCH_CX=" .env | cut -d'=' -f2- | tr -d '"') && \
 	if [ -z "$$SUPABASE_URL" ] || [ -z "$$SUPABASE_KEY" ] || [ -z "$$GENAI_API_KEY" ] || [ -z "$$SEARCH_API_KEY" ] || [ -z "$$SEARCH_CX" ]; then \
 		echo "❌ Missing required secrets in .env file. Required:"; \
-		echo "   SUPABASE_URL, SUPABASE_KEY, GENAI_API_KEY, SEARCH_API_KEY, SEARCH_CX"; \
+		echo "   SUPABASE_URL, SUPABASE_KEY (or SUPABASE_URL_$$ENV_SUFFIX, SUPABASE_KEY_$$ENV_SUFFIX)"; \
+		echo "   GENAI_API_KEY, SEARCH_API_KEY, SEARCH_CX"; \
 		exit 1; \
 	fi && \
 	echo "✅ Loaded application secrets from .env file" && \
+	echo "   Database: $$SUPABASE_URL" && \
 	echo "🔐 Creating sealed secret for application..." && \
 	kubectl create secret generic diocesan-vitality-secrets \
 		--from-literal=supabase-url="$$SUPABASE_URL" \
@@ -917,6 +937,71 @@ _cleanup-sealed-secrets: ## Delete sealed secrets from repository after cluster 
 		git push && \
 		echo "✅ Sealed secrets cleaned up and changes pushed"; \
 	fi
+
+# Database Management
+# ===================
+
+database-create: ## Create environment-specific database project (usage: make database-create CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🗄️  Database setup for '$$CLUSTER_LABEL' environment..." && \
+	echo "" && \
+	if [ "$$CLUSTER_LABEL" = "prd" ]; then \
+		echo "ℹ️  Production uses the primary Supabase project (SUPABASE_URL, SUPABASE_KEY)"; \
+		echo "✅ No additional database setup needed for production"; \
+		exit 0; \
+	fi && \
+	echo "📋 Steps to create $$CLUSTER_LABEL database:" && \
+	echo "" && \
+	echo "1️⃣  Create new Supabase project:" && \
+	echo "   - Go to https://app.supabase.com/" && \
+	echo "   - Click 'New Project'" && \
+	echo "   - Name: diocesan-vitality-$$CLUSTER_LABEL" && \
+	echo "   - Database password: [generate secure password]" && \
+	echo "   - Region: [match production or select nearest]" && \
+	echo "" && \
+	echo "2️⃣  Copy schema from production (optional):" && \
+	echo "   - In production project, go to SQL Editor" && \
+	echo "   - Run: SELECT * FROM information_schema.tables WHERE table_schema = 'public'" && \
+	echo "   - Export schema using Database → Backup or pg_dump" && \
+	echo "   - Import into $$CLUSTER_LABEL project" && \
+	echo "" && \
+	echo "3️⃣  Get credentials from new project:" && \
+	echo "   - Go to Settings → API" && \
+	echo "   - Copy 'URL' → SUPABASE_URL_$$(echo $$CLUSTER_LABEL | tr '[:lower:]' '[:upper:]')" && \
+	echo "   - Copy 'anon/public key' → SUPABASE_KEY_$$(echo $$CLUSTER_LABEL | tr '[:lower:]' '[:upper:]')" && \
+	echo "" && \
+	echo "4️⃣  Update .env file:" && \
+	echo "   Add these lines to .env:" && \
+	echo "   SUPABASE_URL_$$(echo $$CLUSTER_LABEL | tr '[:lower:]' '[:upper:]')=<url>" && \
+	echo "   SUPABASE_KEY_$$(echo $$CLUSTER_LABEL | tr '[:lower:]' '[:upper:]')=<key>" && \
+	echo "" && \
+	echo "5️⃣  Regenerate sealed secrets with new credentials:" && \
+	echo "   make sealed-secrets-create CLUSTER_LABEL=$$CLUSTER_LABEL" && \
+	echo "" && \
+	echo "✅ After completing these steps, $$CLUSTER_LABEL will use its own isolated database"
+
+database-destroy: ## Display instructions to destroy database project (usage: make database-destroy CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🗑️  Database cleanup for '$$CLUSTER_LABEL' environment..." && \
+	echo "" && \
+	if [ "$$CLUSTER_LABEL" = "prd" ]; then \
+		echo "⚠️  Cannot destroy production database - manual action required"; \
+		echo "💡 Production database should never be automatically destroyed"; \
+		exit 1; \
+	fi && \
+	echo "⚠️  Manual steps to destroy $$CLUSTER_LABEL database:" && \
+	echo "" && \
+	echo "1️⃣  Delete Supabase project:" && \
+	echo "   - Go to https://app.supabase.com/" && \
+	echo "   - Select project: diocesan-vitality-$$CLUSTER_LABEL" && \
+	echo "   - Settings → General → Delete Project" && \
+	echo "" && \
+	echo "2️⃣  Optionally remove credentials from .env (manual cleanup):" && \
+	echo "   You may want to remove or comment out these lines in .env:" && \
+	echo "   SUPABASE_URL_$$(echo $$CLUSTER_LABEL | tr '[:lower:]' '[:upper:]')=..." && \
+	echo "   SUPABASE_KEY_$$(echo $$CLUSTER_LABEL | tr '[:lower:]' '[:upper:]')=..." && \
+	echo "" && \
+	echo "✅ Database cleanup instructions displayed for $$CLUSTER_LABEL"
 
 argocd-verify: ## Step 6: Verify ArgoCD server is accessible at its URL (usage: make argocd-verify CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
