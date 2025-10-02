@@ -142,7 +142,7 @@ infra-setup: ## Set up complete infrastructure (8 core steps, usage: make infra-
 	$(MAKE) argocd-install CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	$(MAKE) argocd-apps CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	$(MAKE) sealed-secrets-create CLUSTER_LABEL=$$CLUSTER_LABEL && \
-	$(MAKE) infra-test CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	$(MAKE) tunnel-test CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	echo "🎉 Complete infrastructure setup finished for $$CLUSTER_LABEL!"
 
 infra-destroy: ## Destroy complete infrastructure (usage: make infra-destroy CLUSTER_LABEL=dev [FORCE=yes])
@@ -726,6 +726,76 @@ sealed-secrets-create: ## Step 4: Create sealed secrets for tunnel and applicati
 	$(MAKE) _commit-sealed-secrets CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	echo "" && \
 	echo "✅ Step 4 Complete: All sealed secrets created for $$CLUSTER_LABEL"
+
+tunnel-test: ## Step 5: Test Cloudflare tunnel health (usage: make tunnel-test CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🔍 Step 5: Testing Cloudflare tunnel health for '$$CLUSTER_LABEL'..." && \
+	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
+	echo "" && \
+	echo "🔍 Part 1: Checking sealed secrets status..." && \
+	TUNNEL_SECRET_STATUS=$$(kubectl get sealedsecret cloudflared-token -n cloudflare-tunnel-$$CLUSTER_LABEL -o jsonpath='{.status.conditions[0].type}' 2>/dev/null || echo "NotFound") && \
+	APP_SECRET_STATUS=$$(kubectl get sealedsecret diocesan-vitality-secrets -n diocesan-vitality-$$CLUSTER_LABEL -o jsonpath='{.status.conditions[0].type}' 2>/dev/null || echo "NotFound") && \
+	if [ "$$TUNNEL_SECRET_STATUS" = "NotFound" ]; then \
+		echo "❌ Tunnel sealed secret not found in cloudflare-tunnel-$$CLUSTER_LABEL namespace"; \
+		exit 1; \
+	fi && \
+	if [ "$$APP_SECRET_STATUS" = "NotFound" ]; then \
+		echo "❌ Application sealed secret not found in diocesan-vitality-$$CLUSTER_LABEL namespace"; \
+		exit 1; \
+	fi && \
+	echo "✅ Sealed secrets exist in cluster" && \
+	echo "" && \
+	echo "🔍 Part 2: Verifying secrets were decrypted..." && \
+	if ! kubectl get secret cloudflared-token -n cloudflare-tunnel-$$CLUSTER_LABEL >/dev/null 2>&1; then \
+		echo "❌ Tunnel secret not decrypted (Secret object not found)"; \
+		echo "💡 Check sealed-secrets controller logs: kubectl logs -n kube-system deployment/sealed-secrets-controller"; \
+		exit 1; \
+	fi && \
+	if ! kubectl get secret diocesan-vitality-secrets -n diocesan-vitality-$$CLUSTER_LABEL >/dev/null 2>&1; then \
+		echo "❌ Application secrets not decrypted (Secret object not found)"; \
+		echo "💡 Check sealed-secrets controller logs: kubectl logs -n kube-system deployment/sealed-secrets-controller"; \
+		exit 1; \
+	fi && \
+	echo "✅ Secrets successfully decrypted by sealed-secrets controller" && \
+	echo "" && \
+	echo "🔍 Part 3: Checking tunnel pod status..." && \
+	if ! kubectl get pods -n cloudflare-tunnel-$$CLUSTER_LABEL -l app=cloudflared >/dev/null 2>&1; then \
+		echo "❌ No tunnel pods found"; \
+		echo "💡 Check ApplicationSet: kubectl get applicationset cloudflare-tunnel-$$CLUSTER_LABEL-applicationset -n argocd"; \
+		exit 1; \
+	fi && \
+	TUNNEL_POD_STATUS=$$(kubectl get pods -n cloudflare-tunnel-$$CLUSTER_LABEL -l app=cloudflared -o jsonpath='{.items[0].status.phase}' 2>/dev/null) && \
+	TUNNEL_POD_READY=$$(kubectl get pods -n cloudflare-tunnel-$$CLUSTER_LABEL -l app=cloudflared -o jsonpath='{.items[0].status.containerStatuses[0].ready}' 2>/dev/null) && \
+	if [ "$$TUNNEL_POD_STATUS" != "Running" ] || [ "$$TUNNEL_POD_READY" != "true" ]; then \
+		echo "❌ Tunnel pod not healthy (Status: $$TUNNEL_POD_STATUS, Ready: $$TUNNEL_POD_READY)"; \
+		echo "💡 Check pod logs: kubectl logs -n cloudflare-tunnel-$$CLUSTER_LABEL -l app=cloudflared"; \
+		exit 1; \
+	fi && \
+	echo "✅ Tunnel pod is Running and Ready" && \
+	echo "" && \
+	echo "🔍 Part 4: Verifying tunnel connectivity..." && \
+	TUNNEL_LOGS=$$(kubectl logs -n cloudflare-tunnel-$$CLUSTER_LABEL -l app=cloudflared --tail=50 2>/dev/null) && \
+	if echo "$$TUNNEL_LOGS" | grep -q "Connection.*registered"; then \
+		echo "✅ Tunnel successfully registered with Cloudflare edge"; \
+	elif echo "$$TUNNEL_LOGS" | grep -q "error.*authentication\|error.*token"; then \
+		echo "❌ Tunnel authentication error detected"; \
+		echo "💡 Check tunnel token: make tunnel-verify CLUSTER_LABEL=$$CLUSTER_LABEL"; \
+		exit 1; \
+	else \
+		echo "⚠️  Unable to confirm tunnel registration (logs may be insufficient)"; \
+	fi && \
+	echo "" && \
+	echo "✅ Step 5 Complete: Tunnel health check passed for $$CLUSTER_LABEL" && \
+	echo "" && \
+	echo "📊 Tunnel Status Summary:" && \
+	echo "   Tunnel Pod: $$(kubectl get pods -n cloudflare-tunnel-$$CLUSTER_LABEL -l app=cloudflared -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)" && \
+	echo "   Status: $$TUNNEL_POD_STATUS" && \
+	echo "   Ready: $$TUNNEL_POD_READY" && \
+	echo "" && \
+	echo "🌐 Expected URLs:" && \
+	echo "   Frontend: https://$${CLUSTER_LABEL}ui.diocesanvitality.org" && \
+	echo "   Backend:  https://$${CLUSTER_LABEL}api.diocesanvitality.org" && \
+	echo "   ArgoCD:   https://$${CLUSTER_LABEL}argocd.diocesanvitality.org"
 
 _create-tunnel-sealed-secret: ## Create tunnel token sealed secret
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
