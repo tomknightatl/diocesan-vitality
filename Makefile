@@ -516,9 +516,9 @@ tunnel-dns: ## Step k: Setup tunnel DNS and public hostnames (usage: make tunnel
 	echo "   Tunnel Name: $$TUNNEL_NAME" && \
 	echo "   Tunnel ID: $$TUNNEL_ID" && \
 	echo "   Public Hostnames:" && \
-	echo "     - $$CLUSTER_LABEL.ui.diocesanvitality.org (→ frontend-service.diocesan-vitality-$$CLUSTER_LABEL.svc.cluster.local:80)" && \
-	echo "     - $$CLUSTER_LABEL.api.diocesanvitality.org (→ backend-service.diocesan-vitality-$$CLUSTER_LABEL.svc.cluster.local:8000)" && \
-	echo "     - $$CLUSTER_LABEL.argocd.diocesanvitality.org (→ argocd-server.argocd:80)" && \
+	echo "     - $${CLUSTER_LABEL}ui.diocesanvitality.org (→ frontend-service.diocesan-vitality-$$CLUSTER_LABEL.svc.cluster.local:80)" && \
+	echo "     - $${CLUSTER_LABEL}api.diocesanvitality.org (→ backend-service.diocesan-vitality-$$CLUSTER_LABEL.svc.cluster.local:8000)" && \
+	echo "     - $${CLUSTER_LABEL}argocd.diocesanvitality.org (→ argocd-server.argocd:80)" && \
 	echo "✅ Step 8 Complete: Tunnel DNS records and SSL certificates configured"
 
 tunnel-dns-destroy: ## Step 8b: Remove tunnel DNS records (usage: make tunnel-dns-destroy CLUSTER_LABEL=dev)
@@ -620,6 +620,9 @@ argocd-install: ## Step 9: Install ArgoCD via Helm (usage: make argocd-install C
 	@$(MAKE) _setup-argocd-password CLUSTER_LABEL=$$CLUSTER_LABEL
 	@echo "🏷️  Registering cluster with ArgoCD..."
 	@$(MAKE) _register-cluster-with-argocd CLUSTER_LABEL=$$CLUSTER_LABEL
+	@echo "🚀 Deploying root ApplicationSets..."
+	@kubectl apply -f k8s/argocd/root-applicationsets-$$CLUSTER_LABEL.yaml
+	@echo "✅ Root ApplicationSets deployed - ArgoCD will now manage infrastructure"
 	@echo "✅ Step 9 Complete: ArgoCD installed via Helm for $$CLUSTER_LABEL"
 
 _register-cluster-with-argocd: ## Register current cluster with ArgoCD with proper labels
