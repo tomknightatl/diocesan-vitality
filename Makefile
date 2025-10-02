@@ -789,7 +789,7 @@ _create-application-sealed-secret: ## Create application secrets sealed secret
 	fi && \
 	echo "💾 Committing application sealed secret to repository..." && \
 	git add k8s/environments/$$CLUSTER_LABEL/ && \
-	git commit -m "Add application sealed secret for diocesan-vitality-$$CLUSTER_LABEL - Contains encrypted supabase-url, supabase-key, genai-api-key, search-api-key, search-cx" && \
+	PRE_COMMIT_ALLOW_NO_CONFIG=1 git commit -m "Add application sealed secret for diocesan-vitality-$$CLUSTER_LABEL - Contains encrypted supabase-url, supabase-key, genai-api-key, search-api-key, search-cx" && \
 	git push && \
 	echo "✅ Application sealed secret created and committed"
 
@@ -799,7 +799,7 @@ _commit-sealed-secrets: ## Commit all sealed secrets to repository
 	git add k8s/infrastructure/cloudflare-tunnel/environments/$$CLUSTER_LABEL/ || true && \
 	git add k8s/environments/$$CLUSTER_LABEL/ && \
 	echo "💾 Committing sealed secrets to repository..." && \
-	git commit -m "🔐 Add sealed secrets for $$CLUSTER_LABEL environment" \
+	PRE_COMMIT_ALLOW_NO_CONFIG=1 git commit -m "🔐 Add sealed secrets for $$CLUSTER_LABEL environment" \
 		-m "✅ Tunnel Secret:" \
 		-m "- cloudflared-token: Encrypted tunnel token for Cloudflare tunnel" \
 		-m "" \
