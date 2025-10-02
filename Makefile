@@ -794,6 +794,7 @@ _create-application-sealed-secret: ## Create application secrets sealed secret
 	echo "💾 Committing application sealed secret to repository..." && \
 	git add k8s/environments/$$CLUSTER_LABEL/ && \
 	PRE_COMMIT_ALLOW_NO_CONFIG=1 git commit -m "Add application sealed secret for diocesan-vitality-$$CLUSTER_LABEL - Contains encrypted supabase-url, supabase-key, genai-api-key, search-api-key, search-cx" && \
+	git pull --rebase && \
 	git push && \
 	echo "✅ Application sealed secret created and committed"
 
@@ -816,6 +817,7 @@ _commit-sealed-secrets: ## Commit all sealed secrets to repository
 		-m "" \
 		-m "🔒 All secrets encrypted with cluster-specific sealed-secrets key" \
 		-m "🚀 ArgoCD will auto-deploy when synced from GitOps repository" && \
+	git pull --rebase && \
 	git push && \
 	echo "✅ All sealed secrets committed and pushed to repository"
 
@@ -841,6 +843,7 @@ _cleanup-sealed-secrets: ## Delete sealed secrets from repository after cluster 
 			-m "and cannot be decrypted by a new cluster's sealed-secrets controller." \
 			-m "" \
 			-m "Run 'make sealed-secrets-create CLUSTER_LABEL=$$CLUSTER_LABEL' to regenerate" && \
+		git pull --rebase && \
 		git push && \
 		echo "✅ Sealed secrets cleaned up and changes pushed"; \
 	fi
