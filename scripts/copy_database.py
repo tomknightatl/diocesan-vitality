@@ -8,6 +8,7 @@ import sys
 import os
 from supabase import create_client, Client
 
+
 def main():
     # Get credentials from environment variables
     src_url = os.environ.get('SUPABASE_URL_PRD')
@@ -60,6 +61,7 @@ def main():
     print('')
     print(f'✅ Database copy complete! Total rows: {total_copied}')
     print(f'💡 Verify in Supabase dashboard: {dst_url}')
+
 
 if __name__ == '__main__':
     main()
