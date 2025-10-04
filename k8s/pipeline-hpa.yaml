@@ -9,22 +9,22 @@ spec:
     kind: Deployment
     name: pipeline-deployment
   minReplicas: 1
-  maxReplicas: 1  # Fixed to 1 pod for consistent single-worker operation
+  maxReplicas: 5 # Scale up to 5 pods based on workload
   metrics:
-  # Scale based on CPU usage
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 70  # Restored to normal threshold
-  # Scale based on memory usage
-  - type: Resource
-    resource:
-      name: memory
-      target:
-        type: Utilization
-        averageUtilization: 80
+    # Scale based on CPU usage
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70 # Restored to normal threshold
+    # Scale based on memory usage
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
   # Custom metric: scale based on available work
   # This requires a custom metrics adapter (like prometheus-adapter)
   # - type: Object
@@ -40,19 +40,19 @@ spec:
   #       name: backend-service
   behavior:
     scaleDown:
-      stabilizationWindowSeconds: 300  # Wait 5 minutes before scaling down
+      stabilizationWindowSeconds: 300 # Wait 5 minutes before scaling down
       policies:
-      - type: Pods
-        value: 1     # Scale down by exactly 1 pod at a time
-        periodSeconds: 60
-      selectPolicy: Min  # Use the single pod policy (no percentage scaling)
+        - type: Pods
+          value: 1 # Scale down by exactly 1 pod at a time
+          periodSeconds: 60
+      selectPolicy: Min # Use the single pod policy (no percentage scaling)
     scaleUp:
-      stabilizationWindowSeconds: 60   # Wait 1 minute before scaling up
+      stabilizationWindowSeconds: 60 # Wait 1 minute before scaling up
       policies:
-      - type: Pods
-        value: 1     # Scale up by exactly 1 pod at a time
-        periodSeconds: 60
-      selectPolicy: Max  # Use the single pod policy (no percentage scaling)
+        - type: Pods
+          value: 1 # Scale up by exactly 1 pod at a time
+          periodSeconds: 60
+      selectPolicy: Max # Use the single pod policy (no percentage scaling)
 ---
 # Pod Disruption Budget to ensure availability during scaling
 apiVersion: policy/v1
