@@ -1928,18 +1928,18 @@ class IframeExtractor(BaseExtractor):
         # EXCLUSION LIST: Payment processors, analytics, and non-parish iframes
         # Issue #163 Fix: Prevent false detection of Stripe payment iframes
         excluded_services = [
-            "stripe.com",           # Stripe payment processor
-            "js.stripe.com",        # Stripe JavaScript SDK
+            "stripe.com",  # Stripe payment processor
+            "js.stripe.com",  # Stripe JavaScript SDK
             "checkout.stripe.com",  # Stripe checkout
-            "m.stripe.com",         # Stripe mobile
-            "paypal.com",           # PayPal payment processor
-            "square.com",           # Square payment processor
-            "analytics.google.com", # Google Analytics
-            "googletagmanager.com", # Google Tag Manager
-            "facebook.com",         # Facebook widgets
-            "twitter.com",          # Twitter widgets
-            "instagram.com",        # Instagram embeds
-            "youtube.com",          # YouTube embeds (usually not parish directories)
+            "m.stripe.com",  # Stripe mobile
+            "paypal.com",  # PayPal payment processor
+            "square.com",  # Square payment processor
+            "analytics.google.com",  # Google Analytics
+            "googletagmanager.com",  # Google Tag Manager
+            "facebook.com",  # Facebook widgets
+            "twitter.com",  # Twitter widgets
+            "instagram.com",  # Instagram embeds
+            "youtube.com",  # YouTube embeds (usually not parish directories)
         ]
 
         # Check exclusions first - if excluded, return False immediately
