@@ -15,6 +15,7 @@ This guide explains how to deploy code changes through the Development → Stagi
 ## Overview
 
 Our deployment workflow follows **GitOps principles** where:
+
 - ✅ Git is the single source of truth
 - ✅ All deployments are triggered by Git commits
 - ✅ ArgoCD automatically syncs cluster state with Git
@@ -30,6 +31,7 @@ Developer Push → CI/CD Builds Images → Updates Git Manifests → ArgoCD Sync
 ## Environment Architecture
 
 ### 🧪 Development Environment
+
 - **Cluster**: `do-nyc2-dv-dev`
 - **Branch**: `develop`
 - **Namespace**: `diocesan-vitality-dev`
@@ -42,6 +44,7 @@ Developer Push → CI/CD Builds Images → Updates Git Manifests → ArgoCD Sync
   - ArgoCD: https://dev.argocd.diocesanvitality.org
 
 ### 🎭 Staging Environment
+
 - **Cluster**: `do-nyc2-dv-stg`
 - **Branch**: `main`
 - **Namespace**: `diocesan-vitality-staging`
@@ -54,6 +57,7 @@ Developer Push → CI/CD Builds Images → Updates Git Manifests → ArgoCD Sync
   - ArgoCD: https://stg.argocd.diocesanvitality.org
 
 ### 🚀 Production Environment
+
 - **Cluster**: `do-nyc2-dv-prd`
 - **Branch**: `main`
 - **Namespace**: `diocesan-vitality`
@@ -140,6 +144,7 @@ Developer Push → CI/CD Builds Images → Updates Git Manifests → ArgoCD Sync
 **When to use**: Feature development, bug fixes, experimental changes
 
 1. **Create/work on feature branch:**
+
    ```bash
    git checkout develop
    git pull origin develop
@@ -166,6 +171,7 @@ Developer Push → CI/CD Builds Images → Updates Git Manifests → ArgoCD Sync
    - ✅ ArgoCD detects change and syncs to cluster
 
 4. **Verify deployment:**
+
    ```bash
    # Check ArgoCD sync status
    # Visit: https://dev.argocd.diocesanvitality.org
@@ -190,12 +196,14 @@ Developer Push → CI/CD Builds Images → Updates Git Manifests → ArgoCD Sync
 **When to use**: After dev testing is complete, ready for pre-production validation
 
 1. **Ensure develop is stable:**
+
    ```bash
    # Make sure all tests pass in dev
    # Verify dev environment is working correctly
    ```
 
 2. **Merge develop to main:**
+
    ```bash
    git checkout main
    git pull origin main
@@ -216,6 +224,7 @@ Developer Push → CI/CD Builds Images → Updates Git Manifests → ArgoCD Sync
    - ✅ ArgoCD detects change and syncs to cluster
 
 4. **Verify staging deployment:**
+
    ```bash
    # Check ArgoCD sync status
    # Visit: https://stg.argocd.diocesanvitality.org
@@ -281,6 +290,7 @@ Developer Push → CI/CD Builds Images → Updates Git Manifests → ArgoCD Sync
    - ✅ ArgoCD detects change and syncs to cluster
 
 6. **Verify production deployment:**
+
    ```bash
    # Check ArgoCD sync status
    # Visit: https://prd.argocd.diocesanvitality.org
@@ -309,9 +319,9 @@ Developer Push → CI/CD Builds Images → Updates Git Manifests → ArgoCD Sync
 
 Each environment has its own ArgoCD instance for monitoring GitOps sync status:
 
-- **Development**: https://dev.argocd.diocesanvitality.org
-- **Staging**: https://stg.argocd.diocesanvitality.org
-- **Production**: https://prd.argocd.diocesanvitality.org
+- **Development**: https://devargocd.diocesanvitality.org
+- **Staging**: https://stgargocd.diocesanvitality.org
+- **Production**: https://argocd.diocesanvitality.org
 
 **Login credentials**: See `.argocd-admin-password` file or GitHub secrets
 
@@ -335,6 +345,7 @@ Each environment has its own ArgoCD instance for monitoring GitOps sync status:
 ### GitHub Actions Monitoring
 
 Monitor CI/CD pipeline progress:
+
 - **All workflows**: https://github.com/tomknightatl/diocesan-vitality/actions
 - **Specific workflow**: Click on workflow run to see detailed logs
 
@@ -399,11 +410,11 @@ If Git is unavailable or you need immediate rollback:
 
 ## Rollback Timeline
 
-| Method | Speed | Git Updated | Recommended For |
-|--------|-------|-------------|-----------------|
-| Git Revert | ~5 min | ✅ Yes | Preferred method |
-| Git Checkout | ~5 min | ✅ Yes | Specific version rollback |
-| ArgoCD UI | ~1 min | ❌ No (manual fix needed) | Emergency only |
+| Method       | Speed  | Git Updated               | Recommended For           |
+| ------------ | ------ | ------------------------- | ------------------------- |
+| Git Revert   | ~5 min | ✅ Yes                    | Preferred method          |
+| Git Checkout | ~5 min | ✅ Yes                    | Specific version rollback |
+| ArgoCD UI    | ~1 min | ❌ No (manual fix needed) | Emergency only            |
 
 ---
 
@@ -414,6 +425,7 @@ If Git is unavailable or you need immediate rollback:
 **Symptoms**: Push to `develop` or `main` doesn't start workflow
 
 **Solutions**:
+
 ```bash
 # 1. Check if workflow file is valid
 # Go to: https://github.com/tomknightatl/diocesan-vitality/actions
@@ -432,6 +444,7 @@ cat .github/workflows/multi-cluster-ci-cd.yml | grep -A 5 "on:"
 **Symptoms**: ArgoCD says cluster is out of sync with Git
 
 **Solutions**:
+
 ```bash
 # 1. Check what's different
 # In ArgoCD UI, click "App Diff" to see differences
@@ -450,6 +463,7 @@ kubectl logs -n argocd deployment/argocd-application-controller
 **Symptoms**: Pods keep restarting or won't reach Ready state
 
 **Solutions**:
+
 ```bash
 # 1. Check pod status
 kubectl get pods -n diocesan-vitality-dev  # or staging/production
@@ -473,6 +487,7 @@ kubectl describe pod -n diocesan-vitality-dev <pod-name>
 **Symptoms**: Old code still running after deployment
 
 **Solutions**:
+
 ```bash
 # 1. Check kustomization.yaml was actually updated
 git show HEAD:k8s/environments/development/kustomization.yaml
@@ -494,6 +509,7 @@ kubectl rollout restart deployment/backend-deployment -n diocesan-vitality-dev
 **Symptoms**: Workflow doesn't pause for approval
 
 **Solutions**:
+
 1. Check GitHub environment protection rules are configured
 2. Go to: Repository Settings → Environments → production
 3. Ensure "Required reviewers" is enabled
@@ -525,19 +541,19 @@ kubectl rollout restart deployment/backend-deployment -n diocesan-vitality-dev
 
 ### URLs Quick Reference
 
-| Environment | Frontend | Backend | ArgoCD |
-|-------------|----------|---------|--------|
+| Environment | Frontend                            | Backend                              | ArgoCD                                  |
+| ----------- | ----------------------------------- | ------------------------------------ | --------------------------------------- |
 | Development | https://dev.ui.diocesanvitality.org | https://dev.api.diocesanvitality.org | https://dev.argocd.diocesanvitality.org |
-| Staging | https://stg.ui.diocesanvitality.org | https://stg.api.diocesanvitality.org | https://stg.argocd.diocesanvitality.org |
-| Production | https://diocesanvitality.org | https://api.diocesanvitality.org | https://prd.argocd.diocesanvitality.org |
+| Staging     | https://stg.ui.diocesanvitality.org | https://stg.api.diocesanvitality.org | https://stg.argocd.diocesanvitality.org |
+| Production  | https://diocesanvitality.org        | https://api.diocesanvitality.org     | https://prd.argocd.diocesanvitality.org |
 
 ### Branch → Environment Mapping
 
-| Branch | Environment | Auto-Deploy | Approval |
-|--------|-------------|-------------|----------|
-| `develop` | Development | ✅ Yes | ❌ No |
-| `main` | Staging | ✅ Yes | ❌ No |
-| `main` (manual) | Production | ❌ No | ✅ Yes |
+| Branch          | Environment | Auto-Deploy | Approval |
+| --------------- | ----------- | ----------- | -------- |
+| `develop`       | Development | ✅ Yes      | ❌ No    |
+| `main`          | Staging     | ✅ Yes      | ❌ No    |
+| `main` (manual) | Production  | ❌ No       | ✅ Yes   |
 
 ---
 
@@ -578,6 +594,7 @@ kubectl rollout restart deployment/backend-deployment -n diocesan-vitality-dev
 ## Support
 
 **Questions or issues?**
+
 - Check the troubleshooting section above
 - Review ArgoCD logs and application logs
 - Open an issue on GitHub: https://github.com/tomknightatl/diocesan-vitality/issues
