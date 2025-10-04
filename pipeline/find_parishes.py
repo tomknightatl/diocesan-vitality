@@ -33,7 +33,7 @@ from core.db_batch_operations import get_batch_manager
 from core.driver import close_driver, ensure_driver_available, recover_driver, setup_driver
 from core.logger import get_logger
 from core.utils import normalize_url_join
-from respectful_automation import RespectfulAutomation, create_blocking_report
+from pipeline.respectful_automation import RespectfulAutomation, create_blocking_report
 
 logger = get_logger(__name__)
 

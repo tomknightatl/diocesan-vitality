@@ -42,7 +42,7 @@ from core.parish_validation import filter_valid_parishes
 from extractors.enhanced_ai_fallback_extractor import EnhancedAIFallbackExtractor
 
 # Import core components from the companion module
-from parish_extraction_core import (
+from pipeline.parish_extraction_core import (
     BaseExtractor,
     DiocesePlatform,
     DioceseSitePattern,
@@ -3264,7 +3264,7 @@ import requests
 
 from core.db import get_supabase_client
 from core.logger import get_logger
-from parish_extraction_core import ParishData
+from pipeline.parish_extraction_core import ParishData
 
 logger = get_logger(__name__)
 
