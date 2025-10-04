@@ -494,7 +494,11 @@ class ParishFinderExtractor(BaseExtractor):
                         parishes.append(parish_data)
                         logger.info(f"      ✅ Extracted: {parish_data.name}")
                     else:
+                        # Enhanced diagnostic logging - show WHY element was rejected
                         logger.warning(f"      ⚠️ Skipped element {i}: No valid parish data")
+                        # Log first 3 rejected elements for debugging
+                        if i <= 3:
+                            logger.info(f"         Debug - Element {i} HTML preview: {str(element)[:200]}...")
 
                 except Exception as e:
                     logger.error(f"      ❌ Error processing element {i}: {str(e)[:50]}...")
@@ -536,6 +540,10 @@ class ParishFinderExtractor(BaseExtractor):
                     if first_span:
                         name = self.clean_text(first_span.get_text())
 
+            # DIAGNOSTIC: Log raw extracted data for first 3 elements
+            if element_num <= 3:
+                logger.info(f"         Debug Element {element_num} - Raw name extracted: '{name}'")
+
             # Use the new cleaning function to separate name and address components
             cleaned_data = clean_parish_name_and_extract_address(name)
             clean_name = cleaned_data["name"]
@@ -546,8 +554,17 @@ class ParishFinderExtractor(BaseExtractor):
             base_full_address = cleaned_data["full_address"]
             distance_miles = cleaned_data["distance_miles"]
 
+            # DIAGNOSTIC: Log cleaned data for first 3 elements
+            if element_num <= 3:
+                logger.info(f"         Debug Element {element_num} - After cleaning:")
+                logger.info(f"            Name: '{clean_name}'")
+                logger.info(f"            Address: '{base_street_address}'")
+                logger.info(f"            City: '{base_city}', State: '{base_state}', Zip: '{base_zip_code}'")
+
             # Re-evaluate name after cleaning
             if not clean_name or len(clean_name) < 3:
+                if element_num <= 3:
+                    logger.warning(f"         Debug Element {element_num} - REJECTED: Name too short or missing")
                 return None
 
             # Skip non-parish entries based on the cleaned name
@@ -1908,6 +1925,28 @@ class IframeExtractor(BaseExtractor):
 
         src_lower = src.lower()
 
+        # EXCLUSION LIST: Payment processors, analytics, and non-parish iframes
+        # Issue #163 Fix: Prevent false detection of Stripe payment iframes
+        excluded_services = [
+            "stripe.com",  # Stripe payment processor
+            "js.stripe.com",  # Stripe JavaScript SDK
+            "checkout.stripe.com",  # Stripe checkout
+            "m.stripe.com",  # Stripe mobile
+            "paypal.com",  # PayPal payment processor
+            "square.com",  # Square payment processor
+            "analytics.google.com",  # Google Analytics
+            "googletagmanager.com",  # Google Tag Manager
+            "facebook.com",  # Facebook widgets
+            "twitter.com",  # Twitter widgets
+            "instagram.com",  # Instagram embeds
+            "youtube.com",  # YouTube embeds (usually not parish directories)
+        ]
+
+        # Check exclusions first - if excluded, return False immediately
+        if any(excluded in src_lower for excluded in excluded_services):
+            logger.debug(f"      🚫 Excluded iframe (payment/analytics): {src[:80]}...")
+            return False
+
         # Specific services known to host parish directories
         mapping_services = ["maptive.com", "google.com/maps", "mapbox.com", "arcgis.com", "openstreetmap"]
 
@@ -2903,28 +2942,50 @@ class NavigationExtractor(BaseExtractor):
         parishes = []
 
         try:
-            # Look for direct links to parish directories
+            # Look for direct links to parish directories - EXPANDED patterns
             directory_patterns = [
                 r"parish.*director",
                 r"church.*director",
                 r"find.*parish",
                 r"locate.*church",
                 r"director.*parish",
+                r"parish.*list",
+                r"all.*parish",
+                r"parish.*search",
+                r"parish.*finder",
+                r"locate.*parish",
             ]
 
             all_links = soup.find_all("a", href=True)
 
+            # Score links by relevance
+            scored_links = []
             for link in all_links:
                 href = link.get("href", "")
                 text = link.get_text().strip().lower()
 
-                if any(re.search(pattern, text) or re.search(pattern, href.lower()) for pattern in directory_patterns):
-                    full_url = self._resolve_url(href, driver.current_url)
-                    logger.info(f"    🔗 Found potential parish directory link: {text} -> {full_url}")
+                # Calculate relevance score
+                score = 0
+                if any(re.search(pattern, text) for pattern in directory_patterns):
+                    score += 3
+                if any(re.search(pattern, href.lower()) for pattern in directory_patterns):
+                    score += 2
+                if "parish" in text or "church" in text:
+                    score += 1
 
-                    parishes = self._follow_parish_directory_link(driver, full_url)
-                    if parishes:
-                        return parishes
+                if score > 0:
+                    scored_links.append((score, text, href))
+
+            # Sort by score (highest first) and try the most relevant links
+            scored_links.sort(reverse=True, key=lambda x: x[0])
+
+            for score, text, href in scored_links[:5]:  # Try top 5 links
+                full_url = self._resolve_url(href, driver.current_url)
+                logger.info(f"    🔗 Found potential parish directory link: {text} -> {full_url}")
+
+                parishes = self._follow_parish_directory_link(driver, full_url)
+                if parishes:
+                    return parishes
 
         except Exception as e:
             logger.error(f"    ⚠️ Directory links error: {str(e)[:100]}...")
@@ -3594,6 +3655,39 @@ def test_pdf_extractor():
             print(f"    City: {parish.city}")
         if parish.phone:
             print(f"    Phone: {parish.phone}")
+
+
+def get_extractor_for_pattern(pattern: DioceseSitePattern) -> BaseExtractor:
+    """
+    Factory function to select the appropriate extractor based on the detected pattern.
+
+    Args:
+        pattern: DioceseSitePattern object from PatternDetector
+
+    Returns:
+        Appropriate extractor instance for the detected pattern
+    """
+    extraction_method = pattern.extraction_method
+
+    # Map extraction methods to extractor classes
+    extractor_map = {
+        "diocese_card_extraction_with_details": EnhancedDiocesesCardExtractor,
+        "parish_finder_extraction": ParishFinderExtractor,
+        "table_extraction": TableExtractor,
+        "interactive_map_extraction": ImprovedInteractiveMapExtractor,
+        "iframe_extraction": IframeExtractor,
+        "navigation_extraction": NavigationExtractor,
+        "pdf_extraction": PDFDirectoryExtractor,
+        "generic_extraction": ImprovedGenericExtractor,
+        "squarespace_extraction": ImprovedGenericExtractor,  # Use generic for Squarespace
+    }
+
+    # Get the extractor class, defaulting to generic if not found
+    extractor_class = extractor_map.get(extraction_method, ImprovedGenericExtractor)
+
+    logger.info(f"    🔧 Selected extractor: {extractor_class.__name__} for method '{extraction_method}'")
+
+    return extractor_class(pattern)
 
 
 if __name__ == "__main__":

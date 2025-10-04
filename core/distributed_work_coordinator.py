@@ -154,25 +154,35 @@ class DistributedWorkCoordinator:
             return []
 
     async def _get_unassigned_dioceses(self, limit: int) -> List[Dict[str, Any]]:
-        """Get dioceses that are not currently assigned to any active worker"""
+        """
+        Get dioceses that are not currently assigned to any active worker.
+
+        Prioritization strategy:
+        1. Process in ID order (deterministic, ensures all dioceses eventually processed)
+        2. Skip dioceses currently assigned to active workers
+        3. Only include dioceses with parish directory URLs
+
+        Note: Future enhancement could add last_extraction_attempt and parish_count
+        columns to support cooldown periods and better prioritization.
+        """
         try:
-            # Query for dioceses that either:
-            # 1. Have no work assignment record, OR
-            # 2. Have assignment to workers that are no longer active
-
-            # This is a simplified query - in production you'd want a more sophisticated approach
-            # that considers processing priority, last processing time, etc.
-
-            # Get all dioceses with parish directories
+            # Get all dioceses ordered by ID (deterministic, ensures all dioceses eventually processed)
             dioceses_response = (
-                self.supabase.table("Dioceses").select("id, Name, Website").limit(limit * 2).execute()
-            )  # Get more than needed for filtering
+                self.supabase.table("Dioceses")
+                .select("id, Name, Website")
+                .order("id", desc=False)  # Process in ID order
+                .limit(limit * 3)  # Get extra for filtering
+                .execute()
+            )
 
             if not dioceses_response.data:
                 return []
 
             # Filter to only those with parish directory URLs available
             available_dioceses = []
+            skipped_no_directory = 0
+            skipped_assigned = 0
+
             for diocese in dioceses_response.data:
                 # Check if this diocese has a parish directory URL
                 parish_dir_response = (
@@ -189,35 +199,69 @@ class DistributedWorkCoordinator:
                     .execute()
                 )
 
-                if parish_dir_response.data or override_response.data:
-                    # Check if currently assigned to an active worker
-                    assignment_response = (
-                        self.supabase.table("diocese_work_assignments")
-                        .select("worker_id, assigned_at")
-                        .eq("diocese_id", diocese["id"])
-                        .eq("status", "processing")
-                        .execute()
-                    )
+                if not (parish_dir_response.data or override_response.data):
+                    skipped_no_directory += 1
+                    continue
 
-                    if not assignment_response.data:
-                        # Not currently assigned - available for work
-                        parish_directory_url = (
-                            override_response.data[0]["parish_directory_url"]
-                            if override_response.data
-                            else parish_dir_response.data[0]["parish_directory_url"]
-                        )
+                # Check if currently assigned to an active worker
+                assignment_response = (
+                    self.supabase.table("diocese_work_assignments")
+                    .select("worker_id, assigned_at")
+                    .eq("diocese_id", diocese["id"])
+                    .eq("status", "processing")
+                    .execute()
+                )
 
-                        available_dioceses.append(
-                            {
-                                "id": diocese["id"],
-                                "name": diocese["Name"],
-                                "url": diocese["Website"],
-                                "parish_directory_url": parish_directory_url,
-                            }
-                        )
+                if assignment_response.data:
+                    skipped_assigned += 1
+                    continue
 
-                        if len(available_dioceses) >= limit:
-                            break
+                # Skip dioceses that were recently completed (within last 24 hours)
+                recent_cutoff = (datetime.utcnow() - timedelta(hours=24)).isoformat()
+                recent_completion = (
+                    self.supabase.table("diocese_work_assignments")
+                    .select("completed_at")
+                    .eq("diocese_id", diocese["id"])
+                    .eq("status", "completed")
+                    .gte("completed_at", recent_cutoff)
+                    .execute()
+                )
+
+                if recent_completion.data:
+                    skipped_assigned += 1
+                    continue
+
+                # Available for processing!
+                parish_directory_url = (
+                    override_response.data[0]["parish_directory_url"]
+                    if override_response.data
+                    else parish_dir_response.data[0]["parish_directory_url"]
+                )
+
+                available_dioceses.append(
+                    {
+                        "id": diocese["id"],
+                        "name": diocese["Name"],
+                        "url": diocese["Website"],
+                        "parish_directory_url": parish_directory_url,
+                    }
+                )
+
+                if len(available_dioceses) >= limit:
+                    break
+
+            # Log selection summary
+            if available_dioceses:
+                logger.info(f"📋 Diocese selection summary:")
+                logger.info(f"   ✅ Selected: {len(available_dioceses)} dioceses")
+                logger.info(f"   📂 Skipped (no directory): {skipped_no_directory}")
+                logger.info(f"   🔒 Skipped (already assigned): {skipped_assigned}")
+
+                # Show what was selected
+                for i, d in enumerate(available_dioceses[:3], 1):
+                    logger.info(f"   {i}. {d['name']} (ID: {d['id']})")
+                if len(available_dioceses) > 3:
+                    logger.info(f"   ... and {len(available_dioceses) - 3} more")
 
             return available_dioceses
 
@@ -250,8 +294,11 @@ class DistributedWorkCoordinator:
             logger.error(f"❌ Error assigning dioceses to worker: {e}")
 
     async def mark_diocese_completed(self, diocese_id: int, status: str = "completed"):
-        """Mark a diocese as completed by this worker"""
+        """
+        Mark a diocese as completed by this worker.
+        """
         try:
+            # Update work assignment table
             update_data = {"status": status, "completed_at": datetime.utcnow().isoformat()}
 
             response = (

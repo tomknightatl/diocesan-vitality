@@ -334,25 +334,111 @@ class AsyncDioceseProcessor:
         return result
 
     async def _extract_basic_parish_info_async(self, soup, pattern, diocese_info, max_parishes):
-        """Extract basic parish information (placeholder for now - could be optimized further)"""
-        # For now, use existing synchronous logic
-        # This is a good candidate for future async optimization
+        """Extract basic parish information using the appropriate extractor"""
+        diocese_name = diocese_info.get('name', 'Unknown')
+        parish_directory_url = diocese_info.get('parish_directory_url', '')
+
         try:
             from core.driver import get_protected_driver
-            from parish_extractors import process_diocese_with_detailed_extraction
+            from pipeline.parish_extractors import get_extractor_for_pattern
 
-            # This is a temporary bridge - ideally we'd make this fully async
+            # Log pattern detection results
+            logger.info(f"    🔍 Pattern Detection for {diocese_name}:")
+            logger.info(f"       • Platform: {pattern.platform.value}")
+            logger.info(f"       • Listing Type: {pattern.listing_type.value}")
+            logger.info(f"       • Extraction Method: {pattern.extraction_method}")
+            logger.info(f"       • Confidence: {pattern.confidence_score:.0%}")
+            logger.info(f"       • JavaScript Required: {pattern.javascript_required}")
+            if pattern.notes:
+                logger.info(f"       • Notes: {pattern.notes}")
+
+            # Get the appropriate extractor using factory function
+            extractor = get_extractor_for_pattern(pattern)
+
+            # Get driver for extraction
             driver = get_protected_driver()
             if not driver:
+                logger.error(f"    ❌ Failed to create WebDriver for {diocese_name}")
                 return []
 
-            result = process_diocese_with_detailed_extraction(diocese_info, driver, max_parishes)
+            # Perform extraction with fallback chain
+            logger.info(f"    🚀 Starting extraction for {diocese_name}...")
+            parishes_found = extractor.extract(driver, soup, parish_directory_url)
+
+            # FALLBACK CHAIN: If primary extraction fails, try alternatives
+            if not parishes_found and pattern.extraction_method != "generic_extraction":
+                logger.warning(f"    ⚠️ Primary extraction ({pattern.extraction_method}) found no parishes for {diocese_name}")
+                logger.info(f"    🔄 Attempting fallback: GenericExtractor...")
+
+                # Try generic extractor as fallback
+                from pipeline.parish_extractors import ImprovedGenericExtractor
+                from pipeline.parish_extraction_core import DioceseSitePattern, DiocesePlatform, ParishListingType
+
+                generic_pattern = DioceseSitePattern(
+                    platform=pattern.platform,
+                    listing_type=ParishListingType.SIMPLE_LIST,
+                    confidence_score=0.3,
+                    extraction_method="generic_extraction",
+                    specific_selectors={"containers": "[class*='parish'], [class*='church']"},
+                    javascript_required=False,
+                    notes="Fallback generic extraction"
+                )
+
+                generic_extractor = ImprovedGenericExtractor(generic_pattern)
+                parishes_found = generic_extractor.extract(driver, soup, parish_directory_url)
+
+                if parishes_found:
+                    logger.info(f"    ✅ Fallback GenericExtractor succeeded: {len(parishes_found)} parishes found")
+                else:
+                    logger.info(f"    ⚠️ Fallback GenericExtractor also found no parishes")
+
+                    # FINAL FALLBACK: Try AI-powered extraction
+                    logger.info(f"    🤖 Attempting final fallback: AI-powered extraction...")
+                    try:
+                        from extractors.enhanced_ai_fallback_extractor import EnhancedAIFallbackExtractor
+
+                        ai_extractor = EnhancedAIFallbackExtractor()
+                        # Use the correct method name: extract() not extract_with_ai()
+                        parishes_found = ai_extractor.extract(driver, diocese_name, parish_directory_url)
+
+                        if parishes_found:
+                            logger.info(f"    ✅ AI fallback succeeded: {len(parishes_found)} parishes found")
+                        else:
+                            logger.warning(f"    ❌ All extraction methods failed for {diocese_name}")
+                    except Exception as ai_error:
+                        logger.error(f"    ❌ AI fallback failed: {ai_error}")
+
+            # Log extraction results
+            if parishes_found:
+                logger.info(f"    ✅ Final extraction result for {diocese_name}: {len(parishes_found)} parishes found")
+                # Log sample of parishes found
+                sample_size = min(3, len(parishes_found))
+                for i, parish in enumerate(parishes_found[:sample_size], 1):
+                    logger.info(f"       {i}. {parish.name} - {parish.city or 'No city'}")
+                if len(parishes_found) > sample_size:
+                    logger.info(f"       ... and {len(parishes_found) - sample_size} more")
+            else:
+                logger.warning(f"    ⚠️ No parishes found for {diocese_name} after all extraction attempts")
+
             driver.quit()
+            return parishes_found
 
-            return result.get("parishes_found", [])
-
+        except ImportError as e:
+            logger.error(f"    ❌ CODE ERROR - Import failed for {diocese_name}: {e}")
+            logger.error(f"       This is a code problem, not an extraction failure!")
+            logger.error(f"       Missing module or function: {str(e)}")
+            return []
+        except AttributeError as e:
+            logger.error(f"    ❌ CODE ERROR - Attribute error for {diocese_name}: {e}")
+            logger.error(f"       This is a code problem - missing attribute or method!")
+            logger.error(f"       Details: {str(e)}")
+            return []
         except Exception as e:
-            logger.error(f"Error in basic parish extraction: {e}")
+            logger.error(f"    ❌ Extraction error for {diocese_name}: {type(e).__name__}: {e}")
+            logger.error(f"       Pattern: {pattern.extraction_method}")
+            logger.error(f"       URL: {parish_directory_url}")
+            import traceback
+            logger.error(f"       Traceback: {traceback.format_exc()}")
             return []
 
     def _log_final_results(self, results: Dict[str, Any]):

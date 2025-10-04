@@ -266,21 +266,25 @@ class ParishValidator:
     def _make_decision(self, parish_score: float, exclude_score: float) -> bool:
         """Make binary decision: is this a valid parish?"""
 
-        # Strong exclusion rules
-        if exclude_score >= 2.0 and parish_score < 1.0:
+        # Strong exclusion rules - only reject if clearly administrative
+        if exclude_score >= 3.0 and parish_score < 1.0:
             return False
 
-        # Strong parish rules
-        if parish_score >= 2.0 and exclude_score < 1.0:
+        # Strong parish rules - accept if has clear parish indicators
+        if parish_score >= 1.5 and exclude_score < 1.0:
             return True
 
         # Special case: facility terms should override saint names
         # (e.g., "St. Mary's Meeting Rooms" should be excluded despite having "St.")
-        if exclude_score >= 2.0 and parish_score <= 4.0:
+        if exclude_score >= 3.0 and parish_score <= 4.0:
             return False
 
-        # Tie-breaker: favor parish if scores are close
-        return parish_score > exclude_score
+        # Relaxed tie-breaker: accept if any parish signal exists and exclude score not high
+        if parish_score >= 0.5 and exclude_score < 2.0:
+            return True
+
+        # Final tie-breaker: favor parish if scores are close or equal
+        return parish_score >= exclude_score
 
     def _generate_reason(
         self, parish_score: float, exclude_score: float, matched_parish: List[str], matched_exclude: List[str]
