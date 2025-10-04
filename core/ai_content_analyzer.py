@@ -32,7 +32,7 @@ class AIContentAnalyzer:
         """Initialize the AI content analyzer."""
         self.genai_api_key = genai_api_key
         genai.configure(api_key=genai_api_key)
-        self.model = genai.GenerativeModel("gemini-2.0-flash-exp")
+        self.model = genai.GenerativeModel("gemini-2.5-flash")
 
         # Common parish indicators for validation
         self.parish_indicators = [
