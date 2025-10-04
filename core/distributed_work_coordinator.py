@@ -171,7 +171,6 @@ class DistributedWorkCoordinator:
                 self.supabase.table("Dioceses")
                 .select("id, Name, Website")
                 .order("id", desc=False)  # Process in ID order
-                .limit(limit * 3)  # Get extra for filtering
                 .execute()
             )
 
