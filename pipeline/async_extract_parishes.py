@@ -9,7 +9,6 @@ import asyncio
 import gc
 import os
 import time
-from datetime import datetime
 from typing import Any, Dict, List
 
 import psutil
@@ -120,7 +119,7 @@ class AsyncDioceseProcessor:
             "average_time_per_diocese": 0,
         }
 
-        logger.info(f"🚀 Async Diocese Processor initialized")
+        logger.info("🚀 Async Diocese Processor initialized")
         logger.info(f"   • Pool size: {pool_size} drivers")
         logger.info(f"   • Batch size: {batch_size} requests")
         logger.info(f"   • Max concurrent dioceses: {max_concurrent_dioceses}")
@@ -164,7 +163,7 @@ class AsyncDioceseProcessor:
         start_time = time.time()
         initial_memory = get_memory_usage()
 
-        logger.info(f"🚀 Starting concurrent diocese processing")
+        logger.info("🚀 Starting concurrent diocese processing")
         logger.info(f"   • Dioceses to process: {len(dioceses_to_process)}")
         logger.info(f"   • Max parishes per diocese: {num_parishes_per_diocese}")
         logger.info(f"   • Initial memory: {initial_memory:.1f} MB")
@@ -219,8 +218,8 @@ class AsyncDioceseProcessor:
 
             # Memory management between batches
             if batch_num < len(diocese_batches):
-                logger.info(f"  🧹 Inter-batch cleanup...")
-                current_memory = force_garbage_collection()
+                logger.info("  🧹 Inter-batch cleanup...")
+                force_garbage_collection()
 
                 # Report circuit breaker status between batches
                 worker_id = os.environ.get("WORKER_ID", os.environ.get("HOSTNAME"))
@@ -378,6 +377,28 @@ class AsyncDioceseProcessor:
             "attempted_methods": []
         }
 
+        # Get monitoring client for sending logs to dashboard
+        monitoring_client = None
+        try:
+            worker_id = os.environ.get("WORKER_ID", os.environ.get("HOSTNAME"))
+            monitoring_url = os.environ.get("MONITORING_URL", "http://backend-service:8000")
+            monitoring_client = get_monitoring_client(monitoring_url, worker_id)
+        except Exception as e:
+            logger.debug(f"Could not initialize monitoring client: {e}")
+
+        # Helper to log both to console and dashboard
+        def log_both(message, level="INFO"):
+            """Log to both console logger and monitoring dashboard"""
+            if level == "INFO":
+                logger.info(message)
+            elif level == "WARNING":
+                logger.warning(message)
+            elif level == "ERROR":
+                logger.error(message)
+
+            if monitoring_client:
+                monitoring_client.send_log(f"Step 3 │ {message}", level)
+
         try:
             from core.driver import get_protected_driver
             from pipeline.parish_extractors import get_extractor_for_pattern
@@ -388,7 +409,7 @@ class AsyncDioceseProcessor:
             logger.info(f"       • Listing Type: {pattern.listing_type.value}")
             logger.info(f"       • Extraction Method: {pattern.extraction_method}")
             logger.info(f"       • Confidence: {pattern.confidence_score:.0%}")
-            logger.info(f"       • JavaScript Required: {pattern.javascript_required}")
+            logger.info("       • JavaScript Required: " + str(pattern.javascript_required))
             if pattern.notes:
                 logger.info(f"       • Notes: {pattern.notes}")
 
@@ -402,11 +423,11 @@ class AsyncDioceseProcessor:
                 return []
 
             # Perform extraction with fallback chain
-            logger.info(f"    🚀 Starting extraction for {diocese_name}...")
-            logger.info(f"    📋 PRIMARY METHOD: {pattern.extraction_method}")
-            logger.info(f"       • Platform: {pattern.platform.value}")
-            logger.info(f"       • Confidence: {pattern.confidence_score:.0%}")
-            logger.info(f"       • URL: {parish_directory_url}")
+            log_both(f"    🚀 Starting extraction for {diocese_name}...")
+            log_both(f"    📋 PRIMARY METHOD: {pattern.extraction_method}")
+            log_both(f"       • Platform: {pattern.platform.value}")
+            log_both(f"       • Confidence: {pattern.confidence_score:.0%}")
+            log_both(f"       • URL: {parish_directory_url}")
 
             extraction_details["attempted_methods"].append(pattern.extraction_method)
             parishes_found = extractor.extract(driver, soup, parish_directory_url)
@@ -414,23 +435,23 @@ class AsyncDioceseProcessor:
             # Set method if primary extraction succeeded
             if parishes_found:
                 extraction_details["method"] = pattern.extraction_method
-                logger.info(f"    ✅ PRIMARY METHOD SUCCEEDED: {pattern.extraction_method}")
-                logger.info(f"       • Found {len(parishes_found)} parishes")
-                logger.info(f"       • Method confidence: {pattern.confidence_score:.0%}")
+                log_both(f"    ✅ PRIMARY METHOD SUCCEEDED: {pattern.extraction_method}")
+                log_both(f"       • Found {len(parishes_found)} parishes")
+                log_both(f"       • Method confidence: {pattern.confidence_score:.0%}")
 
             # FALLBACK CHAIN: If primary extraction fails, try alternatives
             if not parishes_found and pattern.extraction_method != "generic_extraction":
-                logger.warning(f"    ❌ PRIMARY METHOD FAILED: {pattern.extraction_method}")
-                logger.warning(f"       • Reason: No parishes found with primary method")
-                logger.warning(f"       • URL accessed: {parish_directory_url}")
-                logger.warning(f"       • Pattern detected: {pattern.listing_type.value}")
+                log_both(f"    ❌ PRIMARY METHOD FAILED: {pattern.extraction_method}", "WARNING")
+                log_both("       • Reason: No parishes found with primary method", "WARNING")
+                log_both(f"       • URL accessed: {parish_directory_url}", "WARNING")
+                log_both(f"       • Pattern detected: {pattern.listing_type.value}", "WARNING")
                 extraction_details["failures"][pattern.extraction_method] = "No parishes found with primary method"
-                logger.info(f"    🔄 FALLBACK #1: Attempting GenericExtractor...")
+                log_both("    🔄 FALLBACK #1: Attempting GenericExtractor...")
                 extraction_details["attempted_methods"].append("generic_extraction")
 
                 # Try generic extractor as fallback
                 from pipeline.parish_extractors import ImprovedGenericExtractor
-                from pipeline.parish_extraction_core import DioceseSitePattern, DiocesePlatform, ParishListingType
+                from pipeline.parish_extraction_core import DioceseSitePattern, ParishListingType
 
                 generic_pattern = DioceseSitePattern(
                     platform=pattern.platform,
@@ -446,87 +467,87 @@ class AsyncDioceseProcessor:
                 parishes_found = generic_extractor.extract(driver, soup, parish_directory_url)
 
                 if parishes_found:
-                    logger.info(f"    ✅ FALLBACK #1 SUCCEEDED: GenericExtractor")
-                    logger.info(f"       • Found {len(parishes_found)} parishes")
-                    logger.info(f"       • Selectors used: {generic_pattern.specific_selectors}")
+                    log_both("    ✅ FALLBACK #1 SUCCEEDED: GenericExtractor")
+                    log_both(f"       • Found {len(parishes_found)} parishes")
+                    log_both("       • Selectors used: " + str(generic_pattern.specific_selectors))
                     extraction_details["method"] = "generic_extraction"
                 else:
-                    logger.warning(f"    ❌ FALLBACK #1 FAILED: GenericExtractor")
-                    logger.warning(f"       • Reason: No parishes found with generic selectors")
-                    logger.warning(f"       • Selectors tried: {generic_pattern.specific_selectors}")
+                    log_both("    ❌ FALLBACK #1 FAILED: GenericExtractor", "WARNING")
+                    log_both("       • Reason: No parishes found with generic selectors", "WARNING")
+                    log_both("       • Selectors tried: " + str(generic_pattern.specific_selectors), "WARNING")
                     extraction_details["failures"]["generic_extraction"] = "No parishes found with generic extractor"
 
                     # FINAL FALLBACK: Try AI-powered extraction
-                    logger.info(f"    🔄 FALLBACK #2 (FINAL): Attempting AI-powered extraction...")
+                    log_both("    🔄 FALLBACK #2 (FINAL): Attempting AI-powered extraction...")
                     extraction_details["attempted_methods"].append("ai_fallback")
                     try:
                         from extractors.enhanced_ai_fallback_extractor import EnhancedAIFallbackExtractor
 
                         ai_extractor = EnhancedAIFallbackExtractor()
-                        logger.info(f"       • AI model: gemini-2.5-flash")
-                        logger.info(f"       • URL: {parish_directory_url}")
+                        log_both("       • AI model: gemini-2.5-flash")
+                        log_both(f"       • URL: {parish_directory_url}")
 
                         # Use the correct method name: extract() not extract_with_ai()
                         parishes_found = ai_extractor.extract(driver, diocese_name, parish_directory_url)
 
                         if parishes_found:
-                            logger.info(f"    ✅ FALLBACK #2 SUCCEEDED: AI-powered extraction")
-                            logger.info(f"       • Found {len(parishes_found)} parishes")
-                            logger.info(f"       • AI successfully parsed complex/dynamic content")
+                            log_both("    ✅ FALLBACK #2 SUCCEEDED: AI-powered extraction")
+                            log_both(f"       • Found {len(parishes_found)} parishes")
+                            log_both("       • AI successfully parsed complex/dynamic content")
                             extraction_details["method"] = "ai_fallback"
                         else:
-                            logger.error(f"    ❌ ALL EXTRACTION METHODS FAILED for {diocese_name}")
-                            logger.error(f"       • Primary method: {pattern.extraction_method} - FAILED")
-                            logger.error(f"       • Fallback #1 (Generic): FAILED")
-                            logger.error(f"       • Fallback #2 (AI): FAILED")
-                            logger.error(f"       • URL: {parish_directory_url}")
-                            logger.error(f"       • Recommendation: Manual review required for this diocese")
+                            log_both(f"    ❌ ALL EXTRACTION METHODS FAILED for {diocese_name}", "ERROR")
+                            log_both(f"       • Primary method: {pattern.extraction_method} - FAILED", "ERROR")
+                            log_both("       • Fallback #1 (Generic): FAILED", "ERROR")
+                            log_both("       • Fallback #2 (AI): FAILED", "ERROR")
+                            log_both(f"       • URL: {parish_directory_url}", "ERROR")
+                            log_both("       • Recommendation: Manual review required for this diocese", "ERROR")
                             extraction_details["failures"]["ai_fallback"] = "AI extraction returned no parishes"
                     except Exception as ai_error:
-                        logger.error(f"    ❌ FALLBACK #2 EXCEPTION: AI extraction crashed")
-                        logger.error(f"       • Error: {str(ai_error)}")
-                        logger.error(f"       • Error type: {type(ai_error).__name__}")
+                        log_both("    ❌ FALLBACK #2 EXCEPTION: AI extraction crashed", "ERROR")
+                        log_both(f"       • Error: {str(ai_error)}", "ERROR")
+                        log_both(f"       • Error type: {type(ai_error).__name__}", "ERROR")
                         extraction_details["failures"]["ai_fallback"] = f"Exception: {str(ai_error)}"
 
             # Log extraction results with comprehensive summary
-            logger.info(f"    " + "=" * 80)
+            log_both("    " + "=" * 80)
             if parishes_found:
-                logger.info(f"    ✅ EXTRACTION SUCCESSFUL for {diocese_name}")
-                logger.info(f"       • Parishes found: {len(parishes_found)}")
-                logger.info(f"       • Successful method: {extraction_details['method']}")
-                logger.info(f"       • Methods tried: {', '.join(extraction_details['attempted_methods'])}")
-                logger.info(f"       • URL: {parish_directory_url}")
+                log_both(f"    ✅ EXTRACTION SUCCESSFUL for {diocese_name}")
+                log_both(f"       • Parishes found: {len(parishes_found)}")
+                log_both(f"       • Successful method: {extraction_details['method']}")
+                log_both("       • Methods tried: " + ", ".join(extraction_details['attempted_methods']))
+                log_both(f"       • URL: {parish_directory_url}")
 
                 # Log sample of parishes found
-                logger.info(f"       • Sample parishes:")
+                log_both("       • Sample parishes:")
                 sample_size = min(5, len(parishes_found))
                 for i, parish in enumerate(parishes_found[:sample_size], 1):
                     city_info = parish.city if parish.city else "No city"
                     confidence_info = f"{parish.confidence_score:.2f}" if hasattr(parish, 'confidence_score') else "N/A"
-                    logger.info(f"         {i}. {parish.name} - {city_info} (confidence: {confidence_info})")
+                    log_both(f"         {i}. {parish.name} - {city_info} (confidence: {confidence_info})")
                 if len(parishes_found) > sample_size:
-                    logger.info(f"         ... and {len(parishes_found) - sample_size} more")
+                    log_both(f"         ... and {len(parishes_found) - sample_size} more")
             else:
-                logger.error(f"    ❌ EXTRACTION FAILED for {diocese_name}")
-                logger.error(f"       • Parishes found: 0")
-                logger.error(f"       • Methods tried: {', '.join(extraction_details['attempted_methods'])}")
-                logger.error(f"       • All methods failed: {list(extraction_details['failures'].keys())}")
-                logger.error(f"       • URL: {parish_directory_url}")
-                logger.error(f"       • This diocese needs manual investigation")
-            logger.info(f"    " + "=" * 80)
+                log_both(f"    ❌ EXTRACTION FAILED for {diocese_name}", "ERROR")
+                log_both("       • Parishes found: 0", "ERROR")
+                log_both("       • Methods tried: " + ", ".join(extraction_details['attempted_methods']), "ERROR")
+                log_both("       • All methods failed: " + str(list(extraction_details['failures'].keys())), "ERROR")
+                log_both(f"       • URL: {parish_directory_url}", "ERROR")
+                log_both("       • This diocese needs manual investigation", "ERROR")
+            log_both("    " + "=" * 80)
 
             driver.quit()
             return parishes_found, extraction_details
 
         except ImportError as e:
             logger.error(f"    ❌ CODE ERROR - Import failed for {diocese_name}: {e}")
-            logger.error(f"       This is a code problem, not an extraction failure!")
+            logger.error("       This is a code problem, not an extraction failure!")
             logger.error(f"       Missing module or function: {str(e)}")
             extraction_details["failures"]["code_error"] = f"ImportError: {str(e)}"
             return [], extraction_details
         except AttributeError as e:
             logger.error(f"    ❌ CODE ERROR - Attribute error for {diocese_name}: {e}")
-            logger.error(f"       This is a code problem - missing attribute or method!")
+            logger.error("       This is a code problem - missing attribute or method!")
             logger.error(f"       Details: {str(e)}")
             extraction_details["failures"]["code_error"] = f"AttributeError: {str(e)}"
             return [], extraction_details
@@ -551,11 +572,11 @@ class AsyncDioceseProcessor:
         logger.info(f"❌ Failed dioceses: {len(results['failed_dioceses'])}")
         logger.info(f"📊 Total parishes extracted: {results['total_parishes_extracted']}")
         logger.info(f"⏱️ Total processing time: {summary['total_time']:.2f}s")
-        logger.info(f"⚡ Performance:")
+        logger.info("⚡ Performance:")
         logger.info(f"   • {metrics['dioceses_per_minute']:.1f} dioceses/minute")
         logger.info(f"   • {metrics['parishes_per_minute']:.1f} parishes/minute")
         logger.info(f"   • {metrics['success_rate']:.1f}% success rate")
-        logger.info(f"💾 Memory:")
+        logger.info("💾 Memory:")
         logger.info(f"   • Initial: {summary['memory_usage']['initial']:.1f} MB")
         logger.info(f"   • Final: {summary['memory_usage']['final']:.1f} MB")
         logger.info(f"   • Growth: {summary['memory_usage']['peak_growth']:.1f} MB")
