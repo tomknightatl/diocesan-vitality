@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import sys
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -443,8 +444,11 @@ class MonitoringManager:
             return worker_list
 
         except Exception as e:
-            print(f"Error fetching worker list from database: {e}")
-            # Fallback to in-memory workers if database query fails
+            import traceback
+            error_details = traceback.format_exc()
+            print(f"❌ Error fetching worker list from database: {e}", file=sys.stderr)
+            print(f"Error details: {error_details}", file=sys.stderr)
+            # Fallback to empty list if database query fails
             return []
 
 
