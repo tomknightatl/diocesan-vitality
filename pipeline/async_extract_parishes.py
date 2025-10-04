@@ -398,7 +398,8 @@ class AsyncDioceseProcessor:
                         from extractors.enhanced_ai_fallback_extractor import EnhancedAIFallbackExtractor
 
                         ai_extractor = EnhancedAIFallbackExtractor()
-                        parishes_found = ai_extractor.extract_with_ai(soup, parish_directory_url, diocese_name)
+                        # Use the correct method name: extract() not extract_with_ai()
+                        parishes_found = ai_extractor.extract(driver, diocese_name, parish_directory_url)
 
                         if parishes_found:
                             logger.info(f"    ✅ AI fallback succeeded: {len(parishes_found)} parishes found")
