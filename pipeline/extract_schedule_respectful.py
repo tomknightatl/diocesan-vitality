@@ -15,12 +15,12 @@ from urllib.parse import urlparse
 import requests
 from bs4 import BeautifulSoup
 
-import config
+from pipeline import config
 from core.db import get_supabase_client
 from core.logger import get_logger
 from core.schedule_ai_extractor import ScheduleAIExtractor, save_ai_schedule_results
 from core.schedule_keywords import load_keywords_from_database
-from extract_schedule import choose_best_url, get_parishes_to_process, get_sitemap_urls, get_suppression_urls
+from pipeline.extract_schedule import choose_best_url, get_parishes_to_process, get_sitemap_urls, get_suppression_urls
 from respectful_automation import RespectfulAutomation, create_blocking_report
 
 logger = get_logger(__name__)

@@ -96,7 +96,7 @@ spec:
             - name: MONITORING_URL
               value: "http://backend-service:8000"
           # Use distributed pipeline runner for worker coordination
-          command: ["python", "distributed_pipeline_runner.py"]
+          command: ["python", "-m", "pipeline.distributed_pipeline_runner"]
           args:
             - "--max_parishes_per_diocese"
             - "$(MAX_PARISHES_PER_DIOCESE)"

@@ -24,17 +24,17 @@ import time
 from enum import Enum
 from typing import Optional
 
-import config
-from async_extract_parishes import main_async as extract_parishes_main_async
+from pipeline import config
+from pipeline.async_extract_parishes import main_async as extract_parishes_main_async
 from core.distributed_work_coordinator import DistributedWorkCoordinator
 from core.logger import get_logger
 from core.monitoring_client import ExtractionMonitoring, get_monitoring_client
 
 # Import the existing pipeline components
-from extract_dioceses import main as extract_dioceses_main
-from extract_schedule_respectful import main as extract_schedule_main
-from find_parishes import find_parish_directories
-from report_statistics import main as report_statistics_main
+from pipeline.extract_dioceses import main as extract_dioceses_main
+from pipeline.extract_schedule_respectful import main as extract_schedule_main
+from pipeline.find_parishes import find_parish_directories
+from pipeline.report_statistics import main as report_statistics_main
 
 logger = get_logger(__name__)
 

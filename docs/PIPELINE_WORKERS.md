@@ -266,19 +266,19 @@ Worker types are configured in Kubernetes manifests:
 
 ```bash
 # Discovery worker
-WORKER_TYPE=discovery python distributed_pipeline_runner.py
+WORKER_TYPE=discovery python -m pipeline.distributed_pipeline_runner
 
 # Extraction worker
-WORKER_TYPE=extraction python distributed_pipeline_runner.py
+WORKER_TYPE=extraction python -m pipeline.distributed_pipeline_runner
 
 # Schedule worker
-WORKER_TYPE=schedule python distributed_pipeline_runner.py
+WORKER_TYPE=schedule python -m pipeline.distributed_pipeline_runner
 
 # Reporting worker
-WORKER_TYPE=reporting python distributed_pipeline_runner.py
+WORKER_TYPE=reporting python -m pipeline.distributed_pipeline_runner
 
 # All steps (backwards compatible)
-python distributed_pipeline_runner.py  # defaults to 'all'
+python -m pipeline.distributed_pipeline_runner  # defaults to 'all'
 ```
 
 ## Monitoring

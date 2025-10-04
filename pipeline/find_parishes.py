@@ -27,7 +27,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from tenacity import RetryError, retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
-import config
+from pipeline import config
 from core.db import get_supabase_client
 from core.db_batch_operations import get_batch_manager
 from core.driver import close_driver, ensure_driver_available, recover_driver, setup_driver

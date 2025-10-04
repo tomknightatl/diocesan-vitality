@@ -14,7 +14,7 @@ from typing import Any, Dict, List
 
 import psutil
 
-import config
+from pipeline import config
 from core.async_driver import get_async_driver_pool, shutdown_async_driver_pool
 from core.async_parish_extractor import get_async_parish_extractor
 from core.db import get_supabase_client
