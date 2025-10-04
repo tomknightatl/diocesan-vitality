@@ -494,7 +494,11 @@ class ParishFinderExtractor(BaseExtractor):
                         parishes.append(parish_data)
                         logger.info(f"      ✅ Extracted: {parish_data.name}")
                     else:
+                        # Enhanced diagnostic logging - show WHY element was rejected
                         logger.warning(f"      ⚠️ Skipped element {i}: No valid parish data")
+                        # Log first 3 rejected elements for debugging
+                        if i <= 3:
+                            logger.info(f"         Debug - Element {i} HTML preview: {str(element)[:200]}...")
 
                 except Exception as e:
                     logger.error(f"      ❌ Error processing element {i}: {str(e)[:50]}...")
@@ -536,6 +540,10 @@ class ParishFinderExtractor(BaseExtractor):
                     if first_span:
                         name = self.clean_text(first_span.get_text())
 
+            # DIAGNOSTIC: Log raw extracted data for first 3 elements
+            if element_num <= 3:
+                logger.info(f"         Debug Element {element_num} - Raw name extracted: '{name}'")
+
             # Use the new cleaning function to separate name and address components
             cleaned_data = clean_parish_name_and_extract_address(name)
             clean_name = cleaned_data["name"]
@@ -546,8 +554,17 @@ class ParishFinderExtractor(BaseExtractor):
             base_full_address = cleaned_data["full_address"]
             distance_miles = cleaned_data["distance_miles"]
 
+            # DIAGNOSTIC: Log cleaned data for first 3 elements
+            if element_num <= 3:
+                logger.info(f"         Debug Element {element_num} - After cleaning:")
+                logger.info(f"            Name: '{clean_name}'")
+                logger.info(f"            Address: '{base_street_address}'")
+                logger.info(f"            City: '{base_city}', State: '{base_state}', Zip: '{base_zip_code}'")
+
             # Re-evaluate name after cleaning
             if not clean_name or len(clean_name) < 3:
+                if element_num <= 3:
+                    logger.warning(f"         Debug Element {element_num} - REJECTED: Name too short or missing")
                 return None
 
             # Skip non-parish entries based on the cleaned name
@@ -1907,6 +1924,28 @@ class IframeExtractor(BaseExtractor):
             return False
 
         src_lower = src.lower()
+
+        # EXCLUSION LIST: Payment processors, analytics, and non-parish iframes
+        # Issue #163 Fix: Prevent false detection of Stripe payment iframes
+        excluded_services = [
+            "stripe.com",           # Stripe payment processor
+            "js.stripe.com",        # Stripe JavaScript SDK
+            "checkout.stripe.com",  # Stripe checkout
+            "m.stripe.com",         # Stripe mobile
+            "paypal.com",           # PayPal payment processor
+            "square.com",           # Square payment processor
+            "analytics.google.com", # Google Analytics
+            "googletagmanager.com", # Google Tag Manager
+            "facebook.com",         # Facebook widgets
+            "twitter.com",          # Twitter widgets
+            "instagram.com",        # Instagram embeds
+            "youtube.com",          # YouTube embeds (usually not parish directories)
+        ]
+
+        # Check exclusions first - if excluded, return False immediately
+        if any(excluded in src_lower for excluded in excluded_services):
+            logger.debug(f"      🚫 Excluded iframe (payment/analytics): {src[:80]}...")
+            return False
 
         # Specific services known to host parish directories
         mapping_services = ["maptive.com", "google.com/maps", "mapbox.com", "arcgis.com", "openstreetmap"]
