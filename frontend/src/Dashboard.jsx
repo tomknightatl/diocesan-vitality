@@ -46,9 +46,7 @@ const Dashboard = () => {
   // Fetch worker list
   const fetchWorkers = useCallback(async () => {
     try {
-      const response = await fetch(
-        `${getBackendHost()}/api/monitoring/workers`,
-      );
+      const response = await fetch("/api/monitoring/workers");
       const data = await response.json();
       if (data.workers) {
         setWorkers(data.workers);
@@ -59,31 +57,13 @@ const Dashboard = () => {
     }
   }, []);
 
-  // Get backend host from current hostname
-  const getBackendHost = () => {
-    const hostname = window.location.hostname;
-    switch (hostname) {
-      case "localhost":
-      case "127.0.0.1":
-        return "http://localhost:8000";
-      case "devui.diocesanvitality.org":
-        return "https://devapi.diocesanvitality.org";
-      case "stgui.diocesanvitality.org":
-        return "https://stgapi.diocesanvitality.org";
-      case "diocesanvitality.org":
-        return "https://api.diocesanvitality.org";
-      default:
-        return "https://api.diocesanvitality.org";
-    }
-  };
-
   // Handle worker selection
   const handleWorkerSelect = async (workerId) => {
     setSelectedWorker(workerId);
     if (workerId === "aggregate") {
       // Switch to aggregate mode
       try {
-        await fetch(`${getBackendHost()}/api/monitoring/mode/aggregate`, {
+        await fetch("/api/monitoring/mode/aggregate", {
           method: "POST",
         });
         setAggregateMode(true);
@@ -93,14 +73,12 @@ const Dashboard = () => {
     } else {
       // Fetch specific worker data
       try {
-        await fetch(`${getBackendHost()}/api/monitoring/mode/individual`, {
+        await fetch("/api/monitoring/mode/individual", {
           method: "POST",
         });
         setAggregateMode(false);
 
-        const response = await fetch(
-          `${getBackendHost()}/api/monitoring/worker/${workerId}`,
-        );
+        const response = await fetch(`/api/monitoring/worker/${workerId}`);
         const workerData = await response.json();
         if (!workerData.error) {
           setExtractionStatus(workerData.extraction_status);
@@ -115,35 +93,10 @@ const Dashboard = () => {
   const connectWebSocket = () => {
     try {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const hostname = window.location.hostname;
-      let backendHost;
-
-      switch (hostname) {
-        case "localhost":
-        case "127.0.0.1":
-          backendHost = "localhost:8000";
-          break;
-
-        case "devui.diocesanvitality.org":
-          backendHost = "devapi.diocesanvitality.org";
-          break;
-
-        case "stgui.diocesanvitality.org":
-          backendHost = "stgapi.diocesanvitality.org";
-          break;
-
-        case "diocesanvitality.org":
-          backendHost = "api.diocesanvitality.org";
-          break;
-
-        default:
-          backendHost = "api.diocesanvitality.org";
-      }
-
-      const wsUrl = `${protocol}//${backendHost}/ws/monitoring`;
+      const host = window.location.host; // hostname + port
+      const wsUrl = `${protocol}//${host}/ws/monitoring`;
 
       console.log("🔌 Attempting WebSocket connection to:", wsUrl);
-      console.log("🏠 Hostname:", hostname);
 
       wsRef.current = new WebSocket(wsUrl);
 
