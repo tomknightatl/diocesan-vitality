@@ -90,7 +90,7 @@ spec:
                   fieldPath: metadata.name
             # Pipeline configuration
             - name: MAX_PARISHES_PER_DIOCESE
-              value: "50"
+              value: "999999" # No cap - extract all parishes
             - name: NUM_PARISHES_FOR_SCHEDULE
               value: "101"
             - name: MONITORING_URL

@@ -328,7 +328,7 @@ cp .env.example .env
 
 1. Start backend: `cd backend && uvicorn main:app --reload --port 8000`
 2. Start frontend: `cd frontend && npm run dev`
-3. Run pipeline: `python run_pipeline.py --max_parishes_per_diocese 5`
+3. Run pipeline: `python -m pipeline.run_pipeline --max_parishes_per_diocese 5`
 4. Monitor via dashboard: http://localhost:3000/dashboard
 
 #### Cluster Development (Alternative)
