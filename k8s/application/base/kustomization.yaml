@@ -7,3 +7,4 @@ resources:
   - pipeline-deployment.yaml
   - backend-service.yaml
   - frontend-service.yaml
+  - pipeline-hpa.yaml

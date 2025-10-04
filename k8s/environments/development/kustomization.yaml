@@ -7,7 +7,6 @@ resources:
   - ../../application/base
   - namespace.yaml
   - diocesan-vitality-secrets-sealedsecret.yaml
-  - ../../pipeline-hpa.yaml
 
 patches:
   - path: development-patches.yaml
