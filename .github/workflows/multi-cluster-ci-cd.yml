@@ -368,8 +368,10 @@ jobs:
 
       - name: Set up kustomize
         run: |
-          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          curl -s -L -o kustomize.tar.gz "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.5.0/kustomize_v5.5.0_linux_amd64.tar.gz"
+          tar xzf kustomize.tar.gz
           sudo mv kustomize /usr/local/bin/
+          kustomize version
 
       - name: Update development manifests with new images
         env:
@@ -466,8 +468,10 @@ jobs:
 
       - name: Set up kustomize
         run: |
-          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          curl -s -L -o kustomize.tar.gz "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.5.0/kustomize_v5.5.0_linux_amd64.tar.gz"
+          tar xzf kustomize.tar.gz
           sudo mv kustomize /usr/local/bin/
+          kustomize version
 
       - name: Update staging manifests with new images
         env:
@@ -565,8 +569,10 @@ jobs:
 
       - name: Set up kustomize
         run: |
-          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          curl -s -L -o kustomize.tar.gz "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.5.0/kustomize_v5.5.0_linux_amd64.tar.gz"
+          tar xzf kustomize.tar.gz
           sudo mv kustomize /usr/local/bin/
+          kustomize version
 
       - name: Update production manifests with new images
         env:
