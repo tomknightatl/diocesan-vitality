@@ -13,26 +13,32 @@ This project is a comprehensive data collection and analysis system for U.S. Cat
 The system runs in the cloud using a **two-tier architecture** designed for cost efficiency and scalability:
 
 ### 🌐 **Tier 1: Always-On Web Services**
+
 **Deployment**: Single small node (s-1vcpu-2gb) running continuously
+
 - **Frontend**: React dashboard serving the user interface at [diocesanvitality.org](https://diocesanvitality.org)
 - **Backend**: FastAPI server providing data APIs and real-time monitoring
 - **Database**: Supabase (managed PostgreSQL) for persistent data storage
 - **Cost**: Minimal (~$12/month) - runs 24/7 to serve users
 
 ### 🚀 **Tier 2: On-Demand Data Collection**
+
 **Deployment**: Dedicated node (s-2vcpu-4gb) that scales from 0→1 when needed
+
 - **Pipeline**: Automated data extraction and processing system
 - **Chrome/Selenium**: Headless browser automation for web scraping
 - **AI Processing**: Google Gemini integration for content analysis
 - **Cost**: Pay-per-use (~$0.02/hour) - only runs when collecting data
 
 ### 💡 **Cost-Optimized Design**
+
 - **Always available**: Users can access the dashboard and data anytime
 - **Scheduled extraction**: Pipeline runs on-demand or scheduled basis
 - **Auto-scaling**: Data collection node scales to 0 when idle (no cost)
 - **Resource isolation**: Web services and data collection don't compete for resources
 
 ### 🔄 **Operational Flow**
+
 1. **Continuous**: Frontend + Backend serve users on small node
 2. **On-demand**: Scale up dedicated node for data collection
 3. **Real-time**: Live extraction monitoring via WebSocket dashboard
@@ -48,6 +54,7 @@ This project uses a comprehensive CI/CD pipeline with automated testing and depl
 ```
 
 ### Quick Development Workflow
+
 ```bash
 # Feature development
 git checkout -b feature/my-feature
@@ -65,12 +72,14 @@ git push origin main  # Requires manual approval
 ```
 
 ### 🛡️ Safety Gates
+
 - ✅ All tests must pass before deployment
 - ✅ Staging deployment must succeed before production
 - ✅ Manual approval required for production
 - ✅ Zero-downtime deployments with rollback capability
 
 ### 📚 CI/CD Documentation
+
 - **[📋 Complete CI/CD Guide](docs/CI_CD_PIPELINE.md)** - Full pipeline documentation
 - **[🔧 GitHub Actions Setup](docs/GITHUB_ACTIONS_SETUP.md)** - Initial setup instructions
 - **[🚀 Deployment Guide](docs/DEPLOYMENT_GUIDE.md)** - Manual deployment options
@@ -97,12 +106,14 @@ The Data Extraction Pipeline is a multi-step process that systematically collect
 When you see pipeline pods running in Kubernetes, they operate in **distributed mode**:
 
 #### ✅ **Continuous Operation**
+
 - Pods run **indefinitely** (not one-time execution)
 - Workers register with a coordination system and process dioceses continuously
 - Each worker gets assigned specific dioceses to avoid conflicts
 - Workers automatically restart processing when new work becomes available
 
 #### ⚙️ **Modified Pipeline Steps**
+
 The distributed pipeline **skips initial setup steps** and focuses on the core extraction:
 
 1. **Diocese Data**: ~~Extract Dioceses~~ (assumes diocese data already exists in database)
@@ -111,6 +122,7 @@ The distributed pipeline **skips initial setup steps** and focuses on the core e
 4. **📊 Reporting**: Only the "lead" worker generates statistical reports
 
 #### 🔄 **Worker Coordination**
+
 - **Database-backed coordination**: Workers register in `pipeline_workers` table
 - **Diocese assignment**: Work is distributed via `diocese_work_assignments` table
 - **Conflict prevention**: No two workers process the same diocese simultaneously
@@ -118,18 +130,19 @@ The distributed pipeline **skips initial setup steps** and focuses on the core e
 - **Real-time monitoring**: Workers report status to the monitoring dashboard
 
 #### 📈 **Scaling Behavior**
+
 - **HPA (Horizontal Pod Autoscaler)**: Automatically scales from 1-5 workers based on CPU/memory
 - **Pod anti-affinity**: Each worker gets its own dedicated node
 - **Graceful scaling**: Workers coordinate during scale-up/scale-down events
 
 ### When to Use Each Pipeline Mode
 
-| **Traditional Pipeline** | **Distributed Pipeline** |
-|--------------------------|---------------------------|
-| Initial data collection   | Production continuous operation |
-| Complete database setup   | Ongoing data maintenance |
-| Single-machine execution  | Kubernetes cluster deployment |
-| `python run_pipeline.py`  | Kubernetes pods with `distributed_pipeline_runner.py` |
+| **Traditional Pipeline**          | **Distributed Pipeline**                                       |
+| --------------------------------- | -------------------------------------------------------------- |
+| Initial data collection           | Production continuous operation                                |
+| Complete database setup           | Ongoing data maintenance                                       |
+| Single-machine execution          | Kubernetes cluster deployment                                  |
+| `python -m pipeline.run_pipeline` | Kubernetes pods with `pipeline/distributed_pipeline_runner.py` |
 
 ### Monitoring the Distributed Pipeline
 
@@ -141,12 +154,14 @@ The distributed pipeline **skips initial setup steps** and focuses on the core e
 ## Key Features
 
 ### 🚀 **Core Data Extraction**
+
 - **Automated Diocese Discovery**: Scrapes the official conference website to collect diocese information
 - **AI-Powered Parish Directory Detection**: Uses Google's Gemini AI to intelligently identify parish directory pages
 - **Advanced Web Scraping**: Employs Selenium with retry logic and pattern detection for robust data extraction
 - **Multi-Platform Parish Extraction**: Supports various website platforms including SquareSpace, WordPress, eCatholic, and custom implementations
 
 ### ⚡ **Performance & Optimization**
+
 - **High-Performance Concurrent Processing**: Asyncio-based extraction with 60% performance improvement
 - **🤖 ML-Based URL Prediction**: Machine learning system that reduces 404 errors by 50% through intelligent URL discovery
 - **🔗 Enhanced URL Management**: Success-based URL memory with "golden URLs" prioritization
@@ -155,6 +170,7 @@ The distributed pipeline **skips initial setup steps** and focuses on the core e
 - **🛡️ Circuit Breaker Protection**: Automatic failure detection and recovery for external services
 
 ### 📊 **Analytics & Monitoring**
+
 - **🖥️ Hybrid Multi-Worker Dashboard**: Real-time extraction monitoring at [diocesanvitality.org](https://diocesanvitality.org)
 - **🔧 Worker Selector**: Switch between aggregate view and individual worker monitoring
 - **🛡️ Enhanced Circuit Breaker Visualization**: 17+ circuit breakers with health-based sorting and color coding
@@ -164,6 +180,7 @@ The distributed pipeline **skips initial setup steps** and focuses on the core e
 - **🎯 Intelligent Parish Prioritization**: Multi-factor scoring for optimal extraction order
 
 ### 🤝 **Respectful Automation**
+
 - **🤖 Gold-Standard Web Ethics**: Comprehensive robots.txt compliance with immediate cessation when blocked
 - **⏱️ Thoughtful Rate Limiting**: 2-5 second delays between requests per domain with randomized timing
 - **🛡️ Advanced Blocking Detection**: Real-time detection of 403 Forbidden, rate limiting, and Cloudflare protection
@@ -172,6 +189,7 @@ The distributed pipeline **skips initial setup steps** and focuses on the core e
 - **💡 Ethical Data Collection**: Prioritizing website owners' preferences over data collection efficiency
 
 ### 🔧 **Advanced Features**
+
 - **Interactive Parish Finder Support**: Specialized extractors for JavaScript-based parish finder interfaces
 - **Cloud Database Integration**: Stores data in Supabase with automated upserts and conflict resolution
 - **Comprehensive Logging**: Detailed extraction statistics and error tracking
@@ -182,23 +200,27 @@ The distributed pipeline **skips initial setup steps** and focuses on the core e
 Our investment in respectful automation reflects a core commitment to **ethical data collection** and **sustainable web practices**. Here's why this matters:
 
 ### 🎯 **Mission Alignment**
+
 - **Catholic Social Teaching**: Our approach reflects Catholic principles of respect, stewardship, and responsible use of resources
 - **Community Partnership**: Parish websites serve their communities first - our research comes second
 - **Long-term Sustainability**: Respectful practices ensure continued access and community trust
 
 ### 📊 **Practical Benefits**
+
 - **Higher Success Rates**: Respectful behavior reduces blocking and improves data quality
 - **Sustainable Operations**: Avoids IP bans and maintains long-term access to data sources
 - **Legal Compliance**: Proactive adherence to robots.txt and web standards reduces legal risks
 - **Community Relations**: Demonstrates good faith to diocesan IT administrators
 
 ### 🛡️ **Technical Excellence**
+
 - **Professional Standards**: Industry best practices for automated data collection
 - **Error Reduction**: Proper rate limiting reduces server stress and timeout errors
 - **Quality Assurance**: Respectful timing allows for complete page loads and accurate extraction
 - **Monitoring Transparency**: Clear logging enables accountability and troubleshooting
 
 ### 💡 **Research Ethics**
+
 - **Academic Integrity**: Maintains high standards for data collection methodology
 - **Transparency**: Open documentation of our respectful practices and limitations
 - **Reproducibility**: Other researchers can build upon our ethical framework
@@ -222,14 +244,16 @@ The system uses a modern, scalable architecture designed for automated data coll
 ## Project Structure
 
 ### Key Components
-- **`run_pipeline.py`**: Main orchestration script for the entire extraction pipeline
-- **`async_extract_parishes.py`**: High-performance concurrent extraction (60% faster)
+
+- **`pipeline/run_pipeline.py`**: Main orchestration script for the entire extraction pipeline
+- **`pipeline/async_extract_parishes.py`**: High-performance concurrent extraction (60% faster)
 - **`core/`**: Essential utilities for database, WebDriver, and circuit breaker management
 - **`frontend/`**: React dashboard with real-time monitoring
 - **`backend/`**: FastAPI server for monitoring and data APIs
 - **`k8s/`**: Kubernetes deployment manifests
 
 ### Technology Stack
+
 - **Python 3.12+** with Selenium, BeautifulSoup, Google Gemini AI
 - **React + FastAPI** for real-time monitoring dashboard
 - **Supabase PostgreSQL** for cloud database storage
@@ -256,8 +280,6 @@ For complete setup instructions including prerequisites, environment configurati
 
 **→ Follow the [Local Development Guide](docs/LOCAL_DEVELOPMENT.md) for detailed step-by-step instructions.**
 
-
-
 ## Running the System
 
 The system can be run in two environments: **local development** for testing and development, or **cloud production** for continuous operation with real-time monitoring.
@@ -267,12 +289,14 @@ The system can be run in two environments: **local development** for testing and
 **Access the live system**: [https://diocesanvitality.org/dashboard](https://diocesanvitality.org/dashboard)
 
 The production system runs automatically in Kubernetes with:
+
 - **Real-time dashboard**: Monitor live data extraction progress
 - **Automatic pipeline**: Continuously collects fresh diocese and parish data
 - **Auto-scaling**: Data collection infrastructure scales up/down as needed
 - **High availability**: Frontend and backend available 24/7
 
 **For system administrators:**
+
 - Pipeline management via Kubernetes scaling (requires cluster access)
 - Monitoring and logs available through the web dashboard
 - See `/k8s/README.md` for deployment and management instructions
@@ -286,21 +310,19 @@ For development, testing, or running custom extractions on your local machine, s
 For comprehensive command examples, parameters, and usage instructions for all scripts, see the **[📝 Commands Guide](docs/COMMANDS.md)**.
 
 **Quick Examples:**
+
 ```bash
 # Full pipeline with monitoring
-source venv/bin/activate && python run_pipeline.py --max_parishes_per_diocese 10
+source venv/bin/activate && python -m pipeline.run_pipeline --max_parishes_per_diocese 10
 
 # Process specific diocese
-python run_pipeline.py --diocese_id 2024 --max_parishes_per_diocese 25
+python -m pipeline.run_pipeline --diocese_id 2024 --max_parishes_per_diocese 25
 
 # High-performance concurrent extraction
-python async_extract_parishes.py --diocese_id 2024 --pool_size 6 --batch_size 12
+python -m pipeline.async_extract_parishes --diocese_id 2024 --pool_size 6 --batch_size 12
 ```
 
 **→ See [Commands Guide](docs/COMMANDS.md) for complete command reference and examples.**
-
-
-
 
 ## Reporting and Analytics
 
@@ -318,11 +340,10 @@ The script will generate PNG image files (e.g., `dioceses_records_over_time.png`
 
 ---
 
-
-
 ## Data Coverage
 
 The production system continuously maintains current data:
+
 - **196 U.S. Catholic Dioceses** (all active dioceses)
 - **17,000+ Parish Records** with detailed information
 - **High Success Rates**: 85-95% successful parish directory detection
@@ -333,6 +354,7 @@ The production system continuously maintains current data:
 ## Contributing
 
 The project is designed for extensibility:
+
 - **New Extractors**: Add support for additional website platforms in `parish_extractors.py`
 - **Enhanced AI**: Improve content analysis in `llm_utils.py`
 - **Additional Data Points**: Extend `ParishData` model in `parish_extraction_core.py`
@@ -360,6 +382,7 @@ The project includes a modern web application providing real-time access to coll
 **🌐 Access the Dashboard**: [https://diocesanvitality.org/dashboard](https://diocesanvitality.org/dashboard)
 
 Features:
+
 - **Real-time extraction monitoring**: Watch live data collection progress
 - **Interactive data browser**: Explore dioceses and parishes
 - **Live logs**: Four-step extraction process visibility
@@ -367,14 +390,15 @@ Features:
 
 ### Architecture
 
--   **/frontend**: React SPA with real-time WebSocket dashboard
--   **/backend**: FastAPI server with monitoring and data APIs
--   **/pipeline**: Containerized extraction system with live monitoring
--   **/k8s**: Production Kubernetes deployment manifests
+- **/frontend**: React SPA with real-time WebSocket dashboard
+- **/backend**: FastAPI server with monitoring and data APIs
+- **/pipeline**: Containerized extraction system with live monitoring
+- **/k8s**: Production Kubernetes deployment manifests
 
 ### Container Registry
 
 The web application uses **Docker Hub** for container image storage. Docker Hub provides:
+
 - **Free public repositories**: Unlimited public container images
 - **Simple authentication**: Standard Docker login workflow
 - **Wide compatibility**: Supported by all Kubernetes distributions
@@ -387,12 +411,14 @@ The web application uses **Docker Hub** for container image storage. Docker Hub 
 ## Documentation
 
 ### 🚀 Getting Started & Development
+
 - **[README.md](README.md)**: Main project documentation
 - **[docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md)**: Complete local development setup and workflow
 - **[docs/DEVELOPMENT_ENVIRONMENTS.md](docs/DEVELOPMENT_ENVIRONMENTS.md)**: Development environment setup (local and cloud)
 - **[docs/COMMANDS.md](docs/COMMANDS.md)**: Complete command reference for all scripts
 
 ### 🏗️ Deployment & Operations
+
 - **[docs/TERRAFORM_INFRASTRUCTURE.md](docs/TERRAFORM_INFRASTRUCTURE.md)**: Terraform infrastructure management (hybrid Terraform + GitOps approach)
 - **[docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md)**: Docker and Kubernetes deployment instructions
 - **[docs/CI_CD_PIPELINE.md](docs/CI_CD_PIPELINE.md)**: Complete CI/CD pipeline documentation and workflows
@@ -405,6 +431,7 @@ The web application uses **Docker Hub** for container image storage. Docker Hub 
 - **[k8s/argocd/cloudflare-tunnel-applicationsetREADME.md](k8s/argocd/cloudflare-tunnel-applicationsetREADME.md)**: Cloudflare tunnel configuration
 
 ### 🔧 System Architecture & Configuration
+
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**: System architecture and design patterns
 - **[docs/DATABASE.md](docs/DATABASE.md)**: Database schema and data management
 - **[docs/AUTHENTICATION.md](docs/AUTHENTICATION.md)**: Authentication and security configuration
@@ -413,21 +440,27 @@ The web application uses **Docker Hub** for container image storage. Docker Hub 
 - **[docs/MONITORING.md](docs/MONITORING.md)**: Real-time monitoring and operational visibility
 
 ### 🖥️ Application Components
+
 - **[backend/README.md](backend/README.md)**: FastAPI backend server documentation
 - **[frontend/README.md](frontend/README.md)**: React frontend application setup
 
 ### ⚡ Performance & Optimization
+
 - **[docs/ASYNC_PERFORMANCE_GUIDE.md](docs/ASYNC_PERFORMANCE_GUIDE.md)**: High-performance concurrent extraction optimization
 - **[docs/ml-model-training.md](docs/ml-model-training.md)**: ML-based URL prediction system training
 
 ### 🧪 Testing & Quality Assurance
+
 - **[tests/TESTING.md](tests/TESTING.md)**: Testing framework and test procedures
 
 ### 🗄️ Database & Migrations
+
 - **[sql/migrations/README.md](sql/migrations/README.md)**: Database migration procedures
 
 ### 📊 Advanced Features
+
 - **[docs/DIOCESE_PARISH_DIRECTORY_OVERRIDE.md](docs/DIOCESE_PARISH_DIRECTORY_OVERRIDE.md)**: Directory URL override system
 
 ### ⚙️ Project Configuration
+
 - **[.claude/CLAUDE.md](.claude/CLAUDE.md)**: Claude Code assistant project instructions and commands
