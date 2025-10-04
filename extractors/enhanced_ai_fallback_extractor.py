@@ -16,7 +16,7 @@ from urllib.parse import urljoin, urlparse
 
 from selenium.webdriver.remote.webdriver import WebDriver
 
-from config import get_genai_api_key
+from pipeline.config import get_genai_api_key
 from core.ai_content_analyzer import get_ai_content_analyzer
 from core.diocese_profiles import get_diocese_profile_manager
 from core.dynamic_content_engine import get_dynamic_content_engine

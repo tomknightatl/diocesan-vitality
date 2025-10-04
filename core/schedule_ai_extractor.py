@@ -11,7 +11,7 @@ from typing import Dict, List, Optional, Tuple
 
 import google.generativeai as genai
 
-import config
+from pipeline import config
 from core.db import get_supabase_client
 from core.logger import get_logger
 

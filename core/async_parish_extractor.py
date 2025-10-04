@@ -16,7 +16,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 from core.async_driver import get_async_driver_pool
 from core.logger import get_logger
-from parish_extraction_core import ParishData, clean_parish_name_and_extract_address
+from pipeline.parish_extraction_core import ParishData, clean_parish_name_and_extract_address
 
 logger = get_logger(__name__)
 
