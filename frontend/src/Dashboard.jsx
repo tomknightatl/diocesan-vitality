@@ -1086,7 +1086,7 @@ const Dashboard = () => {
                     <tr>
                       <th>Timestamp</th>
                       <th>Diocese</th>
-                      <th>Parishes</th>
+                      <th>Max Parishes</th>
                       <th>Success Rate</th>
                       <th>Duration</th>
                       <th>Status</th>
