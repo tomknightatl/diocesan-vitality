@@ -7,7 +7,7 @@ High-performance parish detail extraction using asyncio and intelligent batching
 import asyncio
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from bs4 import BeautifulSoup
 from selenium.webdriver.common.by import By
@@ -99,10 +99,11 @@ class AsyncParishExtractor:
                 extraction_jobs.append(job)
 
         if not extraction_jobs:
-            logger.info("ℹ️ No parishes require detail extraction")
+            logger.info(f"ℹ️ No parishes require detail extraction (checked {len(parishes)} parishes)")
+            logger.info("   • Reason: All parishes either lack detail URLs or have complete information")
             return parishes
 
-        logger.info(f"📝 Created {len(extraction_jobs)} extraction jobs")
+        logger.info(f"📝 Created {len(extraction_jobs)} extraction jobs from {len(parishes)} parishes")
 
         # Process jobs in batches
         enhanced_parishes = []
@@ -185,18 +186,33 @@ class AsyncParishExtractor:
 
     def _should_extract_details(self, parish: ParishData) -> bool:
         """Determine if a parish needs detail extraction"""
-        # Extract details if we have a potential detail URL and missing key information
-        if not hasattr(parish, "detail_url") or not parish.detail_url:
+        # FIX: Check both detail_url and parish_detail_url attributes
+        detail_url = None
+        if hasattr(parish, "parish_detail_url") and parish.parish_detail_url:
+            detail_url = parish.parish_detail_url
+        elif hasattr(parish, "detail_url") and parish.detail_url:
+            detail_url = parish.detail_url
+
+        if not detail_url:
+            logger.debug(f"  ⏭️ Skipping detail extraction for {parish.name}: no detail URL")
             return False
 
         # Check if we're missing important information
-        missing_info = not parish.phone or not parish.website or not parish.full_address or not parish.zip_code
+        missing_info = not parish.website or not parish.phone or not parish.full_address or not parish.zip_code
 
-        return missing_info
+        if not missing_info:
+            logger.debug(f"  ⏭️ Skipping detail extraction for {parish.name}: all info present")
+            return False
+
+        logger.debug(f"  ✅ Will extract details for {parish.name}: URL={detail_url}")
+        return True
 
     def _get_detail_url(self, parish: ParishData) -> str:
         """Get the detail URL for a parish"""
-        if hasattr(parish, "detail_url") and parish.detail_url:
+        # FIX: Check both detail_url and parish_detail_url attributes
+        if hasattr(parish, "parish_detail_url") and parish.parish_detail_url:
+            return parish.parish_detail_url
+        elif hasattr(parish, "detail_url") and parish.detail_url:
             return parish.detail_url
         return ""
 
@@ -222,10 +238,18 @@ class AsyncParishExtractor:
 
     def _determine_extraction_method(self, parish: ParishData) -> str:
         """Determine the best extraction method for a parish"""
-        if hasattr(parish, "detail_url") and parish.detail_url:
-            if "ecatholic" in parish.detail_url.lower():
+        # FIX: Check both detail_url and parish_detail_url attributes
+        detail_url = ""
+        if hasattr(parish, "parish_detail_url") and parish.parish_detail_url:
+            detail_url = parish.parish_detail_url
+        elif hasattr(parish, "detail_url") and parish.detail_url:
+            detail_url = parish.detail_url
+
+        if detail_url:
+            detail_url_lower = detail_url.lower()
+            if "ecatholic" in detail_url_lower:
                 return "ecatholic"
-            elif "diocese" in parish.detail_url.lower():
+            elif "diocese" in detail_url_lower:
                 return "diocese_standard"
         return "standard"
 
