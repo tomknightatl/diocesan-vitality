@@ -427,6 +427,7 @@ class MonitoringManager:
                     "worker_id": worker.get("worker_id", "unknown"),
                     "status": worker.get("status", "unknown"),
                     "worker_status": worker_status,
+                    "worker_type": worker.get("worker_type", "all"),
                     "current_diocese": worker.get("current_diocese"),
                     "parishes_processed": worker.get("parishes_processed", 0),
                     "last_updated": last_updated,
