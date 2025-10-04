@@ -16,6 +16,7 @@ The Diocesan Vitality pipeline uses a **distributed worker architecture** with s
 **Pipeline Steps: 1-2 (Diocese and Parish Directory Discovery)**
 
 #### Responsibilities
+
 - **Step 1: Extract Dioceses**
   - Scrapes the official USCCB source for diocese information
   - Extracts diocese names, addresses, and official websites
@@ -29,6 +30,7 @@ The Diocesan Vitality pipeline uses a **distributed worker architecture** with s
   - Script: `find_parishes.py`
 
 #### Characteristics
+
 - **Resource Allocation**: 512Mi RAM, 200m CPU
 - **Execution Pattern**: Runs continuously in infinite loop with 5-minute sleep between cycles
 - **Scaling**: 1 pod (lightweight operations)
@@ -41,6 +43,7 @@ The Diocesan Vitality pipeline uses a **distributed worker architecture** with s
 **Pipeline Step: 3 (Parish Detail Extraction)**
 
 #### Responsibilities
+
 - **Step 3: Extract Parishes**
   - Extracts detailed parish information from directory pages
   - Employs specialized extractors for different website platforms:
@@ -53,6 +56,7 @@ The Diocesan Vitality pipeline uses a **distributed worker architecture** with s
   - Script: `async_extract_parishes.py`
 
 #### Characteristics
+
 - **Resource Allocation**: 2.2Gi RAM, 800m CPU
 - **Execution Pattern**: Continuous processing with work coordination
 - **Scaling**: 2-5 pods (HPA: scales based on CPU/memory)
@@ -66,6 +70,7 @@ The Diocesan Vitality pipeline uses a **distributed worker architecture** with s
 **Pipeline Step: 4 (Mass Schedule Extraction)**
 
 #### Responsibilities
+
 - **Step 4: Extract Schedules**
   - Visits individual parish websites to extract liturgical schedules
   - Parses Mass times, Adoration schedules, and Reconciliation times
@@ -74,6 +79,7 @@ The Diocesan Vitality pipeline uses a **distributed worker architecture** with s
   - Script: `extract_schedule_respectful.py`
 
 #### Characteristics
+
 - **Resource Allocation**: 1.5Gi RAM, 600m CPU
 - **Execution Pattern**: Batch processing with respectful delays
 - **Scaling**: 1-3 pods (HPA: scales based on workload)
@@ -87,6 +93,7 @@ The Diocesan Vitality pipeline uses a **distributed worker architecture** with s
 **Pipeline Step: 5 (Analytics and Report Generation)**
 
 #### Responsibilities
+
 - **Step 5: Generate Reports**
   - Runs analytics on collected data
   - Generates statistics and insights
@@ -95,6 +102,7 @@ The Diocesan Vitality pipeline uses a **distributed worker architecture** with s
   - Script: `report_statistics.py`
 
 #### Characteristics
+
 - **Resource Allocation**: 512Mi RAM, 200m CPU
 - **Execution Pattern**: Runs every 6 hours
 - **Scaling**: 1 pod (lightweight operations)
@@ -107,6 +115,7 @@ The Diocesan Vitality pipeline uses a **distributed worker architecture** with s
 **Pipeline Steps: All (1-5)**
 
 #### Responsibilities
+
 - Backwards compatible mode that runs all pipeline steps sequentially
 - Coordinates work through distributed work coordinator
 - Used for:
@@ -115,6 +124,7 @@ The Diocesan Vitality pipeline uses a **distributed worker architecture** with s
   - Legacy compatibility
 
 #### Characteristics
+
 - **Resource Allocation**: Configurable (defaults to extraction worker resources)
 - **Execution Pattern**: Sequential execution of all stages
 - **Scaling**: Typically 1 pod
@@ -150,12 +160,45 @@ Workers coordinate through the database using:
 
 Each worker type has optimized resource allocation:
 
-| Worker Type | Memory | CPU | Scaling | Reason |
-|-------------|--------|-----|---------|--------|
-| Discovery | 512Mi | 200m | 1 pod | Lightweight HTTP and AI calls |
-| Extraction | 2.2Gi | 800m | 2-5 pods | Multiple WebDriver instances, concurrent processing |
-| Schedule | 1.5Gi | 600m | 1-3 pods | WebDriver with AI analysis |
-| Reporting | 512Mi | 200m | 1 pod | Data analysis and SQL queries |
+| Worker Type | Memory | CPU  | Scaling  | Reason                                              |
+| ----------- | ------ | ---- | -------- | --------------------------------------------------- |
+| Discovery   | 512Mi  | 200m | 1 pod    | Lightweight HTTP and AI calls                       |
+| Extraction  | 2.2Gi  | 800m | 2-5 pods | Multiple WebDriver instances, concurrent processing |
+| Schedule    | 1.5Gi  | 600m | 1-3 pods | WebDriver with AI analysis                          |
+| Reporting   | 512Mi  | 200m | 1 pod    | Data analysis and SQL queries                       |
+
+### Pod Distribution and Anti-Affinity
+
+**Workers per Pod:** Each pod runs **exactly 1 worker process**
+
+- 1 pod = 1 Python process = 1 worker
+- Worker identified by pod name (`WORKER_ID: metadata.name`)
+
+**Pods per Node:** **Prefers 1 pod per node, but allows multiple if needed**
+
+The deployment uses soft pod anti-affinity:
+
+```yaml
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution: # Soft constraint
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - pipeline
+          topologyKey: "kubernetes.io/hostname"
+```
+
+**Behavior:**
+
+- **Ideal case** (enough nodes): Pipeline pods spread across different nodes (1 pod per node)
+- **Limited nodes**: Multiple pods can run on same node, balanced evenly
+- **Single node**: All pods run on the same node (preference ignored)
+- **Why soft?** Ensures pods can still be scheduled even with limited nodes
 
 ### Horizontal Pod Autoscaling (HPA)
 
@@ -249,6 +292,7 @@ Each worker type reports to the monitoring dashboard:
 - **Circuit breakers**: Website-specific failure tracking
 
 Access the monitoring dashboard at:
+
 - **Production**: https://diocesanvitality.org/dashboard
 - **Development**: https://devui.diocesanvitality.org/dashboard
 - **Staging**: https://stgui.diocesanvitality.org/dashboard
@@ -265,21 +309,25 @@ Access the monitoring dashboard at:
 ## Troubleshooting
 
 ### Worker Not Starting
+
 - Check `WORKER_TYPE` environment variable is set correctly
 - Verify database connectivity (SUPABASE_URL, SUPABASE_KEY)
 - Check pod logs: `kubectl logs -n <namespace> <pod-name>`
 
 ### Worker Showing as Failed
+
 - Check for Python exceptions in logs
 - Verify website accessibility (circuit breakers may be tripped)
 - Check resource limits (OOMKilled indicates memory issues)
 
 ### No Work Being Processed
+
 - Verify previous pipeline stages completed successfully
 - Check work coordination tables (`diocese_work_assignments`)
 - Ensure workers are registered in `pipeline_workers` table
 
 ### High Resource Usage
+
 - Review `max_parishes_per_diocese` setting (lower for less memory)
 - Check for WebDriver memory leaks (schedule/extraction workers)
 - Consider scaling down HPA limits
