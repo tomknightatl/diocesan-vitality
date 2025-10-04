@@ -6,7 +6,6 @@ namespace: diocesan-vitality
 resources:
   - ../../application/base
   - namespace.yaml
-  - ../../pipeline-hpa.yaml
 
 patches:
   - path: production-patches.yaml
