@@ -217,7 +217,6 @@ class DistributedWorkCoordinator:
                     continue
 
                 # Skip dioceses that were recently completed (within last 24 hours)
-                from datetime import datetime, timedelta
                 recent_cutoff = (datetime.utcnow() - timedelta(hours=24)).isoformat()
                 recent_completion = (
                     self.supabase.table("diocese_work_assignments")
