@@ -10,7 +10,7 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
-import config
+from pipeline import config
 from core.db import get_supabase_client
 from core.http_client import get_http_client
 from core.logger import get_logger

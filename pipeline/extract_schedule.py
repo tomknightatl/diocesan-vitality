@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-import config
+from pipeline import config
 from core.db import get_supabase_client  # Import the get_supabase_client function
 from core.enhanced_url_manager import get_enhanced_url_manager
 from core.intelligent_parish_prioritizer import get_intelligent_parish_prioritizer
