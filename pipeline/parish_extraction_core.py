@@ -800,6 +800,8 @@ def enhanced_safe_upsert_to_supabase(
     # Phase 2: Batch upsert with optimized batch size
     batch_size = min(50, len(valid_parishes))  # Optimal batch size for Supabase
     success_count = 0
+    updated_count = 0
+    new_count = 0
     total_batches = (len(valid_parishes) + batch_size - 1) // batch_size
 
     logger.info(f"  🚀 Processing {len(valid_parishes)} parishes in {total_batches} batch(es) of {batch_size}...")
@@ -872,11 +874,13 @@ def enhanced_safe_upsert_to_supabase(
             logger.error(f"    ❌ Batch {batch_num + 1} failed: {e}")
             # Try individual upserts as fallback
             logger.info(f"    🔄 Falling back to individual upserts for batch {batch_num + 1}...")
-            batch_success = _fallback_individual_upserts(batch, supabase, monitoring_client, diocese_name, parish_actions)
+            batch_success, batch_updated, batch_new = _fallback_individual_upserts(batch, supabase, monitoring_client, diocese_name, parish_actions)
             success_count += batch_success
+            updated_count += batch_updated
+            new_count += batch_new
 
     # Phase 3: Summary reporting
-    logger.info(f"  📊 Results: {success_count} saved, {skipped_count} skipped, {detail_success_count} with detailed info")
+    logger.info(f"  📊 Results: {success_count} saved ({new_count} new, {updated_count} updated), {skipped_count} skipped, {detail_success_count} with detailed info")
     if success_count > 0:
         success_rate = (success_count / (success_count + skipped_count)) * 100
         logger.info(f"  📈 Success rate: {success_rate:.1f}%")
@@ -894,32 +898,86 @@ def enhanced_safe_upsert_to_supabase(
 
 def _fallback_individual_upserts(
     batch: List[Dict], supabase, monitoring_client=None, diocese_name=None, parish_actions=None
-) -> int:
-    """Fallback function for individual upserts when batch fails"""
+) -> tuple:
+    """Fallback function for individual upserts when batch fails
+
+    Handles duplicate constraints by checking if parish exists and updating instead of inserting.
+
+    Returns:
+        tuple: (success_count, updated_count, new_count)
+    """
     success_count = 0
+    updated_count = 0
+    new_count = 0
 
     for item in batch:
         try:
-            response = supabase.table("Parishes").upsert(item["data"]).execute()
+            parish = item["original"]
+            data = item["data"]
+
+            # Check if parish exists by Name or Web URL (both have unique constraints)
+            existing = None
+            try:
+                # Check by name first
+                name_check = (
+                    supabase.table("Parishes")
+                    .select("id")
+                    .eq("diocese_id", data["diocese_id"])
+                    .eq("Name", data["Name"])
+                    .execute()
+                )
+                if name_check.data:
+                    existing = name_check.data[0]
+                # If not found by name, check by Web URL (if provided)
+                elif data.get("Web"):
+                    web_check = (
+                        supabase.table("Parishes")
+                        .select("id")
+                        .eq("diocese_id", data["diocese_id"])
+                        .eq("Web", data["Web"])
+                        .execute()
+                    )
+                    if web_check.data:
+                        existing = web_check.data[0]
+            except Exception as check_error:
+                logger.debug(f"      Error checking existing parish {parish.name}: {check_error}")
+
+            # Update if exists, insert if new
+            if existing:
+                response = supabase.table("Parishes").update(data).eq("id", existing["id"]).execute()
+                action_verb = "updated"
+                updated_count += 1
+            else:
+                response = supabase.table("Parishes").insert(data).execute()
+                action_verb = "added"
+                new_count += 1
+
             if not (hasattr(response, "error") and response.error):
                 success_count += 1
-                parish = item["original"]
-                logger.info(f"      ✅ 📌 Individually saved: {parish.name}")
+                logger.info(f"      ✅ 📌 Parish {action_verb}: {parish.name}")
 
                 # Send to monitoring if available
                 if monitoring_client and diocese_name:
-                    action = parish_actions.get(parish.name, "Parish saved") if parish_actions else "Parish saved"
+                    action = f"Parish {action_verb}"
                     website_link = (
                         f" → <a href='{parish.website}' target='_blank'>{parish.website}</a>" if parish.website else ""
                     )
                     monitoring_client.send_log(f"Step 3 │ ✅ {action}: {parish.name}, {diocese_name}{website_link}", "INFO")
             else:
-                logger.error(f"      ❌ Individual upsert error: {response.error}")
+                logger.error(f"      ❌ Individual {action_verb} error for {parish.name}: {response.error}")
         except Exception as e:
             parish = item["original"]
-            logger.error(f"      ❌ Individual upsert failed for {parish.name}: {e}")
+            # Check if it's a duplicate error that we can ignore
+            if "duplicate key" in str(e).lower() or "unique constraint" in str(e).lower():
+                logger.warning(f"      ⚠️ Parish already exists (skipping): {parish.name}")
+                success_count += 1  # Count as success since data is in DB
+            else:
+                logger.error(f"      ❌ Individual upsert failed for {parish.name}: {e}")
 
-    return success_count
+    if updated_count > 0 or new_count > 0:
+        logger.info(f"      📊 Batch summary: {success_count} saved ({updated_count} updated, {new_count} new)")
+
+    return success_count, updated_count, new_count
 
 
 def analyze_parish_finder_quality(parishes: List[ParishData]) -> Dict:
