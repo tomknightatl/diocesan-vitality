@@ -216,6 +216,22 @@ class DistributedWorkCoordinator:
                     skipped_assigned += 1
                     continue
 
+                # Skip dioceses that were recently completed (within last 24 hours)
+                from datetime import datetime, timedelta
+                recent_cutoff = (datetime.utcnow() - timedelta(hours=24)).isoformat()
+                recent_completion = (
+                    self.supabase.table("diocese_work_assignments")
+                    .select("completed_at")
+                    .eq("diocese_id", diocese["id"])
+                    .eq("status", "completed")
+                    .gte("completed_at", recent_cutoff)
+                    .execute()
+                )
+
+                if recent_completion.data:
+                    skipped_assigned += 1
+                    continue
+
                 # Available for processing!
                 parish_directory_url = (
                     override_response.data[0]["parish_directory_url"]
