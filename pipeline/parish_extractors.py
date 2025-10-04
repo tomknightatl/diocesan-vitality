@@ -3596,5 +3596,38 @@ def test_pdf_extractor():
             print(f"    Phone: {parish.phone}")
 
 
+def get_extractor_for_pattern(pattern: DioceseSitePattern) -> BaseExtractor:
+    """
+    Factory function to select the appropriate extractor based on the detected pattern.
+
+    Args:
+        pattern: DioceseSitePattern object from PatternDetector
+
+    Returns:
+        Appropriate extractor instance for the detected pattern
+    """
+    extraction_method = pattern.extraction_method
+
+    # Map extraction methods to extractor classes
+    extractor_map = {
+        "diocese_card_extraction_with_details": EnhancedDiocesesCardExtractor,
+        "parish_finder_extraction": ParishFinderExtractor,
+        "table_extraction": TableExtractor,
+        "interactive_map_extraction": ImprovedInteractiveMapExtractor,
+        "iframe_extraction": IframeExtractor,
+        "navigation_extraction": NavigationExtractor,
+        "pdf_extraction": PDFDirectoryExtractor,
+        "generic_extraction": ImprovedGenericExtractor,
+        "squarespace_extraction": ImprovedGenericExtractor,  # Use generic for Squarespace
+    }
+
+    # Get the extractor class, defaulting to generic if not found
+    extractor_class = extractor_map.get(extraction_method, ImprovedGenericExtractor)
+
+    logger.info(f"    🔧 Selected extractor: {extractor_class.__name__} for method '{extraction_method}'")
+
+    return extractor_class(pattern)
+
+
 if __name__ == "__main__":
     test_pdf_extractor()
