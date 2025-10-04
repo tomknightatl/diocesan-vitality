@@ -2903,28 +2903,50 @@ class NavigationExtractor(BaseExtractor):
         parishes = []
 
         try:
-            # Look for direct links to parish directories
+            # Look for direct links to parish directories - EXPANDED patterns
             directory_patterns = [
                 r"parish.*director",
                 r"church.*director",
                 r"find.*parish",
                 r"locate.*church",
                 r"director.*parish",
+                r"parish.*list",
+                r"all.*parish",
+                r"parish.*search",
+                r"parish.*finder",
+                r"locate.*parish",
             ]
 
             all_links = soup.find_all("a", href=True)
 
+            # Score links by relevance
+            scored_links = []
             for link in all_links:
                 href = link.get("href", "")
                 text = link.get_text().strip().lower()
 
-                if any(re.search(pattern, text) or re.search(pattern, href.lower()) for pattern in directory_patterns):
-                    full_url = self._resolve_url(href, driver.current_url)
-                    logger.info(f"    🔗 Found potential parish directory link: {text} -> {full_url}")
+                # Calculate relevance score
+                score = 0
+                if any(re.search(pattern, text) for pattern in directory_patterns):
+                    score += 3
+                if any(re.search(pattern, href.lower()) for pattern in directory_patterns):
+                    score += 2
+                if "parish" in text or "church" in text:
+                    score += 1
 
-                    parishes = self._follow_parish_directory_link(driver, full_url)
-                    if parishes:
-                        return parishes
+                if score > 0:
+                    scored_links.append((score, text, href))
+
+            # Sort by score (highest first) and try the most relevant links
+            scored_links.sort(reverse=True, key=lambda x: x[0])
+
+            for score, text, href in scored_links[:5]:  # Try top 5 links
+                full_url = self._resolve_url(href, driver.current_url)
+                logger.info(f"    🔗 Found potential parish directory link: {text} -> {full_url}")
+
+                parishes = self._follow_parish_directory_link(driver, full_url)
+                if parishes:
+                    return parishes
 
         except Exception as e:
             logger.error(f"    ⚠️ Directory links error: {str(e)[:100]}...")

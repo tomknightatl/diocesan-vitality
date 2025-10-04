@@ -361,13 +361,55 @@ class AsyncDioceseProcessor:
                 logger.error(f"    ❌ Failed to create WebDriver for {diocese_name}")
                 return []
 
-            # Perform extraction
+            # Perform extraction with fallback chain
             logger.info(f"    🚀 Starting extraction for {diocese_name}...")
             parishes_found = extractor.extract(driver, soup, parish_directory_url)
 
+            # FALLBACK CHAIN: If primary extraction fails, try alternatives
+            if not parishes_found and pattern.extraction_method != "generic_extraction":
+                logger.warning(f"    ⚠️ Primary extraction ({pattern.extraction_method}) found no parishes for {diocese_name}")
+                logger.info(f"    🔄 Attempting fallback: GenericExtractor...")
+
+                # Try generic extractor as fallback
+                from pipeline.parish_extractors import ImprovedGenericExtractor
+                from pipeline.parish_extraction_core import DioceseSitePattern, DiocesePlatform, ParishListingType
+
+                generic_pattern = DioceseSitePattern(
+                    platform=pattern.platform,
+                    listing_type=ParishListingType.SIMPLE_LIST,
+                    confidence_score=0.3,
+                    extraction_method="generic_extraction",
+                    specific_selectors={"containers": "[class*='parish'], [class*='church']"},
+                    javascript_required=False,
+                    notes="Fallback generic extraction"
+                )
+
+                generic_extractor = ImprovedGenericExtractor(generic_pattern)
+                parishes_found = generic_extractor.extract(driver, soup, parish_directory_url)
+
+                if parishes_found:
+                    logger.info(f"    ✅ Fallback GenericExtractor succeeded: {len(parishes_found)} parishes found")
+                else:
+                    logger.info(f"    ⚠️ Fallback GenericExtractor also found no parishes")
+
+                    # FINAL FALLBACK: Try AI-powered extraction
+                    logger.info(f"    🤖 Attempting final fallback: AI-powered extraction...")
+                    try:
+                        from extractors.enhanced_ai_fallback_extractor import EnhancedAIFallbackExtractor
+
+                        ai_extractor = EnhancedAIFallbackExtractor()
+                        parishes_found = ai_extractor.extract_with_ai(soup, parish_directory_url, diocese_name)
+
+                        if parishes_found:
+                            logger.info(f"    ✅ AI fallback succeeded: {len(parishes_found)} parishes found")
+                        else:
+                            logger.warning(f"    ❌ All extraction methods failed for {diocese_name}")
+                    except Exception as ai_error:
+                        logger.error(f"    ❌ AI fallback failed: {ai_error}")
+
             # Log extraction results
             if parishes_found:
-                logger.info(f"    ✅ Extraction successful for {diocese_name}: {len(parishes_found)} parishes found")
+                logger.info(f"    ✅ Final extraction result for {diocese_name}: {len(parishes_found)} parishes found")
                 # Log sample of parishes found
                 sample_size = min(3, len(parishes_found))
                 for i, parish in enumerate(parishes_found[:sample_size], 1):
@@ -375,7 +417,7 @@ class AsyncDioceseProcessor:
                 if len(parishes_found) > sample_size:
                     logger.info(f"       ... and {len(parishes_found) - sample_size} more")
             else:
-                logger.warning(f"    ⚠️ No parishes found for {diocese_name} using {pattern.extraction_method}")
+                logger.warning(f"    ⚠️ No parishes found for {diocese_name} after all extraction attempts")
 
             driver.quit()
             return parishes_found
