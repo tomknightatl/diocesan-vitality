@@ -295,7 +295,7 @@ class AIContentAnalyzer:
         """Generate AI analysis of the page structure and content."""
 
         prompt = f"""
-You are an expert web scraper analyzing a Catholic diocese's parish directory page that failed standard extraction methods.
+You are an expert web scraper analyzing a Catholic diocese's parish directory page that has defeated 3 standard extraction methods.
 
 DIOCESE: {diocese_name}
 URL: {url}
@@ -303,47 +303,80 @@ URL: {url}
 DOM STRUCTURE ANALYSIS:
 {json.dumps(dom_analysis, indent=2)}
 
-CONTENT SNIPPETS:
-{chr(10).join(content_snippets)}
+CONTENT SNIPPETS (actual page content):
+{chr(10).join(content_snippets[:3])}
 
-Your task is to analyze this page and provide:
+CRITICAL INSTRUCTIONS:
+Your job is to find ALL parishes on this page. Standard methods (navigation extraction, generic
+extraction, table extraction) have ALL FAILED.
 
-1. CUSTOM_SELECTORS: Generate 5-8 CSS selectors that would likely capture parish links/information
-2. EXTRACTION_STRATEGY: Recommend the best approach (links, text-parsing, table-extraction, etc.)
-3. CONFIDENCE: Rate your confidence (0.0-1.0) in the suggested approach
-4. INSIGHTS: Key observations about the page structure
+SUCCESSFUL EXTRACTION EXAMPLES:
+1. Accordion/Tab Navigation: If parishes are in collapsible sections or tabs, look for:
+   - Buttons with data-toggle, aria-expanded, or onclick handlers
+   - Tab panels with class names like "tab-pane", "accordion-item"
+   - Selectors: "button[data-toggle]", ".accordion-header", "[role='tab']"
 
-Focus on finding:
-- Parish names (e.g., "St. Mary", "Holy Trinity Parish")
-- Parish links or detail pages
-- Contact information (addresses, phone numbers)
-- Mass times or schedules
+2. Embedded Maps/JavaScript Lists: If parishes load via JavaScript:
+   - Look for data attributes: data-parishes, data-locations, data-markers
+   - Script tags with JSON data: <script type="application/json">
+   - Selectors: "[data-parishes]", "script[type='application/json']"
 
-Return your analysis as JSON:
+3. Navigation Dropdowns: If parishes are in menu dropdowns:
+   - Hover menus: .dropdown-menu, .submenu, .nav-dropdown
+   - Hidden until hover: display:none, visibility:hidden
+   - Selectors: ".menu-item a[href*='parish']", "nav .dropdown a"
+
+4. Iframe Embedded: If directory is in an iframe:
+   - Check for: <iframe src="...parishfinder...">
+   - Strategy: "iframe_extraction" with iframe URL
+
+5. PDF/Document Links: If directory is a downloadable file:
+   - Look for: .pdf links, "Download Parish Directory"
+   - Strategy: "pdf_extraction" with document URL
+
+ANALYSIS REQUIREMENTS:
+1. SELECTORS: Provide 8-12 highly specific CSS selectors that target ACTUAL elements you see
+   in the DOM/content
+2. XPATH: Include XPath expressions for complex cases (contains(), following-sibling, etc.)
+3. STRATEGY: Choose the BEST match:
+   - "link_extraction_and_navigation_based" (if parishes are in dropdowns/menus)
+   - "accordion_tab_extraction" (if in collapsible sections)
+   - "javascript_data_attribute_extraction" (if in data-* attributes)
+   - "iframe_extraction" (if in embedded iframe)
+   - "pdf_extraction" (if in downloadable PDF)
+   - "table_extraction" (if in HTML tables)
+   - "text_parsing_with_regex" (if plain text list)
+4. CONFIDENCE: Be honest (0.0-1.0). If unsure, say 0.3-0.5
+5. SPECIFIC_EXTRACTION_STEPS: Provide step-by-step instructions
+
+Return JSON (use ACTUAL selectors from the page, not generic examples):
 {{
     "selectors": [
-        "a[href*='parish']",
-        ".parish-name a",
-        "// add more custom selectors"
+        "ACTUAL selector from DOM",
+        "ANOTHER actual selector",
+        "Be SPECIFIC to THIS page"
     ],
     "xpath_expressions": [
-        "//a[contains(text(), 'St.')]",
-        "//a[contains(text(), 'Parish')]"
+        "//element[@actual-attribute='value']"
     ],
-    "strategy": "link_extraction|text_parsing|table_extraction|navigation_based",
-    "confidence": 0.8,
+    "strategy": "best_matching_strategy_from_list_above",
+    "confidence": 0.7,
     "insights": [
-        "Page uses WordPress structure",
-        "Parishes listed in main content area",
-        "Each parish has a dedicated link"
+        "SPECIFIC observation about THIS page",
+        "What I actually see in the DOM/content"
     ],
     "parish_patterns": [
-        "Parish names follow 'Saint [Name] Parish' format",
-        "Links contain '/parish/' in URL"
+        "Actual pattern from this page"
+    ],
+    "specific_extraction_steps": [
+        "Step 1: Find element with selector X",
+        "Step 2: Extract Y from element",
+        "Step 3: Parse Z"
     ]
 }}
 
-Be specific and actionable. Focus on elements that actually exist on this page.
+REMEMBER: We need ACTUAL working selectors, not generic examples. Analyze the DOM STRUCTURE
+and CONTENT SNIPPETS provided above.
 """
 
         try:

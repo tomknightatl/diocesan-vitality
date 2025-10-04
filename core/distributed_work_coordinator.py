@@ -171,11 +171,13 @@ class DistributedWorkCoordinator:
                 self.supabase.table("Dioceses")
                 .select("id, Name, Website")
                 .order("id", desc=False)  # Process in ID order
-                .limit(limit * 3)  # Get extra for filtering
                 .execute()
             )
 
+            logger.debug(f"🔍 Fetched {len(dioceses_response.data)} total dioceses from database")
+
             if not dioceses_response.data:
+                logger.warning("⚠️ No dioceses found in database")
                 return []
 
             # Filter to only those with parish directory URLs available
@@ -247,13 +249,14 @@ class DistributedWorkCoordinator:
                     }
                 )
 
-                if len(available_dioceses) >= limit:
-                    break
-
             # Log selection summary
+            logger.info(f"📋 Diocese selection summary:")
+            logger.info(f"   • Total dioceses checked: {len(dioceses_response.data)}")
+            logger.info(f"   • Skipped (no directory): {skipped_no_directory}")
+            logger.info(f"   • Skipped (assigned/cooldown): {skipped_assigned}")
+            logger.info(f"   ✅ Available for processing: {len(available_dioceses)}")
             if available_dioceses:
-                logger.info(f"📋 Diocese selection summary:")
-                logger.info(f"   ✅ Selected: {len(available_dioceses)} dioceses")
+                logger.info(f"   • Selected IDs: {[d['id'] for d in available_dioceses[:10]]}")
                 logger.info(f"   📂 Skipped (no directory): {skipped_no_directory}")
                 logger.info(f"   🔒 Skipped (already assigned): {skipped_assigned}")
 
