@@ -196,9 +196,22 @@ class AsyncDioceseProcessor:
                     results["failed_dioceses"].append({"diocese_info": diocese_info, "error": str(result)})
                     self.processing_stats["failed_dioceses"] += 1
                 else:
-                    logger.info(
-                        f"✅ Diocese {diocese_info['name']} completed: " f"{result['parishes_count']} parishes extracted"
-                    )
+                    # Log differently based on extraction success
+                    if result["parishes_count"] == 0:
+                        logger.warning(
+                            f"⚠️ Diocese {diocese_info['name']} completed with 0 parishes extracted - "
+                            f"extraction_method={result.get('extraction_method', 'unknown')}, "
+                            f"url={diocese_info.get('parish_directory_url', 'N/A')}"
+                        )
+                        # Log detailed failure reasons if available
+                        if "failure_details" in result:
+                            logger.warning(f"    Failure details: {result['failure_details']}")
+                    else:
+                        logger.info(
+                            f"✅ Diocese {diocese_info['name']} completed: "
+                            f"{result['parishes_count']} parishes extracted "
+                            f"(method: {result.get('extraction_method', 'unknown')})"
+                        )
                     results["successful_dioceses"].append(result)
                     results["total_parishes_extracted"] += result["parishes_count"]
                     self.processing_stats["successful_dioceses"] += 1
@@ -262,6 +275,8 @@ class AsyncDioceseProcessor:
             "enhanced_parishes": 0,
             "extraction_time": 0,
             "success": False,
+            "extraction_method": "unknown",
+            "failure_details": {},
         }
 
         start_time = time.time()
@@ -297,11 +312,22 @@ class AsyncDioceseProcessor:
 
             # Use existing synchronous extraction logic for basic parish info
             # This could be further optimized in future iterations
-            parishes_found = await self._extract_basic_parish_info_async(soup, pattern, diocese_info, max_parishes)
+            parishes_found, extraction_details = await self._extract_basic_parish_info_async(
+                soup, pattern, diocese_info, max_parishes
+            )
+
+            # Store extraction details in result
+            result["extraction_method"] = extraction_details.get("method", "unknown")
+            result["failure_details"] = extraction_details.get("failures", {})
 
             if not parishes_found:
                 result["success"] = False
                 result["error"] = "No parishes found"
+                logger.warning(
+                    f"   ❌ Extraction failed for {diocese_name}: "
+                    f"tried_methods={list(extraction_details.get('failures', {}).keys())}, "
+                    f"url_accessible={extraction_details.get('url_accessible', True)}"
+                )
                 return result
 
             logger.info(f"   📋 Found {len(parishes_found)} parishes for {diocese_name}")
@@ -334,9 +360,23 @@ class AsyncDioceseProcessor:
         return result
 
     async def _extract_basic_parish_info_async(self, soup, pattern, diocese_info, max_parishes):
-        """Extract basic parish information using the appropriate extractor"""
+        """Extract basic parish information using the appropriate extractor
+
+        Returns:
+            tuple: (parishes_found, extraction_details) where extraction_details contains:
+                - method: successful extraction method used
+                - failures: dict of failed methods with reasons
+                - url_accessible: whether the URL was accessible
+        """
         diocese_name = diocese_info.get('name', 'Unknown')
         parish_directory_url = diocese_info.get('parish_directory_url', '')
+
+        extraction_details = {
+            "method": "none",
+            "failures": {},
+            "url_accessible": True,
+            "attempted_methods": []
+        }
 
         try:
             from core.driver import get_protected_driver
@@ -363,12 +403,19 @@ class AsyncDioceseProcessor:
 
             # Perform extraction with fallback chain
             logger.info(f"    🚀 Starting extraction for {diocese_name}...")
+            extraction_details["attempted_methods"].append(pattern.extraction_method)
             parishes_found = extractor.extract(driver, soup, parish_directory_url)
+
+            # Set method if primary extraction succeeded
+            if parishes_found:
+                extraction_details["method"] = pattern.extraction_method
 
             # FALLBACK CHAIN: If primary extraction fails, try alternatives
             if not parishes_found and pattern.extraction_method != "generic_extraction":
                 logger.warning(f"    ⚠️ Primary extraction ({pattern.extraction_method}) found no parishes for {diocese_name}")
+                extraction_details["failures"][pattern.extraction_method] = "No parishes found with primary method"
                 logger.info(f"    🔄 Attempting fallback: GenericExtractor...")
+                extraction_details["attempted_methods"].append("generic_extraction")
 
                 # Try generic extractor as fallback
                 from pipeline.parish_extractors import ImprovedGenericExtractor
@@ -389,11 +436,14 @@ class AsyncDioceseProcessor:
 
                 if parishes_found:
                     logger.info(f"    ✅ Fallback GenericExtractor succeeded: {len(parishes_found)} parishes found")
+                    extraction_details["method"] = "generic_extraction"
                 else:
                     logger.info(f"    ⚠️ Fallback GenericExtractor also found no parishes")
+                    extraction_details["failures"]["generic_extraction"] = "No parishes found with generic extractor"
 
                     # FINAL FALLBACK: Try AI-powered extraction
                     logger.info(f"    🤖 Attempting final fallback: AI-powered extraction...")
+                    extraction_details["attempted_methods"].append("ai_fallback")
                     try:
                         from extractors.enhanced_ai_fallback_extractor import EnhancedAIFallbackExtractor
 
@@ -403,10 +453,13 @@ class AsyncDioceseProcessor:
 
                         if parishes_found:
                             logger.info(f"    ✅ AI fallback succeeded: {len(parishes_found)} parishes found")
+                            extraction_details["method"] = "ai_fallback"
                         else:
                             logger.warning(f"    ❌ All extraction methods failed for {diocese_name}")
+                            extraction_details["failures"]["ai_fallback"] = "AI extraction returned no parishes"
                     except Exception as ai_error:
                         logger.error(f"    ❌ AI fallback failed: {ai_error}")
+                        extraction_details["failures"]["ai_fallback"] = f"Exception: {str(ai_error)}"
 
             # Log extraction results
             if parishes_found:
@@ -421,25 +474,29 @@ class AsyncDioceseProcessor:
                 logger.warning(f"    ⚠️ No parishes found for {diocese_name} after all extraction attempts")
 
             driver.quit()
-            return parishes_found
+            return parishes_found, extraction_details
 
         except ImportError as e:
             logger.error(f"    ❌ CODE ERROR - Import failed for {diocese_name}: {e}")
             logger.error(f"       This is a code problem, not an extraction failure!")
             logger.error(f"       Missing module or function: {str(e)}")
-            return []
+            extraction_details["failures"]["code_error"] = f"ImportError: {str(e)}"
+            return [], extraction_details
         except AttributeError as e:
             logger.error(f"    ❌ CODE ERROR - Attribute error for {diocese_name}: {e}")
             logger.error(f"       This is a code problem - missing attribute or method!")
             logger.error(f"       Details: {str(e)}")
-            return []
+            extraction_details["failures"]["code_error"] = f"AttributeError: {str(e)}"
+            return [], extraction_details
         except Exception as e:
             logger.error(f"    ❌ Extraction error for {diocese_name}: {type(e).__name__}: {e}")
             logger.error(f"       Pattern: {pattern.extraction_method}")
             logger.error(f"       URL: {parish_directory_url}")
             import traceback
             logger.error(f"       Traceback: {traceback.format_exc()}")
-            return []
+            extraction_details["failures"]["exception"] = f"{type(e).__name__}: {str(e)}"
+            extraction_details["url_accessible"] = "error" in str(e).lower() or "timeout" in str(e).lower()
+            return [], extraction_details
 
     def _log_final_results(self, results: Dict[str, Any]):
         """Log comprehensive final results"""
