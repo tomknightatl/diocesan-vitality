@@ -57,7 +57,7 @@ class DistributedPipelineRunner:
     def __init__(
         self,
         worker_type: WorkerType = WorkerType.ALL,
-        max_parishes_per_diocese: int = 50,
+        max_parishes_per_diocese: int = None,
         num_parishes_for_schedule: int = 101,
         monitoring_url: str = "http://backend-service:8000",
         disable_monitoring: bool = False,
