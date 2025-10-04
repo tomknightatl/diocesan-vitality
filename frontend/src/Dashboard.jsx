@@ -10,6 +10,9 @@ import {
   Spinner,
   Button,
   Form,
+  OverlayTrigger,
+  Tooltip,
+  Collapse,
 } from "react-bootstrap";
 import "./Dashboard.css";
 
@@ -27,6 +30,11 @@ const Dashboard = () => {
   const [workers, setWorkers] = useState([]);
   const [selectedWorker, setSelectedWorker] = useState("aggregate");
   const [aggregateMode, setAggregateMode] = useState(true);
+
+  // Collapse state for worker sections
+  const [activeWorkersCollapsed, setActiveWorkersCollapsed] = useState(false);
+  const [inactiveWorkersCollapsed, setInactiveWorkersCollapsed] =
+    useState(false);
 
   const wsRef = useRef(null);
   const maxLogEntries = 100;
@@ -303,7 +311,42 @@ const Dashboard = () => {
     const minutes = Math.floor(seconds / 60);
     if (minutes < 60) return `${minutes}m ago`;
     const hours = Math.floor(minutes / 60);
-    return `${hours}h ago`;
+    if (hours < 48) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  };
+
+  const getWorkerTypeDisplay = (workerType) => {
+    const types = {
+      discovery: "Discovery",
+      extraction: "Extraction",
+      schedule: "Schedule",
+      reporting: "Reporting",
+      all: "All Steps",
+    };
+    return types[workerType] || workerType;
+  };
+
+  const getWorkerTypeTooltip = (workerType) => {
+    const tooltips = {
+      discovery: "Steps 1-2: Diocese & Parish Directory Discovery",
+      extraction: "Step 3: Parish Detail Extraction",
+      schedule: "Step 4: Mass Schedule Extraction",
+      reporting: "Step 5: Analytics and Reporting",
+      all: "All Pipeline Steps (Legacy)",
+    };
+    return tooltips[workerType] || "Unknown worker type";
+  };
+
+  const getWorkerTypeIcon = (workerType) => {
+    const icons = {
+      discovery: "🔍",
+      extraction: "⚡",
+      schedule: "📅",
+      reporting: "📊",
+      all: "🔄",
+    };
+    return icons[workerType] || "❓";
   };
 
   return (
@@ -346,187 +389,105 @@ const Dashboard = () => {
 
               {/* Active Workers List */}
               <div className="mb-4">
-                <h6 className="text-muted mb-3">Active Workers</h6>
-                <div className="worker-list">
-                  {/* Aggregate View Option */}
-                  <div
-                    className={`worker-row border rounded p-3 mb-2 cursor-pointer ${
-                      selectedWorker === "aggregate"
-                        ? "border-primary bg-primary-subtle"
-                        : "border-secondary"
-                    }`}
-                    onClick={() => handleWorkerSelect("aggregate")}
-                    style={{ cursor: "pointer", transition: "all 0.2s ease" }}
-                  >
-                    <Row className="align-items-center">
-                      <Col md={3}>
-                        <div className="d-flex align-items-center">
-                          <span className="me-2" style={{ fontSize: "1.2em" }}>
-                            📈
-                          </span>
-                          <div>
-                            <h6 className="mb-0">
-                              <strong>Aggregate View</strong>
-                            </h6>
-                            <small className="text-muted">
-                              Combined view of all workers
-                            </small>
-                          </div>
-                        </div>
-                      </Col>
-                      <Col md={2} className="text-center">
-                        <Badge bg="info">
-                          {
-                            workers.filter(
-                              (w) =>
-                                w.worker_status === "active" ||
-                                w.worker_status === "recent",
-                            ).length
-                          }{" "}
-                          active
-                        </Badge>
-                      </Col>
-                      <Col md={2} className="text-center">
-                        <div className="fw-bold text-success">N/A</div>
-                        <small className="text-muted d-block">
-                          System Health
-                        </small>
-                      </Col>
-                      <Col md={2} className="text-center">
-                        <div className="fw-bold">N/A</div>
-                        <small className="text-muted d-block">CPU/Memory</small>
-                      </Col>
-                      <Col md={2} className="text-center">
-                        <div className="fw-bold">0</div>
-                        <small className="text-muted d-block">
-                          Recent Errors
-                        </small>
-                      </Col>
-                      <Col md={1} className="text-center">
-                        <span className="text-primary">
-                          {selectedWorker === "aggregate" ? "✓" : "○"}
-                        </span>
-                      </Col>
-                    </Row>
-                  </div>
-
-                  {/* Active Workers */}
-                  {workers
-                    .filter(
-                      (w) =>
-                        w.worker_status === "active" ||
-                        w.worker_status === "recent",
-                    )
-                    .map((worker) => (
-                      <div
-                        key={worker.worker_id}
-                        className={`worker-row border rounded p-3 mb-2 cursor-pointer ${
-                          selectedWorker === worker.worker_id
-                            ? "border-primary bg-primary-subtle"
-                            : "border-success"
-                        }`}
-                        onClick={() => handleWorkerSelect(worker.worker_id)}
-                        style={{
-                          cursor: "pointer",
-                          transition: "all 0.2s ease",
-                        }}
-                      >
-                        <Row className="align-items-center">
-                          <Col md={3}>
-                            <div className="d-flex align-items-center">
-                              <span
-                                className="me-2"
-                                style={{ fontSize: "1.2em" }}
-                              >
-                                {getWorkerStatusIcon(worker.worker_status)}
-                              </span>
-                              <div>
-                                <h6 className="mb-0">{worker.worker_id}</h6>
-                                <small className="text-muted">
-                                  {worker.current_diocese
-                                    ? `Processing: ${worker.current_diocese}`
-                                    : "Ready"}
-                                </small>
-                              </div>
-                            </div>
-                          </Col>
-                          <Col md={2} className="text-center">
-                            <Badge bg={getStatusBadge(worker.status)}>
-                              {worker.status}
-                            </Badge>
-                            <small className="text-muted d-block">
-                              Extraction Status
-                            </small>
-                          </Col>
-                          <Col md={2} className="text-center">
-                            <div className="fw-bold text-success">95%</div>
-                            <small className="text-muted d-block">
-                              System Health
-                            </small>
-                          </Col>
-                          <Col md={2} className="text-center">
-                            <div className="fw-bold">45%/60%</div>
-                            <small className="text-muted d-block">
-                              CPU/Memory
-                            </small>
-                          </Col>
-                          <Col md={2} className="text-center">
-                            <div className="fw-bold">0</div>
-                            <small className="text-muted d-block">
-                              Recent Errors
-                            </small>
-                          </Col>
-                          <Col md={1} className="text-center">
-                            <span className="text-primary">
-                              {selectedWorker === worker.worker_id ? "✓" : "○"}
-                            </span>
-                          </Col>
-                        </Row>
-                      </div>
-                    ))}
-
-                  {/* No Workers Message */}
-                  {workers.filter(
-                    (w) =>
-                      w.worker_status === "active" ||
-                      w.worker_status === "recent",
-                  ).length === 0 && (
-                    <div className="text-center py-4">
-                      <div className="text-muted">
-                        <i
-                          className="fas fa-info-circle mb-2"
-                          style={{ fontSize: "2em" }}
-                        ></i>
-                        <h6>No Active Workers</h6>
-                        <p className="mb-0">
-                          No pipeline workers are currently running. Workers
-                          will appear here when the pipeline starts.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Recent & Inactive Workers */}
-              {workers.filter(
-                (w) =>
-                  w.worker_status !== "active" && w.worker_status !== "recent",
-              ).length > 0 && (
-                <div className="mb-3">
-                  <h6 className="text-muted mb-3">Recent & Inactive Workers</h6>
+                <h6
+                  className="text-muted mb-3 d-flex justify-content-between align-items-center"
+                  style={{ cursor: "pointer" }}
+                  onClick={() =>
+                    setActiveWorkersCollapsed(!activeWorkersCollapsed)
+                  }
+                >
+                  <span>Active Workers</span>
+                  <span>{activeWorkersCollapsed ? "▶" : "▼"}</span>
+                </h6>
+                <Collapse in={!activeWorkersCollapsed}>
                   <div className="worker-list">
+                    {/* Aggregate View Option */}
+                    <div
+                      className={`worker-row border rounded p-3 mb-2 cursor-pointer ${
+                        selectedWorker === "aggregate"
+                          ? "border-primary bg-primary-subtle"
+                          : "border-secondary"
+                      }`}
+                      onClick={() => handleWorkerSelect("aggregate")}
+                      style={{ cursor: "pointer", transition: "all 0.2s ease" }}
+                    >
+                      <Row className="align-items-center">
+                        <Col md={3}>
+                          <div className="d-flex align-items-center">
+                            <span
+                              className="me-2"
+                              style={{ fontSize: "1.2em" }}
+                            >
+                              📈
+                            </span>
+                            <div>
+                              <h6 className="mb-0">
+                                <strong>Aggregate View</strong>
+                              </h6>
+                              <small className="text-muted">
+                                Combined view of all workers
+                              </small>
+                            </div>
+                          </div>
+                        </Col>
+                        <Col md={2} className="text-center">
+                          <Badge bg="info">
+                            {
+                              workers.filter(
+                                (w) =>
+                                  w.worker_status === "active" ||
+                                  w.worker_status === "recent",
+                              ).length
+                            }{" "}
+                            active
+                          </Badge>
+                        </Col>
+                        <Col md={2} className="text-center">
+                          <div className="fw-bold text-success">N/A</div>
+                          <small className="text-muted d-block">
+                            System Health
+                          </small>
+                        </Col>
+                        <Col md={2} className="text-center">
+                          <div className="fw-bold">N/A</div>
+                          <small className="text-muted d-block">
+                            CPU/Memory
+                          </small>
+                        </Col>
+                        <Col md={2} className="text-center">
+                          <div className="fw-bold">0</div>
+                          <small className="text-muted d-block">
+                            Recent Errors
+                          </small>
+                        </Col>
+                        <Col md={1} className="text-center">
+                          <span className="text-primary">
+                            {selectedWorker === "aggregate" ? "✓" : "○"}
+                          </span>
+                        </Col>
+                      </Row>
+                    </div>
+
+                    {/* Active Workers */}
                     {workers
                       .filter(
                         (w) =>
-                          w.worker_status !== "active" &&
-                          w.worker_status !== "recent",
+                          w.worker_status === "active" ||
+                          w.worker_status === "recent",
                       )
                       .map((worker) => (
                         <div
                           key={worker.worker_id}
-                          className="worker-row border rounded p-3 mb-2 bg-light opacity-75"
-                          style={{ cursor: "not-allowed" }}
+                          className={`worker-row border rounded p-3 mb-2 cursor-pointer ${
+                            selectedWorker === worker.worker_id
+                              ? "border-primary bg-primary-subtle"
+                              : "border-success"
+                          }`}
+                          onClick={() => handleWorkerSelect(worker.worker_id)}
+                          style={{
+                            cursor: "pointer",
+                            transition: "all 0.2s ease",
+                          }}
                         >
                           <Row className="align-items-center">
                             <Col md={3}>
@@ -538,51 +499,202 @@ const Dashboard = () => {
                                   {getWorkerStatusIcon(worker.worker_status)}
                                 </span>
                                 <div>
-                                  <h6 className="mb-0 text-muted">
-                                    {worker.worker_id}
-                                  </h6>
+                                  <h6 className="mb-0">{worker.worker_id}</h6>
                                   <small className="text-muted">
-                                    Last seen:{" "}
-                                    {formatTimeAgo(worker.time_since_update)}
+                                    {worker.current_diocese
+                                      ? `Processing: ${worker.current_diocese}`
+                                      : "Ready"}
                                   </small>
                                 </div>
                               </div>
                             </Col>
                             <Col md={2} className="text-center">
-                              <Badge
-                                bg={getWorkerStatusBadge(worker.worker_status)}
+                              <OverlayTrigger
+                                placement="top"
+                                overlay={
+                                  <Tooltip>
+                                    {getWorkerTypeTooltip(worker.worker_type)}
+                                  </Tooltip>
+                                }
                               >
-                                {worker.worker_status}
+                                <div>
+                                  <span className="me-1">
+                                    {getWorkerTypeIcon(worker.worker_type)}
+                                  </span>
+                                  {getWorkerTypeDisplay(worker.worker_type)}
+                                </div>
+                              </OverlayTrigger>
+                              <small className="text-muted d-block">
+                                Worker Type
+                              </small>
+                            </Col>
+                            <Col md={2} className="text-center">
+                              <Badge bg={getStatusBadge(worker.status)}>
+                                {worker.status}
                               </Badge>
                               <small className="text-muted d-block">
-                                Worker Status
+                                Status
                               </small>
                             </Col>
                             <Col md={2} className="text-center">
-                              <div className="fw-bold text-muted">N/A</div>
+                              <div className="fw-bold">
+                                {formatTimeAgo(worker.time_since_update)}
+                              </div>
                               <small className="text-muted d-block">
-                                System Health
+                                Last Seen
                               </small>
                             </Col>
                             <Col md={2} className="text-center">
-                              <div className="fw-bold text-muted">N/A</div>
+                              <div className="fw-bold">
+                                {worker.parishes_processed || 0}
+                              </div>
                               <small className="text-muted d-block">
-                                CPU/Memory
-                              </small>
-                            </Col>
-                            <Col md={2} className="text-center">
-                              <div className="fw-bold text-muted">N/A</div>
-                              <small className="text-muted d-block">
-                                Recent Errors
+                                Parishes
                               </small>
                             </Col>
                             <Col md={1} className="text-center">
-                              <span className="text-muted">○</span>
+                              <span className="text-primary">
+                                {selectedWorker === worker.worker_id
+                                  ? "✓"
+                                  : "○"}
+                              </span>
                             </Col>
                           </Row>
                         </div>
                       ))}
+
+                    {/* No Workers Message */}
+                    {workers.filter(
+                      (w) =>
+                        w.worker_status === "active" ||
+                        w.worker_status === "recent",
+                    ).length === 0 && (
+                      <div className="text-center py-4">
+                        <div className="text-muted">
+                          <i
+                            className="fas fa-info-circle mb-2"
+                            style={{ fontSize: "2em" }}
+                          ></i>
+                          <h6>No Active Workers</h6>
+                          <p className="mb-0">
+                            No pipeline workers are currently running. Workers
+                            will appear here when the pipeline starts.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
+                </Collapse>
+              </div>
+
+              {/* Recent & Inactive Workers */}
+              {workers.filter(
+                (w) =>
+                  w.worker_status !== "active" &&
+                  w.worker_status !== "recent" &&
+                  w.time_since_update < 172800, // 48 hours in seconds
+              ).length > 0 && (
+                <div className="mb-3">
+                  <h6
+                    className="text-muted mb-3 d-flex justify-content-between align-items-center"
+                    style={{ cursor: "pointer" }}
+                    onClick={() =>
+                      setInactiveWorkersCollapsed(!inactiveWorkersCollapsed)
+                    }
+                  >
+                    <span>Recent & Inactive Workers</span>
+                    <span>{inactiveWorkersCollapsed ? "▶" : "▼"}</span>
+                  </h6>
+                  <Collapse in={!inactiveWorkersCollapsed}>
+                    <div className="worker-list">
+                      {workers
+                        .filter(
+                          (w) =>
+                            w.worker_status !== "active" &&
+                            w.worker_status !== "recent" &&
+                            w.time_since_update < 172800, // 48 hours
+                        )
+                        .map((worker) => (
+                          <div
+                            key={worker.worker_id}
+                            className="worker-row border rounded p-3 mb-2 bg-light opacity-75"
+                            style={{ cursor: "not-allowed" }}
+                          >
+                            <Row className="align-items-center">
+                              <Col md={3}>
+                                <div className="d-flex align-items-center">
+                                  <span
+                                    className="me-2"
+                                    style={{ fontSize: "1.2em" }}
+                                  >
+                                    {getWorkerStatusIcon(worker.worker_status)}
+                                  </span>
+                                  <div>
+                                    <h6 className="mb-0 text-muted">
+                                      {worker.worker_id}
+                                    </h6>
+                                    <small className="text-muted">
+                                      {worker.current_diocese || "Idle"}
+                                    </small>
+                                  </div>
+                                </div>
+                              </Col>
+                              <Col md={2} className="text-center">
+                                <OverlayTrigger
+                                  placement="top"
+                                  overlay={
+                                    <Tooltip>
+                                      {getWorkerTypeTooltip(worker.worker_type)}
+                                    </Tooltip>
+                                  }
+                                >
+                                  <div className="text-muted">
+                                    <span className="me-1">
+                                      {getWorkerTypeIcon(worker.worker_type)}
+                                    </span>
+                                    {getWorkerTypeDisplay(worker.worker_type)}
+                                  </div>
+                                </OverlayTrigger>
+                                <small className="text-muted d-block">
+                                  Worker Type
+                                </small>
+                              </Col>
+                              <Col md={2} className="text-center">
+                                <Badge
+                                  bg={getWorkerStatusBadge(
+                                    worker.worker_status,
+                                  )}
+                                >
+                                  {worker.worker_status}
+                                </Badge>
+                                <small className="text-muted d-block">
+                                  Status
+                                </small>
+                              </Col>
+                              <Col md={2} className="text-center">
+                                <div className="fw-bold text-muted">
+                                  {formatTimeAgo(worker.time_since_update)}
+                                </div>
+                                <small className="text-muted d-block">
+                                  Last Seen
+                                </small>
+                              </Col>
+                              <Col md={2} className="text-center">
+                                <div className="fw-bold text-muted">
+                                  {worker.parishes_processed || 0}
+                                </div>
+                                <small className="text-muted d-block">
+                                  Parishes
+                                </small>
+                              </Col>
+                              <Col md={1} className="text-center">
+                                <span className="text-muted">○</span>
+                              </Col>
+                            </Row>
+                          </div>
+                        ))}
+                    </div>
+                  </Collapse>
                 </div>
               )}
 
@@ -728,7 +840,32 @@ const Dashboard = () => {
                     <div className="mt-2">
                       <small className="text-muted">
                         <div>
-                          <strong>Worker:</strong> {selectedWorker}
+                          <strong>Worker Type:</strong>{" "}
+                          <OverlayTrigger
+                            placement="top"
+                            overlay={
+                              <Tooltip>
+                                {getWorkerTypeTooltip(
+                                  workers.find(
+                                    (w) => w.worker_id === selectedWorker,
+                                  )?.worker_type || "all",
+                                )}
+                              </Tooltip>
+                            }
+                          >
+                            <span>
+                              {getWorkerTypeIcon(
+                                workers.find(
+                                  (w) => w.worker_id === selectedWorker,
+                                )?.worker_type || "all",
+                              )}{" "}
+                              {getWorkerTypeDisplay(
+                                workers.find(
+                                  (w) => w.worker_id === selectedWorker,
+                                )?.worker_type || "all",
+                              )}
+                            </span>
+                          </OverlayTrigger>
                         </div>
                         {extractionStatus.current_diocese && (
                           <div>
