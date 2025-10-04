@@ -165,19 +165,20 @@ class DistributedPipelineRunner:
         logger.info("🔍 Running discovery worker (Steps 1-2)")
 
         try:
-            # Step 1: Extract Dioceses
-            self.monitoring_client.send_log("Step 1 │ Extract Dioceses: Discovering new dioceses", "INFO")
-            extract_dioceses_main(max_dioceses=0)  # No limit for discovery
-            self.monitoring_client.send_log("Step 1 │ ✅ Diocese extraction completed", "INFO")
+            while not self.shutdown_requested:
+                # Step 1: Extract Dioceses
+                self.monitoring_client.send_log("Step 1 │ Extract Dioceses: Discovering new dioceses", "INFO")
+                extract_dioceses_main(max_dioceses=0)  # No limit for discovery
+                self.monitoring_client.send_log("Step 1 │ ✅ Diocese extraction completed", "INFO")
 
-            # Step 2: Find Parish Directories
-            self.monitoring_client.send_log("Step 2 │ Find Parish Directories: AI-powered directory discovery", "INFO")
-            find_parish_directories(diocese_id=None, max_dioceses_to_process=0)  # Process all
-            self.monitoring_client.send_log("Step 2 │ ✅ Parish directory discovery completed", "INFO")
+                # Step 2: Find Parish Directories
+                self.monitoring_client.send_log("Step 2 │ Find Parish Directories: AI-powered directory discovery", "INFO")
+                find_parish_directories(diocese_id=None, max_dioceses_to_process=0)  # Process all
+                self.monitoring_client.send_log("Step 2 │ ✅ Parish directory discovery completed", "INFO")
 
-            # Discovery workers can sleep longer between cycles
-            logger.info("⏸️ Discovery worker completed - sleeping for next cycle")
-            await asyncio.sleep(300)  # 5 minute sleep for discovery workers
+                # Discovery workers can sleep longer between cycles
+                logger.info("⏸️ Discovery worker completed - sleeping for next cycle (5 minutes)")
+                await asyncio.sleep(300)  # 5 minute sleep for discovery workers
 
         except Exception as e:
             logger.error(f"❌ Error in discovery worker: {e}")

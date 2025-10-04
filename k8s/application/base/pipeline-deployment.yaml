@@ -7,7 +7,6 @@ spec:
   revisionHistoryLimit: 1
   strategy:
     type: Recreate # Terminate old pod before creating new one (avoids anti-affinity conflicts)
-  progressDeadlineSeconds: 600 # Fail deployment after 10 minutes to prevent accumulating pods
   selector:
     matchLabels:
       app: pipeline
