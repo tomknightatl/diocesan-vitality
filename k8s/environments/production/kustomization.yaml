@@ -4,59 +4,33 @@ kind: Kustomization
 namespace: diocesan-vitality
 
 resources:
-<<<<<<< HEAD
-- ../../application/base
-- namespace.yaml
-=======
   - ../../application/base
   - namespace.yaml
   - ../../pipeline-hpa.yaml
->>>>>>> develop
 
 patches:
-- path: production-patches.yaml
+  - path: production-patches.yaml
 
 # Images - updated automatically by CI/CD pipeline
 images:
-<<<<<<< HEAD
-- name: tomatl/diocesan-vitality:backend
-  newName: tomatl/diocesan-vitality
-  newTag: production-backend-2025-10-04-23-24-04
-- name: tomatl/diocesan-vitality:frontend
-  newName: tomatl/diocesan-vitality
-  newTag: production-frontend-2025-10-04-23-24-04
-- name: tomatl/diocesan-vitality:pipeline
-  newName: tomatl/diocesan-vitality
-  newTag: production-pipeline-2025-10-04-23-24-04
-=======
   - name: tomatl/diocesan-vitality:backend
     newName: tomatl/diocesan-vitality
-    newTag: production-backend-2025-10-04-23-07-55
+    newTag: production-backend-2025-10-04-23-24-04
   - name: tomatl/diocesan-vitality:frontend
     newName: tomatl/diocesan-vitality
-    newTag: production-frontend-2025-10-04-23-07-55
+    newTag: production-frontend-2025-10-04-23-24-04
   - name: tomatl/diocesan-vitality:pipeline
     newName: tomatl/diocesan-vitality
-    newTag: production-pipeline-2025-10-04-23-07-55
->>>>>>> develop
+    newTag: production-pipeline-2025-10-04-23-24-04
 
 commonLabels:
   cluster: do-nyc2-dv-prd
   environment: production
 
 replicas:
-<<<<<<< HEAD
-- count: 1
-  name: backend-deployment
-- count: 2
-  name: frontend-deployment
-- count: 1
-  name: pipeline-deployment
-=======
   - count: 1
     name: backend-deployment
   - count: 2
     name: frontend-deployment
   - count: 1
     name: pipeline-deployment
->>>>>>> develop
