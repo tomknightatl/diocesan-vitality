@@ -435,6 +435,29 @@ class PatternDetector:
             src = iframe.get("src", "") or ""
             src_lower = src.lower()
 
+            # EXCLUDE payment, analytics, and social media iframes
+            excluded_services = [
+                "stripe.com",
+                "paypal.com",
+                "square.com",
+                "donate",
+                "payment",
+                "analytics",
+                "google-analytics",
+                "googletagmanager",
+                "facebook.com",
+                "twitter.com",
+                "youtube.com",
+                "vimeo.com",
+                "recaptcha",
+                "ads",
+                "advertising"
+            ]
+
+            # Skip if this is an excluded iframe
+            if any(excluded in src_lower for excluded in excluded_services):
+                continue
+
             # Check for mapping/parish directory services in iframes
             mapping_services = ["maptive.com", "google.com/maps", "mapbox.com", "arcgis.com", "leaflet", "openstreetmap"]
 
