@@ -24,17 +24,17 @@ import time
 from enum import Enum
 from typing import Optional
 
-import config
-from async_extract_parishes import main_async as extract_parishes_main_async
+from pipeline import config
+from pipeline.async_extract_parishes import main_async as extract_parishes_main_async
 from core.distributed_work_coordinator import DistributedWorkCoordinator
 from core.logger import get_logger
 from core.monitoring_client import ExtractionMonitoring, get_monitoring_client
 
 # Import the existing pipeline components
-from extract_dioceses import main as extract_dioceses_main
-from extract_schedule_respectful import main as extract_schedule_main
-from find_parishes import find_parish_directories
-from report_statistics import main as report_statistics_main
+from pipeline.extract_dioceses import main as extract_dioceses_main
+from pipeline.extract_schedule_respectful import main as extract_schedule_main
+from pipeline.find_parishes import find_parish_directories
+from pipeline.report_statistics import main as report_statistics_main
 
 logger = get_logger(__name__)
 
@@ -165,19 +165,20 @@ class DistributedPipelineRunner:
         logger.info("🔍 Running discovery worker (Steps 1-2)")
 
         try:
-            # Step 1: Extract Dioceses
-            self.monitoring_client.send_log("Step 1 │ Extract Dioceses: Discovering new dioceses", "INFO")
-            extract_dioceses_main(max_dioceses=0)  # No limit for discovery
-            self.monitoring_client.send_log("Step 1 │ ✅ Diocese extraction completed", "INFO")
+            while not self.shutdown_requested:
+                # Step 1: Extract Dioceses
+                self.monitoring_client.send_log("Step 1 │ Extract Dioceses: Discovering new dioceses", "INFO")
+                extract_dioceses_main(max_dioceses=0)  # No limit for discovery
+                self.monitoring_client.send_log("Step 1 │ ✅ Diocese extraction completed", "INFO")
 
-            # Step 2: Find Parish Directories
-            self.monitoring_client.send_log("Step 2 │ Find Parish Directories: AI-powered directory discovery", "INFO")
-            find_parish_directories(diocese_id=None, max_dioceses_to_process=0)  # Process all
-            self.monitoring_client.send_log("Step 2 │ ✅ Parish directory discovery completed", "INFO")
+                # Step 2: Find Parish Directories
+                self.monitoring_client.send_log("Step 2 │ Find Parish Directories: AI-powered directory discovery", "INFO")
+                find_parish_directories(diocese_id=None, max_dioceses_to_process=0)  # Process all
+                self.monitoring_client.send_log("Step 2 │ ✅ Parish directory discovery completed", "INFO")
 
-            # Discovery workers can sleep longer between cycles
-            logger.info("⏸️ Discovery worker completed - sleeping for next cycle")
-            await asyncio.sleep(300)  # 5 minute sleep for discovery workers
+                # Discovery workers can sleep longer between cycles
+                logger.info("⏸️ Discovery worker completed - sleeping for next cycle (5 minutes)")
+                await asyncio.sleep(300)  # 5 minute sleep for discovery workers
 
         except Exception as e:
             logger.error(f"❌ Error in discovery worker: {e}")

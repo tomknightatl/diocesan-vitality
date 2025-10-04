@@ -142,28 +142,99 @@ infra-setup: ## Set up complete infrastructure (8 core steps, usage: make infra-
 	$(MAKE) argocd-install CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	$(MAKE) argocd-apps CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	$(MAKE) sealed-secrets-create CLUSTER_LABEL=$$CLUSTER_LABEL && \
-	$(MAKE) infra-test CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	$(MAKE) tunnel-test CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	if [ "$$CLUSTER_LABEL" = "dev" ]; then \
+		echo "🗄️  Initializing dev database..." && \
+		echo "   Step 1: Extracting production schema to sql/initial_schema.sql" && \
+		$(MAKE) database-schema-refresh && \
+		echo "   Step 2: Applying schema and copying data to dev database" && \
+		$(MAKE) database-init-dev; \
+	fi && \
+	echo "🔍 Running final infrastructure verification..." && \
+	$(MAKE) infra-verify CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	echo "🎉 Complete infrastructure setup finished for $$CLUSTER_LABEL!"
 
-infra-destroy: ## Destroy complete infrastructure (usage: make infra-destroy CLUSTER_LABEL=dev)
+infra-destroy: ## Destroy complete infrastructure (usage: make infra-destroy CLUSTER_LABEL=dev [FORCE=yes])
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	FORCE=$${FORCE:-no} && \
+	CLUSTER_NAME="dv-$$CLUSTER_LABEL" && \
 	echo "🚨 DESTRUCTIVE: Destroying complete infrastructure for '$$CLUSTER_LABEL'..." && \
 	echo "⚠️  This will permanently delete:" && \
-	echo "   - DigitalOcean cluster: dv-$$CLUSTER_LABEL" && \
+	echo "   - DigitalOcean cluster: $$CLUSTER_NAME" && \
 	echo "   - Cloudflare tunnel: do-nyc2-dv-$$CLUSTER_LABEL" && \
 	echo "   - DNS records for $$CLUSTER_LABEL.{ui,api,argocd}.diocesanvitality.org" && \
 	echo "   - kubectl context: do-nyc2-dv-$$CLUSTER_LABEL" && \
-	read -p "Are you sure? Type 'yes' to continue: " CONFIRM </dev/tty && \
-	if [ "$$CONFIRM" != "yes" ]; then \
-		echo "❌ Operation cancelled"; \
-		exit 1; \
+	if [ "$$FORCE" != "yes" ]; then \
+		read -p "Are you sure? Type 'yes' to continue: " CONFIRM </dev/tty && \
+		if [ "$$CONFIRM" != "yes" ]; then \
+			echo "❌ Operation cancelled"; \
+			exit 1; \
+		fi; \
+	else \
+		echo "⚡ FORCE=yes detected - skipping confirmation"; \
 	fi && \
-	echo "🗑️  Executing infrastructure destruction in reverse order..." && \
-	$(MAKE) tunnel-dns-destroy CLUSTER_LABEL=$$CLUSTER_LABEL || true && \
-	$(MAKE) tunnel-destroy CLUSTER_LABEL=$$CLUSTER_LABEL || true && \
+	echo "🗑️  Executing infrastructure destruction (optimized order: Cluster → Context → Tunnel → DNS)..." && \
+	echo "" && \
+	echo "📍 Step 1/4: Destroying cluster..." && \
+	$(MAKE) cluster-destroy CLUSTER_LABEL=$$CLUSTER_LABEL FORCE=yes || true && \
+	echo "" && \
+	echo "📍 Step 2/4: Cleaning kubectl context..." && \
 	$(MAKE) cluster-context-destroy CLUSTER_LABEL=$$CLUSTER_LABEL || true && \
-	$(MAKE) cluster-destroy CLUSTER_LABEL=$$CLUSTER_LABEL || true && \
+	echo "" && \
+	echo "📍 Step 3/4: Destroying Cloudflare tunnel..." && \
+	$(MAKE) tunnel-destroy CLUSTER_LABEL=$$CLUSTER_LABEL FORCE=yes || true && \
+	echo "" && \
+	echo "📍 Step 4/4: Destroying DNS records..." && \
+	$(MAKE) tunnel-dns-destroy CLUSTER_LABEL=$$CLUSTER_LABEL || true && \
+	echo "" && \
+	echo "🔍 Verifying infrastructure destruction..." && \
+	if $(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster get $$CLUSTER_NAME" 2>/dev/null | grep -q "$$CLUSTER_NAME"; then \
+		echo "⚠️  Warning: Cluster $$CLUSTER_NAME still exists!"; \
+	else \
+		echo "✅ Cluster $$CLUSTER_NAME confirmed deleted"; \
+	fi && \
+	if kubectl config get-contexts -o name 2>/dev/null | grep -q "^do-nyc2-dv-$$CLUSTER_LABEL$$"; then \
+		echo "⚠️  Warning: kubectl context still exists!"; \
+	else \
+		echo "✅ kubectl context confirmed removed"; \
+	fi && \
+	echo "" && \
 	echo "✅ Infrastructure destruction complete for $$CLUSTER_LABEL"
+
+infra-verify: ## Verify infrastructure is working (usage: make infra-verify CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🔍 Verifying infrastructure for '$$CLUSTER_LABEL'..." && \
+	echo "" && \
+	echo "Testing URLs:" && \
+	echo "  UI:     https://$$CLUSTER_LABEL.ui.diocesanvitality.org" && \
+	echo "  API:    https://$$CLUSTER_LABEL.api.diocesanvitality.org" && \
+	echo "  ArgoCD: https://$$CLUSTER_LABEL.argocd.diocesanvitality.org" && \
+	echo "" && \
+	UI_STATUS=$$(curl -s -o /dev/null -w "%{http_code}" https://$$CLUSTER_LABEL.ui.diocesanvitality.org 2>/dev/null || echo "000") && \
+	API_STATUS=$$(curl -s -o /dev/null -w "%{http_code}" https://$$CLUSTER_LABEL.api.diocesanvitality.org/health 2>/dev/null || echo "000") && \
+	ARGOCD_STATUS=$$(curl -s -o /dev/null -w "%{http_code}" https://$$CLUSTER_LABEL.argocd.diocesanvitality.org 2>/dev/null || echo "000") && \
+	echo "Results:" && \
+	if [ "$$UI_STATUS" = "200" ] || [ "$$UI_STATUS" = "301" ] || [ "$$UI_STATUS" = "302" ]; then \
+		echo "  ✅ UI: $$UI_STATUS"; \
+	else \
+		echo "  ⚠️  UI: $$UI_STATUS (may still be deploying)"; \
+	fi && \
+	if [ "$$API_STATUS" = "200" ]; then \
+		echo "  ✅ API: $$API_STATUS"; \
+	else \
+		echo "  ⚠️  API: $$API_STATUS (may still be deploying)"; \
+	fi && \
+	if [ "$$ARGOCD_STATUS" = "200" ] || [ "$$ARGOCD_STATUS" = "307" ]; then \
+		echo "  ✅ ArgoCD: $$ARGOCD_STATUS"; \
+	else \
+		echo "  ⚠️  ArgoCD: $$ARGOCD_STATUS (may still be deploying)"; \
+	fi && \
+	echo "" && \
+	if [ "$$UI_STATUS" != "000" ] && [ "$$API_STATUS" != "000" ] && [ "$$ARGOCD_STATUS" != "000" ]; then \
+		echo "✅ Infrastructure verification complete - all services responding"; \
+	else \
+		echo "⚠️  Some services may still be deploying. Run 'make infra-verify CLUSTER_LABEL=$$CLUSTER_LABEL' again in a few minutes"; \
+	fi
 
 cluster-auth: ## Step a: A5uthenticate with DigitalOcean (usage: make cluster-auth)
 	@echo "🔍 Step a: Setting up DigitalOcean authentication..." && \
@@ -171,7 +242,7 @@ cluster-auth: ## Step a: A5uthenticate with DigitalOcean (usage: make cluster-au
 		echo "❌ .env file not found. Please copy .env.example to .env and configure your tokens" && \
 		exit 1; \
 	fi && \
-	DIGITALOCEAN_TOKEN=$$(awk -F'=' '/^DIGITALOCEAN_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	DIGITALOCEAN_TOKEN=$$(sed -n 's/^DIGITALOCEAN_TOKEN=//p' .env | tr -d '\r\n"'"'"'') && \
 	if [ -z "$$DIGITALOCEAN_TOKEN" ] || [ "$$DIGITALOCEAN_TOKEN" = "<key>" ]; then \
 		echo "❌ DIGITALOCEAN_TOKEN not set in .env file. Please add your DigitalOcean API token" && \
 		exit 1; \
@@ -197,13 +268,13 @@ cluster-check: ## Step b: Check if cluster exists (usage: make cluster-check CLU
 	echo "🔍 Step b: Checking if cluster exists..." && \
 	CLUSTER_NAME="dv-$$CLUSTER_LABEL" && \
 	$(MAKE) cluster-auth && \
-	echo "🔍 Querying clus5ter $$CLUSTER_NAME..." && \
+	echo "🔍 Querying cluster $$CLUSTER_NAME..." && \
 	$(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster get $$CLUSTER_NAME" && \
 	echo "✅ Step b Complete: Cluster $$CLUSTER_NAME exists and is accessible"
 
 _doctl-exec: ## Internal helper to execute doctl commands with authentication
-	@DIGITALOCEAN_TOKEN=$$(awk -F'=' '/^DIGITALOCEAN_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-	DIGITALOCEAN_ACCESS_TOKEN="$$DIGITALOCEAN_TOKEN" timeout 15 doctl $(DOCTL_CMD)
+	@DIGITALOCEAN_TOKEN=$$(sed -n 's/^DIGITALOCEAN_TOKEN=//p' .env | tr -d '\r\n"'"'"'"'') && \
+	DIGITALOCEAN_ACCESS_TOKEN="$$DIGITALOCEAN_TOKEN" timeout 900 doctl $(DOCTL_CMD)
 
 cluster-create: ## Step c: Create cluster (usage: make cluster-create CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
@@ -212,7 +283,15 @@ cluster-create: ## Step c: Create cluster (usage: make cluster-create CLUSTER_LA
 	$(MAKE) cluster-check CLUSTER_LABEL=$$CLUSTER_LABEL && \
 	echo "✅ Step c Complete: Cluster $$CLUSTER_NAME already exists - skipping creation" || { \
 		REGION="nyc2" && \
-		K8S_VERSION="1.33.1-do.3" && \
+		echo "🔍 Checking available Kubernetes versions..." && \
+		AVAILABLE_VERSIONS=$$($(MAKE) _doctl-exec DOCTL_CMD="kubernetes options versions --format Slug --no-header" 2>/dev/null) && \
+		REQUESTED_MINOR="1.33" && \
+		K8S_VERSION=$$(echo "$$AVAILABLE_VERSIONS" | grep "^$$REQUESTED_MINOR" | head -1) && \
+		if [ -z "$$K8S_VERSION" ]; then \
+			echo "⚠️  Warning: No version matching $$REQUESTED_MINOR found, using latest available" && \
+			K8S_VERSION=$$(echo "$$AVAILABLE_VERSIONS" | head -1); \
+		fi && \
+		echo "✅ Selected Kubernetes version: $$K8S_VERSION" && \
 		echo "📋 Cluster configuration (matching production):" && \
 		echo "   Name: $$CLUSTER_NAME" && \
 		echo "   Region: $$REGION" && \
@@ -232,7 +311,7 @@ cluster-create: ## Step c: Create cluster (usage: make cluster-create CLUSTER_LA
 				echo "📊 Cluster status: $$CURRENT_STATUS ($$(date '+%H:%M:%S'))"; \
 			else \
 				echo "⏳ Cluster initializing... ($$(date '+%H:%M:%S'))"; \
-			fi; \5555555
+			fi; \
 			sleep 30; \
 		done && \
 		wait $$CREATE_PID && \
@@ -248,24 +327,30 @@ cluster-create: ## Step c: Create cluster (usage: make cluster-create CLUSTER_LA
 			echo "⚠️  Cluster status is $$FINAL_STATUS - may still be initializing"; \
 			echo "✅ Step c Complete: Cluster creation initiated"; \
 		fi; \
-	fi
+	}
 
-cluster-destroy: ## Step d: Destroy cluster (usage: make cluster-destroy CLUSTER_LABEL=dev)
+cluster-destroy: ## Step d: Destroy cluster (usage: make cluster-destroy CLUSTER_LABEL=dev [FORCE=yes])
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	FORCE=$${FORCE:-no} && \
 	echo "🚨 Step d: DESTRUCTIVE - Destroying DigitalOcean cluster for '$$CLUSTER_LABEL'..." && \
 	CLUSTER_NAME="dv-$$CLUSTER_LABEL" && \
 	echo "⚠️  This will permanently delete cluster: $$CLUSTER_NAME" && \
-	read -p "Are you sure? Type 'yes' to continue: " CONFIRM </dev/tty && \
-	if [ "$$CONFIRM" != "yes" ]; then \
-		echo "❌ Operation cancelled"; \
-		exit 1; \
+	if [ "$$FORCE" != "yes" ]; then \
+		read -p "Are you sure? Type 'yes' to continue: " CONFIRM </dev/tty && \
+		if [ "$$CONFIRM" != "yes" ]; then \
+			echo "❌ Operation cancelled"; \
+			exit 1; \
+		fi; \
 	fi && \
-	$(MAKE) cluster-check CLUSTER_LABEL=$$CLUSTER_LABEL && \
-	echo "ℹ️  Step d Complete: Cluster $$CLUSTER_NAME does not exist - nothing to destroy" || { \
+	if $(MAKE) cluster-check CLUSTER_LABEL=$$CLUSTER_LABEL 2>/dev/null; then \
 		echo "🗑️  Deleting cluster $$CLUSTER_NAME (this may take several minutes)..." && \
 		$(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster delete $$CLUSTER_NAME --force" && \
+		echo "🧹 Cleaning up sealed secrets from repository..." && \
+		$(MAKE) _cleanup-sealed-secrets CLUSTER_LABEL=$$CLUSTER_LABEL && \
 		echo "✅ Step d Complete: Cluster $$CLUSTER_NAME deleted successfully"; \
-	}
+	else \
+		echo "ℹ️  Step d Complete: Cluster $$CLUSTER_NAME does not exist - nothing to destroy"; \
+	fi
 
 cluster-context: ## Step e: Setup kubectl context (usage: make cluster-context CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
@@ -298,9 +383,9 @@ tunnel-auth: ## Step g: Authenticate with Cloudflare (usage: make tunnel-auth)
 		echo "❌ .env file not found. Please copy .env.example to .env and configure your tokens" && \
 		exit 1; \
 	fi && \
-	CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-	CLOUDFLARE_ACCOUNT_ID=$$(awk -F'=' '/^CLOUDFLARE_ACCOUNT_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-	ZONE_ID=$$(awk -F'=' '/^CLOUDFLARE_ZONE_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	CLOUDFLARE_API_TOKEN=$$(sed -n 's/^CLOUDFLARE_API_TOKEN=//p' .env | tr -d '\r\n"'"'"'') && \
+	CLOUDFLARE_ACCOUNT_ID=$$(sed -n 's/^CLOUDFLARE_ACCOUNT_ID=//p' .env | tr -d '\r\n"'"'"'') && \
+	ZONE_ID=$$(sed -n 's/^CLOUDFLARE_ZONE_ID=//p' .env | tr -d '\r\n"'"'"'') && \
 	if [ -z "$$CLOUDFLARE_API_TOKEN" ] || [ -z "$$CLOUDFLARE_ACCOUNT_ID" ] || [ -z "$$ZONE_ID" ]; then \
 		echo "❌ Missing Cloudflare credentials in .env file" && \
 		echo "Required: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_ZONE_ID" && \
@@ -322,8 +407,8 @@ tunnel-check: ## Step h: Check if tunnel exists (usage: make tunnel-check CLUSTE
 	echo "🔍 Step h: Checking if tunnel exists..." && \
 	TUNNEL_NAME="do-nyc2-dv-$$CLUSTER_LABEL" && \
 	$(MAKE) tunnel-auth && \
-	CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-	CLOUDFLARE_ACCOUNT_ID=$$(awk -F'=' '/^CLOUDFLARE_ACCOUNT_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	CLOUDFLARE_API_TOKEN=$$(sed -n 's/^CLOUDFLARE_API_TOKEN=//p' .env | tr -d '\r\n"'"'"'') && \
+	CLOUDFLARE_ACCOUNT_ID=$$(sed -n 's/^CLOUDFLARE_ACCOUNT_ID=//p' .env | tr -d '\r\n"'"'"'') && \
 	export CLOUDFLARE_API_TOKEN="$$CLOUDFLARE_API_TOKEN" && \
 	echo "🔧 Fetching tunnels via API..." && \
 	TUNNELS_RESPONSE=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel" \
@@ -340,8 +425,8 @@ tunnel-create: ## Step i: Create tunnel (usage: make tunnel-create CLUSTER_LABEL
 	echo "🚀 Step i: Creating Cloudflare tunnel for '$$CLUSTER_LABEL'..." && \
 	TUNNEL_NAME="do-nyc2-dv-$$CLUSTER_LABEL" && \
 	$(MAKE) tunnel-check CLUSTER_LABEL=$$CLUSTER_LABEL && \
-	CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-	CLOUDFLARE_ACCOUNT_ID=$$(awk -F'=' '/^CLOUDFLARE_ACCOUNT_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	CLOUDFLARE_API_TOKEN=$$(sed -n 's/^CLOUDFLARE_API_TOKEN=//p' .env | tr -d '\r\n"'"'"'') && \
+	CLOUDFLARE_ACCOUNT_ID=$$(sed -n 's/^CLOUDFLARE_ACCOUNT_ID=//p' .env | tr -d '\r\n"'"'"'') && \
 	export CLOUDFLARE_API_TOKEN="$$CLOUDFLARE_API_TOKEN" && \
 	TUNNELS_RESPONSE=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel" \
 		-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN" \
@@ -364,32 +449,36 @@ tunnel-create: ## Step i: Create tunnel (usage: make tunnel-create CLUSTER_LABEL
 		fi; \
 	fi
 
-tunnel-destroy: ## Step j: Destroy tunnel (usage: make tunnel-destroy CLUSTER_LABEL=dev)
+tunnel-destroy: ## Step j: Destroy tunnel (usage: make tunnel-destroy CLUSTER_LABEL=dev [FORCE=yes])
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	FORCE=$${FORCE:-no} && \
 	echo "🚨 Step j: DESTRUCTIVE - Destroying Cloudflare tunnel for '$$CLUSTER_LABEL'..." && \
 	TUNNEL_NAME="do-nyc2-dv-$$CLUSTER_LABEL" && \
-	echo "⚠️  This will permanently delete tunnel: $$TUNNEL_NAME and all associated DNS records" && \
-	read -p "Are you sure? Type 'yes' to continue: " CONFIRM </dev/tty && \
-	if [ "$$CONFIRM" != "yes" ]; then \
-		echo "❌ Operation cancelled"; \
-		exit 1; \
+	echo "⚠️  This will permanently delete tunnel: $$TUNNEL_NAME" && \
+	if [ "$$FORCE" != "yes" ]; then \
+		read -p "Are you sure? Type 'yes' to continue: " CONFIRM </dev/tty && \
+		if [ "$$CONFIRM" != "yes" ]; then \
+			echo "❌ Operation cancelled"; \
+			exit 1; \
+		fi; \
 	fi && \
-	$(MAKE) tunnel-check CLUSTER_LABEL=$$CLUSTER_LABEL && \
-	CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-	CLOUDFLARE_ACCOUNT_ID=$$(awk -F'=' '/^CLOUDFLARE_ACCOUNT_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	$(MAKE) tunnel-auth && \
+	CLOUDFLARE_API_TOKEN=$$(sed -n 's/^CLOUDFLARE_API_TOKEN=//p' .env | tr -d '\r\n"'"'"'') && \
+	CLOUDFLARE_ACCOUNT_ID=$$(sed -n 's/^CLOUDFLARE_ACCOUNT_ID=//p' .env | tr -d '\r\n"'"'"'') && \
 	export CLOUDFLARE_API_TOKEN="$$CLOUDFLARE_API_TOKEN" && \
+	echo "🔍 Checking if tunnel exists..." && \
 	TUNNELS_RESPONSE=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel" \
 		-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN" \
 		-H "Content-Type: application/json") && \
 	if TUNNEL_ID=$$(echo "$$TUNNELS_RESPONSE" | jq -r ".result[] | select(.name==\"$$TUNNEL_NAME\" and .deleted_at==null) | .id" 2>/dev/null | head -1) && [ -n "$$TUNNEL_ID" ] && [ "$$TUNNEL_ID" != "null" ]; then \
-		echo "🗑️  Deleting tunnel: $$TUNNEL_NAME ($$TUNNEL_ID)" && \
+		echo "🗑️  Deleting tunnel: $$TUNNEL_NAME (ID: $$TUNNEL_ID)" && \
 		TUNNEL_DELETE_RESPONSE=$$(curl -s -X DELETE "https://api.cloudflare.com/client/v4/accounts/$$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel/$$TUNNEL_ID" \
 			-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN") && \
-		echo "📄 Tunnel deletion response: $$TUNNEL_DELETE_RESPONSE" && \
 		if echo "$$TUNNEL_DELETE_RESPONSE" | jq -e '.success == true' >/dev/null 2>&1; then \
-			echo "✅ Step j Complete: Tunnel $$TUNNEL_NAME deleted successfully"; \
+			echo "✅ Step j Complete: Tunnel $$TUNNEL_NAME ($$TUNNEL_ID) deleted successfully"; \
 		else \
-			echo "⚠️  Tunnel deletion may have issues, but continuing..."; \
+			echo "⚠️  Warning: Tunnel deletion response indicates issues"; \
+			echo "📄 Response: $$TUNNEL_DELETE_RESPONSE"; \
 		fi; \
 	else \
 		echo "ℹ️  Step j Complete: Tunnel $$TUNNEL_NAME does not exist or is already deleted"; \
@@ -400,9 +489,9 @@ tunnel-dns: ## Step k: Setup tunnel DNS and public hostnames (usage: make tunnel
 	echo "🌐 Step k: Creating DNS records and public hostnames for '$$CLUSTER_LABEL'..." && \
 	TUNNEL_NAME="do-nyc2-dv-$$CLUSTER_LABEL" && \
 	$(MAKE) tunnel-check CLUSTER_LABEL=$$CLUSTER_LABEL && \
-	CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-	CLOUDFLARE_ACCOUNT_ID=$$(awk -F'=' '/^CLOUDFLARE_ACCOUNT_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-	ZONE_ID=$$(awk -F'=' '/^CLOUDFLARE_ZONE_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	CLOUDFLARE_API_TOKEN=$$(sed -n 's/^CLOUDFLARE_API_TOKEN=//p' .env | tr -d '\r\n"'"'"'') && \
+	CLOUDFLARE_ACCOUNT_ID=$$(sed -n 's/^CLOUDFLARE_ACCOUNT_ID=//p' .env | tr -d '\r\n"'"'"'') && \
+	ZONE_ID=$$(sed -n 's/^CLOUDFLARE_ZONE_ID=//p' .env | tr -d '\r\n"'"'"'') && \
 	export CLOUDFLARE_API_TOKEN="$$CLOUDFLARE_API_TOKEN" && \
 	TUNNELS_RESPONSE=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel" \
 		-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN" \
@@ -473,34 +562,45 @@ tunnel-dns: ## Step k: Setup tunnel DNS and public hostnames (usage: make tunnel
 	echo "   Tunnel Name: $$TUNNEL_NAME" && \
 	echo "   Tunnel ID: $$TUNNEL_ID" && \
 	echo "   Public Hostnames:" && \
-	echo "     - $$CLUSTER_LABEL.ui.diocesanvitality.org (→ frontend-service.diocesan-vitality-$$CLUSTER_LABEL.svc.cluster.local:80)" && \
-	echo "     - $$CLUSTER_LABEL.api.diocesanvitality.org (→ backend-service.diocesan-vitality-$$CLUSTER_LABEL.svc.cluster.local:8000)" && \
-	echo "     - $$CLUSTER_LABEL.argocd.diocesanvitality.org (→ argocd-server.argocd:80)" && \
+	echo "     - $${CLUSTER_LABEL}ui.diocesanvitality.org (→ frontend-service.diocesan-vitality-$$CLUSTER_LABEL.svc.cluster.local:80)" && \
+	echo "     - $${CLUSTER_LABEL}api.diocesanvitality.org (→ backend-service.diocesan-vitality-$$CLUSTER_LABEL.svc.cluster.local:8000)" && \
+	echo "     - $${CLUSTER_LABEL}argocd.diocesanvitality.org (→ argocd-server.argocd:80)" && \
 	echo "✅ Step 8 Complete: Tunnel DNS records and SSL certificates configured"
 
 tunnel-dns-destroy: ## Step 8b: Remove tunnel DNS records (usage: make tunnel-dns-destroy CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	echo "🗑️  Step 8b: Removing tunnel DNS records for '$$CLUSTER_LABEL'..." && \
 	$(MAKE) tunnel-auth && \
-	CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-	ZONE_ID=$$(awk -F'=' '/^CLOUDFLARE_ZONE_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	CLOUDFLARE_API_TOKEN=$$(sed -n 's/^CLOUDFLARE_API_TOKEN=//p' .env | tr -d '\r\n"'"'"'') && \
+	ZONE_ID=$$(sed -n 's/^CLOUDFLARE_ZONE_ID=//p' .env | tr -d '\r\n"'"'"'') && \
 	export CLOUDFLARE_API_TOKEN="$$CLOUDFLARE_API_TOKEN" && \
+	DELETED_COUNT=0 && \
+	SKIPPED_COUNT=0 && \
 	for SUBDOMAIN in ui api argocd; do \
 		HOSTNAME="$$CLUSTER_LABEL.$$SUBDOMAIN.diocesanvitality.org" && \
-		echo "🔍 Checking DNS record: $$HOSTNAME" && \
+		echo "  🔍 Checking: $$HOSTNAME..." && \
 		DNS_CHECK_RESPONSE=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$$ZONE_ID/dns_records?name=$$HOSTNAME" \
 			-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN") && \
 		EXISTING=$$(echo "$$DNS_CHECK_RESPONSE" | jq -r '.result[0].id // "null"') && \
 		if [ "$$EXISTING" != "null" ]; then \
-			echo "🗑️  Deleting DNS record: $$HOSTNAME (ID: $$EXISTING)" && \
+			echo "  🗑️  Deleting: $$HOSTNAME (ID: $$EXISTING)" && \
 			DNS_DELETE_RESPONSE=$$(curl -s -X DELETE "https://api.cloudflare.com/client/v4/zones/$$ZONE_ID/dns_records/$$EXISTING" \
 				-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN") && \
-			echo "📄 DNS delete response: $$DNS_DELETE_RESPONSE" && \
-			echo "✅ DNS record deleted: $$HOSTNAME"; \
+			if echo "$$DNS_DELETE_RESPONSE" | jq -e '.success == true' >/dev/null 2>&1; then \
+				echo "  ✅ Deleted: $$HOSTNAME" && \
+				DELETED_COUNT=$$((DELETED_COUNT + 1)); \
+			else \
+				echo "  ⚠️  Warning: Deletion may have failed for $$HOSTNAME"; \
+			fi; \
 		else \
-			echo "ℹ️  DNS record does not exist: $$HOSTNAME"; \
+			echo "  ℹ️  Not found: $$HOSTNAME" && \
+			SKIPPED_COUNT=$$((SKIPPED_COUNT + 1)); \
 		fi; \
 	done && \
+	echo "" && \
+	echo "📊 DNS Destruction Summary:" && \
+	echo "   Deleted: $$DELETED_COUNT records" && \
+	echo "   Skipped: $$SKIPPED_COUNT records (already deleted)" && \
 	echo "✅ Step 8b Complete: DNS records destroyed for $$CLUSTER_LABEL"
 
 
@@ -566,6 +666,9 @@ argocd-install: ## Step 9: Install ArgoCD via Helm (usage: make argocd-install C
 	@$(MAKE) _setup-argocd-password CLUSTER_LABEL=$$CLUSTER_LABEL
 	@echo "🏷️  Registering cluster with ArgoCD..."
 	@$(MAKE) _register-cluster-with-argocd CLUSTER_LABEL=$$CLUSTER_LABEL
+	@echo "🚀 Deploying root ApplicationSets..."
+	@kubectl apply -f k8s/argocd/root-applicationsets-$$CLUSTER_LABEL.yaml
+	@echo "✅ Root ApplicationSets deployed - ArgoCD will now manage infrastructure"
 	@echo "✅ Step 9 Complete: ArgoCD installed via Helm for $$CLUSTER_LABEL"
 
 _register-cluster-with-argocd: ## Register current cluster with ArgoCD with proper labels
@@ -668,6 +771,76 @@ sealed-secrets-create: ## Step 4: Create sealed secrets for tunnel and applicati
 	echo "" && \
 	echo "✅ Step 4 Complete: All sealed secrets created for $$CLUSTER_LABEL"
 
+tunnel-test: ## Step 5: Test Cloudflare tunnel health (usage: make tunnel-test CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🔍 Step 5: Testing Cloudflare tunnel health for '$$CLUSTER_LABEL'..." && \
+	kubectl config use-context do-nyc2-dv-$$CLUSTER_LABEL && \
+	echo "" && \
+	echo "🔍 Part 1: Checking sealed secrets status..." && \
+	TUNNEL_SECRET_STATUS=$$(kubectl get sealedsecret cloudflared-token -n cloudflare-tunnel-$$CLUSTER_LABEL -o jsonpath='{.status.conditions[0].type}' 2>/dev/null || echo "NotFound") && \
+	APP_SECRET_STATUS=$$(kubectl get sealedsecret diocesan-vitality-secrets -n diocesan-vitality-$$CLUSTER_LABEL -o jsonpath='{.status.conditions[0].type}' 2>/dev/null || echo "NotFound") && \
+	if [ "$$TUNNEL_SECRET_STATUS" = "NotFound" ]; then \
+		echo "❌ Tunnel sealed secret not found in cloudflare-tunnel-$$CLUSTER_LABEL namespace"; \
+		exit 1; \
+	fi && \
+	if [ "$$APP_SECRET_STATUS" = "NotFound" ]; then \
+		echo "❌ Application sealed secret not found in diocesan-vitality-$$CLUSTER_LABEL namespace"; \
+		exit 1; \
+	fi && \
+	echo "✅ Sealed secrets exist in cluster" && \
+	echo "" && \
+	echo "🔍 Part 2: Verifying secrets were decrypted..." && \
+	if ! kubectl get secret cloudflared-token -n cloudflare-tunnel-$$CLUSTER_LABEL >/dev/null 2>&1; then \
+		echo "❌ Tunnel secret not decrypted (Secret object not found)"; \
+		echo "💡 Check sealed-secrets controller logs: kubectl logs -n kube-system deployment/sealed-secrets-controller"; \
+		exit 1; \
+	fi && \
+	if ! kubectl get secret diocesan-vitality-secrets -n diocesan-vitality-$$CLUSTER_LABEL >/dev/null 2>&1; then \
+		echo "❌ Application secrets not decrypted (Secret object not found)"; \
+		echo "💡 Check sealed-secrets controller logs: kubectl logs -n kube-system deployment/sealed-secrets-controller"; \
+		exit 1; \
+	fi && \
+	echo "✅ Secrets successfully decrypted by sealed-secrets controller" && \
+	echo "" && \
+	echo "🔍 Part 3: Checking tunnel pod status..." && \
+	if ! kubectl get pods -n cloudflare-tunnel-$$CLUSTER_LABEL -l app=cloudflared >/dev/null 2>&1; then \
+		echo "❌ No tunnel pods found"; \
+		echo "💡 Check ApplicationSet: kubectl get applicationset cloudflare-tunnel-$$CLUSTER_LABEL-applicationset -n argocd"; \
+		exit 1; \
+	fi && \
+	TUNNEL_POD_STATUS=$$(kubectl get pods -n cloudflare-tunnel-$$CLUSTER_LABEL -l app=cloudflared -o jsonpath='{.items[0].status.phase}' 2>/dev/null) && \
+	TUNNEL_POD_READY=$$(kubectl get pods -n cloudflare-tunnel-$$CLUSTER_LABEL -l app=cloudflared -o jsonpath='{.items[0].status.containerStatuses[0].ready}' 2>/dev/null) && \
+	if [ "$$TUNNEL_POD_STATUS" != "Running" ] || [ "$$TUNNEL_POD_READY" != "true" ]; then \
+		echo "❌ Tunnel pod not healthy (Status: $$TUNNEL_POD_STATUS, Ready: $$TUNNEL_POD_READY)"; \
+		echo "💡 Check pod logs: kubectl logs -n cloudflare-tunnel-$$CLUSTER_LABEL -l app=cloudflared"; \
+		exit 1; \
+	fi && \
+	echo "✅ Tunnel pod is Running and Ready" && \
+	echo "" && \
+	echo "🔍 Part 4: Verifying tunnel connectivity..." && \
+	TUNNEL_LOGS=$$(kubectl logs -n cloudflare-tunnel-$$CLUSTER_LABEL -l app=cloudflared --tail=50 2>/dev/null) && \
+	if echo "$$TUNNEL_LOGS" | grep -q "Connection.*registered"; then \
+		echo "✅ Tunnel successfully registered with Cloudflare edge"; \
+	elif echo "$$TUNNEL_LOGS" | grep -q "error.*authentication\|error.*token"; then \
+		echo "❌ Tunnel authentication error detected"; \
+		echo "💡 Check tunnel token: make tunnel-verify CLUSTER_LABEL=$$CLUSTER_LABEL"; \
+		exit 1; \
+	else \
+		echo "⚠️  Unable to confirm tunnel registration (logs may be insufficient)"; \
+	fi && \
+	echo "" && \
+	echo "✅ Step 5 Complete: Tunnel health check passed for $$CLUSTER_LABEL" && \
+	echo "" && \
+	echo "📊 Tunnel Status Summary:" && \
+	echo "   Tunnel Pod: $$(kubectl get pods -n cloudflare-tunnel-$$CLUSTER_LABEL -l app=cloudflared -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)" && \
+	echo "   Status: $$TUNNEL_POD_STATUS" && \
+	echo "   Ready: $$TUNNEL_POD_READY" && \
+	echo "" && \
+	echo "🌐 Expected URLs:" && \
+	echo "   Frontend: https://$${CLUSTER_LABEL}ui.diocesanvitality.org" && \
+	echo "   Backend:  https://$${CLUSTER_LABEL}api.diocesanvitality.org" && \
+	echo "   ArgoCD:   https://$${CLUSTER_LABEL}argocd.diocesanvitality.org"
+
 _create-tunnel-sealed-secret: ## Create tunnel token sealed secret
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	echo "🔍 Loading tunnel token from environment file..." && \
@@ -691,7 +864,8 @@ _create-tunnel-sealed-secret: ## Create tunnel token sealed secret
 	echo -n "$$TUNNEL_TOKEN" | kubectl create secret generic cloudflared-token \
 		--dry-run=client --from-file=tunnel-token=/dev/stdin \
 		--namespace=cloudflare-tunnel-$$CLUSTER_LABEL -o yaml | \
-	kubeseal -o yaml --namespace=cloudflare-tunnel-$$CLUSTER_LABEL > \
+	kubeseal --controller-namespace=kube-system --controller-name=sealed-secrets-controller \
+		-o yaml --namespace=cloudflare-tunnel-$$CLUSTER_LABEL > \
 		k8s/infrastructure/cloudflare-tunnel/environments/$$CLUSTER_LABEL/cloudflared-token-sealedsecret.yaml && \
 	echo "🔧 Updating kustomization to include sealed secret..." && \
 	$(MAKE) _update-kustomization-for-sealed-secret CLUSTER_LABEL=$$CLUSTER_LABEL && \
@@ -704,17 +878,39 @@ _create-application-sealed-secret: ## Create application secrets sealed secret
 		echo "❌ .env file not found. Please copy .env.example to .env and configure your secrets"; \
 		exit 1; \
 	fi && \
-	SUPABASE_URL=$$(grep "^SUPABASE_URL=" .env | cut -d'=' -f2- | tr -d '"') && \
-	SUPABASE_KEY=$$(grep "^SUPABASE_KEY=" .env | cut -d'=' -f2- | tr -d '"') && \
+	SUPABASE_URL_VAR="SUPABASE_URL" && \
+	SUPABASE_KEY_VAR="SUPABASE_KEY" && \
+	if [ "$$CLUSTER_LABEL" != "prd" ]; then \
+		ENV_SUFFIX=$$(echo $$CLUSTER_LABEL | tr '[:lower:]' '[:upper:]') && \
+		SUPABASE_URL_ENV=$$(grep "^SUPABASE_URL_$$ENV_SUFFIX=" .env 2>/dev/null | cut -d'=' -f2- | tr -d '"' | sed 's/^[[:space:]]*//;s/[[:space:]]*$$//') && \
+		SUPABASE_KEY_ENV=$$(grep "^SUPABASE_KEY_$$ENV_SUFFIX=" .env 2>/dev/null | cut -d'=' -f2- | tr -d '"' | sed 's/^[[:space:]]*//;s/[[:space:]]*$$//') && \
+		if [ -n "$$SUPABASE_URL_ENV" ] && [ -n "$$SUPABASE_KEY_ENV" ] && \
+		   ! echo "$$SUPABASE_URL_ENV" | grep -qE '^<.*>$$|^your-|^replace-|^placeholder' && \
+		   ! echo "$$SUPABASE_KEY_ENV" | grep -qE '^<.*>$$|^your-|^replace-|^placeholder'; then \
+			echo "ℹ️  Using environment-specific database credentials (SUPABASE_URL_$$ENV_SUFFIX, SUPABASE_KEY_$$ENV_SUFFIX)"; \
+			SUPABASE_URL="$$SUPABASE_URL_ENV" && \
+			SUPABASE_KEY="$$SUPABASE_KEY_ENV"; \
+		else \
+			echo "⚠️  No environment-specific credentials found, falling back to production database"; \
+			echo "💡 To use isolated $$CLUSTER_LABEL database, run: make database-create CLUSTER_LABEL=$$CLUSTER_LABEL"; \
+			SUPABASE_URL=$$(grep "^SUPABASE_URL=" .env | cut -d'=' -f2- | tr -d '"') && \
+			SUPABASE_KEY=$$(grep "^SUPABASE_KEY=" .env | cut -d'=' -f2- | tr -d '"'); \
+		fi; \
+	else \
+		SUPABASE_URL=$$(grep "^SUPABASE_URL=" .env | cut -d'=' -f2- | tr -d '"') && \
+		SUPABASE_KEY=$$(grep "^SUPABASE_KEY=" .env | cut -d'=' -f2- | tr -d '"'); \
+	fi && \
 	GENAI_API_KEY=$$(grep "^GENAI_API_KEY=" .env | cut -d'=' -f2- | tr -d '"') && \
 	SEARCH_API_KEY=$$(grep "^SEARCH_API_KEY=" .env | cut -d'=' -f2- | tr -d '"') && \
 	SEARCH_CX=$$(grep "^SEARCH_CX=" .env | cut -d'=' -f2- | tr -d '"') && \
 	if [ -z "$$SUPABASE_URL" ] || [ -z "$$SUPABASE_KEY" ] || [ -z "$$GENAI_API_KEY" ] || [ -z "$$SEARCH_API_KEY" ] || [ -z "$$SEARCH_CX" ]; then \
 		echo "❌ Missing required secrets in .env file. Required:"; \
-		echo "   SUPABASE_URL, SUPABASE_KEY, GENAI_API_KEY, SEARCH_API_KEY, SEARCH_CX"; \
+		echo "   SUPABASE_URL, SUPABASE_KEY (or SUPABASE_URL_$$ENV_SUFFIX, SUPABASE_KEY_$$ENV_SUFFIX)"; \
+		echo "   GENAI_API_KEY, SEARCH_API_KEY, SEARCH_CX"; \
 		exit 1; \
 	fi && \
 	echo "✅ Loaded application secrets from .env file" && \
+	echo "   Database: $$SUPABASE_URL" && \
 	echo "🔐 Creating sealed secret for application..." && \
 	kubectl create secret generic diocesan-vitality-secrets \
 		--from-literal=supabase-url="$$SUPABASE_URL" \
@@ -724,7 +920,8 @@ _create-application-sealed-secret: ## Create application secrets sealed secret
 		--from-literal=search-cx="$$SEARCH_CX" \
 		--namespace=diocesan-vitality-$$CLUSTER_LABEL \
 		--dry-run=client -o yaml | \
-	kubeseal -o yaml --namespace=diocesan-vitality-$$CLUSTER_LABEL > \
+	kubeseal --controller-namespace=kube-system --controller-name=sealed-secrets-controller \
+		-o yaml --namespace=diocesan-vitality-$$CLUSTER_LABEL > \
 		k8s/environments/$$CLUSTER_LABEL/diocesan-vitality-secrets-sealedsecret.yaml && \
 	echo "🔧 Adding sealed secret to kustomization..." && \
 	if ! grep -q "diocesan-vitality-secrets-sealedsecret.yaml" k8s/environments/$$CLUSTER_LABEL/kustomization.yaml; then \
@@ -732,7 +929,8 @@ _create-application-sealed-secret: ## Create application secrets sealed secret
 	fi && \
 	echo "💾 Committing application sealed secret to repository..." && \
 	git add k8s/environments/$$CLUSTER_LABEL/ && \
-	git commit -m "Add application sealed secret for diocesan-vitality-$$CLUSTER_LABEL - Contains encrypted supabase-url, supabase-key, genai-api-key, search-api-key, search-cx" && \
+	PRE_COMMIT_ALLOW_NO_CONFIG=1 git commit -m "Add application sealed secret for diocesan-vitality-$$CLUSTER_LABEL [skip ci]" -m "Contains encrypted supabase-url, supabase-key, genai-api-key, search-api-key, search-cx" && \
+	git pull --rebase && \
 	git push && \
 	echo "✅ Application sealed secret created and committed"
 
@@ -742,7 +940,7 @@ _commit-sealed-secrets: ## Commit all sealed secrets to repository
 	git add k8s/infrastructure/cloudflare-tunnel/environments/$$CLUSTER_LABEL/ || true && \
 	git add k8s/environments/$$CLUSTER_LABEL/ && \
 	echo "💾 Committing sealed secrets to repository..." && \
-	git commit -m "🔐 Add sealed secrets for $$CLUSTER_LABEL environment" \
+	PRE_COMMIT_ALLOW_NO_CONFIG=1 git commit -m "🔐 Add sealed secrets for $$CLUSTER_LABEL environment [skip ci]" \
 		-m "✅ Tunnel Secret:" \
 		-m "- cloudflared-token: Encrypted tunnel token for Cloudflare tunnel" \
 		-m "" \
@@ -755,8 +953,330 @@ _commit-sealed-secrets: ## Commit all sealed secrets to repository
 		-m "" \
 		-m "🔒 All secrets encrypted with cluster-specific sealed-secrets key" \
 		-m "🚀 ArgoCD will auto-deploy when synced from GitOps repository" && \
+	git pull --rebase && \
 	git push && \
 	echo "✅ All sealed secrets committed and pushed to repository"
+
+_cleanup-sealed-secrets: ## Delete sealed secrets from repository after cluster destroy
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🧹 Cleaning up sealed secrets for $$CLUSTER_LABEL environment..." && \
+	TUNNEL_SECRET="k8s/infrastructure/cloudflare-tunnel/environments/$$CLUSTER_LABEL/cloudflared-token-sealedsecret.yaml" && \
+	APP_SECRET="k8s/environments/$$CLUSTER_LABEL/diocesan-vitality-secrets-sealedsecret.yaml" && \
+	if [ -f "$$TUNNEL_SECRET" ]; then \
+		echo "🗑️  Removing tunnel sealed secret: $$TUNNEL_SECRET" && \
+		git rm "$$TUNNEL_SECRET" || rm -f "$$TUNNEL_SECRET"; \
+	fi && \
+	if [ -f "$$APP_SECRET" ]; then \
+		echo "🗑️  Removing application sealed secret: $$APP_SECRET" && \
+		git rm "$$APP_SECRET" || rm -f "$$APP_SECRET"; \
+	fi && \
+	if git diff --cached --quiet; then \
+		echo "ℹ️  No sealed secrets to clean up"; \
+	else \
+		echo "💾 Committing sealed secret cleanup..." && \
+		PRE_COMMIT_ALLOW_NO_CONFIG=1 git commit -m "🧹 Remove sealed secrets for $$CLUSTER_LABEL after cluster destroy [skip ci]" \
+			-m "These sealed secrets were encrypted with the old cluster's certificate" \
+			-m "and cannot be decrypted by a new cluster's sealed-secrets controller." \
+			-m "" \
+			-m "Run 'make sealed-secrets-create CLUSTER_LABEL=$$CLUSTER_LABEL' to regenerate" && \
+		git pull --rebase && \
+		git push && \
+		echo "✅ Sealed secrets cleaned up and changes pushed"; \
+	fi
+
+# Database Management
+# ===================
+
+database-create: ## Copy production database to environment-specific database (usage: make database-create CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🗄️  Database copy for '$$CLUSTER_LABEL' environment..." && \
+	echo "" && \
+	if [ "$$CLUSTER_LABEL" = "prd" ]; then \
+		echo "ℹ️  Production is the source database - no copy needed"; \
+		exit 0; \
+	fi && \
+	echo "🔍 Checking environment-specific database credentials..." && \
+	if [ ! -f ".env" ]; then \
+		echo "❌ .env file not found"; \
+		exit 1; \
+	fi && \
+	ENV_SUFFIX=$$(echo $$CLUSTER_LABEL | tr '[:lower:]' '[:upper:]') && \
+	SUPABASE_URL_DEV=$$(grep "^SUPABASE_URL_$$ENV_SUFFIX=" .env 2>/dev/null | cut -d'=' -f2- | tr -d '"') && \
+	SUPABASE_KEY_DEV=$$(grep "^SUPABASE_KEY_$$ENV_SUFFIX=" .env 2>/dev/null | cut -d'=' -f2- | tr -d '"') && \
+	SUPABASE_DB_PASSWORD_DEV=$$(grep "^SUPABASE_DB_PASSWORD_$$ENV_SUFFIX=" .env 2>/dev/null | cut -d'=' -f2- | tr -d '"') && \
+	SUPABASE_URL_PRD=$$(grep "^SUPABASE_URL=" .env | cut -d'=' -f2- | tr -d '"') && \
+	SUPABASE_KEY_PRD=$$(grep "^SUPABASE_KEY=" .env | cut -d'=' -f2- | tr -d '"') && \
+	SUPABASE_DB_PASSWORD_PRD=$$(grep "^SUPABASE_DB_PASSWORD=" .env | cut -d'=' -f2- | tr -d '"') && \
+	if [ -z "$$SUPABASE_URL_DEV" ] || [ -z "$$SUPABASE_KEY_DEV" ]; then \
+		echo "❌ Missing $$CLUSTER_LABEL database credentials in .env"; \
+		echo "" && \
+		echo "📋 Prerequisites:" && \
+		echo "1. Manually create Supabase project: diocesan-vitality-$$CLUSTER_LABEL" && \
+		echo "2. Add credentials to .env:" && \
+		echo "   SUPABASE_URL_$$ENV_SUFFIX=<your-dev-url>" && \
+		echo "   SUPABASE_KEY_$$ENV_SUFFIX=<your-dev-key>" && \
+		echo "3. Run this command again" && \
+		exit 1; \
+	fi && \
+	echo "✅ Found $$CLUSTER_LABEL database credentials" && \
+	echo "" && \
+	echo "📊 Database Copy Operation:" && \
+	echo "   Source: $$SUPABASE_URL_PRD" && \
+	echo "   Target: $$SUPABASE_URL_DEV" && \
+	echo "" && \
+	echo "⚠️  This will:" && \
+	echo "   - Export schema and data from production" && \
+	echo "   - Drop existing tables in $$CLUSTER_LABEL database" && \
+	echo "   - Import production data into $$CLUSTER_LABEL database" && \
+	echo "" && \
+	if [ -z "$$SKIP_CONFIRM" ]; then \
+		read -p "Continue? Type 'yes' to proceed: " CONFIRM </dev/tty && \
+		if [ "$$CONFIRM" != "yes" ]; then \
+			echo "❌ Operation cancelled"; \
+			exit 1; \
+		fi; \
+	else \
+		echo "ℹ️  Auto-confirming (SKIP_CONFIRM=1)"; \
+	fi && \
+	echo "" && \
+	echo "🔄 Copying production database to $$CLUSTER_LABEL..." && \
+	$(MAKE) _database-copy-internal SUPABASE_URL_SRC="$$SUPABASE_URL_PRD" SUPABASE_KEY_SRC="$$SUPABASE_KEY_PRD" SUPABASE_DB_PASSWORD_SRC="$$SUPABASE_DB_PASSWORD_PRD" SUPABASE_URL_DST="$$SUPABASE_URL_DEV" SUPABASE_KEY_DST="$$SUPABASE_KEY_DEV" SUPABASE_DB_PASSWORD_DST="$$SUPABASE_DB_PASSWORD_DEV" CLUSTER_LABEL=$$CLUSTER_LABEL && \
+	echo "" && \
+	echo "✅ Database copy complete for $$CLUSTER_LABEL" && \
+	echo "" && \
+	echo "Next steps:" && \
+	echo "   make sealed-secrets-create CLUSTER_LABEL=$$CLUSTER_LABEL"
+
+_database-copy-internal: ## Internal target to perform database copy using pg_dump/pg_restore
+	@echo "🔧 Installing dependencies..." && \
+	if ! command -v psql >/dev/null 2>&1; then \
+		echo "📦 Installing postgresql-client..." && \
+		sudo apt-get update -qq && sudo apt-get install -y postgresql-client; \
+	fi && \
+	echo "✅ Dependencies ready" && \
+	echo "" && \
+	echo "🔍 Extracting database connection details..." && \
+	SRC_HOST=$$(echo $(SUPABASE_URL_SRC) | sed 's|https://||' | sed 's|http://||' | cut -d'/' -f1) && \
+	SRC_PROJECT=$$(echo $$SRC_HOST | cut -d'.' -f1) && \
+	DST_HOST=$$(echo $(SUPABASE_URL_DST) | sed 's|https://||' | sed 's|http://||' | cut -d'/' -f1) && \
+	DST_PROJECT=$$(echo $$DST_HOST | cut -d'.' -f1) && \
+	echo "   Source project: $$SRC_PROJECT" && \
+	echo "   Target project: $$DST_PROJECT" && \
+	echo "" && \
+	if [ -z "$(SUPABASE_DB_PASSWORD_SRC)" ] || [ -z "$(SUPABASE_DB_PASSWORD_DST)" ]; then \
+		echo "⚠️  Missing database passwords in .env" && \
+		echo "💡 Add SUPABASE_DB_PASSWORD and SUPABASE_DB_PASSWORD_DEV to .env" && \
+		exit 1; \
+	fi && \
+	echo "⚠️  Manual database copy required (IPv6 connectivity needed for direct access)" && \
+	echo "" && \
+	echo "📋 Option 1: Use Supabase Dashboard (Easiest - works on free tier)" && \
+	echo "   1. Export: Open https://supabase.com/dashboard/project/$$SRC_PROJECT/editor" && \
+	echo "      Run SQL: SELECT * FROM dioceses; -- Copy all table data" && \
+	echo "   2. Import: Open https://supabase.com/dashboard/project/$$DST_PROJECT/editor" && \
+	echo "      Paste and run the same queries" && \
+	echo "" && \
+	echo "📋 Option 2: Use pg_dump from machine with IPv6" && \
+	echo "   From a machine with IPv6 connectivity, run:" && \
+	echo "   PGPASSWORD='$(SUPABASE_DB_PASSWORD_SRC)' pg_dump -h db.$$SRC_PROJECT.supabase.co -U postgres -d postgres > backup.sql" && \
+	echo "   PGPASSWORD='$(SUPABASE_DB_PASSWORD_DST)' psql -h db.$$DST_PROJECT.supabase.co -U postgres -d postgres < backup.sql" && \
+	echo "" && \
+	echo "💡 For now, dev can share production database (already configured)" && \
+	echo "   Environment-specific credentials will be used when database is populated"
+
+database-copy-prd-to-dev: ## Copy production database to dev using Python script (usage: make database-copy-prd-to-dev)
+	@echo "🔄 Copying production database to dev..." && \
+	echo "" && \
+	if [ ! -f ".env" ]; then \
+		echo "❌ .env file not found"; \
+		exit 1; \
+	fi && \
+	export SUPABASE_URL_PRD=$$(grep "^SUPABASE_URL=" .env | cut -d'=' -f2- | tr -d '"') && \
+	export SUPABASE_KEY_PRD=$$(grep "^SUPABASE_KEY=" .env | cut -d'=' -f2- | tr -d '"') && \
+	export SUPABASE_URL_DEV=$$(grep "^SUPABASE_URL_DEV=" .env | cut -d'=' -f2- | tr -d '"') && \
+	export SUPABASE_KEY_DEV=$$(grep "^SUPABASE_KEY_DEV=" .env | cut -d'=' -f2- | tr -d '"') && \
+	if [ -z "$$SUPABASE_URL_DEV" ] || [ -z "$$SUPABASE_KEY_DEV" ]; then \
+		echo "❌ Missing dev database credentials in .env"; \
+		exit 1; \
+	fi && \
+	echo "📊 Database Copy Operation:" && \
+	echo "   Source: $$SUPABASE_URL_PRD" && \
+	echo "   Target: $$SUPABASE_URL_DEV" && \
+	echo "" && \
+	python3 scripts/copy_database.py
+
+database-schema-refresh: ## Extract current production schema to sql/initial_schema.sql (usage: make database-schema-refresh)
+	@echo "🔄 Extracting schema from production database..." && \
+	echo "" && \
+	if [ ! -f ".env" ]; then \
+		echo "❌ .env file not found"; \
+		exit 1; \
+	fi && \
+	SUPABASE_DB_PASSWORD=$$(grep "^SUPABASE_DB_PASSWORD=" .env | cut -d'=' -f2- | tr -d '"') && \
+	echo "   Host: aws-0-us-east-2.pooler.supabase.com:5432 (production pooler)" && \
+	echo "   Using PostgreSQL 17 client via connection pooler" && \
+	echo "" && \
+	if [ -f sql/initial_schema.sql ]; then \
+		cp sql/initial_schema.sql sql/initial_schema.sql.backup && \
+		echo "💾 Backed up existing schema to sql/initial_schema.sql.backup"; \
+	fi && \
+	PGPASSWORD="$$SUPABASE_DB_PASSWORD" pg_dump \
+		-h aws-0-us-east-2.pooler.supabase.com \
+		-p 5432 \
+		-U postgres.nzcwtjloonumxpsqzarq \
+		-d postgres \
+		--schema-only \
+		--no-owner \
+		--no-acl \
+		--schema=public \
+		-f sql/initial_schema.sql && \
+	echo "" && \
+	echo "✅ Schema exported successfully to sql/initial_schema.sql" && \
+	echo "   Lines: $$(wc -l < sql/initial_schema.sql)" && \
+	echo "" && \
+	echo "📊 Tables extracted:" && \
+	grep -i "CREATE TABLE" sql/initial_schema.sql | sed 's/CREATE TABLE public\./  - /' | sed 's/ (.*$$//'
+
+database-init-dev: ## Initialize dev database with production schema and data (usage: make database-init-dev)
+	@echo "🚀 Initializing dev database from production..." && \
+	echo "" && \
+	if [ ! -f ".env" ]; then \
+		echo "❌ .env file not found"; \
+		exit 1; \
+	fi && \
+	SUPABASE_DB_PASSWORD_DEV=$$(grep "^SUPABASE_DB_PASSWORD_DEV=" .env | cut -d'=' -f2- | tr -d '"') && \
+	echo "⚠️  WARNING: This will DELETE ALL DATA in dev database!" && \
+	echo "" && \
+	echo "Step 1/4: Dropping existing dev schema..." && \
+	PGPASSWORD="$$SUPABASE_DB_PASSWORD_DEV" psql \
+		-h aws-1-us-east-2.pooler.supabase.com \
+		-p 5432 \
+		-U postgres.derftxlibiidgcdafxrx \
+		-d postgres \
+		-c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" > /dev/null 2>&1 && \
+	echo "✅ Dev schema dropped and recreated" && \
+	echo "" && \
+	echo "Step 2/4: Applying production schema to dev..." && \
+	PGPASSWORD="$$SUPABASE_DB_PASSWORD_DEV" psql \
+		-h aws-1-us-east-2.pooler.supabase.com \
+		-p 5432 \
+		-U postgres.derftxlibiidgcdafxrx \
+		-d postgres \
+		-f sql/initial_schema.sql > /dev/null 2>&1 && \
+	echo "✅ Schema applied to dev" && \
+	echo "" && \
+	echo "Step 3/4: Granting permissions..." && \
+	PGPASSWORD="$$SUPABASE_DB_PASSWORD_DEV" psql \
+		-h aws-1-us-east-2.pooler.supabase.com \
+		-p 5432 \
+		-U postgres.derftxlibiidgcdafxrx \
+		-d postgres \
+		-c "GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role; \
+		    GRANT ALL ON SCHEMA public TO anon, authenticated, service_role; \
+		    GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role; \
+		    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role; \
+		    GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated, service_role; \
+		    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role; \
+		    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role; \
+		    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon, authenticated, service_role;" > /dev/null 2>&1 && \
+	echo "✅ Permissions granted" && \
+	echo "" && \
+	echo "Step 4/4: Copying production data to dev..." && \
+	python3 scripts/copy_database.py && \
+	echo "" && \
+	echo "🎉 Dev database initialized successfully!"
+
+database-schema-export: ## Export production database schema to SQL file (usage: make database-schema-export)
+	@echo "📤 Exporting production database schema..." && \
+	echo "" && \
+	if [ ! -f ".env" ]; then \
+		echo "❌ .env file not found"; \
+		exit 1; \
+	fi && \
+	SUPABASE_URL_PRD=$$(grep "^SUPABASE_URL=" .env | cut -d'=' -f2- | tr -d '"') && \
+	SUPABASE_DB_PASSWORD_PRD=$$(grep "^SUPABASE_DB_PASSWORD=" .env | cut -d'=' -f2- | tr -d '"') && \
+	if [ -z "$$SUPABASE_URL_PRD" ] || [ -z "$$SUPABASE_DB_PASSWORD_PRD" ]; then \
+		echo "❌ Missing production database credentials in .env"; \
+		exit 1; \
+	fi && \
+	SRC_HOST=$$(echo $$SUPABASE_URL_PRD | sed 's|https://||' | sed 's|http://||' | cut -d'/' -f1) && \
+	SRC_PROJECT=$$(echo $$SRC_HOST | cut -d'.' -f1) && \
+	echo "📊 Schema Export:" && \
+	echo "   Source: $$SUPABASE_URL_PRD ($$SRC_PROJECT)" && \
+	echo "   Output: sql/exported_schema.sql" && \
+	echo "" && \
+	echo "⚠️  Note: Requires IPv6 connectivity to Supabase" && \
+	echo "🔧 Exporting schema (structure only, no data)..." && \
+	PGPASSWORD="$$SUPABASE_DB_PASSWORD_PRD" pg_dump -h db.$$SRC_PROJECT.supabase.co -U postgres -d postgres --schema-only > sql/exported_schema.sql && \
+	echo "" && \
+	echo "✅ Schema exported successfully!" && \
+	echo "💡 Now run: make database-schema-import"
+
+database-schema-import: ## Import schema from exported SQL file to dev database (usage: make database-schema-import)
+	@echo "📥 Importing schema to dev database..." && \
+	echo "" && \
+	if [ ! -f "sql/exported_schema.sql" ]; then \
+		echo "❌ Schema file not found: sql/exported_schema.sql"; \
+		echo "💡 Run: make database-schema-export first"; \
+		exit 1; \
+	fi && \
+	if [ ! -f ".env" ]; then \
+		echo "❌ .env file not found"; \
+		exit 1; \
+	fi && \
+	SUPABASE_URL_DEV=$$(grep "^SUPABASE_URL_DEV=" .env | cut -d'=' -f2- | tr -d '"') && \
+	SUPABASE_DB_PASSWORD_DEV=$$(grep "^SUPABASE_DB_PASSWORD_DEV=" .env | cut -d'=' -f2- | tr -d '"') && \
+	if [ -z "$$SUPABASE_URL_DEV" ] || [ -z "$$SUPABASE_DB_PASSWORD_DEV" ]; then \
+		echo "❌ Missing dev database credentials in .env"; \
+		exit 1; \
+	fi && \
+	DST_HOST=$$(echo $$SUPABASE_URL_DEV | sed 's|https://||' | sed 's|http://||' | cut -d'/' -f1) && \
+	DST_PROJECT=$$(echo $$DST_HOST | cut -d'.' -f1) && \
+	echo "📊 Schema Import:" && \
+	echo "   Target: $$SUPABASE_URL_DEV ($$DST_PROJECT)" && \
+	echo "   Source: sql/exported_schema.sql" && \
+	echo "" && \
+	echo "⚠️  Note: Requires IPv6 connectivity to Supabase" && \
+	echo "🔧 Importing schema..." && \
+	PGPASSWORD="$$SUPABASE_DB_PASSWORD_DEV" psql -h db.$$DST_PROJECT.supabase.co -U postgres -d postgres -f sql/exported_schema.sql && \
+	echo "" && \
+	echo "✅ Schema imported successfully!" && \
+	echo "💡 Now you can run: make database-copy-prd-to-dev"
+
+database-init: ## Initialize database schema for dev environment using SQL files (usage: make database-init)
+	@echo "🗄️  Initializing dev database schema from SQL files..." && \
+	echo "" && \
+	echo "⚠️  Note: This command requires IPv6 connectivity" && \
+	echo "💡 Alternative: Copy sql/initial_schema.sql content to Supabase dashboard SQL editor" && \
+	echo "" && \
+	echo "📋 Manual steps:" && \
+	echo "1. Open: https://supabase.com/dashboard/project/$$(grep "^SUPABASE_URL_DEV=" .env | cut -d'=' -f2- | tr -d '"' | sed 's|https://||' | cut -d'.' -f1)/sql/new" && \
+	echo "2. Copy contents of sql/initial_schema.sql" && \
+	echo "3. Paste and click 'Run'" && \
+	echo "4. Repeat for each file in sql/migrations/ (in alphabetical order)"
+
+database-destroy: ## Display instructions to destroy database project (usage: make database-destroy CLUSTER_LABEL=dev)
+	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
+	echo "🗑️  Database cleanup for '$$CLUSTER_LABEL' environment..." && \
+	echo "" && \
+	if [ "$$CLUSTER_LABEL" = "prd" ]; then \
+		echo "⚠️  Cannot destroy production database - manual action required"; \
+		echo "💡 Production database should never be automatically destroyed"; \
+		exit 1; \
+	fi && \
+	echo "⚠️  Manual steps to destroy $$CLUSTER_LABEL database:" && \
+	echo "" && \
+	echo "1️⃣  Delete Supabase project:" && \
+	echo "   - Go to https://app.supabase.com/" && \
+	echo "   - Select project: diocesan-vitality-$$CLUSTER_LABEL" && \
+	echo "   - Settings → General → Delete Project" && \
+	echo "" && \
+	echo "2️⃣  Optionally remove credentials from .env (manual cleanup):" && \
+	echo "   You may want to remove or comment out these lines in .env:" && \
+	echo "   SUPABASE_URL_$$(echo $$CLUSTER_LABEL | tr '[:lower:]' '[:upper:]')=..." && \
+	echo "   SUPABASE_KEY_$$(echo $$CLUSTER_LABEL | tr '[:lower:]' '[:upper:]')=..." && \
+	echo "" && \
+	echo "✅ Database cleanup instructions displayed for $$CLUSTER_LABEL"
 
 argocd-verify: ## Step 6: Verify ArgoCD server is accessible at its URL (usage: make argocd-verify CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
@@ -1081,8 +1601,8 @@ infra-status: ## Check infrastructure status
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \
 	TUNNEL_NAME="do-nyc2-dv-$$CLUSTER_LABEL" && \
 	if [ -f .env ]; then \
-		CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-		CLOUDFLARE_ACCOUNT_ID=$$(awk -F'=' '/^CLOUDFLARE_ACCOUNT_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+		CLOUDFLARE_API_TOKEN=$$(sed -n 's/^CLOUDFLARE_API_TOKEN=//p' .env | tr -d '\r\n"'"'"'') && \
+		CLOUDFLARE_ACCOUNT_ID=$$(sed -n 's/^CLOUDFLARE_ACCOUNT_ID=//p' .env | tr -d '\r\n"'"'"'') && \
 		if [ -n "$$CLOUDFLARE_API_TOKEN" ] && [ -n "$$CLOUDFLARE_ACCOUNT_ID" ]; then \
 			TUNNELS_RESPONSE=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel" \
 				-H "Authorization: Bearer $$CLOUDFLARE_API_TOKEN" \
@@ -1120,8 +1640,8 @@ tunnel-verify: ## Generate tunnel token file for sealed secrets (usage: make tun
 	echo "🔍 Generating tunnel token for '$$CLUSTER_LABEL'..." && \
 	TUNNEL_NAME="do-nyc2-dv-$$CLUSTER_LABEL" && \
 	$(MAKE) tunnel-auth && \
-	CLOUDFLARE_API_TOKEN=$$(awk -F'=' '/^CLOUDFLARE_API_TOKEN=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
-	CLOUDFLARE_ACCOUNT_ID=$$(awk -F'=' '/^CLOUDFLARE_ACCOUNT_ID=/ {gsub(/["'\''\\r\\n]/, "", $$2); print $$2}' .env) && \
+	CLOUDFLARE_API_TOKEN=$$(sed -n 's/^CLOUDFLARE_API_TOKEN=//p' .env | tr -d '\r\n"'"'"'') && \
+	CLOUDFLARE_ACCOUNT_ID=$$(sed -n 's/^CLOUDFLARE_ACCOUNT_ID=//p' .env | tr -d '\r\n"'"'"'') && \
 	export CLOUDFLARE_API_TOKEN="$$CLOUDFLARE_API_TOKEN" && \
 	echo "🔧 Fetching tunnel information..." && \
 	TUNNELS_RESPONSE=$$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/$$CLOUDFLARE_ACCOUNT_ID/cfd_tunnel" \

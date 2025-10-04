@@ -14,14 +14,14 @@ from typing import Any, Dict, List
 
 import psutil
 
-import config
+from pipeline import config
 from core.async_driver import get_async_driver_pool, shutdown_async_driver_pool
 from core.async_parish_extractor import get_async_parish_extractor
 from core.db import get_supabase_client
 from core.logger import get_logger
 from core.monitoring_client import get_monitoring_client
-from parish_extraction_core import PatternDetector, enhanced_safe_upsert_to_supabase
-from parish_extractors import ensure_chrome_installed
+from pipeline.parish_extraction_core import PatternDetector, enhanced_safe_upsert_to_supabase
+from pipeline.parish_extractors import ensure_chrome_installed
 
 logger = get_logger(__name__)
 

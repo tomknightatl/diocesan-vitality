@@ -41,7 +41,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY *.py .
+COPY pipeline/ pipeline/
 COPY core/ core/
 COPY sql/ sql/
 COPY extractors/ extractors/
@@ -55,5 +55,5 @@ USER appuser
 ENV DISPLAY=:99
 ENV CHROME_BIN=/usr/bin/google-chrome
 
-# Default command
-CMD ["python", "run_pipeline.py"]
+# Default command (runs distributed pipeline runner)
+CMD ["python", "-m", "pipeline.distributed_pipeline_runner"]

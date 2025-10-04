@@ -12,7 +12,7 @@ from typing import Any, Dict, List
 from core.async_driver import get_async_driver_pool, shutdown_async_driver_pool
 from core.async_parish_extractor import get_async_parish_extractor
 from core.logger import get_logger
-from parish_extraction_core import ParishData
+from pipeline.parish_extraction_core import ParishData
 
 logger = get_logger(__name__)
 

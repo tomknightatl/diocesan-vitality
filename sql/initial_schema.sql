@@ -1,8 +1,16 @@
+--
+-- PostgreSQL database dump
+--
 
+\restrict Q55Rl6hEiX9grGaoJKsUt9do2dcX3aaEevBXpWClesxSwNgcn1UHmV99XbSfAFr
+
+-- Dumped from database version 17.6
+-- Dumped by pg_dump version 17.6 (Debian 17.6-2.pgdg12+1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -11,57 +19,50 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+--
+-- Name: public; Type: SCHEMA; Schema: -; Owner: -
+--
 
-COMMENT ON SCHEMA "public" IS 'standard public schema';
-
-
-
-CREATE EXTENSION IF NOT EXISTS "pg_graphql" WITH SCHEMA "graphql";
-
+CREATE SCHEMA public;
 
 
+--
+-- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON SCHEMA public IS 'standard public schema';
 
 
+--
+-- Name: fact_type_enum; Type: TYPE; Schema: public; Owner: -
+--
 
-CREATE EXTENSION IF NOT EXISTS "pg_stat_statements" WITH SCHEMA "extensions";
-
-
-
-
-
-
-CREATE EXTENSION IF NOT EXISTS "pgcrypto" WITH SCHEMA "extensions";
-
-
-
-
-
-
-CREATE EXTENSION IF NOT EXISTS "supabase_vault" WITH SCHEMA "vault";
-
-
-
-
-
-
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
-
-
-
-
-
-
-CREATE TYPE "public"."fact_type_enum" AS ENUM (
+CREATE TYPE public.fact_type_enum AS ENUM (
     'ReconciliationSchedule',
     'AdorationSchedule'
 );
 
 
-ALTER TYPE "public"."fact_type_enum" OWNER TO "postgres";
+--
+-- Name: update_pipeline_workers_updated_at(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_pipeline_workers_updated_at() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$;
 
 
-CREATE OR REPLACE FUNCTION "public"."update_updated_at_column"() RETURNS "trigger"
-    LANGUAGE "plpgsql"
+--
+-- Name: update_updated_at_column(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_updated_at_column() RETURNS trigger
+    LANGUAGE plpgsql
     AS $$
 BEGIN
     NEW.updated_at = now();
@@ -70,78 +71,228 @@ END;
 $$;
 
 
-ALTER FUNCTION "public"."update_updated_at_column"() OWNER TO "postgres";
-
 SET default_tablespace = '';
 
-SET default_table_access_method = "heap";
+SET default_table_access_method = heap;
 
+--
+-- Name: ScheduleKeywords; Type: TABLE; Schema: public; Owner: -
+--
 
-CREATE TABLE IF NOT EXISTS "public"."ScheduleKeywords" (
-    "id" "uuid" DEFAULT "extensions"."uuid_generate_v4"() NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"(),
-    "updated_at" timestamp with time zone DEFAULT "now"(),
-    "keyword" "text" NOT NULL,
-    "schedule_type" "text" NOT NULL,
-    "weight" integer DEFAULT 1 NOT NULL,
-    "is_negative" boolean DEFAULT false,
-    "is_active" boolean DEFAULT true,
-    "description" "text",
-    "examples" "text",
-    CONSTRAINT "ScheduleKeywords_schedule_type_check" CHECK (("schedule_type" = ANY (ARRAY['reconciliation'::"text", 'adoration'::"text", 'both'::"text"])))
+CREATE TABLE public."ScheduleKeywords" (
+    id uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    keyword text NOT NULL,
+    schedule_type text NOT NULL,
+    weight integer DEFAULT 1 NOT NULL,
+    is_negative boolean DEFAULT false,
+    is_active boolean DEFAULT true,
+    description text,
+    examples text,
+    CONSTRAINT "ScheduleKeywords_schedule_type_check" CHECK ((schedule_type = ANY (ARRAY['reconciliation'::text, 'adoration'::text, 'both'::text, 'mass'::text, 'all'::text])))
 );
 
 
-ALTER TABLE "public"."ScheduleKeywords" OWNER TO "postgres";
+--
+-- Name: CONSTRAINT "ScheduleKeywords_schedule_type_check" ON "ScheduleKeywords"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON CONSTRAINT "ScheduleKeywords_schedule_type_check" ON public."ScheduleKeywords" IS 'Allows schedule types: reconciliation, adoration, both (shared), mass, all (universal)';
 
 
-CREATE OR REPLACE VIEW "public"."ActiveScheduleKeywords" AS
- SELECT "ScheduleKeywords"."id",
-    "ScheduleKeywords"."keyword",
-    "ScheduleKeywords"."schedule_type",
-    "ScheduleKeywords"."weight",
-    "ScheduleKeywords"."is_negative",
-    "ScheduleKeywords"."description",
-    "ScheduleKeywords"."created_at",
-    "ScheduleKeywords"."updated_at"
-   FROM "public"."ScheduleKeywords"
-  WHERE ("ScheduleKeywords"."is_active" = true)
-  ORDER BY "ScheduleKeywords"."schedule_type", "ScheduleKeywords"."weight" DESC, "ScheduleKeywords"."keyword";
+--
+-- Name: ActiveScheduleKeywords; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public."ActiveScheduleKeywords" AS
+ SELECT id,
+    keyword,
+    schedule_type,
+    weight,
+    is_negative,
+    description,
+    created_at,
+    updated_at
+   FROM public."ScheduleKeywords"
+  WHERE (is_active = true)
+  ORDER BY schedule_type, weight DESC, keyword;
 
 
-ALTER TABLE "public"."ActiveScheduleKeywords" OWNER TO "postgres";
+--
+-- Name: DioceseParishDirectoryOverride; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."DioceseParishDirectoryOverride" (
+    id bigint NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    diocese_url character varying,
+    parish_directory_url character varying,
+    found character varying,
+    found_method character varying,
+    updated_at character varying,
+    diocese_id integer
+);
 
 
-CREATE TABLE IF NOT EXISTS "public"."Dioceses" (
-    "id" bigint NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+--
+-- Name: TABLE "DioceseParishDirectoryOverride"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public."DioceseParishDirectoryOverride" IS 'Manual overrides for parish directory URLs when automated discovery needs correction';
+
+
+--
+-- Name: COLUMN "DioceseParishDirectoryOverride".diocese_url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."DioceseParishDirectoryOverride".diocese_url IS 'Diocese website URL (should match Dioceses.Website)';
+
+
+--
+-- Name: COLUMN "DioceseParishDirectoryOverride".parish_directory_url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."DioceseParishDirectoryOverride".parish_directory_url IS 'Override URL for parish directory page';
+
+
+--
+-- Name: COLUMN "DioceseParishDirectoryOverride".found; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."DioceseParishDirectoryOverride".found IS 'Status or reason for override (e.g., "manual override", "automated failed")';
+
+
+--
+-- Name: COLUMN "DioceseParishDirectoryOverride".found_method; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."DioceseParishDirectoryOverride".found_method IS 'Method used to find override URL (e.g., "manual", "support ticket")';
+
+
+--
+-- Name: COLUMN "DioceseParishDirectoryOverride".diocese_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."DioceseParishDirectoryOverride".diocese_id IS 'Foreign key reference to Dioceses.id';
+
+
+--
+-- Name: DioceseParishDirectoryOverride_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public."DioceseParishDirectoryOverride" ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public."DioceseParishDirectoryOverride_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: Dioceses; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."Dioceses" (
+    id bigint NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
     "Name" character varying,
     "Address" character varying,
     "Website" character varying,
-    "extracted_at" character varying
+    extracted_at character varying
 );
 
 
-ALTER TABLE "public"."Dioceses" OWNER TO "postgres";
+--
+-- Name: DiocesesParishDirectory; Type: TABLE; Schema: public; Owner: -
+--
 
-
-CREATE TABLE IF NOT EXISTS "public"."DiocesesParishDirectory" (
-    "id" bigint NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "diocese_url" character varying,
-    "parish_directory_url" character varying,
-    "found" character varying,
-    "found_method" character varying,
-    "updated_at" character varying,
-    "diocese_id" integer
+CREATE TABLE public."DiocesesParishDirectory" (
+    id bigint NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    diocese_url character varying,
+    parish_directory_url character varying,
+    found character varying,
+    found_method character varying,
+    updated_at character varying,
+    diocese_id integer,
+    last_extraction_attempt_at timestamp with time zone,
+    is_blocked boolean DEFAULT false,
+    blocking_type text,
+    blocking_evidence jsonb,
+    status_code integer,
+    robots_txt_check jsonb,
+    respectful_automation_used boolean DEFAULT false,
+    status_description text
 );
 
 
-ALTER TABLE "public"."DiocesesParishDirectory" OWNER TO "postgres";
+--
+-- Name: COLUMN "DiocesesParishDirectory".last_extraction_attempt_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."DiocesesParishDirectory".last_extraction_attempt_at IS 'Timestamp of when parish extraction was last attempted for this diocese parish directory';
 
 
-ALTER TABLE "public"."DiocesesParishDirectory" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
-    SEQUENCE NAME "public"."DiocesesParishDirectory_id_seq"
+--
+-- Name: COLUMN "DiocesesParishDirectory".is_blocked; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."DiocesesParishDirectory".is_blocked IS 'Whether the diocese website is blocking automated access';
+
+
+--
+-- Name: COLUMN "DiocesesParishDirectory".blocking_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."DiocesesParishDirectory".blocking_type IS 'Type of blocking detected (403_forbidden,
+  cloudflare_protection, etc.)';
+
+
+--
+-- Name: COLUMN "DiocesesParishDirectory".blocking_evidence; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."DiocesesParishDirectory".blocking_evidence IS 'JSON array of evidence for blocking detection';
+
+
+--
+-- Name: COLUMN "DiocesesParishDirectory".status_code; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."DiocesesParishDirectory".status_code IS 'HTTP status code received';
+
+
+--
+-- Name: COLUMN "DiocesesParishDirectory".robots_txt_check; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."DiocesesParishDirectory".robots_txt_check IS 'JSON object with robots.txt compliance check results';
+
+
+--
+-- Name: COLUMN "DiocesesParishDirectory".respectful_automation_used; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."DiocesesParishDirectory".respectful_automation_used IS 'Whether respectful automation practices were
+  used';
+
+
+--
+-- Name: COLUMN "DiocesesParishDirectory".status_description; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."DiocesesParishDirectory".status_description IS 'Human-readable description of blocking status';
+
+
+--
+-- Name: DiocesesParishDirectory_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public."DiocesesParishDirectory" ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public."DiocesesParishDirectory_id_seq"
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -150,9 +301,12 @@ ALTER TABLE "public"."DiocesesParishDirectory" ALTER COLUMN "id" ADD GENERATED B
 );
 
 
+--
+-- Name: Dioceses_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
 
-ALTER TABLE "public"."Dioceses" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
-    SEQUENCE NAME "public"."Dioceses_id_seq"
+ALTER TABLE public."Dioceses" ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public."Dioceses_id_seq"
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -161,23 +315,27 @@ ALTER TABLE "public"."Dioceses" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS ID
 );
 
 
+--
+-- Name: DiscoveredUrls; Type: TABLE; Schema: public; Owner: -
+--
 
-CREATE TABLE IF NOT EXISTS "public"."DiscoveredUrls" (
-    "id" bigint NOT NULL,
-    "parish_id" bigint,
-    "url" "text" NOT NULL,
-    "score" integer NOT NULL,
-    "source_url" "text",
-    "visited" boolean DEFAULT false,
-    "created_at" timestamp with time zone DEFAULT "now"()
+CREATE TABLE public."DiscoveredUrls" (
+    id bigint NOT NULL,
+    parish_id bigint,
+    url text NOT NULL,
+    score integer NOT NULL,
+    source_url text,
+    visited boolean DEFAULT false,
+    created_at timestamp with time zone DEFAULT now()
 );
 
 
-ALTER TABLE "public"."DiscoveredUrls" OWNER TO "postgres";
+--
+-- Name: DiscoveredUrls_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
 
-
-ALTER TABLE "public"."DiscoveredUrls" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
-    SEQUENCE NAME "public"."DiscoveredUrls_id_seq"
+ALTER TABLE public."DiscoveredUrls" ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public."DiscoveredUrls_id_seq"
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -186,40 +344,53 @@ ALTER TABLE "public"."DiscoveredUrls" ALTER COLUMN "id" ADD GENERATED BY DEFAULT
 );
 
 
+--
+-- Name: ParishData; Type: TABLE; Schema: public; Owner: -
+--
 
-CREATE TABLE IF NOT EXISTS "public"."ParishData" (
-    "id" bigint NOT NULL,
-    "parish_id" bigint NOT NULL,
-    "fact_type" "public"."fact_type_enum" NOT NULL,
-    "fact_value" "text",
-    "fact_source_url" "text",
-    "created_at" timestamp with time zone DEFAULT "now"(),
-    "updated_at" timestamp with time zone DEFAULT "now"(),
-    "fact_string" "text",
-    "confidence_score" integer DEFAULT 0,
-    "extraction_method" "text" DEFAULT 'keyword_based'::"text",
-    "ai_structured_data" "jsonb"
+CREATE TABLE public."ParishData" (
+    id bigint NOT NULL,
+    parish_id bigint NOT NULL,
+    fact_type public.fact_type_enum NOT NULL,
+    fact_value text,
+    fact_source_url text,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    fact_string text,
+    confidence_score integer DEFAULT 0,
+    extraction_method text DEFAULT 'keyword_based'::text,
+    ai_structured_data jsonb
 );
 
 
-ALTER TABLE "public"."ParishData" OWNER TO "postgres";
+--
+-- Name: COLUMN "ParishData".confidence_score; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."ParishData".confidence_score IS 'AI confidence score (0-100) for extracted information';
 
 
-COMMENT ON COLUMN "public"."ParishData"."confidence_score" IS 'AI confidence score (0-100) for extracted information';
+--
+-- Name: COLUMN "ParishData".extraction_method; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."ParishData".extraction_method IS 'Method used: keyword_based, ai_gemini, manual, etc.';
 
 
+--
+-- Name: COLUMN "ParishData".ai_structured_data; Type: COMMENT; Schema: public; Owner: -
+--
 
-COMMENT ON COLUMN "public"."ParishData"."extraction_method" IS 'Method used: keyword_based, ai_gemini, manual, etc.';
-
-
-
-COMMENT ON COLUMN "public"."ParishData"."ai_structured_data" IS 'JSON structure with detailed AI extraction results';
-
+COMMENT ON COLUMN public."ParishData".ai_structured_data IS 'JSON structure with detailed AI extraction results';
 
 
-CREATE TABLE IF NOT EXISTS "public"."Parishes" (
-    "id" bigint NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+--
+-- Name: Parishes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."Parishes" (
+    id bigint NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
     "Name" character varying,
     "Status" character varying,
     "Deanery" character varying,
@@ -229,53 +400,65 @@ CREATE TABLE IF NOT EXISTS "public"."Parishes" (
     "Zip Code" character varying,
     "Phone Number" character varying,
     "Web" character varying,
-    "diocese_url" character varying,
-    "parish_directory_url" character varying,
-    "extraction_method" character varying,
-    "confidence_score" real,
-    "extracted_at" character varying,
-    "parish_detail_url" "text",
-    "full_address" "text",
-    "clergy_info" "text",
-    "service_times" "text",
-    "detail_extraction_success" boolean,
-    "detail_extraction_error" "text",
-    "latitude" double precision,
-    "longitude" double precision,
-    "diocese_id" bigint
+    diocese_url character varying,
+    parish_directory_url character varying,
+    extraction_method character varying,
+    confidence_score real,
+    extracted_at character varying,
+    parish_detail_url text,
+    full_address text,
+    clergy_info text,
+    service_times text,
+    detail_extraction_success boolean,
+    detail_extraction_error text,
+    latitude double precision,
+    longitude double precision,
+    diocese_id bigint,
+    is_blocked boolean DEFAULT false,
+    blocking_type text,
+    blocking_evidence jsonb,
+    status_code integer,
+    robots_txt_check jsonb,
+    respectful_automation_used boolean DEFAULT false,
+    status_description text
 );
 
 
-ALTER TABLE "public"."Parishes" OWNER TO "postgres";
+--
+-- Name: HighQualitySchedules; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public."HighQualitySchedules" AS
+ SELECT pd.id,
+    pd.parish_id,
+    pd.fact_type,
+    pd.fact_value,
+    pd.fact_source_url,
+    pd.confidence_score,
+    pd.extraction_method,
+    pd.ai_structured_data,
+    pd.created_at,
+    p."Name" AS parish_name,
+    p."Web" AS parish_website
+   FROM (public."ParishData" pd
+     LEFT JOIN public."Parishes" p ON ((pd.parish_id = p.id)))
+  WHERE ((pd.extraction_method = 'ai_gemini'::text) AND (pd.confidence_score >= 70) AND (pd.fact_type = ANY (ARRAY['AdorationSchedule'::public.fact_type_enum, 'ReconciliationSchedule'::public.fact_type_enum])))
+  ORDER BY pd.confidence_score DESC, pd.created_at DESC;
 
 
-CREATE OR REPLACE VIEW "public"."HighQualitySchedules" AS
- SELECT "pd"."id",
-    "pd"."parish_id",
-    "pd"."fact_type",
-    "pd"."fact_value",
-    "pd"."fact_source_url",
-    "pd"."confidence_score",
-    "pd"."extraction_method",
-    "pd"."ai_structured_data",
-    "pd"."created_at",
-    "p"."Name" AS "parish_name",
-    "p"."Web" AS "parish_website"
-   FROM ("public"."ParishData" "pd"
-     LEFT JOIN "public"."Parishes" "p" ON (("pd"."parish_id" = "p"."id")))
-  WHERE (("pd"."extraction_method" = 'ai_gemini'::"text") AND ("pd"."confidence_score" >= 70) AND ("pd"."fact_type" = ANY (ARRAY['AdorationSchedule'::"public"."fact_type_enum", 'ReconciliationSchedule'::"public"."fact_type_enum"])))
-  ORDER BY "pd"."confidence_score" DESC, "pd"."created_at" DESC;
+--
+-- Name: VIEW "HighQualitySchedules"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON VIEW public."HighQualitySchedules" IS 'High-confidence AI-extracted schedule information for parishes';
 
 
-ALTER TABLE "public"."HighQualitySchedules" OWNER TO "postgres";
+--
+-- Name: ParishData_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
 
-
-COMMENT ON VIEW "public"."HighQualitySchedules" IS 'High-confidence AI-extracted schedule information for parishes';
-
-
-
-ALTER TABLE "public"."ParishData" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
-    SEQUENCE NAME "public"."ParishData_id_seq"
+ALTER TABLE public."ParishData" ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public."ParishData_id_seq"
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -284,105 +467,131 @@ ALTER TABLE "public"."ParishData" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS 
 );
 
 
+--
+-- Name: ParishScheduleSummary; Type: VIEW; Schema: public; Owner: -
+--
 
-CREATE OR REPLACE VIEW "public"."ParishScheduleSummary" AS
- SELECT "p"."id" AS "parish_id",
-    "p"."Name" AS "parish_name",
-    "p"."Web" AS "parish_website",
-    "p"."diocese_id",
-    "bool_or"(
+CREATE VIEW public."ParishScheduleSummary" WITH (security_invoker='true') AS
+ SELECT p.id AS parish_id,
+    p."Name" AS parish_name,
+    p."Web" AS parish_website,
+    p.diocese_id,
+    bool_or(
         CASE
-            WHEN ((("pd"."fact_type")::"text" ~~ '%Adoration%'::"text") AND ("pd"."extraction_method" = 'ai_gemini'::"text") AND ("pd"."confidence_score" >= 70)) THEN (("pd"."ai_structured_data" ->> 'has_weekly_schedule'::"text"))::boolean
-            WHEN ((("pd"."fact_type")::"text" ~~ '%Adoration%'::"text") AND ("pd"."extraction_method" <> 'ai_gemini'::"text")) THEN (("pd"."fact_value" IS NOT NULL) AND ("pd"."fact_value" <> 'Information not found'::"text"))
+            WHEN (((pd.fact_type)::text ~~ '%Adoration%'::text) AND (pd.extraction_method = 'ai_gemini'::text) AND (pd.confidence_score >= 70)) THEN ((pd.ai_structured_data ->> 'has_weekly_schedule'::text))::boolean
+            WHEN (((pd.fact_type)::text ~~ '%Adoration%'::text) AND (pd.extraction_method <> 'ai_gemini'::text)) THEN ((pd.fact_value IS NOT NULL) AND (pd.fact_value <> 'Information not found'::text))
             ELSE false
-        END) AS "has_weekly_adoration",
-    "max"(
+        END) AS has_weekly_adoration,
+    max(
         CASE
-            WHEN ((("pd"."fact_type")::"text" ~~ '%Adoration%'::"text") AND ("pd"."extraction_method" = 'ai_gemini'::"text")) THEN "pd"."confidence_score"
-            WHEN ((("pd"."fact_type")::"text" ~~ '%Adoration%'::"text") AND ("pd"."extraction_method" <> 'ai_gemini'::"text")) THEN 50
+            WHEN (((pd.fact_type)::text ~~ '%Adoration%'::text) AND (pd.extraction_method = 'ai_gemini'::text)) THEN pd.confidence_score
+            WHEN (((pd.fact_type)::text ~~ '%Adoration%'::text) AND (pd.extraction_method <> 'ai_gemini'::text)) THEN 50
             ELSE NULL::integer
-        END) AS "adoration_confidence",
-    "max"(
+        END) AS adoration_confidence,
+    max(
         CASE
-            WHEN ((("pd"."fact_type")::"text" ~~ '%Adoration%'::"text") AND ("pd"."extraction_method" = 'ai_gemini'::"text")) THEN ("pd"."ai_structured_data" ->> 'frequency'::"text")
-            ELSE 'unknown'::"text"
-        END) AS "adoration_frequency",
-    "bool_or"(
+            WHEN (((pd.fact_type)::text ~~ '%Adoration%'::text) AND (pd.extraction_method = 'ai_gemini'::text)) THEN (pd.ai_structured_data ->> 'frequency'::text)
+            ELSE 'unknown'::text
+        END) AS adoration_frequency,
+    bool_or(
         CASE
-            WHEN ((("pd"."fact_type")::"text" ~~ '%Reconciliation%'::"text") AND ("pd"."extraction_method" = 'ai_gemini'::"text") AND ("pd"."confidence_score" >= 70)) THEN (("pd"."ai_structured_data" ->> 'has_weekly_schedule'::"text"))::boolean
-            WHEN ((("pd"."fact_type")::"text" ~~ '%Reconciliation%'::"text") AND ("pd"."extraction_method" <> 'ai_gemini'::"text")) THEN (("pd"."fact_value" IS NOT NULL) AND ("pd"."fact_value" <> 'Information not found'::"text"))
+            WHEN (((pd.fact_type)::text ~~ '%Reconciliation%'::text) AND (pd.extraction_method = 'ai_gemini'::text) AND (pd.confidence_score >= 70)) THEN ((pd.ai_structured_data ->> 'has_weekly_schedule'::text))::boolean
+            WHEN (((pd.fact_type)::text ~~ '%Reconciliation%'::text) AND (pd.extraction_method <> 'ai_gemini'::text)) THEN ((pd.fact_value IS NOT NULL) AND (pd.fact_value <> 'Information not found'::text))
             ELSE false
-        END) AS "has_weekly_reconciliation",
-    "max"(
+        END) AS has_weekly_reconciliation,
+    max(
         CASE
-            WHEN ((("pd"."fact_type")::"text" ~~ '%Reconciliation%'::"text") AND ("pd"."extraction_method" = 'ai_gemini'::"text")) THEN "pd"."confidence_score"
-            WHEN ((("pd"."fact_type")::"text" ~~ '%Reconciliation%'::"text") AND ("pd"."extraction_method" <> 'ai_gemini'::"text")) THEN 50
+            WHEN (((pd.fact_type)::text ~~ '%Reconciliation%'::text) AND (pd.extraction_method = 'ai_gemini'::text)) THEN pd.confidence_score
+            WHEN (((pd.fact_type)::text ~~ '%Reconciliation%'::text) AND (pd.extraction_method <> 'ai_gemini'::text)) THEN 50
             ELSE NULL::integer
-        END) AS "reconciliation_confidence",
-    "max"(
+        END) AS reconciliation_confidence,
+    max(
         CASE
-            WHEN ((("pd"."fact_type")::"text" ~~ '%Reconciliation%'::"text") AND ("pd"."extraction_method" = 'ai_gemini'::"text")) THEN ("pd"."ai_structured_data" ->> 'frequency'::"text")
-            ELSE 'unknown'::"text"
-        END) AS "reconciliation_frequency",
-    "count"(
+            WHEN (((pd.fact_type)::text ~~ '%Reconciliation%'::text) AND (pd.extraction_method = 'ai_gemini'::text)) THEN (pd.ai_structured_data ->> 'frequency'::text)
+            ELSE 'unknown'::text
+        END) AS reconciliation_frequency,
+    count(
         CASE
-            WHEN ("pd"."extraction_method" = 'ai_gemini'::"text") THEN 1
+            WHEN (pd.extraction_method = 'ai_gemini'::text) THEN 1
             ELSE NULL::integer
-        END) AS "ai_extractions",
-    "count"(
+        END) AS ai_extractions,
+    count(
         CASE
-            WHEN ("pd"."extraction_method" <> 'ai_gemini'::"text") THEN 1
+            WHEN (pd.extraction_method <> 'ai_gemini'::text) THEN 1
             ELSE NULL::integer
-        END) AS "keyword_extractions",
-    "max"("pd"."created_at") AS "last_updated"
-   FROM ("public"."Parishes" "p"
-     LEFT JOIN "public"."ParishData" "pd" ON (("p"."id" = "pd"."parish_id")))
-  WHERE ("pd"."fact_type" = ANY (ARRAY['AdorationSchedule'::"public"."fact_type_enum", 'ReconciliationSchedule'::"public"."fact_type_enum"]))
-  GROUP BY "p"."id", "p"."Name", "p"."Web", "p"."diocese_id"
-  ORDER BY ("count"(
+        END) AS keyword_extractions,
+    max(pd.created_at) AS last_updated
+   FROM (public."Parishes" p
+     LEFT JOIN public."ParishData" pd ON ((p.id = pd.parish_id)))
+  WHERE (pd.fact_type = ANY (ARRAY['AdorationSchedule'::public.fact_type_enum, 'ReconciliationSchedule'::public.fact_type_enum]))
+  GROUP BY p.id, p."Name", p."Web", p.diocese_id
+  ORDER BY (count(
         CASE
-            WHEN ("pd"."extraction_method" = 'ai_gemini'::"text") THEN 1
+            WHEN (pd.extraction_method = 'ai_gemini'::text) THEN 1
             ELSE NULL::integer
-        END)) DESC, ("max"("pd"."created_at")) DESC;
+        END)) DESC, (max(pd.created_at)) DESC;
 
 
-ALTER TABLE "public"."ParishScheduleSummary" OWNER TO "postgres";
+--
+-- Name: VIEW "ParishScheduleSummary"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON VIEW public."ParishScheduleSummary" IS 'Summary view showing schedule availability for all parishes';
 
 
-COMMENT ON VIEW "public"."ParishScheduleSummary" IS 'Summary view showing schedule availability for all parishes';
+--
+-- Name: ParishesTestSet; Type: TABLE; Schema: public; Owner: -
+--
 
-
-
-CREATE TABLE IF NOT EXISTS "public"."expected_parishes_2002" (
-    "id" integer NOT NULL,
-    "diocese_id" integer NOT NULL,
-    "parish_name" "text" NOT NULL,
-    "city" "text" NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"()
+CREATE TABLE public."ParishesTestSet" (
+    id bigint NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    "Name" character varying,
+    "Status" character varying,
+    "Deanery" character varying,
+    "Street Address" character varying,
+    "City" character varying,
+    "State" character varying,
+    "Zip Code" character varying,
+    "Phone Number" character varying,
+    "Web" character varying,
+    diocese_url character varying,
+    parish_directory_url character varying,
+    extraction_method character varying,
+    confidence_score real,
+    extracted_at character varying,
+    parish_detail_url text,
+    full_address text,
+    clergy_info text,
+    service_times text,
+    detail_extraction_success boolean,
+    detail_extraction_error text,
+    latitude double precision,
+    longitude double precision,
+    diocese_id bigint,
+    is_blocked boolean DEFAULT false,
+    blocking_type text,
+    blocking_evidence jsonb,
+    status_code integer,
+    robots_txt_check jsonb,
+    respectful_automation_used boolean DEFAULT false,
+    status_description text
 );
 
 
-ALTER TABLE "public"."expected_parishes_2002" OWNER TO "postgres";
+--
+-- Name: TABLE "ParishesTestSet"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public."ParishesTestSet" IS 'Known Good Data';
 
 
-CREATE SEQUENCE IF NOT EXISTS "public"."expected_parishes_2002_id_seq"
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
+--
+-- Name: ParishesTestSet_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
 
-
-ALTER TABLE "public"."expected_parishes_2002_id_seq" OWNER TO "postgres";
-
-
-ALTER SEQUENCE "public"."expected_parishes_2002_id_seq" OWNED BY "public"."expected_parishes_2002"."id";
-
-
-
-ALTER TABLE "public"."Parishes" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
-    SEQUENCE NAME "public"."parishes_id_seq"
+ALTER TABLE public."ParishesTestSet" ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public."ParishesTestSet_id_seq"
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -391,19 +600,124 @@ ALTER TABLE "public"."Parishes" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS ID
 );
 
 
+--
+-- Name: diocese_work_assignments; Type: TABLE; Schema: public; Owner: -
+--
 
-CREATE TABLE IF NOT EXISTS "public"."parishfactssuppressionurls" (
-    "id" bigint NOT NULL,
-    "url" "text" NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+CREATE TABLE public.diocese_work_assignments (
+    id uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
+    diocese_id integer NOT NULL,
+    worker_id text NOT NULL,
+    status text NOT NULL,
+    assigned_at timestamp with time zone DEFAULT now() NOT NULL,
+    completed_at timestamp with time zone,
+    estimated_completion timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT diocese_work_assignments_status_check CHECK ((status = ANY (ARRAY['processing'::text, 'completed'::text, 'failed'::text])))
 );
 
 
-ALTER TABLE "public"."parishfactssuppressionurls" OWNER TO "postgres";
+--
+-- Name: TABLE diocese_work_assignments; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.diocese_work_assignments IS 'Tracks which worker is processing which diocese to prevent conflicts';
 
 
-CREATE SEQUENCE IF NOT EXISTS "public"."parishfactssuppressionurls_id_seq"
+--
+-- Name: COLUMN diocese_work_assignments.diocese_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.diocese_work_assignments.diocese_id IS 'ID of the diocese being processed';
+
+
+--
+-- Name: COLUMN diocese_work_assignments.worker_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.diocese_work_assignments.worker_id IS 'ID of the worker processing this diocese';
+
+
+--
+-- Name: COLUMN diocese_work_assignments.status; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.diocese_work_assignments.status IS 'Processing status: processing, completed, or failed';
+
+
+--
+-- Name: parishes_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public."Parishes" ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.parishes_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: parishes_with_diocese_name; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.parishes_with_diocese_name AS
+ SELECT p.id,
+    p.created_at,
+    p."Name",
+    p."Status",
+    p."Deanery",
+    p."Street Address",
+    p."City",
+    p."State",
+    p."Zip Code",
+    p."Phone Number",
+    p."Web",
+    p.diocese_url,
+    p.parish_directory_url,
+    p.extraction_method,
+    p.confidence_score,
+    p.extracted_at,
+    p.parish_detail_url,
+    p.full_address,
+    p.clergy_info,
+    p.service_times,
+    p.detail_extraction_success,
+    p.detail_extraction_error,
+    p.latitude,
+    p.longitude,
+    p.diocese_id,
+    p.is_blocked,
+    p.blocking_type,
+    p.blocking_evidence,
+    p.status_code,
+    p.robots_txt_check,
+    p.respectful_automation_used,
+    p.status_description,
+    d."Name" AS diocese_name
+   FROM (public."Parishes" p
+     JOIN public."Dioceses" d ON ((p.diocese_id = d.id)));
+
+
+--
+-- Name: parishfactssuppressionurls; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.parishfactssuppressionurls (
+    id bigint NOT NULL,
+    url text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: parishfactssuppressionurls_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.parishfactssuppressionurls_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -411,604 +725,631 @@ CREATE SEQUENCE IF NOT EXISTS "public"."parishfactssuppressionurls_id_seq"
     CACHE 1;
 
 
-ALTER TABLE "public"."parishfactssuppressionurls_id_seq" OWNER TO "postgres";
+--
+-- Name: parishfactssuppressionurls_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.parishfactssuppressionurls_id_seq OWNED BY public.parishfactssuppressionurls.id;
 
 
-ALTER SEQUENCE "public"."parishfactssuppressionurls_id_seq" OWNED BY "public"."parishfactssuppressionurls"."id";
+--
+-- Name: pipeline_workers; Type: TABLE; Schema: public; Owner: -
+--
 
-
-
-CREATE TABLE IF NOT EXISTS "public"."test_parishes_expected_2009" (
-    "id" integer NOT NULL,
-    "name" "text" NOT NULL,
-    "address" "text" NOT NULL,
-    "city" "text" NOT NULL,
-    "state" "text" NOT NULL,
-    "zip_code" "text" NOT NULL,
-    "diocese_id" integer DEFAULT 2009,
-    "created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE public.pipeline_workers (
+    worker_id text NOT NULL,
+    pod_name text NOT NULL,
+    status text NOT NULL,
+    last_heartbeat timestamp with time zone DEFAULT now() NOT NULL,
+    assigned_dioceses integer[] DEFAULT ARRAY[]::integer[],
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now(),
+    worker_type text DEFAULT 'all'::text,
+    CONSTRAINT pipeline_workers_status_check CHECK ((status = ANY (ARRAY['active'::text, 'inactive'::text, 'failed'::text])))
 );
 
 
-ALTER TABLE "public"."test_parishes_expected_2009" OWNER TO "postgres";
+--
+-- Name: TABLE pipeline_workers; Type: COMMENT; Schema: public; Owner: -
+--
 
+COMMENT ON TABLE public.pipeline_workers IS 'Tracks active pipeline worker pods for coordination';
 
-CREATE SEQUENCE IF NOT EXISTS "public"."test_parishes_expected_2009_id_seq"
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
 
+--
+-- Name: COLUMN pipeline_workers.worker_id; Type: COMMENT; Schema: public; Owner: -
+--
 
-ALTER TABLE "public"."test_parishes_expected_2009_id_seq" OWNER TO "postgres";
+COMMENT ON COLUMN public.pipeline_workers.worker_id IS 'Unique identifier for each pipeline worker pod';
 
 
-ALTER SEQUENCE "public"."test_parishes_expected_2009_id_seq" OWNED BY "public"."test_parishes_expected_2009"."id";
+--
+-- Name: COLUMN pipeline_workers.pod_name; Type: COMMENT; Schema: public; Owner: -
+--
 
+COMMENT ON COLUMN public.pipeline_workers.pod_name IS 'Kubernetes pod name for debugging';
 
 
-ALTER TABLE ONLY "public"."expected_parishes_2002" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."expected_parishes_2002_id_seq"'::"regclass");
+--
+-- Name: COLUMN pipeline_workers.status; Type: COMMENT; Schema: public; Owner: -
+--
 
+COMMENT ON COLUMN public.pipeline_workers.status IS 'Current status: active, inactive, or failed';
 
 
-ALTER TABLE ONLY "public"."parishfactssuppressionurls" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."parishfactssuppressionurls_id_seq"'::"regclass");
+--
+-- Name: COLUMN pipeline_workers.last_heartbeat; Type: COMMENT; Schema: public; Owner: -
+--
 
+COMMENT ON COLUMN public.pipeline_workers.last_heartbeat IS 'Last time this worker sent a heartbeat';
 
 
-ALTER TABLE ONLY "public"."test_parishes_expected_2009" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."test_parishes_expected_2009_id_seq"'::"regclass");
+--
+-- Name: parishfactssuppressionurls id; Type: DEFAULT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public.parishfactssuppressionurls ALTER COLUMN id SET DEFAULT nextval('public.parishfactssuppressionurls_id_seq'::regclass);
 
 
-ALTER TABLE ONLY "public"."DiocesesParishDirectory"
-    ADD CONSTRAINT "DiocesesParishDirectory_pkey" PRIMARY KEY ("id");
+--
+-- Name: DioceseParishDirectoryOverride DioceseParishDirectoryOverride_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public."DioceseParishDirectoryOverride"
+    ADD CONSTRAINT "DioceseParishDirectoryOverride_pkey" PRIMARY KEY (id);
 
 
-ALTER TABLE ONLY "public"."Dioceses"
-    ADD CONSTRAINT "Dioceses_pkey" PRIMARY KEY ("id");
+--
+-- Name: DiocesesParishDirectory DiocesesParishDirectory_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public."DiocesesParishDirectory"
+    ADD CONSTRAINT "DiocesesParishDirectory_pkey" PRIMARY KEY (id);
 
 
-ALTER TABLE ONLY "public"."DiscoveredUrls"
-    ADD CONSTRAINT "DiscoveredUrls_pkey" PRIMARY KEY ("id");
+--
+-- Name: Dioceses Dioceses_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public."Dioceses"
+    ADD CONSTRAINT "Dioceses_pkey" PRIMARY KEY (id);
 
 
-ALTER TABLE ONLY "public"."DiscoveredUrls"
-    ADD CONSTRAINT "DiscoveredUrls_url_parish_id_unique" UNIQUE ("url", "parish_id");
+--
+-- Name: DiscoveredUrls DiscoveredUrls_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public."DiscoveredUrls"
+    ADD CONSTRAINT "DiscoveredUrls_pkey" PRIMARY KEY (id);
 
 
-ALTER TABLE ONLY "public"."ParishData"
-    ADD CONSTRAINT "ParishData_pkey" PRIMARY KEY ("id");
+--
+-- Name: DiscoveredUrls DiscoveredUrls_url_parish_id_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public."DiscoveredUrls"
+    ADD CONSTRAINT "DiscoveredUrls_url_parish_id_unique" UNIQUE (url, parish_id);
 
 
-ALTER TABLE ONLY "public"."ScheduleKeywords"
-    ADD CONSTRAINT "ScheduleKeywords_keyword_schedule_type_key" UNIQUE ("keyword", "schedule_type");
+--
+-- Name: ParishData ParishData_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public."ParishData"
+    ADD CONSTRAINT "ParishData_pkey" PRIMARY KEY (id);
 
 
-ALTER TABLE ONLY "public"."ScheduleKeywords"
-    ADD CONSTRAINT "ScheduleKeywords_pkey" PRIMARY KEY ("id");
+--
+-- Name: ParishesTestSet ParishesTestSet_diocese_id_Name_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public."ParishesTestSet"
+    ADD CONSTRAINT "ParishesTestSet_diocese_id_Name_key" UNIQUE (diocese_id, "Name");
 
 
-ALTER TABLE ONLY "public"."expected_parishes_2002"
-    ADD CONSTRAINT "expected_parishes_2002_pkey" PRIMARY KEY ("id");
+--
+-- Name: ParishesTestSet ParishesTestSet_diocese_id_Web_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public."ParishesTestSet"
+    ADD CONSTRAINT "ParishesTestSet_diocese_id_Web_key" UNIQUE (diocese_id, "Web");
 
 
-ALTER TABLE ONLY "public"."ParishData"
-    ADD CONSTRAINT "parishdata_parish_id_fact_type_unique" UNIQUE ("parish_id", "fact_type");
+--
+-- Name: ParishesTestSet ParishesTestSet_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public."ParishesTestSet"
+    ADD CONSTRAINT "ParishesTestSet_pkey" PRIMARY KEY (id);
 
 
-ALTER TABLE ONLY "public"."Parishes"
-    ADD CONSTRAINT "parishes_pkey" PRIMARY KEY ("id");
+--
+-- Name: ScheduleKeywords ScheduleKeywords_keyword_schedule_type_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public."ScheduleKeywords"
+    ADD CONSTRAINT "ScheduleKeywords_keyword_schedule_type_key" UNIQUE (keyword, schedule_type);
 
 
-ALTER TABLE ONLY "public"."parishfactssuppressionurls"
-    ADD CONSTRAINT "parishfactssuppressionurls_pkey" PRIMARY KEY ("id");
+--
+-- Name: ScheduleKeywords ScheduleKeywords_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public."ScheduleKeywords"
+    ADD CONSTRAINT "ScheduleKeywords_pkey" PRIMARY KEY (id);
 
 
-ALTER TABLE ONLY "public"."parishfactssuppressionurls"
-    ADD CONSTRAINT "parishfactssuppressionurls_url_key" UNIQUE ("url");
+--
+-- Name: diocese_work_assignments diocese_work_assignments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public.diocese_work_assignments
+    ADD CONSTRAINT diocese_work_assignments_pkey PRIMARY KEY (id);
 
 
-ALTER TABLE ONLY "public"."test_parishes_expected_2009"
-    ADD CONSTRAINT "test_parishes_expected_2009_pkey" PRIMARY KEY ("id");
+--
+-- Name: ParishData parishdata_parish_id_fact_type_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public."ParishData"
+    ADD CONSTRAINT parishdata_parish_id_fact_type_unique UNIQUE (parish_id, fact_type);
 
 
-ALTER TABLE ONLY "public"."DiocesesParishDirectory"
-    ADD CONSTRAINT "unique_diocese_id" UNIQUE ("diocese_id");
+--
+-- Name: Parishes parishes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public."Parishes"
+    ADD CONSTRAINT parishes_pkey PRIMARY KEY (id);
 
 
-ALTER TABLE ONLY "public"."Dioceses"
-    ADD CONSTRAINT "unique_diocese_name" UNIQUE ("Name");
+--
+-- Name: parishfactssuppressionurls parishfactssuppressionurls_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public.parishfactssuppressionurls
+    ADD CONSTRAINT parishfactssuppressionurls_pkey PRIMARY KEY (id);
 
 
-ALTER TABLE ONLY "public"."Parishes"
-    ADD CONSTRAINT "unique_parish_per_diocese_name" UNIQUE ("diocese_id", "Name");
+--
+-- Name: parishfactssuppressionurls parishfactssuppressionurls_url_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public.parishfactssuppressionurls
+    ADD CONSTRAINT parishfactssuppressionurls_url_key UNIQUE (url);
 
 
-ALTER TABLE ONLY "public"."Parishes"
-    ADD CONSTRAINT "unique_parish_per_diocese_web" UNIQUE ("diocese_id", "Web");
+--
+-- Name: pipeline_workers pipeline_workers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public.pipeline_workers
+    ADD CONSTRAINT pipeline_workers_pkey PRIMARY KEY (worker_id);
 
 
-CREATE INDEX "idx_discoveredurls_parish_id" ON "public"."DiscoveredUrls" USING "btree" ("parish_id");
+--
+-- Name: DiocesesParishDirectory unique_diocese_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public."DiocesesParishDirectory"
+    ADD CONSTRAINT unique_diocese_id UNIQUE (diocese_id);
 
 
-CREATE INDEX "idx_expected_parishes_2002_diocese_id" ON "public"."expected_parishes_2002" USING "btree" ("diocese_id");
+--
+-- Name: Dioceses unique_diocese_name; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public."Dioceses"
+    ADD CONSTRAINT unique_diocese_name UNIQUE ("Name");
 
 
-CREATE INDEX "idx_parish_data_ai_structured_data" ON "public"."ParishData" USING "gin" ("ai_structured_data");
+--
+-- Name: DioceseParishDirectoryOverride unique_override_diocese_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public."DioceseParishDirectoryOverride"
+    ADD CONSTRAINT unique_override_diocese_id UNIQUE (diocese_id);
 
 
-CREATE INDEX "idx_parish_data_confidence" ON "public"."ParishData" USING "btree" ("confidence_score");
+--
+-- Name: Parishes unique_parish_per_diocese_name; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public."Parishes"
+    ADD CONSTRAINT unique_parish_per_diocese_name UNIQUE (diocese_id, "Name");
 
 
-CREATE INDEX "idx_parish_data_extraction_method" ON "public"."ParishData" USING "btree" ("extraction_method");
+--
+-- Name: Parishes unique_parish_per_diocese_web; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public."Parishes"
+    ADD CONSTRAINT unique_parish_per_diocese_web UNIQUE (diocese_id, "Web");
 
 
-CREATE INDEX "idx_parishes_confidence_score" ON "public"."Parishes" USING "btree" ("confidence_score");
+--
+-- Name: ParishesTestSet_blocking_type_idx; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX "ParishesTestSet_blocking_type_idx" ON public."ParishesTestSet" USING btree (blocking_type);
 
 
-CREATE INDEX "idx_parishes_detail_success" ON "public"."Parishes" USING "btree" ("detail_extraction_success");
+--
+-- Name: ParishesTestSet_confidence_score_idx; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX "ParishesTestSet_confidence_score_idx" ON public."ParishesTestSet" USING btree (confidence_score);
 
 
-CREATE INDEX "idx_parishes_extracted_at" ON "public"."Parishes" USING "btree" ("extracted_at");
+--
+-- Name: ParishesTestSet_detail_extraction_success_idx; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX "ParishesTestSet_detail_extraction_success_idx" ON public."ParishesTestSet" USING btree (detail_extraction_success);
 
 
-CREATE INDEX "idx_parishes_extraction_method" ON "public"."Parishes" USING "btree" ("extraction_method");
+--
+-- Name: ParishesTestSet_extracted_at_idx; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX "ParishesTestSet_extracted_at_idx" ON public."ParishesTestSet" USING btree (extracted_at);
 
 
-CREATE INDEX "idx_schedule_keywords_active" ON "public"."ScheduleKeywords" USING "btree" ("is_active");
+--
+-- Name: ParishesTestSet_extraction_method_idx; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX "ParishesTestSet_extraction_method_idx" ON public."ParishesTestSet" USING btree (extraction_method);
 
 
-CREATE INDEX "idx_schedule_keywords_type" ON "public"."ScheduleKeywords" USING "btree" ("schedule_type");
+--
+-- Name: ParishesTestSet_is_blocked_idx; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX "ParishesTestSet_is_blocked_idx" ON public."ParishesTestSet" USING btree (is_blocked);
 
 
-CREATE INDEX "idx_schedule_keywords_weight" ON "public"."ScheduleKeywords" USING "btree" ("weight" DESC);
+--
+-- Name: ParishesTestSet_respectful_automation_used_idx; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX "ParishesTestSet_respectful_automation_used_idx" ON public."ParishesTestSet" USING btree (respectful_automation_used);
 
 
-CREATE OR REPLACE TRIGGER "update_parishdata_updated_at" BEFORE UPDATE ON "public"."ParishData" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+--
+-- Name: idx_diocese_assignments_diocese; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX idx_diocese_assignments_diocese ON public.diocese_work_assignments USING btree (diocese_id);
 
 
-CREATE OR REPLACE TRIGGER "update_parishfactssuppressionurls_updated_at" BEFORE UPDATE ON "public"."parishfactssuppressionurls" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+--
+-- Name: idx_diocese_assignments_status; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX idx_diocese_assignments_status ON public.diocese_work_assignments USING btree (status);
 
 
-CREATE OR REPLACE TRIGGER "update_schedule_keywords_updated_at" BEFORE UPDATE ON "public"."ScheduleKeywords" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+--
+-- Name: idx_diocese_assignments_worker; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX idx_diocese_assignments_worker ON public.diocese_work_assignments USING btree (worker_id);
 
 
-ALTER TABLE ONLY "public"."DiscoveredUrls"
-    ADD CONSTRAINT "DiscoveredUrls_parish_id_fkey" FOREIGN KEY ("parish_id") REFERENCES "public"."Parishes"("id");
+--
+-- Name: idx_dioceses_parish_directory_blocked; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX idx_dioceses_parish_directory_blocked ON public."DiocesesParishDirectory" USING btree (is_blocked);
 
 
-ALTER TABLE ONLY "public"."ParishData"
-    ADD CONSTRAINT "ParishData_parish_id_fkey" FOREIGN KEY ("parish_id") REFERENCES "public"."Parishes"("id");
+--
+-- Name: idx_dioceses_parish_directory_blocking_type; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX idx_dioceses_parish_directory_blocking_type ON public."DiocesesParishDirectory" USING btree (blocking_type);
 
 
-CREATE POLICY "Allow notebook access" ON "public"."Dioceses" TO "anon" USING (true) WITH CHECK (true);
+--
+-- Name: idx_dioceses_parish_directory_last_extraction_attempt; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX idx_dioceses_parish_directory_last_extraction_attempt ON public."DiocesesParishDirectory" USING btree (last_extraction_attempt_at);
 
 
-CREATE POLICY "Allow notebook access" ON "public"."DiocesesParishDirectory" USING (true) WITH CHECK (true);
+--
+-- Name: INDEX idx_dioceses_parish_directory_last_extraction_attempt; Type: COMMENT; Schema: public; Owner: -
+--
 
+COMMENT ON INDEX public.idx_dioceses_parish_directory_last_extraction_attempt IS 'Index for efficient sorting and filtering by last extraction attempt timestamp';
 
 
-CREATE POLICY "Allow notebook access" ON "public"."Parishes" USING (true) WITH CHECK (true);
+--
+-- Name: idx_discoveredurls_parish_id; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX idx_discoveredurls_parish_id ON public."DiscoveredUrls" USING btree (parish_id);
 
 
-ALTER TABLE "public"."Dioceses" ENABLE ROW LEVEL SECURITY;
+--
+-- Name: idx_override_diocese_id; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX idx_override_diocese_id ON public."DioceseParishDirectoryOverride" USING btree (diocese_id);
 
-ALTER TABLE "public"."DiocesesParishDirectory" ENABLE ROW LEVEL SECURITY;
 
+--
+-- Name: idx_override_diocese_url; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE POLICY "Enable all operations for authenticated users" ON "public"."ScheduleKeywords" TO "authenticated" USING (true) WITH CHECK (true);
+CREATE INDEX idx_override_diocese_url ON public."DioceseParishDirectoryOverride" USING btree (diocese_url);
 
 
+--
+-- Name: idx_parish_data_ai_structured_data; Type: INDEX; Schema: public; Owner: -
+--
 
-CREATE POLICY "Enable read access for anonymous users" ON "public"."ScheduleKeywords" FOR SELECT TO "anon" USING (true);
+CREATE INDEX idx_parish_data_ai_structured_data ON public."ParishData" USING gin (ai_structured_data);
 
 
+--
+-- Name: idx_parish_data_confidence; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER TABLE "public"."Parishes" ENABLE ROW LEVEL SECURITY;
+CREATE INDEX idx_parish_data_confidence ON public."ParishData" USING btree (confidence_score);
 
 
-ALTER TABLE "public"."ScheduleKeywords" ENABLE ROW LEVEL SECURITY;
+--
+-- Name: idx_parish_data_extraction_method; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX idx_parish_data_extraction_method ON public."ParishData" USING btree (extraction_method);
 
 
+--
+-- Name: idx_parishes_blocked; Type: INDEX; Schema: public; Owner: -
+--
 
-ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
+CREATE INDEX idx_parishes_blocked ON public."Parishes" USING btree (is_blocked);
 
 
-GRANT USAGE ON SCHEMA "public" TO "postgres";
-GRANT USAGE ON SCHEMA "public" TO "anon";
-GRANT USAGE ON SCHEMA "public" TO "authenticated";
-GRANT USAGE ON SCHEMA "public" TO "service_role";
+--
+-- Name: idx_parishes_blocking_type; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX idx_parishes_blocking_type ON public."Parishes" USING btree (blocking_type);
 
 
+--
+-- Name: idx_parishes_confidence_score; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX idx_parishes_confidence_score ON public."Parishes" USING btree (confidence_score);
 
 
+--
+-- Name: idx_parishes_detail_success; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX idx_parishes_detail_success ON public."Parishes" USING btree (detail_extraction_success);
 
 
+--
+-- Name: idx_parishes_extracted_at; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX idx_parishes_extracted_at ON public."Parishes" USING btree (extracted_at);
 
 
+--
+-- Name: idx_parishes_extraction_method; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX idx_parishes_extraction_method ON public."Parishes" USING btree (extraction_method);
 
 
+--
+-- Name: idx_parishes_respectful_automation; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX idx_parishes_respectful_automation ON public."Parishes" USING btree (respectful_automation_used);
 
 
+--
+-- Name: idx_pipeline_workers_heartbeat; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX idx_pipeline_workers_heartbeat ON public.pipeline_workers USING btree (last_heartbeat);
 
 
+--
+-- Name: idx_pipeline_workers_status; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX idx_pipeline_workers_status ON public.pipeline_workers USING btree (status);
 
 
+--
+-- Name: idx_schedule_keywords_active; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX idx_schedule_keywords_active ON public."ScheduleKeywords" USING btree (is_active);
 
 
+--
+-- Name: idx_schedule_keywords_type; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX idx_schedule_keywords_type ON public."ScheduleKeywords" USING btree (schedule_type);
 
 
+--
+-- Name: idx_schedule_keywords_weight; Type: INDEX; Schema: public; Owner: -
+--
 
+CREATE INDEX idx_schedule_keywords_weight ON public."ScheduleKeywords" USING btree (weight DESC);
 
 
+--
+-- Name: ParishData update_parishdata_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
 
+CREATE TRIGGER update_parishdata_updated_at BEFORE UPDATE ON public."ParishData" FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 
+--
+-- Name: parishfactssuppressionurls update_parishfactssuppressionurls_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
 
+CREATE TRIGGER update_parishfactssuppressionurls_updated_at BEFORE UPDATE ON public.parishfactssuppressionurls FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 
+--
+-- Name: pipeline_workers update_pipeline_workers_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
 
+CREATE TRIGGER update_pipeline_workers_updated_at BEFORE UPDATE ON public.pipeline_workers FOR EACH ROW EXECUTE FUNCTION public.update_pipeline_workers_updated_at();
 
 
+--
+-- Name: ScheduleKeywords update_schedule_keywords_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
 
+CREATE TRIGGER update_schedule_keywords_updated_at BEFORE UPDATE ON public."ScheduleKeywords" FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 
+--
+-- Name: DiscoveredUrls DiscoveredUrls_parish_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public."DiscoveredUrls"
+    ADD CONSTRAINT "DiscoveredUrls_parish_id_fkey" FOREIGN KEY (parish_id) REFERENCES public."Parishes"(id);
 
 
+--
+-- Name: ParishData ParishData_parish_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public."ParishData"
+    ADD CONSTRAINT "ParishData_parish_id_fkey" FOREIGN KEY (parish_id) REFERENCES public."Parishes"(id);
 
 
+--
+-- Name: diocese_work_assignments diocese_work_assignments_diocese_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public.diocese_work_assignments
+    ADD CONSTRAINT diocese_work_assignments_diocese_id_fkey FOREIGN KEY (diocese_id) REFERENCES public."Dioceses"(id);
 
 
+--
+-- Name: diocese_work_assignments diocese_work_assignments_worker_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
+ALTER TABLE ONLY public.diocese_work_assignments
+    ADD CONSTRAINT diocese_work_assignments_worker_id_fkey FOREIGN KEY (worker_id) REFERENCES public.pipeline_workers(worker_id);
 
 
+--
+-- Name: DioceseParishDirectoryOverride Allow notebook access; Type: POLICY; Schema: public; Owner: -
+--
 
+CREATE POLICY "Allow notebook access" ON public."DioceseParishDirectoryOverride" USING (true) WITH CHECK (true);
 
 
+--
+-- Name: Dioceses Allow notebook access; Type: POLICY; Schema: public; Owner: -
+--
 
+CREATE POLICY "Allow notebook access" ON public."Dioceses" TO anon USING (true) WITH CHECK (true);
 
 
+--
+-- Name: DiocesesParishDirectory Allow notebook access; Type: POLICY; Schema: public; Owner: -
+--
 
+CREATE POLICY "Allow notebook access" ON public."DiocesesParishDirectory" USING (true) WITH CHECK (true);
 
 
+--
+-- Name: Parishes Allow notebook access; Type: POLICY; Schema: public; Owner: -
+--
 
+CREATE POLICY "Allow notebook access" ON public."Parishes" USING (true) WITH CHECK (true);
 
 
+--
+-- Name: DioceseParishDirectoryOverride; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
+ALTER TABLE public."DioceseParishDirectoryOverride" ENABLE ROW LEVEL SECURITY;
 
+--
+-- Name: Dioceses; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
+ALTER TABLE public."Dioceses" ENABLE ROW LEVEL SECURITY;
 
+--
+-- Name: DiocesesParishDirectory; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
+ALTER TABLE public."DiocesesParishDirectory" ENABLE ROW LEVEL SECURITY;
 
+--
+-- Name: DiscoveredUrls; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
+ALTER TABLE public."DiscoveredUrls" ENABLE ROW LEVEL SECURITY;
 
+--
+-- Name: ScheduleKeywords Enable all operations for authenticated users; Type: POLICY; Schema: public; Owner: -
+--
 
+CREATE POLICY "Enable all operations for authenticated users" ON public."ScheduleKeywords" TO authenticated USING (true) WITH CHECK (true);
 
 
+--
+-- Name: ScheduleKeywords Enable read access for anonymous users; Type: POLICY; Schema: public; Owner: -
+--
 
+CREATE POLICY "Enable read access for anonymous users" ON public."ScheduleKeywords" FOR SELECT TO anon USING (true);
 
 
+--
+-- Name: ParishData; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
+ALTER TABLE public."ParishData" ENABLE ROW LEVEL SECURITY;
 
+--
+-- Name: Parishes; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
+ALTER TABLE public."Parishes" ENABLE ROW LEVEL SECURITY;
 
+--
+-- Name: ParishesTestSet; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
+ALTER TABLE public."ParishesTestSet" ENABLE ROW LEVEL SECURITY;
 
+--
+-- Name: ScheduleKeywords; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
+ALTER TABLE public."ScheduleKeywords" ENABLE ROW LEVEL SECURITY;
 
+--
+-- Name: parishfactssuppressionurls; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
+ALTER TABLE public.parishfactssuppressionurls ENABLE ROW LEVEL SECURITY;
 
+--
+-- PostgreSQL database dump complete
+--
 
+\unrestrict Q55Rl6hEiX9grGaoJKsUt9do2dcX3aaEevBXpWClesxSwNgcn1UHmV99XbSfAFr
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-GRANT ALL ON FUNCTION "public"."update_updated_at_column"() TO "anon";
-GRANT ALL ON FUNCTION "public"."update_updated_at_column"() TO "authenticated";
-GRANT ALL ON FUNCTION "public"."update_updated_at_column"() TO "service_role";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-GRANT ALL ON TABLE "public"."ScheduleKeywords" TO "anon";
-GRANT ALL ON TABLE "public"."ScheduleKeywords" TO "authenticated";
-GRANT ALL ON TABLE "public"."ScheduleKeywords" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."ActiveScheduleKeywords" TO "anon";
-GRANT ALL ON TABLE "public"."ActiveScheduleKeywords" TO "authenticated";
-GRANT ALL ON TABLE "public"."ActiveScheduleKeywords" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."Dioceses" TO "anon";
-GRANT ALL ON TABLE "public"."Dioceses" TO "authenticated";
-GRANT ALL ON TABLE "public"."Dioceses" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."DiocesesParishDirectory" TO "anon";
-GRANT ALL ON TABLE "public"."DiocesesParishDirectory" TO "authenticated";
-GRANT ALL ON TABLE "public"."DiocesesParishDirectory" TO "service_role";
-
-
-
-GRANT ALL ON SEQUENCE "public"."DiocesesParishDirectory_id_seq" TO "anon";
-GRANT ALL ON SEQUENCE "public"."DiocesesParishDirectory_id_seq" TO "authenticated";
-GRANT ALL ON SEQUENCE "public"."DiocesesParishDirectory_id_seq" TO "service_role";
-
-
-
-GRANT ALL ON SEQUENCE "public"."Dioceses_id_seq" TO "anon";
-GRANT ALL ON SEQUENCE "public"."Dioceses_id_seq" TO "authenticated";
-GRANT ALL ON SEQUENCE "public"."Dioceses_id_seq" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."DiscoveredUrls" TO "anon";
-GRANT ALL ON TABLE "public"."DiscoveredUrls" TO "authenticated";
-GRANT ALL ON TABLE "public"."DiscoveredUrls" TO "service_role";
-
-
-
-GRANT ALL ON SEQUENCE "public"."DiscoveredUrls_id_seq" TO "anon";
-GRANT ALL ON SEQUENCE "public"."DiscoveredUrls_id_seq" TO "authenticated";
-GRANT ALL ON SEQUENCE "public"."DiscoveredUrls_id_seq" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."ParishData" TO "anon";
-GRANT ALL ON TABLE "public"."ParishData" TO "authenticated";
-GRANT ALL ON TABLE "public"."ParishData" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."Parishes" TO "anon";
-GRANT ALL ON TABLE "public"."Parishes" TO "authenticated";
-GRANT ALL ON TABLE "public"."Parishes" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."HighQualitySchedules" TO "anon";
-GRANT ALL ON TABLE "public"."HighQualitySchedules" TO "authenticated";
-GRANT ALL ON TABLE "public"."HighQualitySchedules" TO "service_role";
-
-
-
-GRANT ALL ON SEQUENCE "public"."ParishData_id_seq" TO "anon";
-GRANT ALL ON SEQUENCE "public"."ParishData_id_seq" TO "authenticated";
-GRANT ALL ON SEQUENCE "public"."ParishData_id_seq" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."ParishScheduleSummary" TO "anon";
-GRANT ALL ON TABLE "public"."ParishScheduleSummary" TO "authenticated";
-GRANT ALL ON TABLE "public"."ParishScheduleSummary" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."expected_parishes_2002" TO "anon";
-GRANT ALL ON TABLE "public"."expected_parishes_2002" TO "authenticated";
-GRANT ALL ON TABLE "public"."expected_parishes_2002" TO "service_role";
-
-
-
-GRANT ALL ON SEQUENCE "public"."expected_parishes_2002_id_seq" TO "anon";
-GRANT ALL ON SEQUENCE "public"."expected_parishes_2002_id_seq" TO "authenticated";
-GRANT ALL ON SEQUENCE "public"."expected_parishes_2002_id_seq" TO "service_role";
-
-
-
-GRANT ALL ON SEQUENCE "public"."parishes_id_seq" TO "anon";
-GRANT ALL ON SEQUENCE "public"."parishes_id_seq" TO "authenticated";
-GRANT ALL ON SEQUENCE "public"."parishes_id_seq" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."parishfactssuppressionurls" TO "anon";
-GRANT ALL ON TABLE "public"."parishfactssuppressionurls" TO "authenticated";
-GRANT ALL ON TABLE "public"."parishfactssuppressionurls" TO "service_role";
-
-
-
-GRANT ALL ON SEQUENCE "public"."parishfactssuppressionurls_id_seq" TO "anon";
-GRANT ALL ON SEQUENCE "public"."parishfactssuppressionurls_id_seq" TO "authenticated";
-GRANT ALL ON SEQUENCE "public"."parishfactssuppressionurls_id_seq" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."test_parishes_expected_2009" TO "anon";
-GRANT ALL ON TABLE "public"."test_parishes_expected_2009" TO "authenticated";
-GRANT ALL ON TABLE "public"."test_parishes_expected_2009" TO "service_role";
-
-
-
-GRANT ALL ON SEQUENCE "public"."test_parishes_expected_2009_id_seq" TO "anon";
-GRANT ALL ON SEQUENCE "public"."test_parishes_expected_2009_id_seq" TO "authenticated";
-GRANT ALL ON SEQUENCE "public"."test_parishes_expected_2009_id_seq" TO "service_role";
-
-
-
-
-
-
-
-
-
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES  TO "postgres";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES  TO "anon";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES  TO "authenticated";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES  TO "service_role";
-
-
-
-
-
-
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS  TO "postgres";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS  TO "anon";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS  TO "authenticated";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS  TO "service_role";
-
-
-
-
-
-
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES  TO "postgres";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES  TO "anon";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES  TO "authenticated";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES  TO "service_role";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-RESET ALL;
