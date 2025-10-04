@@ -34,7 +34,7 @@ const Dashboard = () => {
   // Collapse state for worker sections
   const [activeWorkersCollapsed, setActiveWorkersCollapsed] = useState(false);
   const [inactiveWorkersCollapsed, setInactiveWorkersCollapsed] =
-    useState(false);
+    useState(true);
 
   const wsRef = useRef(null);
   const maxLogEntries = 100;
