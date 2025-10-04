@@ -6,6 +6,7 @@ on:
     paths:
       - "backend/**"
       - "frontend/**"
+      - "pipeline/**"
       - "core/**"
       - "extractors/**"
       - "scripts/**"
@@ -21,6 +22,7 @@ on:
     paths:
       - "backend/**"
       - "frontend/**"
+      - "pipeline/**"
       - "core/**"
       - "extractors/**"
       - "scripts/**"
