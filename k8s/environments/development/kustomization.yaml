@@ -4,10 +4,16 @@ kind: Kustomization
 namespace: diocesan-vitality-dev
 
 resources:
+<<<<<<< HEAD
 - ../../application/base
 - namespace.yaml
 - diocesan-vitality-secrets-sealedsecret.yaml
 - ../../pipeline-hpa.yaml
+=======
+  - ../../application/base
+  - namespace.yaml
+  - diocesan-vitality-secrets-sealedsecret.yaml
+>>>>>>> main
 
 patches:
 - path: development-patches.yaml
@@ -23,7 +29,7 @@ images:
 - name: tomatl/diocesan-vitality:pipeline
   newName: tomatl/diocesan-vitality
   newTag: development-pipeline-2025-10-04-23-31-58
-
+315831583158
 commonLabels:
   cluster: do-nyc2-dv-dev
   environment: development
