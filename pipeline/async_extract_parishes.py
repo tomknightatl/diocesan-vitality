@@ -334,25 +334,68 @@ class AsyncDioceseProcessor:
         return result
 
     async def _extract_basic_parish_info_async(self, soup, pattern, diocese_info, max_parishes):
-        """Extract basic parish information (placeholder for now - could be optimized further)"""
-        # For now, use existing synchronous logic
-        # This is a good candidate for future async optimization
+        """Extract basic parish information using the appropriate extractor"""
+        diocese_name = diocese_info.get('name', 'Unknown')
+        parish_directory_url = diocese_info.get('parish_directory_url', '')
+
         try:
             from core.driver import get_protected_driver
-            from parish_extractors import process_diocese_with_detailed_extraction
+            from pipeline.parish_extractors import get_extractor_for_pattern
 
-            # This is a temporary bridge - ideally we'd make this fully async
+            # Log pattern detection results
+            logger.info(f"    🔍 Pattern Detection for {diocese_name}:")
+            logger.info(f"       • Platform: {pattern.platform.value}")
+            logger.info(f"       • Listing Type: {pattern.listing_type.value}")
+            logger.info(f"       • Extraction Method: {pattern.extraction_method}")
+            logger.info(f"       • Confidence: {pattern.confidence_score:.0%}")
+            logger.info(f"       • JavaScript Required: {pattern.javascript_required}")
+            if pattern.notes:
+                logger.info(f"       • Notes: {pattern.notes}")
+
+            # Get the appropriate extractor using factory function
+            extractor = get_extractor_for_pattern(pattern)
+
+            # Get driver for extraction
             driver = get_protected_driver()
             if not driver:
+                logger.error(f"    ❌ Failed to create WebDriver for {diocese_name}")
                 return []
 
-            result = process_diocese_with_detailed_extraction(diocese_info, driver, max_parishes)
+            # Perform extraction
+            logger.info(f"    🚀 Starting extraction for {diocese_name}...")
+            parishes_found = extractor.extract(driver, soup, parish_directory_url)
+
+            # Log extraction results
+            if parishes_found:
+                logger.info(f"    ✅ Extraction successful for {diocese_name}: {len(parishes_found)} parishes found")
+                # Log sample of parishes found
+                sample_size = min(3, len(parishes_found))
+                for i, parish in enumerate(parishes_found[:sample_size], 1):
+                    logger.info(f"       {i}. {parish.name} - {parish.city or 'No city'}")
+                if len(parishes_found) > sample_size:
+                    logger.info(f"       ... and {len(parishes_found) - sample_size} more")
+            else:
+                logger.warning(f"    ⚠️ No parishes found for {diocese_name} using {pattern.extraction_method}")
+
             driver.quit()
+            return parishes_found
 
-            return result.get("parishes_found", [])
-
+        except ImportError as e:
+            logger.error(f"    ❌ CODE ERROR - Import failed for {diocese_name}: {e}")
+            logger.error(f"       This is a code problem, not an extraction failure!")
+            logger.error(f"       Missing module or function: {str(e)}")
+            return []
+        except AttributeError as e:
+            logger.error(f"    ❌ CODE ERROR - Attribute error for {diocese_name}: {e}")
+            logger.error(f"       This is a code problem - missing attribute or method!")
+            logger.error(f"       Details: {str(e)}")
+            return []
         except Exception as e:
-            logger.error(f"Error in basic parish extraction: {e}")
+            logger.error(f"    ❌ Extraction error for {diocese_name}: {type(e).__name__}: {e}")
+            logger.error(f"       Pattern: {pattern.extraction_method}")
+            logger.error(f"       URL: {parish_directory_url}")
+            import traceback
+            logger.error(f"       Traceback: {traceback.format_exc()}")
             return []
 
     def _log_final_results(self, results: Dict[str, Any]):
