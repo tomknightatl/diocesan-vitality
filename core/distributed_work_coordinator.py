@@ -249,9 +249,6 @@ class DistributedWorkCoordinator:
                     }
                 )
 
-                if len(available_dioceses) >= limit:
-                    break
-
             # Log selection summary
             logger.info(f"📋 Diocese selection summary:")
             logger.info(f"   • Total dioceses checked: {len(dioceses_response.data)}")
