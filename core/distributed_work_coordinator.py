@@ -154,26 +154,50 @@ class DistributedWorkCoordinator:
             return []
 
     async def _get_unassigned_dioceses(self, limit: int) -> List[Dict[str, Any]]:
-        """Get dioceses that are not currently assigned to any active worker"""
+        """
+        Get dioceses that are not currently assigned to any active worker.
+
+        Prioritization strategy:
+        1. Never processed dioceses (parish_count = 0 or NULL, last_extraction_attempt = NULL)
+        2. Least recently processed dioceses (oldest last_extraction_attempt)
+        3. Skip dioceses processed in last 1 hour (cooldown period)
+        """
         try:
-            # Query for dioceses that either:
-            # 1. Have no work assignment record, OR
-            # 2. Have assignment to workers that are no longer active
+            # Define cooldown period (1 hour) - skip recently processed dioceses
+            cooldown_hours = 1
+            from datetime import datetime, timedelta
+            cooldown_cutoff = (datetime.utcnow() - timedelta(hours=cooldown_hours)).isoformat()
 
-            # This is a simplified query - in production you'd want a more sophisticated approach
-            # that considers processing priority, last processing time, etc.
-
-            # Get all dioceses with parish directories
+            # Get all dioceses ordered by priority:
+            # Order by: last_extraction_attempt ASC NULLS FIRST (never processed come first)
             dioceses_response = (
-                self.supabase.table("Dioceses").select("id, Name, Website").limit(limit * 2).execute()
-            )  # Get more than needed for filtering
+                self.supabase.table("Dioceses")
+                .select("id, Name, Website, parish_count, last_extraction_attempt")
+                .order("last_extraction_attempt", desc=False, nullsfirst=True)  # NULL first (never processed)
+                .limit(limit * 3)  # Get extra for filtering
+                .execute()
+            )
 
             if not dioceses_response.data:
                 return []
 
             # Filter to only those with parish directory URLs available
             available_dioceses = []
+            skipped_cooldown = 0
+            skipped_no_directory = 0
+            skipped_assigned = 0
+
             for diocese in dioceses_response.data:
+                # COOLDOWN CHECK: Skip dioceses processed in last cooldown period
+                last_attempt = diocese.get("last_extraction_attempt")
+                if last_attempt and last_attempt > cooldown_cutoff:
+                    skipped_cooldown += 1
+                    logger.debug(
+                        f"   ⏰ Skipping {diocese['Name']} - in cooldown "
+                        f"(last attempt: {last_attempt[:19]})"
+                    )
+                    continue
+
                 # Check if this diocese has a parish directory URL
                 parish_dir_response = (
                     self.supabase.table("DiocesesParishDirectory")
@@ -189,35 +213,59 @@ class DistributedWorkCoordinator:
                     .execute()
                 )
 
-                if parish_dir_response.data or override_response.data:
-                    # Check if currently assigned to an active worker
-                    assignment_response = (
-                        self.supabase.table("diocese_work_assignments")
-                        .select("worker_id, assigned_at")
-                        .eq("diocese_id", diocese["id"])
-                        .eq("status", "processing")
-                        .execute()
-                    )
+                if not (parish_dir_response.data or override_response.data):
+                    skipped_no_directory += 1
+                    continue
 
-                    if not assignment_response.data:
-                        # Not currently assigned - available for work
-                        parish_directory_url = (
-                            override_response.data[0]["parish_directory_url"]
-                            if override_response.data
-                            else parish_dir_response.data[0]["parish_directory_url"]
-                        )
+                # Check if currently assigned to an active worker
+                assignment_response = (
+                    self.supabase.table("diocese_work_assignments")
+                    .select("worker_id, assigned_at")
+                    .eq("diocese_id", diocese["id"])
+                    .eq("status", "processing")
+                    .execute()
+                )
 
-                        available_dioceses.append(
-                            {
-                                "id": diocese["id"],
-                                "name": diocese["Name"],
-                                "url": diocese["Website"],
-                                "parish_directory_url": parish_directory_url,
-                            }
-                        )
+                if assignment_response.data:
+                    skipped_assigned += 1
+                    continue
 
-                        if len(available_dioceses) >= limit:
-                            break
+                # Available for processing!
+                parish_directory_url = (
+                    override_response.data[0]["parish_directory_url"]
+                    if override_response.data
+                    else parish_dir_response.data[0]["parish_directory_url"]
+                )
+
+                available_dioceses.append(
+                    {
+                        "id": diocese["id"],
+                        "name": diocese["Name"],
+                        "url": diocese["Website"],
+                        "parish_directory_url": parish_directory_url,
+                        "last_extraction_attempt": last_attempt,
+                        "parish_count": diocese.get("parish_count", 0),
+                    }
+                )
+
+                if len(available_dioceses) >= limit:
+                    break
+
+            # Log selection summary
+            if available_dioceses:
+                logger.info(f"📋 Diocese selection summary:")
+                logger.info(f"   ✅ Selected: {len(available_dioceses)} dioceses")
+                logger.info(f"   ⏰ Skipped (cooldown): {skipped_cooldown}")
+                logger.info(f"   📂 Skipped (no directory): {skipped_no_directory}")
+                logger.info(f"   🔒 Skipped (already assigned): {skipped_assigned}")
+
+                # Show what was selected
+                for i, d in enumerate(available_dioceses[:3], 1):
+                    last_attempt = d.get("last_extraction_attempt")
+                    status = "NEVER PROCESSED" if not last_attempt else f"last: {last_attempt[:19]}"
+                    logger.info(f"   {i}. {d['name']} ({status})")
+                if len(available_dioceses) > 3:
+                    logger.info(f"   ... and {len(available_dioceses) - 3} more")
 
             return available_dioceses
 
@@ -250,8 +298,14 @@ class DistributedWorkCoordinator:
             logger.error(f"❌ Error assigning dioceses to worker: {e}")
 
     async def mark_diocese_completed(self, diocese_id: int, status: str = "completed"):
-        """Mark a diocese as completed by this worker"""
+        """
+        Mark a diocese as completed by this worker.
+
+        Also updates the Dioceses table with last_extraction_attempt timestamp
+        to support cooldown period and prevent immediate re-processing.
+        """
         try:
+            # Update work assignment table
             update_data = {"status": status, "completed_at": datetime.utcnow().isoformat()}
 
             response = (
@@ -266,6 +320,24 @@ class DistributedWorkCoordinator:
                 logger.debug(f"✅ Marked diocese {diocese_id} as {status}")
             else:
                 logger.warning(f"⚠️ Failed to mark diocese {diocese_id} as {status}")
+
+            # Update Dioceses table with extraction attempt timestamp
+            # This enables cooldown period to prevent immediate re-processing
+            diocese_update = {
+                "last_extraction_attempt": datetime.utcnow().isoformat()
+            }
+
+            diocese_response = (
+                self.supabase.table("Dioceses")
+                .update(diocese_update)
+                .eq("id", diocese_id)
+                .execute()
+            )
+
+            if diocese_response.data:
+                logger.debug(f"✅ Updated last_extraction_attempt for diocese {diocese_id}")
+            else:
+                logger.warning(f"⚠️ Failed to update last_extraction_attempt for diocese {diocese_id}")
 
         except Exception as e:
             logger.error(f"❌ Error marking diocese {diocese_id} as completed: {e}")
