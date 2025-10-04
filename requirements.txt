@@ -22,3 +22,4 @@ PyPDF2
 pdfplumber
 pydantic
 scikit-learn
+psycopg2-binary

@@ -64,8 +64,8 @@ spec:
               value: "DEBUG"
           resources:
             requests:
-              memory: "256Mi"
-              cpu: "200m"
+              memory: "768Mi"
+              cpu: "400m"
             limits:
-              memory: "512Mi"
-              cpu: "500m"
+              memory: "1536Mi"
+              cpu: "800m"
