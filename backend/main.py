@@ -19,6 +19,13 @@ from supabase import Client, create_client
 dotenv_path = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(dotenv_path=dotenv_path)
 
+# Initialize Supabase client
+supabase_url = os.getenv("SUPABASE_URL")
+supabase_key = os.getenv("SUPABASE_KEY")
+if not supabase_url or not supabase_key:
+    raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in environment variables")
+supabase: Client = create_client(supabase_url, supabase_key)
+
 
 # Global monitoring state
 class MonitoringManager:
@@ -384,43 +391,61 @@ class MonitoringManager:
 
     def get_worker_list(self):
         """Get list of all workers with their basic status, classified by activity"""
-        current_time = time.time()
-        worker_list = []
+        try:
+            # Query database for active workers from pipeline_workers table
+            response = supabase.table("pipeline_workers").select("*").execute()
 
-        for worker_id, worker_data in self.workers.items():
-            last_updated = worker_data["last_updated"]
-            time_since_update = current_time - last_updated
+            if not response.data:
+                return []
 
-            # Classify worker status based on last update time
-            if time_since_update <= 60:  # Active: updated within 1 minute
-                worker_status = "active"
-            elif time_since_update <= 300:  # Recent: updated within 5 minutes
-                worker_status = "recent"
-            else:  # Stale: no updates for more than 5 minutes
-                worker_status = "stale"
+            current_time = time.time()
+            worker_list = []
 
-            worker_list.append(
-                {
-                    "worker_id": worker_id,
-                    "status": worker_data["extraction_status"]["status"],
-                    "worker_status": worker_status,  # New field for activity classification
-                    "current_diocese": worker_data["extraction_status"]["current_diocese"],
-                    "parishes_processed": worker_data["extraction_status"]["parishes_processed"],
-                    "last_updated": worker_data["last_updated"],
+            for worker in response.data:
+                # Parse last_heartbeat timestamp
+                last_heartbeat = worker.get("last_heartbeat")
+                if last_heartbeat:
+                    # Convert ISO timestamp to epoch time
+                    from datetime import datetime
+                    heartbeat_dt = datetime.fromisoformat(last_heartbeat.replace('Z', '+00:00'))
+                    last_updated = heartbeat_dt.timestamp()
+                else:
+                    last_updated = 0
+
+                time_since_update = current_time - last_updated
+
+                # Classify worker status based on last heartbeat time
+                if time_since_update <= 60:  # Active: heartbeat within 1 minute
+                    worker_status = "active"
+                elif time_since_update <= 300:  # Recent: heartbeat within 5 minutes
+                    worker_status = "recent"
+                else:  # Stale: no heartbeat for more than 5 minutes
+                    worker_status = "stale"
+
+                worker_list.append({
+                    "worker_id": worker.get("worker_id", "unknown"),
+                    "status": worker.get("status", "unknown"),
+                    "worker_status": worker_status,
+                    "current_diocese": worker.get("current_diocese"),
+                    "parishes_processed": worker.get("parishes_processed", 0),
+                    "last_updated": last_updated,
                     "time_since_update": int(time_since_update),
-                }
+                })
+
+            # Sort by activity: active first, then recent, then stale
+            worker_list.sort(
+                key=lambda w: (
+                    0 if w["worker_status"] == "active" else 1 if w["worker_status"] == "recent" else 2,
+                    -w["last_updated"],
+                )
             )
 
-        # Sort by activity: active first, then recent, then stale
-        # Within each group, sort by most recently updated
-        worker_list.sort(
-            key=lambda w: (
-                0 if w["worker_status"] == "active" else 1 if w["worker_status"] == "recent" else 2,
-                -w["last_updated"],  # Most recent first within each group
-            )
-        )
+            return worker_list
 
-        return worker_list
+        except Exception as e:
+            print(f"Error fetching worker list from database: {e}")
+            # Fallback to in-memory workers if database query fails
+            return []
 
 
 # Global monitoring manager instance
