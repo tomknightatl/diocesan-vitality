@@ -229,8 +229,7 @@ class DistributedPipelineRunner:
                 extract_schedule_main(
                     num_parishes=len(available_work),
                     parish_id=None,
-                    max_pages_to_scan=10,
-                    monitoring_client=self.monitoring_client,
+                    max_pages_per_parish=10,
                 )
 
                 self.monitoring_client.send_log(
