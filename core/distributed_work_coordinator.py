@@ -417,19 +417,38 @@ class DistributedWorkCoordinator:
             List of parish information for schedule extraction
         """
         try:
-            # Get parishes that have basic info but no schedule data
-            # Note: Fetching without foreign key join to avoid PostgREST relationship errors
+            # Get parishes that don't have schedule data in ParishScheduleSummary
+            # First, get parish IDs that already have schedule data
+            existing_schedules = (
+                self.supabase.table("ParishScheduleSummary")
+                .select("parish_id")
+                .execute()
+            )
+
+            existing_parish_ids = {row["parish_id"] for row in existing_schedules.data} if existing_schedules.data else set()
+
+            # Get parishes with websites that haven't been processed for schedules
             parishes_response = (
                 self.supabase.table("Parishes")
                 .select("id, Name, Web, diocese_id")
-                .is_("mass_schedule_found", None)
-                .limit(max_parishes)
+                .not_.is_("Web", None)
+                .neq("Web", "")
+                .limit(max_parishes * 3)  # Get more than needed to filter
                 .execute()
             )
 
             if parishes_response.data:
-                logger.info(f"📋 Found {len(parishes_response.data)} parishes needing schedule extraction")
-                return parishes_response.data
+                # Filter out parishes that already have schedule data
+                unprocessed_parishes = [
+                    p for p in parishes_response.data
+                    if p["id"] not in existing_parish_ids
+                ][:max_parishes]
+
+                logger.info(
+                    f"📋 Found {len(unprocessed_parishes)} parishes needing schedule extraction "
+                    f"({len(existing_parish_ids)} already processed)"
+                )
+                return unprocessed_parishes
             else:
                 return []
 
