@@ -50,10 +50,3 @@ spec:
                 secretKeyRef:
                   name: diocesan-vitality-secrets
                   key: supabase-key
-          volumeMounts:
-            - name: charts
-              mountPath: /app/charts
-      volumes:
-        - name: charts
-          persistentVolumeClaim:
-            claimName: charts-pvc
