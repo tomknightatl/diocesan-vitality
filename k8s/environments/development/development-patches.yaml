@@ -62,10 +62,12 @@ spec:
               value: "true"
             - name: LOG_LEVEL
               value: "DEBUG"
+            - name: WORKER_TYPE
+              value: "schedule"
           resources:
             requests:
-              memory: "768Mi"
-              cpu: "400m"
-            limits:
               memory: "1536Mi"
-              cpu: "800m"
+              cpu: "600m"
+            limits:
+              memory: "2048Mi"
+              cpu: "1000m"
