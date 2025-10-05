@@ -22,6 +22,7 @@ from core.db import get_supabase_client  # Import the get_supabase_client functi
 from core.enhanced_url_manager import get_enhanced_url_manager
 from core.intelligent_parish_prioritizer import get_intelligent_parish_prioritizer
 from core.logger import get_logger
+from core.monitoring_client import MonitoringClient
 from core.schedule_ai_extractor import ScheduleAIExtractor, save_ai_schedule_results
 from core.schedule_keywords import get_all_keywords_for_priority_calculation, load_keywords_from_database
 from core.stealth_browser import get_stealth_browser
@@ -1439,4 +1440,13 @@ if __name__ == "__main__":
         help=f"Maximum number of pages to scan per parish. Defaults to {config.DEFAULT_MAX_PAGES_TO_SCAN}.",
     )
     args = parser.parse_args()
-    main(args.num_parishes, args.parish_id, args.max_pages_to_scan)
+
+    # Initialize monitoring client if MONITORING_URL is set
+    import os
+    monitoring_client = None
+    monitoring_url = os.getenv("MONITORING_URL")
+    if monitoring_url:
+        monitoring_client = MonitoringClient(monitoring_url, worker_id="schedule-local")
+        logger.info(f"Monitoring enabled: {monitoring_url}")
+
+    main(args.num_parishes, args.parish_id, args.max_pages_to_scan, monitoring_client)
