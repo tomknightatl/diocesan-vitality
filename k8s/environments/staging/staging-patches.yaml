@@ -51,7 +51,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: pipeline-deployment
+  name: pipeline-discovery-deployment
 spec:
   template:
     spec:
@@ -60,8 +60,8 @@ spec:
           env:
             - name: ENVIRONMENT
               value: "staging"
-            - name: DATABASE_URL
-              value: "${STAGING_DATABASE_URL}"
+            - name: WORKER_TYPE
+              value: "discovery"
             - name: SUPABASE_URL
               value: "${STAGING_SUPABASE_URL}"
             - name: SUPABASE_KEY
@@ -71,7 +71,63 @@ spec:
           resources:
             requests:
               memory: "512Mi"
-              cpu: "300m"
+              cpu: "100m"
             limits:
               memory: "1Gi"
+              cpu: "300m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pipeline-extraction-deployment
+spec:
+  template:
+    spec:
+      containers:
+        - name: pipeline
+          env:
+            - name: ENVIRONMENT
+              value: "staging"
+            - name: WORKER_TYPE
+              value: "extraction"
+            - name: SUPABASE_URL
+              value: "${STAGING_SUPABASE_URL}"
+            - name: SUPABASE_KEY
+              value: "${STAGING_SUPABASE_KEY}"
+            - name: GENAI_API_KEY
+              value: "${STAGING_GENAI_API_KEY}"
+          resources:
+            requests:
+              memory: "1.5Gi"
+              cpu: "600m"
+            limits:
+              memory: "3Gi"
+              cpu: "1200m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pipeline-schedule-deployment
+spec:
+  template:
+    spec:
+      containers:
+        - name: pipeline
+          env:
+            - name: ENVIRONMENT
+              value: "staging"
+            - name: WORKER_TYPE
+              value: "schedule"
+            - name: SUPABASE_URL
+              value: "${STAGING_SUPABASE_URL}"
+            - name: SUPABASE_KEY
+              value: "${STAGING_SUPABASE_KEY}"
+            - name: GENAI_API_KEY
+              value: "${STAGING_GENAI_API_KEY}"
+          resources:
+            requests:
+              memory: "1.2Gi"
+              cpu: "500m"
+            limits:
+              memory: "2.5Gi"
               cpu: "1000m"
