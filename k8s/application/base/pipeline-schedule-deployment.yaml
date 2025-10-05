@@ -1,0 +1,139 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pipeline-schedule-deployment
+spec:
+  replicas: 1 # Schedule extraction is WebDriver-intensive, start with 1
+  revisionHistoryLimit: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: pipeline-schedule
+      worker-type: schedule
+  template:
+    metadata:
+      labels:
+        app: pipeline-schedule
+        worker-type: schedule
+    spec:
+      serviceAccountName: default
+      nodeSelector:
+        doks.digitalocean.com/node-pool: fast-pool # Schedule needs WebDriver resources
+      containers:
+        - name: pipeline
+          image: tomatl/diocesan-vitality:pipeline
+          imagePullPolicy: Always
+          resources:
+            requests:
+              memory: "1.2Gi" # Reduced to fit cluster capacity
+              cpu: "500m"
+            limits:
+              memory: "2.5Gi"
+              cpu: "1000m"
+          env:
+            # Database configuration
+            - name: SUPABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: diocesan-vitality-secrets
+                  key: supabase-url
+            - name: SUPABASE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: diocesan-vitality-secrets
+                  key: supabase-key
+            # AI and search API keys
+            - name: GENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: diocesan-vitality-secrets
+                  key: genai-api-key
+            - name: SEARCH_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: diocesan-vitality-secrets
+                  key: search-api-key
+            - name: SEARCH_CX
+              valueFrom:
+                secretKeyRef:
+                  name: diocesan-vitality-secrets
+                  key: search-cx
+            # Environment configuration for Chrome/Selenium
+            - name: HOME
+              value: "/tmp"
+            - name: WDM_LOCAL_CACHE
+              value: "/tmp/webdriver-cache"
+            # Worker identification
+            - name: WORKER_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            # Worker type specification
+            - name: WORKER_TYPE
+              value: "schedule"
+            # Pipeline configuration
+            - name: NUM_PARISHES_FOR_SCHEDULE
+              value: "101"
+            - name: MONITORING_URL
+              value: "http://backend-service:8000"
+          # Use distributed pipeline runner with schedule worker type
+          command: ["python", "-m", "pipeline.distributed_pipeline_runner"]
+          args:
+            - "--worker_type"
+            - "schedule"
+            - "--num_parishes_for_schedule"
+            - "$(NUM_PARISHES_FOR_SCHEDULE)"
+            - "--monitoring_url"
+            - "$(MONITORING_URL)"
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: chrome-user-data
+              mountPath: /app/.chrome-user-data
+          livenessProbe:
+            exec:
+              command:
+                - python
+                - -c
+                - |
+                  import sys
+                  import os
+                  sys.path.append(os.getcwd())
+                  from core.distributed_work_coordinator import DistributedWorkCoordinator
+                  coordinator = DistributedWorkCoordinator()
+                  print("healthy")
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - python
+                - -c
+                - |
+                  import sys
+                  import os
+                  sys.path.append(os.getcwd())
+                  from core.db import get_supabase_client
+                  supabase = get_supabase_client()
+                  if supabase:
+                      print("ready")
+                  else:
+                      exit(1)
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 2
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: chrome-user-data
+          emptyDir: {}
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 120 # Allow time for WebDriver cleanup
