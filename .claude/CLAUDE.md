@@ -470,6 +470,13 @@ make monitor-check              # Monitoring integration
 - When changes are ready, inform the user and ask for permission to commit/push
 - Provide a summary of changes before requesting permission
 
+### IMPORTANT: Pre-commit Hooks
+
+- **NEVER bypass pre-commit hooks using PRE_COMMIT_ALLOW_NO_CONFIG=1 or --no-verify without explicit user permission**
+- **If pre-commit hooks fail, inform the user and ask how to proceed**
+- **Only bypass pre-commit hooks when the user explicitly authorizes it**
+- Pre-commit hooks exist for code quality and should be respected by default
+
 ## GitOps and ArgoCD Rules
 
 ### CRITICAL: ArgoCD-Managed Resources
