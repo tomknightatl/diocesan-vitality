@@ -218,20 +218,9 @@ class DistributedWorkCoordinator:
                     skipped_assigned += 1
                     continue
 
-                # Skip dioceses that were recently completed (within last 24 hours)
-                recent_cutoff = (datetime.utcnow() - timedelta(hours=24)).isoformat()
-                recent_completion = (
-                    self.supabase.table("diocese_work_assignments")
-                    .select("completed_at")
-                    .eq("diocese_id", diocese["id"])
-                    .eq("status", "completed")
-                    .gte("completed_at", recent_cutoff)
-                    .execute()
-                )
-
-                if recent_completion.data:
-                    skipped_assigned += 1
-                    continue
+                # No cooldown between steps - removed 24-hour cooldown logic
+                # This allows the pipeline to immediately move from Step 3 to Step 4
+                # and continuously cycle through all steps without artificial delays
 
                 # Available for processing!
                 parish_directory_url = (
