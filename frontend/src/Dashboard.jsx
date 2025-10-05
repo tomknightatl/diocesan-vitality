@@ -31,6 +31,10 @@ const Dashboard = () => {
   const [selectedWorker, setSelectedWorker] = useState("aggregate");
   const [aggregateMode, setAggregateMode] = useState(true);
 
+  // Log filtering and tabs
+  const [logFilter, setLogFilter] = useState("all");
+  const [activeLogTab, setActiveLogTab] = useState("all");
+
   // Collapse state for worker sections
   const [activeWorkersCollapsed, setActiveWorkersCollapsed] = useState(false);
   const [inactiveWorkersCollapsed, setInactiveWorkersCollapsed] =
@@ -347,6 +351,36 @@ const Dashboard = () => {
       all: "🔄",
     };
     return icons[workerType] || "❓";
+  };
+
+  const filterLogsByWorkerType = (logs, filterType) => {
+    if (filterType === "all") return logs;
+    return logs.filter((log) => log.worker_type === filterType);
+  };
+
+  const filterLogsByWorkerId = (logs, workerId) => {
+    if (workerId === "aggregate") return logs;
+    return logs.filter((log) => log.worker_id === workerId);
+  };
+
+  const getFilteredLogs = () => {
+    let filtered = liveLog;
+
+    // Filter by worker type (from tab selection)
+    if (activeLogTab !== "all") {
+      filtered = filterLogsByWorkerType(filtered, activeLogTab);
+    }
+
+    // Filter by specific worker if not in aggregate mode
+    if (!aggregateMode && selectedWorker !== "aggregate") {
+      filtered = filterLogsByWorkerId(filtered, selectedWorker);
+    }
+
+    return filtered;
+  };
+
+  const getLogCountByWorkerType = (workerType) => {
+    return filterLogsByWorkerType(liveLog, workerType).length;
   };
 
   return (
@@ -1135,12 +1169,94 @@ const Dashboard = () => {
         </Col>
       </Row>
 
-      {/* Live Log */}
+      {/* Live Log with Tabs and Filtering */}
       <Row>
         <Col>
           <Card>
             <Card.Body>
-              <Card.Title>📋 Live Extraction Log</Card.Title>
+              <Card.Title className="d-flex justify-content-between align-items-center">
+                <span>📋 Live Extraction Log</span>
+                {!aggregateMode && selectedWorker !== "aggregate" && (
+                  <Badge bg="primary">Viewing: {selectedWorker}</Badge>
+                )}
+              </Card.Title>
+
+              {/* Worker Type Tabs */}
+              <div className="mb-3 d-flex gap-2 flex-wrap">
+                <Button
+                  variant={
+                    activeLogTab === "all" ? "primary" : "outline-primary"
+                  }
+                  size="sm"
+                  onClick={() => setActiveLogTab("all")}
+                >
+                  All Logs
+                  {liveLog.length > 0 && (
+                    <Badge bg="light" text="dark" className="ms-2">
+                      {liveLog.length}
+                    </Badge>
+                  )}
+                </Button>
+                <Button
+                  variant={
+                    activeLogTab === "discovery" ? "primary" : "outline-primary"
+                  }
+                  size="sm"
+                  onClick={() => setActiveLogTab("discovery")}
+                >
+                  {getWorkerTypeIcon("discovery")} Discovery
+                  {getLogCountByWorkerType("discovery") > 0 && (
+                    <Badge bg="light" text="dark" className="ms-2">
+                      {getLogCountByWorkerType("discovery")}
+                    </Badge>
+                  )}
+                </Button>
+                <Button
+                  variant={
+                    activeLogTab === "extraction"
+                      ? "primary"
+                      : "outline-primary"
+                  }
+                  size="sm"
+                  onClick={() => setActiveLogTab("extraction")}
+                >
+                  {getWorkerTypeIcon("extraction")} Extraction
+                  {getLogCountByWorkerType("extraction") > 0 && (
+                    <Badge bg="light" text="dark" className="ms-2">
+                      {getLogCountByWorkerType("extraction")}
+                    </Badge>
+                  )}
+                </Button>
+                <Button
+                  variant={
+                    activeLogTab === "schedule" ? "primary" : "outline-primary"
+                  }
+                  size="sm"
+                  onClick={() => setActiveLogTab("schedule")}
+                >
+                  {getWorkerTypeIcon("schedule")} Schedule
+                  {getLogCountByWorkerType("schedule") > 0 && (
+                    <Badge bg="light" text="dark" className="ms-2">
+                      {getLogCountByWorkerType("schedule")}
+                    </Badge>
+                  )}
+                </Button>
+                <Button
+                  variant={
+                    activeLogTab === "reporting" ? "primary" : "outline-primary"
+                  }
+                  size="sm"
+                  onClick={() => setActiveLogTab("reporting")}
+                >
+                  {getWorkerTypeIcon("reporting")} Reporting
+                  {getLogCountByWorkerType("reporting") > 0 && (
+                    <Badge bg="light" text="dark" className="ms-2">
+                      {getLogCountByWorkerType("reporting")}
+                    </Badge>
+                  )}
+                </Button>
+              </div>
+
               <div
                 className="live-log bg-dark text-light p-3 rounded text-start"
                 style={{
@@ -1163,8 +1279,8 @@ const Dashboard = () => {
                     }
                   `}
                 </style>
-                {liveLog.length > 0 ? (
-                  liveLog.map((log, index) => (
+                {getFilteredLogs().length > 0 ? (
+                  getFilteredLogs().map((log, index) => (
                     <div
                       key={log.id || index}
                       className="mb-1 d-flex align-items-start text-start"
@@ -1179,6 +1295,18 @@ const Dashboard = () => {
                       >
                         [{formatTimestamp(log.timestamp)}]
                       </span>
+                      {log.worker_type && (
+                        <span
+                          className="me-2"
+                          style={{
+                            minWidth: "20px",
+                            fontSize: "0.875rem",
+                          }}
+                          title={getWorkerTypeDisplay(log.worker_type)}
+                        >
+                          {getWorkerTypeIcon(log.worker_type)}
+                        </span>
+                      )}
                       <div
                         className={`flex-grow-1 text-start ${
                           log.level === "ERROR"
@@ -1198,12 +1326,22 @@ const Dashboard = () => {
                             display: "block",
                           }}
                         />
+                        {log.worker_id && aggregateMode && (
+                          <small
+                            className="text-muted d-block mt-1"
+                            style={{ fontSize: "0.7rem" }}
+                          >
+                            Worker: {log.worker_id}
+                          </small>
+                        )}
                       </div>
                     </div>
                   ))
                 ) : (
                   <div className="text-muted text-start">
-                    No log entries available
+                    {activeLogTab === "all"
+                      ? "No log entries available"
+                      : `No ${getWorkerTypeDisplay(activeLogTab)} logs available`}
                   </div>
                 )}
               </div>

@@ -104,6 +104,7 @@ class DistributedPipelineRunner:
             self.monitoring_client.send_log(
                 f"Pipeline │ Starting distributed pipeline (Worker: {self.coordinator.worker_id}, Type: {self.worker_type.value})",
                 "INFO",
+                worker_type=self.worker_type.value,
             )
 
             start_time = time.time()
@@ -120,7 +121,9 @@ class DistributedPipelineRunner:
 
             total_time = time.time() - start_time
             self.monitoring_client.send_log(
-                f"Pipeline │ 🎉 Distributed pipeline completed in {total_time:.1f} seconds", "INFO"
+                f"Pipeline │ 🎉 Distributed pipeline completed in {total_time:.1f} seconds",
+                "INFO",
+                worker_type=self.worker_type.value,
             )
 
         except Exception as e:
@@ -159,14 +162,14 @@ class DistributedPipelineRunner:
         try:
             while not self.shutdown_requested:
                 # Step 1: Extract Dioceses
-                self.monitoring_client.send_log("Step 1 │ Extract Dioceses: Discovering new dioceses", "INFO")
+                self.monitoring_client.send_log("Step 1 │ Extract Dioceses: Discovering new dioceses", "INFO", worker_type="discovery")
                 extract_dioceses_main(max_dioceses=0)  # No limit for discovery
-                self.monitoring_client.send_log("Step 1 │ ✅ Diocese extraction completed", "INFO")
+                self.monitoring_client.send_log("Step 1 │ ✅ Diocese extraction completed", "INFO", worker_type="discovery")
 
                 # Step 2: Find Parish Directories
-                self.monitoring_client.send_log("Step 2 │ Find Parish Directories: AI-powered directory discovery", "INFO")
+                self.monitoring_client.send_log("Step 2 │ Find Parish Directories: AI-powered directory discovery", "INFO", worker_type="discovery")
                 find_parish_directories(diocese_id=None, max_dioceses_to_process=0)  # Process all
-                self.monitoring_client.send_log("Step 2 │ ✅ Parish directory discovery completed", "INFO")
+                self.monitoring_client.send_log("Step 2 │ ✅ Parish directory discovery completed", "INFO", worker_type="discovery")
 
                 # Discovery workers can sleep longer between cycles
                 logger.info("⏸️ Discovery worker completed - sleeping for next cycle (5 minutes)")
@@ -210,14 +213,16 @@ class DistributedPipelineRunner:
 
                 # Process schedule extraction
                 self.monitoring_client.send_log(
-                    f"Step 4 │ Extract Schedules: Processing {len(available_work)} parishes", "INFO"
+                    f"Step 4 │ Extract Schedules: Processing {len(available_work)} parishes",
+                    "INFO",
+                    worker_type="schedule",
                 )
 
                 extract_schedule_main(
                     num_parishes=len(available_work), parish_id=None, max_pages_per_parish=10, diocese_id=None
                 )
 
-                self.monitoring_client.send_log("Step 4 │ ✅ Schedule extraction batch completed", "INFO")
+                self.monitoring_client.send_log("Step 4 │ ✅ Schedule extraction batch completed", "INFO", worker_type="schedule")
 
                 # Respectful delay between batches
                 await asyncio.sleep(30)
@@ -287,7 +292,11 @@ class DistributedPipelineRunner:
 
                 # Extract parishes for this diocese
                 with ExtractionMonitoring(diocese["name"], self.max_parishes_per_diocese) as monitor:
-                    self.monitoring_client.send_log(f"Diocese │ {diocese['name']}: Starting parish extraction", "INFO")
+                    self.monitoring_client.send_log(
+                        f"Diocese │ {diocese['name']}: Starting parish extraction",
+                        "INFO",
+                        worker_type=self.worker_type.value,
+                    )
 
                     # Run async parish extraction for this specific diocese
                     results = await extract_parishes_main_async(
@@ -303,10 +312,16 @@ class DistributedPipelineRunner:
                         monitor.update_progress(self.max_parishes_per_diocese, parishes_extracted)
 
                         self.monitoring_client.send_log(
-                            f"Diocese │ {diocese['name']}: ✅ Extracted {parishes_extracted} parishes", "INFO"
+                            f"Diocese │ {diocese['name']}: ✅ Extracted {parishes_extracted} parishes",
+                            "INFO",
+                            worker_type=self.worker_type.value,
                         )
                     else:
-                        self.monitoring_client.send_log(f"Diocese │ {diocese['name']}: ⚠️ No parishes extracted", "WARNING")
+                        self.monitoring_client.send_log(
+                            f"Diocese │ {diocese['name']}: ⚠️ No parishes extracted",
+                            "WARNING",
+                            worker_type=self.worker_type.value,
+                        )
 
                 # Mark diocese as completed
                 await self.coordinator.mark_diocese_completed(diocese["id"], "completed")
