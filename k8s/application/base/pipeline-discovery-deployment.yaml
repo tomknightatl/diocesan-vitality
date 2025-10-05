@@ -19,17 +19,17 @@ spec:
     spec:
       serviceAccountName: default
       nodeSelector:
-        doks.digitalocean.com/node-pool: slow-pool # Discovery is lightweight
+        doks.digitalocean.com/node-pool: fast-pool # Moved to fast-pool for more memory, allows slow-pool shutdown
       containers:
         - name: pipeline
           image: tomatl/diocesan-vitality:pipeline
           imagePullPolicy: Always
           resources:
             requests:
-              memory: "240Mi" # Maximum available on slow-pool with buffer
+              memory: "250Mi" # Increased - 240Mi still causes OOMKilled
               cpu: "100m"
             limits:
-              memory: "480Mi"
+              memory: "500Mi"
               cpu: "300m"
           env:
             # Database configuration
