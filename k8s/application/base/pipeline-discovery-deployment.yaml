@@ -26,10 +26,10 @@ spec:
           imagePullPolicy: Always
           resources:
             requests:
-              memory: "224Mi" # Optimized for slow-pool 1450Mi total target
+              memory: "240Mi" # Maximum available on slow-pool with buffer
               cpu: "100m"
             limits:
-              memory: "448Mi"
+              memory: "480Mi"
               cpu: "300m"
           env:
             # Database configuration
