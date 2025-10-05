@@ -38,11 +38,11 @@ spec:
           imagePullPolicy: Always
           resources:
             requests:
-              memory: "2.2Gi" # High memory for concurrent parish processing
-              cpu: "800m"
+              memory: "1.5Gi" # Reduced to fit cluster capacity
+              cpu: "600m"
             limits:
-              memory: "4Gi"
-              cpu: "1500m"
+              memory: "3Gi"
+              cpu: "1200m"
           env:
             # Database configuration
             - name: SUPABASE_URL
