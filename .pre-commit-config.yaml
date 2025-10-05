@@ -40,9 +40,9 @@ repos:
       - id: end-of-file-fixer
         exclude: ^(venv/|node_modules/|\.git/)
       - id: check-yaml
-        exclude: ^(venv/|node_modules/|\.git/)
+        exclude: ^(venv/|node_modules/|\.git/|k8s/.*\.yaml$)
       - id: check-added-large-files
-        args: ['--maxkb=1000']
+        args: ["--maxkb=1000"]
       - id: check-merge-conflict
       - id: detect-private-key
 

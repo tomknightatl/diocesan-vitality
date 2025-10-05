@@ -13,6 +13,16 @@ includeClaudeAttribution: false
 - **All code changes must go through: develop → CI/CD → staging validation → merge to main**
 - **Main branch is protected and only updated via controlled merges from develop**
 
+## Pre-commit Hook Policy
+
+**🚨 CRITICAL: Never Bypass Pre-commit Hooks Without Permission**
+
+- **NEVER bypass pre-commit hooks using SKIP=<hook-name>, --no-verify, or any other method without explicit user permission**
+- **If pre-commit hooks fail, ALWAYS inform the user and ask how to proceed**
+- **NEVER decide on your own to skip or bypass failed pre-commit checks**
+- **Only bypass pre-commit hooks when the user explicitly authorizes it**
+- **Pre-commit hooks exist for code quality and must be respected by default**
+
 ## kubectl Command Policy
 
 **🚨 CRITICAL: kubectl Command Approval Required**
