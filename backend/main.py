@@ -1370,8 +1370,16 @@ async def get_chart(chart_name: str, background_tasks: BackgroundTasks):
             print(f"📊 No cached chart for {chart_name}, generating synchronously...")
             generate_all_charts_background()
 
-    # Serve from cache
+    # Serve from cache with headers to prevent CDN caching
     if chart_path.exists():
-        return FileResponse(chart_path, media_type="image/png")
+        return FileResponse(
+            chart_path,
+            media_type="image/png",
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
     else:
         raise HTTPException(status_code=500, detail="Chart generation failed")
