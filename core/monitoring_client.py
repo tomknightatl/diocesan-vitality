@@ -4,7 +4,6 @@ Monitoring Client for Real-time Dashboard Integration.
 Provides easy integration for async extraction scripts to send updates to the monitoring dashboard.
 """
 
-import json
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
@@ -113,19 +112,58 @@ class MonitoringClient:
         return self._make_request("/error", data)
 
     def report_extraction_complete(
-        self, diocese_name: str, parishes_extracted: int, success_rate: float, duration: float, status: str = "completed"
+        self,
+        diocese_name: str,
+        parishes_extracted: int = None,
+        success_rate: float = None,
+        duration: float = 0,
+        status: str = "completed",
+        parish_name: str = None,
+        parish_url: str = None,
+        parish_address: str = None,
+        schedules_found: int = None,
+        mass_times: str = None,
     ) -> bool:
-        """Report completed extraction"""
+        """
+        Report completed extraction.
+
+        Supports both diocese-level and parish-level extraction reporting:
+        - Diocese-level: diocese_name, parishes_extracted, success_rate
+        - Parish-level: diocese_name, parish_name, parish_url, parish_address, schedules_found, mass_times
+        """
         data = {
             "diocese_name": diocese_name,
-            "parishes_extracted": parishes_extracted,
-            "success_rate": success_rate,
             "duration": duration,
             "status": status,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
+
+        # Add diocese-level fields if provided
+        if parishes_extracted is not None:
+            data["parishes_extracted"] = parishes_extracted
+        if success_rate is not None:
+            data["success_rate"] = success_rate
+
+        # Add parish-level fields if provided
+        if parish_name is not None:
+            data["parish_name"] = parish_name
+        if parish_url is not None:
+            data["parish_url"] = parish_url
+            data["url"] = parish_url  # Alias for compatibility
+            data["source_url"] = parish_url  # Alias for compatibility
+        if parish_address is not None:
+            data["parish_address"] = parish_address
+            data["address"] = parish_address  # Alias for compatibility
+        if schedules_found is not None:
+            data["schedules_found"] = schedules_found
+        if mass_times is not None:
+            data["mass_times"] = mass_times
+
         return self._make_request("/extraction_complete", data)
 
-    def send_log(self, message: str, level: str = "INFO", module: Optional[str] = None, worker_type: Optional[str] = None) -> bool:
+    def send_log(
+        self, message: str, level: str = "INFO", module: Optional[str] = None, worker_type: Optional[str] = None
+    ) -> bool:
         """Send live log entry"""
         data = {
             "message": message,
@@ -146,9 +184,18 @@ class MonitoringClient:
             parishes_processed=0,
             progress_percentage=0.0,
         )
-        self.send_log(f"Started extraction for {diocese_name} ({total_parishes} parishes)", "INFO", worker_type=worker_type)
+        self.send_log(
+            f"Started extraction for {diocese_name} ({total_parishes} parishes)", "INFO", worker_type=worker_type
+        )
 
-    def extraction_progress(self, diocese_name: str, parishes_processed: int, total_parishes: int, success_rate: float, worker_type: Optional[str] = None):
+    def extraction_progress(
+        self,
+        diocese_name: str,
+        parishes_processed: int,
+        total_parishes: int,
+        success_rate: float,
+        worker_type: Optional[str] = None,
+    ):
         """Convenience method for extraction progress"""
         progress_percentage = (parishes_processed / max(total_parishes, 1)) * 100
 
@@ -162,15 +209,30 @@ class MonitoringClient:
         )
 
         if parishes_processed % 5 == 0:  # Log every 5 parishes
-            self.send_log(f"📊 Progress: {parishes_processed}/{total_parishes} parishes ({progress_percentage:.1f}%)", "INFO", worker_type=worker_type)
+            self.send_log(
+                f"📊 Progress: {parishes_processed}/{total_parishes} parishes ({progress_percentage:.1f}%)",
+                "INFO",
+                worker_type=worker_type,
+            )
 
-    def extraction_finished(self, diocese_name: str, parishes_extracted: int, success_rate: float, duration: float, worker_type: Optional[str] = None):
+    def extraction_finished(
+        self,
+        diocese_name: str,
+        parishes_extracted: int,
+        success_rate: float,
+        duration: float,
+        worker_type: Optional[str] = None,
+    ):
         """Convenience method for extraction completion"""
         self.update_extraction_status(status="idle")
         self.report_extraction_complete(
             diocese_name=diocese_name, parishes_extracted=parishes_extracted, success_rate=success_rate, duration=duration
         )
-        self.send_log(f"✅ Completed {diocese_name}: {parishes_extracted} parishes, {success_rate:.1f}% success", "INFO", worker_type=worker_type)
+        self.send_log(
+            f"✅ Completed {diocese_name}: {parishes_extracted} parishes, {success_rate:.1f}% success",
+            "INFO",
+            worker_type=worker_type,
+        )
 
     def circuit_breaker_opened(self, circuit_name: str, reason: str, worker_type: Optional[str] = None):
         """Convenience method for circuit breaker opening"""
@@ -282,9 +344,6 @@ class ExtractionMonitoring:
             self.client.report_error(
                 error_type="ExtractionError", message=f"Extraction failed: {str(exc_val)}", diocese=self.diocese_name
             )
-            status = "error"
-        else:
-            status = "completed"
 
         self.client.extraction_finished(self.diocese_name, self.parishes_processed, success_rate, duration)
 
