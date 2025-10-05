@@ -28,8 +28,28 @@ def fetch_and_process_table(table_name: str, supabase_client: Client):
     """Fetches data from a Supabase table and processes it for charting."""
     print(f"Fetching data from {table_name}...")
     try:
-        response = supabase_client.table(table_name).select("*").execute()
-        data = response.data
+        # Fetch all records using pagination (Supabase default limit is 1000)
+        # Use range() to fetch in batches until all records are retrieved
+        all_data = []
+        batch_size = 1000
+        offset = 0
+
+        while True:
+            response = supabase_client.table(table_name).select("*").range(offset, offset + batch_size - 1).execute()
+            batch_data = response.data
+
+            if not batch_data:
+                break
+
+            all_data.extend(batch_data)
+
+            # If we got fewer records than batch_size, we've reached the end
+            if len(batch_data) < batch_size:
+                break
+
+            offset += batch_size
+
+        data = all_data
         if not data:
             print(f"No data found in {table_name}.")
             return None, None
