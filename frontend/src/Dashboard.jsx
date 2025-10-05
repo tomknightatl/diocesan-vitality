@@ -324,7 +324,6 @@ const Dashboard = () => {
       discovery: "Discovery",
       extraction: "Extraction",
       schedule: "Schedule",
-      reporting: "Reporting",
       all: "All Steps",
     };
     return types[workerType] || workerType;
@@ -335,7 +334,6 @@ const Dashboard = () => {
       discovery: "Steps 1-2: Diocese & Parish Directory Discovery",
       extraction: "Step 3: Parish Detail Extraction",
       schedule: "Step 4: Mass Schedule Extraction",
-      reporting: "Step 5: Analytics and Reporting",
       all: "All Pipeline Steps (Legacy)",
     };
     return tooltips[workerType] || "Unknown worker type";
@@ -346,7 +344,6 @@ const Dashboard = () => {
       discovery: "🔍",
       extraction: "⚡",
       schedule: "📅",
-      reporting: "📊",
       all: "🔄",
     };
     return icons[workerType] || "❓";
@@ -755,15 +752,6 @@ const Dashboard = () => {
                   </Badge>
                 </small>
               </div>
-
-              <div className="mt-3 pt-3 border-top">
-                <small className="text-muted">
-                  <strong>Legend:</strong>
-                  <span className="ms-2">🟢 Active (≤1min)</span>
-                  <span className="ms-2">🟡 Recent (≤5min)</span>
-                  <span className="ms-2">⚪ Stale (&gt;5min)</span>
-                </small>
-              </div>
             </Card.Body>
           </Card>
         </Col>
@@ -1117,9 +1105,17 @@ const Dashboard = () => {
                 <Table striped bordered hover responsive>
                   <thead>
                     <tr>
+                      {/* Source Information (Left) */}
                       <th>Timestamp</th>
                       <th>Diocese</th>
-                      <th>Max Parishes</th>
+                      {!aggregateMode && selectedWorker !== "aggregate" && (
+                        <>
+                          <th>Source URL</th>
+                          <th>Worker ID</th>
+                        </>
+                      )}
+                      {/* Extracted Information (Right) */}
+                      <th>Parishes</th>
                       <th>Success Rate</th>
                       <th>Duration</th>
                       <th>Status</th>
@@ -1128,8 +1124,24 @@ const Dashboard = () => {
                   <tbody>
                     {extractionHistory.slice(0, 10).map((extraction, index) => (
                       <tr key={index}>
+                        {/* Source Information (Left) */}
                         <td>{formatTimestamp(extraction.timestamp)}</td>
                         <td>{extraction.diocese_name}</td>
+                        {!aggregateMode && selectedWorker !== "aggregate" && (
+                          <>
+                            <td>
+                              <small className="text-muted">
+                                {extraction.source_url || "N/A"}
+                              </small>
+                            </td>
+                            <td>
+                              <small className="text-muted">
+                                {extraction.worker_id || selectedWorker}
+                              </small>
+                            </td>
+                          </>
+                        )}
+                        {/* Extracted Information (Right) */}
                         <td>{extraction.parishes_extracted}</td>
                         <td>
                           <Badge
@@ -1240,20 +1252,6 @@ const Dashboard = () => {
                     </Badge>
                   )}
                 </Button>
-                <Button
-                  variant={
-                    activeLogTab === "reporting" ? "primary" : "outline-primary"
-                  }
-                  size="sm"
-                  onClick={() => setActiveLogTab("reporting")}
-                >
-                  {getWorkerTypeIcon("reporting")} Reporting
-                  {getLogCountByWorkerType("reporting") > 0 && (
-                    <Badge bg="light" text="dark" className="ms-2">
-                      {getLogCountByWorkerType("reporting")}
-                    </Badge>
-                  )}
-                </Button>
               </div>
 
               <div
@@ -1337,7 +1335,7 @@ const Dashboard = () => {
                     </div>
                   ))
                 ) : (
-                  <div className="text-muted text-start">
+                  <div className="text-light text-start">
                     {activeLogTab === "all"
                       ? "No log entries available"
                       : `No ${getWorkerTypeDisplay(activeLogTab)} logs available`}
