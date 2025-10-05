@@ -31,9 +31,6 @@ const Dashboard = () => {
   const [selectedWorker, setSelectedWorker] = useState("aggregate");
   const [aggregateMode, setAggregateMode] = useState(true);
 
-  // Log filtering and tabs
-  const [activeLogTab, setActiveLogTab] = useState("all");
-
   // Collapse state for worker sections
   const [activeWorkersCollapsed, setActiveWorkersCollapsed] = useState(false);
   const [inactiveWorkersCollapsed, setInactiveWorkersCollapsed] =
@@ -59,9 +56,30 @@ const Dashboard = () => {
     try {
       const response = await fetch("/api/monitoring/workers");
       const data = await response.json();
-      if (data.workers) {
+      if (data.workers && data.workers.length > 0) {
         setWorkers(data.workers);
-        setAggregateMode(data.aggregate_mode);
+
+        // Preselect the most recently seen worker (lowest time_since_update)
+        const mostRecentWorker = data.workers.reduce((prev, current) => {
+          return prev.time_since_update < current.time_since_update
+            ? prev
+            : current;
+        });
+
+        if (mostRecentWorker) {
+          setSelectedWorker(mostRecentWorker.worker_id);
+          setAggregateMode(false);
+
+          // Fetch the selected worker's data
+          const workerResponse = await fetch(
+            `/api/monitoring/worker/${mostRecentWorker.worker_id}`,
+          );
+          const workerData = await workerResponse.json();
+          if (!workerData.error) {
+            setExtractionStatus(workerData.extraction_status);
+            setCircuitBreakers(workerData.circuit_breakers);
+          }
+        }
       }
     } catch (error) {
       console.error("Error fetching workers:", error);
@@ -71,33 +89,22 @@ const Dashboard = () => {
   // Handle worker selection
   const handleWorkerSelect = async (workerId) => {
     setSelectedWorker(workerId);
-    if (workerId === "aggregate") {
-      // Switch to aggregate mode
-      try {
-        await fetch("/api/monitoring/mode/aggregate", {
-          method: "POST",
-        });
-        setAggregateMode(true);
-      } catch (error) {
-        console.error("Error setting aggregate mode:", error);
-      }
-    } else {
-      // Fetch specific worker data
-      try {
-        await fetch("/api/monitoring/mode/individual", {
-          method: "POST",
-        });
-        setAggregateMode(false);
 
-        const response = await fetch(`/api/monitoring/worker/${workerId}`);
-        const workerData = await response.json();
-        if (!workerData.error) {
-          setExtractionStatus(workerData.extraction_status);
-          setCircuitBreakers(workerData.circuit_breakers);
-        }
-      } catch (error) {
-        console.error("Error fetching worker data:", error);
+    // Fetch specific worker data
+    try {
+      await fetch("/api/monitoring/mode/individual", {
+        method: "POST",
+      });
+      setAggregateMode(false);
+
+      const response = await fetch(`/api/monitoring/worker/${workerId}`);
+      const workerData = await response.json();
+      if (!workerData.error) {
+        setExtractionStatus(workerData.extraction_status);
+        setCircuitBreakers(workerData.circuit_breakers);
       }
+    } catch (error) {
+      console.error("Error fetching worker data:", error);
     }
   };
 
@@ -349,38 +356,17 @@ const Dashboard = () => {
     return icons[workerType] || "❓";
   };
 
-  const filterLogsByWorkerType = (logs, filterType) => {
-    if (filterType === "all") return logs;
-    return logs.filter((log) => {
-      // Handle both worker_type field and module field (legacy support)
-      const logType = log.worker_type || log.module;
-      return logType && logType.toLowerCase() === filterType.toLowerCase();
-    });
-  };
-
   const filterLogsByWorkerId = (logs, workerId) => {
     if (workerId === "aggregate") return logs;
     return logs.filter((log) => log.worker_id === workerId);
   };
 
   const getFilteredLogs = () => {
-    let filtered = liveLog;
-
-    // Filter by worker type (from tab selection)
-    if (activeLogTab !== "all") {
-      filtered = filterLogsByWorkerType(filtered, activeLogTab);
+    // Show logs for selected worker only
+    if (selectedWorker !== "aggregate") {
+      return filterLogsByWorkerId(liveLog, selectedWorker);
     }
-
-    // Filter by specific worker if not in aggregate mode
-    if (!aggregateMode && selectedWorker !== "aggregate") {
-      filtered = filterLogsByWorkerId(filtered, selectedWorker);
-    }
-
-    return filtered;
-  };
-
-  const getLogCountByWorkerType = (workerType) => {
-    return filterLogsByWorkerType(liveLog, workerType).length;
+    return liveLog;
   };
 
   return (
@@ -435,73 +421,6 @@ const Dashboard = () => {
                 </h6>
                 <Collapse in={!activeWorkersCollapsed}>
                   <div className="worker-list">
-                    {/* Aggregate View Option */}
-                    <div
-                      className={`worker-row border rounded p-3 mb-2 cursor-pointer ${
-                        selectedWorker === "aggregate"
-                          ? "border-primary bg-primary-subtle"
-                          : "border-secondary"
-                      }`}
-                      onClick={() => handleWorkerSelect("aggregate")}
-                      style={{ cursor: "pointer", transition: "all 0.2s ease" }}
-                    >
-                      <Row className="align-items-center">
-                        <Col md={3}>
-                          <div className="d-flex align-items-center">
-                            <span
-                              className="me-2"
-                              style={{ fontSize: "1.2em" }}
-                            >
-                              📈
-                            </span>
-                            <div>
-                              <h6 className="mb-0">
-                                <strong>Aggregate View</strong>
-                              </h6>
-                              <small className="text-muted">
-                                Combined view of all workers
-                              </small>
-                            </div>
-                          </div>
-                        </Col>
-                        <Col md={2} className="text-center">
-                          <Badge bg="info">
-                            {
-                              workers.filter(
-                                (w) =>
-                                  w.worker_status === "active" ||
-                                  w.worker_status === "recent",
-                              ).length
-                            }{" "}
-                            active
-                          </Badge>
-                        </Col>
-                        <Col md={2} className="text-center">
-                          <div className="fw-bold text-success">N/A</div>
-                          <small className="text-muted d-block">
-                            System Health
-                          </small>
-                        </Col>
-                        <Col md={2} className="text-center">
-                          <div className="fw-bold">N/A</div>
-                          <small className="text-muted d-block">
-                            CPU/Memory
-                          </small>
-                        </Col>
-                        <Col md={2} className="text-center">
-                          <div className="fw-bold">0</div>
-                          <small className="text-muted d-block">
-                            Recent Errors
-                          </small>
-                        </Col>
-                        <Col md={1} className="text-center">
-                          <span className="text-primary">
-                            {selectedWorker === "aggregate" ? "✓" : "○"}
-                          </span>
-                        </Col>
-                      </Row>
-                    </div>
-
                     {/* Active Workers */}
                     {workers
                       .filter(
@@ -552,9 +471,6 @@ const Dashboard = () => {
                                 }
                               >
                                 <div>
-                                  <span className="me-1">
-                                    {getWorkerTypeIcon(worker.worker_type)}
-                                  </span>
                                   {getWorkerTypeDisplay(worker.worker_type)}
                                 </div>
                               </OverlayTrigger>
@@ -683,9 +599,6 @@ const Dashboard = () => {
                                   }
                                 >
                                   <div className="text-muted">
-                                    <span className="me-1">
-                                      {getWorkerTypeIcon(worker.worker_type)}
-                                    </span>
                                     {getWorkerTypeDisplay(worker.worker_type)}
                                   </div>
                                 </OverlayTrigger>
@@ -833,74 +746,41 @@ const Dashboard = () => {
                       {extractionStatus.stale_reason}
                     </small>
                   )}
-                {extractionStatus &&
-                  aggregateMode &&
-                  extractionStatus.active_workers !== undefined && (
-                    <div className="mt-2">
-                      <small className="text-muted">
-                        <div>
-                          <strong>Active Workers:</strong>{" "}
-                          {extractionStatus.active_workers}/
-                          {extractionStatus.total_workers}
-                        </div>
-                        {extractionStatus.current_diocese && (
-                          <div>
-                            <strong>Processing:</strong>{" "}
-                            {extractionStatus.current_diocese}
-                          </div>
-                        )}
-                        {extractionStatus.parishes_processed > 0 && (
-                          <div>
-                            <strong>Progress:</strong>{" "}
-                            {extractionStatus.parishes_processed}/
-                            {extractionStatus.total_parishes} parishes
-                          </div>
-                        )}
-                      </small>
-                    </div>
-                  )}
-                {extractionStatus &&
-                  !aggregateMode &&
-                  selectedWorker !== "aggregate" && (
-                    <div className="mt-2">
-                      <small className="text-muted">
-                        <div>
-                          <strong>Worker Type:</strong>{" "}
-                          <OverlayTrigger
-                            placement="top"
-                            overlay={
-                              <Tooltip>
-                                {getWorkerTypeTooltip(
-                                  workers.find(
-                                    (w) => w.worker_id === selectedWorker,
-                                  )?.worker_type || "all",
-                                )}
-                              </Tooltip>
-                            }
-                          >
-                            <span>
-                              {getWorkerTypeIcon(
-                                workers.find(
-                                  (w) => w.worker_id === selectedWorker,
-                                )?.worker_type || "all",
-                              )}{" "}
-                              {getWorkerTypeDisplay(
+                {extractionStatus && selectedWorker && (
+                  <div className="mt-2">
+                    <small className="text-muted">
+                      <div>
+                        <strong>Worker Type:</strong>{" "}
+                        <OverlayTrigger
+                          placement="top"
+                          overlay={
+                            <Tooltip>
+                              {getWorkerTypeTooltip(
                                 workers.find(
                                   (w) => w.worker_id === selectedWorker,
                                 )?.worker_type || "all",
                               )}
-                            </span>
-                          </OverlayTrigger>
+                            </Tooltip>
+                          }
+                        >
+                          <span>
+                            {getWorkerTypeDisplay(
+                              workers.find(
+                                (w) => w.worker_id === selectedWorker,
+                              )?.worker_type || "all",
+                            )}
+                          </span>
+                        </OverlayTrigger>
+                      </div>
+                      {extractionStatus.current_diocese && (
+                        <div>
+                          <strong>Diocese:</strong>{" "}
+                          {extractionStatus.current_diocese}
                         </div>
-                        {extractionStatus.current_diocese && (
-                          <div>
-                            <strong>Diocese:</strong>{" "}
-                            {extractionStatus.current_diocese}
-                          </div>
-                        )}
-                      </small>
-                    </div>
-                  )}
+                      )}
+                    </small>
+                  </div>
+                )}
               </div>
             </Card.Body>
           </Card>
@@ -1123,8 +1003,7 @@ const Dashboard = () => {
                             return (
                               <>
                                 <th>Diocese</th>
-                                <th>Search Query</th>
-                                <th>Dioceses Found</th>
+                                <th>Directory of Parishes URL</th>
                                 <th>Status</th>
                               </>
                             );
@@ -1185,10 +1064,11 @@ const Dashboard = () => {
                                   <td>{extraction.diocese_name}</td>
                                   <td>
                                     <small className="text-muted">
-                                      {extraction.search_query || "N/A"}
+                                      {extraction.directory_url ||
+                                        extraction.source_url ||
+                                        "N/A"}
                                     </small>
                                   </td>
-                                  <td>{extraction.dioceses_found || 0}</td>
                                   <td>
                                     <Badge
                                       bg={
@@ -1327,73 +1207,11 @@ const Dashboard = () => {
           <Card>
             <Card.Body>
               <Card.Title className="d-flex justify-content-between align-items-center">
-                <span>📋 Live Extraction Log</span>
-                {!aggregateMode && selectedWorker !== "aggregate" && (
-                  <Badge bg="primary">Viewing: {selectedWorker}</Badge>
+                <span>📋 Live Logs</span>
+                {selectedWorker !== "aggregate" && (
+                  <Badge bg="primary">Worker: {selectedWorker}</Badge>
                 )}
               </Card.Title>
-
-              {/* Worker Type Tabs */}
-              <div className="mb-3 d-flex gap-2 flex-wrap">
-                <Button
-                  variant={
-                    activeLogTab === "all" ? "primary" : "outline-primary"
-                  }
-                  size="sm"
-                  onClick={() => setActiveLogTab("all")}
-                >
-                  All Logs
-                  {liveLog.length > 0 && (
-                    <Badge bg="light" text="dark" className="ms-2">
-                      {liveLog.length}
-                    </Badge>
-                  )}
-                </Button>
-                <Button
-                  variant={
-                    activeLogTab === "discovery" ? "primary" : "outline-primary"
-                  }
-                  size="sm"
-                  onClick={() => setActiveLogTab("discovery")}
-                >
-                  {getWorkerTypeIcon("discovery")} Discovery
-                  {getLogCountByWorkerType("discovery") > 0 && (
-                    <Badge bg="light" text="dark" className="ms-2">
-                      {getLogCountByWorkerType("discovery")}
-                    </Badge>
-                  )}
-                </Button>
-                <Button
-                  variant={
-                    activeLogTab === "extraction"
-                      ? "primary"
-                      : "outline-primary"
-                  }
-                  size="sm"
-                  onClick={() => setActiveLogTab("extraction")}
-                >
-                  {getWorkerTypeIcon("extraction")} Extraction
-                  {getLogCountByWorkerType("extraction") > 0 && (
-                    <Badge bg="light" text="dark" className="ms-2">
-                      {getLogCountByWorkerType("extraction")}
-                    </Badge>
-                  )}
-                </Button>
-                <Button
-                  variant={
-                    activeLogTab === "schedule" ? "primary" : "outline-primary"
-                  }
-                  size="sm"
-                  onClick={() => setActiveLogTab("schedule")}
-                >
-                  {getWorkerTypeIcon("schedule")} Schedule
-                  {getLogCountByWorkerType("schedule") > 0 && (
-                    <Badge bg="light" text="dark" className="ms-2">
-                      {getLogCountByWorkerType("schedule")}
-                    </Badge>
-                  )}
-                </Button>
-              </div>
 
               <div
                 className="live-log bg-dark text-light p-3 rounded text-start"
@@ -1477,9 +1295,7 @@ const Dashboard = () => {
                   ))
                 ) : (
                   <div className="text-light text-start">
-                    {activeLogTab === "all"
-                      ? "No log entries available"
-                      : `No ${getWorkerTypeDisplay(activeLogTab)} logs available`}
+                    No log entries available for this worker
                   </div>
                 )}
               </div>
