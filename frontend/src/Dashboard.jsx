@@ -468,64 +468,18 @@ const Dashboard = () => {
                                 Worker Type
                               </small>
                             </Col>
-                            <Col md={2} className="text-center">
-                              <Badge bg={getStatusBadge(worker.status)}>
+                            <Col md={3} className="text-center">
+                              <Badge
+                                bg={
+                                  worker.status === "active"
+                                    ? "success"
+                                    : getStatusBadge(worker.status)
+                                }
+                              >
                                 {worker.status}
                               </Badge>
                               <small className="text-muted d-block">
                                 Status
-                              </small>
-                            </Col>
-                            <Col md={1} className="text-center">
-                              <div className="fw-bold">
-                                {worker.cpu_percent
-                                  ? `${formatDecimal(worker.cpu_percent)}%`
-                                  : "N/A"}
-                              </div>
-                              <small className="text-muted d-block">CPU%</small>
-                            </Col>
-                            <Col md={1} className="text-center">
-                              <div className="fw-bold">
-                                {worker.memory_percent
-                                  ? `${formatDecimal(worker.memory_percent)}%`
-                                  : "N/A"}
-                              </div>
-                              <small className="text-muted d-block">
-                                Memory%
-                              </small>
-                            </Col>
-                            <Col md={1} className="text-center">
-                              <div className="fw-bold">
-                                {worker.uptime
-                                  ? formatDuration(worker.uptime)
-                                  : "N/A"}
-                              </div>
-                              <small className="text-muted d-block">
-                                Uptime
-                              </small>
-                            </Col>
-                            <Col md={1} className="text-center">
-                              <div
-                                className={`fw-bold ${worker.recent_errors > 0 ? "text-danger" : "text-success"}`}
-                              >
-                                {worker.recent_errors || 0}
-                              </div>
-                              <small className="text-muted d-block">
-                                Errors
-                              </small>
-                            </Col>
-                            <Col md={2} className="text-center">
-                              <div className="fw-bold">
-                                {worker.worker_type === "discovery" ||
-                                worker.worker_type === "extraction"
-                                  ? worker.current_diocese || "N/A"
-                                  : worker.current_parish || "N/A"}
-                              </div>
-                              <small className="text-muted d-block">
-                                {worker.worker_type === "discovery" ||
-                                worker.worker_type === "extraction"
-                                  ? "Diocese"
-                                  : "Parish"}
                               </small>
                             </Col>
                             <Col md={1} className="text-center">
@@ -632,70 +586,20 @@ const Dashboard = () => {
                                   Worker Type
                                 </small>
                               </Col>
-                              <Col md={2} className="text-center">
+                              <Col md={3} className="text-center">
                                 <Badge
-                                  bg={getWorkerStatusBadge(
-                                    worker.worker_status,
-                                  )}
+                                  bg={
+                                    worker.status === "active"
+                                      ? "success"
+                                      : getWorkerStatusBadge(
+                                          worker.worker_status,
+                                        )
+                                  }
                                 >
                                   {worker.worker_status}
                                 </Badge>
                                 <small className="text-muted d-block">
                                   Status
-                                </small>
-                              </Col>
-                              <Col md={1} className="text-center">
-                                <div className="fw-bold text-muted">
-                                  {worker.cpu_percent
-                                    ? `${formatDecimal(worker.cpu_percent)}%`
-                                    : "N/A"}
-                                </div>
-                                <small className="text-muted d-block">
-                                  CPU%
-                                </small>
-                              </Col>
-                              <Col md={1} className="text-center">
-                                <div className="fw-bold text-muted">
-                                  {worker.memory_percent
-                                    ? `${formatDecimal(worker.memory_percent)}%`
-                                    : "N/A"}
-                                </div>
-                                <small className="text-muted d-block">
-                                  Memory%
-                                </small>
-                              </Col>
-                              <Col md={1} className="text-center">
-                                <div className="fw-bold text-muted">
-                                  {worker.uptime
-                                    ? formatDuration(worker.uptime)
-                                    : "N/A"}
-                                </div>
-                                <small className="text-muted d-block">
-                                  Uptime
-                                </small>
-                              </Col>
-                              <Col md={1} className="text-center">
-                                <div
-                                  className={`fw-bold text-muted ${worker.recent_errors > 0 ? "text-danger" : ""}`}
-                                >
-                                  {worker.recent_errors || 0}
-                                </div>
-                                <small className="text-muted d-block">
-                                  Errors
-                                </small>
-                              </Col>
-                              <Col md={2} className="text-center">
-                                <div className="fw-bold text-muted">
-                                  {worker.worker_type === "discovery" ||
-                                  worker.worker_type === "extraction"
-                                    ? worker.current_diocese || "N/A"
-                                    : worker.current_parish || "N/A"}
-                                </div>
-                                <small className="text-muted d-block">
-                                  {worker.worker_type === "discovery" ||
-                                  worker.worker_type === "extraction"
-                                    ? "Diocese"
-                                    : "Parish"}
                                 </small>
                               </Col>
                               <Col md={1} className="text-center">
@@ -1085,8 +989,8 @@ const Dashboard = () => {
                             return (
                               <>
                                 <th>Duration</th>
-                                <th>Diocese</th>
                                 <th>Parish</th>
+                                <th>Parish Address</th>
                                 <th>Parish URL</th>
                                 <th>Schedules Found</th>
                                 <th>Mass Times</th>
@@ -1126,7 +1030,8 @@ const Dashboard = () => {
                                   <td>{extraction.diocese_name}</td>
                                   <td>
                                     <small className="text-muted">
-                                      {extraction.directory_url ||
+                                      {extraction.parish_directory_url ||
+                                        extraction.directory_url ||
                                         extraction.source_url ||
                                         "N/A"}
                                     </small>
@@ -1150,10 +1055,19 @@ const Dashboard = () => {
                                   <td>{extraction.diocese_name}</td>
                                   <td>
                                     <small className="text-muted">
-                                      {extraction.source_url || "N/A"}
+                                      {extraction.parish_directory_url ||
+                                        extraction.directory_url ||
+                                        extraction.source_url ||
+                                        "N/A"}
                                     </small>
                                   </td>
-                                  <td>{extraction.parishes_extracted}</td>
+                                  <td>
+                                    {extraction.parishes_extracted !==
+                                      undefined &&
+                                    extraction.parishes_extracted !== 999999
+                                      ? extraction.parishes_extracted
+                                      : extraction.total_parishes || 0}
+                                  </td>
                                   <td>
                                     <Badge
                                       bg={
@@ -1170,8 +1084,18 @@ const Dashboard = () => {
                               {workerType === "schedule" && (
                                 <>
                                   <td>{formatDuration(extraction.duration)}</td>
-                                  <td>{extraction.diocese_name || "N/A"}</td>
-                                  <td>{extraction.parish_name || "N/A"}</td>
+                                  <td>
+                                    {extraction.parish_name ||
+                                      extraction.name ||
+                                      "N/A"}
+                                  </td>
+                                  <td>
+                                    <small className="text-muted">
+                                      {extraction.parish_address ||
+                                        extraction.address ||
+                                        "N/A"}
+                                    </small>
+                                  </td>
                                   <td>
                                     <small className="text-muted">
                                       {extraction.parish_url ||
