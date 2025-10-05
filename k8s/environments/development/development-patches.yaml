@@ -14,11 +14,11 @@ spec:
               value: "true"
           resources:
             requests:
-              memory: "128Mi"
-              cpu: "100m"
+              memory: "80Mi"
+              cpu: "50m"
             limits:
-              memory: "256Mi"
-              cpu: "300m"
+              memory: "160Mi"
+              cpu: "200m"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -40,11 +40,11 @@ spec:
               value: "true"
           resources:
             requests:
-              memory: "64Mi"
-              cpu: "50m"
+              memory: "46Mi"
+              cpu: "25m"
             limits:
-              memory: "128Mi"
-              cpu: "100m"
+              memory: "92Mi"
+              cpu: "75m"
 ---
 apiVersion: apps/v1
 kind: Deployment
