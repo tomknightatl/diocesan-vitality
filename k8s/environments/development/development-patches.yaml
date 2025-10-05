@@ -62,19 +62,10 @@ spec:
               value: "true"
             - name: LOG_LEVEL
               value: "DEBUG"
-            - name: WORKER_TYPE
-              value: "reporting"
-          # Override command to use reporting worker type
-          command: ["python", "-m", "pipeline.distributed_pipeline_runner"]
-          args:
-            - "--worker_type"
-            - "reporting"
-            - "--monitoring_url"
-            - "http://backend-service:8000"
           resources:
             requests:
-              memory: "512Mi"
-              cpu: "200m"
-            limits:
-              memory: "1Gi"
+              memory: "768Mi"
               cpu: "400m"
+            limits:
+              memory: "1536Mi"
+              cpu: "800m"

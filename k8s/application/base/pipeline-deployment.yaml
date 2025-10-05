@@ -109,6 +109,8 @@ spec:
               mountPath: /tmp
             - name: chrome-user-data
               mountPath: /app/.chrome-user-data
+            - name: charts
+              mountPath: /app/charts
           # Health checks for HPA
           livenessProbe:
             exec:
@@ -152,6 +154,9 @@ spec:
           emptyDir: {}
         - name: chrome-user-data
           emptyDir: {}
+        - name: charts
+          persistentVolumeClaim:
+            claimName: charts-pvc
       restartPolicy: Always
       # Graceful shutdown to allow coordination cleanup
       terminationGracePeriodSeconds: 120
