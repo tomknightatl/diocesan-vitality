@@ -8,3 +8,4 @@ resources:
   - backend-service.yaml
   - frontend-service.yaml
   - pipeline-hpa.yaml
+  - charts-pvc.yaml

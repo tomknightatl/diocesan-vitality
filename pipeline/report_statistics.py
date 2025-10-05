@@ -219,16 +219,20 @@ def plot_time_series(
     # Use consistent subplot positioning instead of tight_layout for alignment
     plt.subplots_adjust(left=0.1, right=0.95, top=0.9, bottom=0.25)
 
-    # Only save charts if frontend/public directory exists (local development)
-    # In Kubernetes pods, this directory doesn't exist and charts are not needed
-    output_dir = "frontend/public"
-    if os.path.exists(output_dir):
-        filename = f"{output_dir}/{table_name.lower()}_records_over_time.png"
-        # Save with higher DPI for crisp display on modern screens
-        plt.savefig(filename, dpi=150, bbox_inches=None, facecolor="white", edgecolor="none")
-        print(f"Chart saved to {filename}")
+    # Save charts to /app/charts in Kubernetes, or frontend/public for local development
+    if os.path.exists("/app/charts"):
+        output_dir = "/app/charts"
+    elif os.path.exists("frontend/public"):
+        output_dir = "frontend/public"
     else:
-        print(f"Skipping chart save (frontend/public directory not found - running in Kubernetes)")
+        # Create /app/charts if neither exists (Kubernetes environment)
+        output_dir = "/app/charts"
+        os.makedirs(output_dir, exist_ok=True)
+
+    filename = f"{output_dir}/{table_name.lower()}_records_over_time.png"
+    # Save with higher DPI for crisp display on modern screens
+    plt.savefig(filename, dpi=150, bbox_inches=None, facecolor="white", edgecolor="none")
+    print(f"Chart saved to {filename}")
 
     plt.close(fig)  # Close the figure to free memory
 
