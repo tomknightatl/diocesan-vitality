@@ -125,13 +125,19 @@ class MonitoringClient:
         }
         return self._make_request("/extraction_complete", data)
 
-    def send_log(self, message: str, level: str = "INFO", module: Optional[str] = None) -> bool:
+    def send_log(self, message: str, level: str = "INFO", module: Optional[str] = None, worker_type: Optional[str] = None) -> bool:
         """Send live log entry"""
-        data = {"message": message, "level": level, "module": module or "extraction"}
+        data = {
+            "message": message,
+            "level": level,
+            "module": module or "extraction",
+            "worker_id": self.worker_id,
+            "worker_type": worker_type,
+        }
         return self._make_request("/log", data)
 
     # Convenience methods for common scenarios
-    def extraction_started(self, diocese_name: str, total_parishes: int = 0):
+    def extraction_started(self, diocese_name: str, total_parishes: int = 0, worker_type: Optional[str] = None):
         """Convenience method for extraction start"""
         self.update_extraction_status(
             status="running",
@@ -140,9 +146,9 @@ class MonitoringClient:
             parishes_processed=0,
             progress_percentage=0.0,
         )
-        self.send_log(f"Started extraction for {diocese_name} ({total_parishes} parishes)", "INFO")
+        self.send_log(f"Started extraction for {diocese_name} ({total_parishes} parishes)", "INFO", worker_type=worker_type)
 
-    def extraction_progress(self, diocese_name: str, parishes_processed: int, total_parishes: int, success_rate: float):
+    def extraction_progress(self, diocese_name: str, parishes_processed: int, total_parishes: int, success_rate: float, worker_type: Optional[str] = None):
         """Convenience method for extraction progress"""
         progress_percentage = (parishes_processed / max(total_parishes, 1)) * 100
 
@@ -156,26 +162,26 @@ class MonitoringClient:
         )
 
         if parishes_processed % 5 == 0:  # Log every 5 parishes
-            self.send_log(f"📊 Progress: {parishes_processed}/{total_parishes} parishes ({progress_percentage:.1f}%)", "INFO")
+            self.send_log(f"📊 Progress: {parishes_processed}/{total_parishes} parishes ({progress_percentage:.1f}%)", "INFO", worker_type=worker_type)
 
-    def extraction_finished(self, diocese_name: str, parishes_extracted: int, success_rate: float, duration: float):
+    def extraction_finished(self, diocese_name: str, parishes_extracted: int, success_rate: float, duration: float, worker_type: Optional[str] = None):
         """Convenience method for extraction completion"""
         self.update_extraction_status(status="idle")
         self.report_extraction_complete(
             diocese_name=diocese_name, parishes_extracted=parishes_extracted, success_rate=success_rate, duration=duration
         )
-        self.send_log(f"✅ Completed {diocese_name}: {parishes_extracted} parishes, {success_rate:.1f}% success", "INFO")
+        self.send_log(f"✅ Completed {diocese_name}: {parishes_extracted} parishes, {success_rate:.1f}% success", "INFO", worker_type=worker_type)
 
-    def circuit_breaker_opened(self, circuit_name: str, reason: str):
+    def circuit_breaker_opened(self, circuit_name: str, reason: str, worker_type: Optional[str] = None):
         """Convenience method for circuit breaker opening"""
         self.report_error(
             error_type="CircuitBreakerOpen", message=f"Circuit breaker '{circuit_name}' opened: {reason}", severity="warning"
         )
-        self.send_log(f"🚫 Circuit breaker '{circuit_name}' OPEN: {reason}", "WARNING")
+        self.send_log(f"🚫 Circuit breaker '{circuit_name}' OPEN: {reason}", "WARNING", worker_type=worker_type)
 
-    def circuit_breaker_closed(self, circuit_name: str):
+    def circuit_breaker_closed(self, circuit_name: str, worker_type: Optional[str] = None):
         """Convenience method for circuit breaker recovery"""
-        self.send_log(f"🟢 Circuit breaker '{circuit_name}' CLOSED - service recovered", "INFO")
+        self.send_log(f"🟢 Circuit breaker '{circuit_name}' CLOSED - service recovered", "INFO", worker_type=worker_type)
 
     def performance_update(self, parishes_per_minute: float, queue_size: int = 0, pool_utilization: float = 0.0):
         """Convenience method for performance updates"""
