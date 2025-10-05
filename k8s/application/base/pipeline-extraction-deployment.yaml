@@ -1,26 +1,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: pipeline-deployment
+  name: pipeline-extraction-deployment
 spec:
-  replicas: 1 # HPA will manage this
+  replicas: 2 # Extraction is resource-intensive, start with 2
   revisionHistoryLimit: 1
   strategy:
-    type: Recreate # Terminate old pod before creating new one (avoids anti-affinity conflicts)
+    type: Recreate
   selector:
     matchLabels:
-      app: pipeline
+      app: pipeline-extraction
+      worker-type: extraction
   template:
     metadata:
       labels:
-        app: pipeline
-      annotations:
-        # Force pod restart when config changes
-        configmap/checksum: '{{ include (print $.Template.BasePath "/pipeline-configmap.yaml") . | sha256sum }}'
+        app: pipeline-extraction
+        worker-type: extraction
     spec:
       serviceAccountName: default
       nodeSelector:
-        doks.digitalocean.com/node-pool: fast-pool
+        doks.digitalocean.com/node-pool: fast-pool # Extraction needs more resources
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -28,22 +27,22 @@ spec:
               podAffinityTerm:
                 labelSelector:
                   matchExpressions:
-                    - key: app
+                    - key: worker-type
                       operator: In
                       values:
-                        - pipeline
-                topologyKey: "kubernetes.io/hostname" # Prefer not to run 2 pipeline pods on same node
+                        - extraction
+                topologyKey: "kubernetes.io/hostname" # Spread extraction workers across nodes
       containers:
         - name: pipeline
           image: tomatl/diocesan-vitality:pipeline
           imagePullPolicy: Always
           resources:
             requests:
-              memory: "2.2Gi" # Increased based on observed 2052Mi peak usage
-              cpu: "800m" # Based on observed 670m-1271m usage
+              memory: "512Mi" # Further reduced to fit fast-pool available capacity
+              cpu: "400m"
             limits:
-              memory: "4Gi"
-              cpu: "1500m"
+              memory: "1Gi"
+              cpu: "800m"
           env:
             # Database configuration
             - name: SUPABASE_URL
@@ -72,36 +71,35 @@ spec:
                 secretKeyRef:
                   name: diocesan-vitality-secrets
                   key: search-cx
-            # Environment configuration for Chrome/Selenium
-            - name: MPLCONFIGDIR
-              value: "/tmp/matplotlib"
+            # Environment configuration
             - name: HOME
               value: "/tmp"
             - name: WDM_LOCAL_CACHE
               value: "/tmp/webdriver-cache"
-            # Worker identification for coordination
+            # Worker identification
             - name: WORKER_ID
               valueFrom:
                 fieldRef:
-                  fieldPath: metadata.name # Use pod name as worker ID
+                  fieldPath: metadata.name
             - name: HOSTNAME
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            # Worker type specification
+            - name: WORKER_TYPE
+              value: "extraction"
             # Pipeline configuration
             - name: MAX_PARISHES_PER_DIOCESE
               value: "999999" # No cap - extract all parishes
-            - name: NUM_PARISHES_FOR_SCHEDULE
-              value: "101"
             - name: MONITORING_URL
               value: "http://backend-service:8000"
-          # Use distributed pipeline runner for worker coordination
+          # Use distributed pipeline runner with extraction worker type
           command: ["python", "-m", "pipeline.distributed_pipeline_runner"]
           args:
+            - "--worker_type"
+            - "extraction"
             - "--max_parishes_per_diocese"
             - "$(MAX_PARISHES_PER_DIOCESE)"
-            - "--num_parishes_for_schedule"
-            - "$(NUM_PARISHES_FOR_SCHEDULE)"
             - "--monitoring_url"
             - "$(MONITORING_URL)"
           volumeMounts:
@@ -109,7 +107,6 @@ spec:
               mountPath: /tmp
             - name: chrome-user-data
               mountPath: /app/.chrome-user-data
-          # Health checks for HPA
           livenessProbe:
             exec:
               command:
@@ -121,7 +118,6 @@ spec:
                   sys.path.append(os.getcwd())
                   from core.distributed_work_coordinator import DistributedWorkCoordinator
                   coordinator = DistributedWorkCoordinator()
-                  # Simple health check - if we can create coordinator, we're healthy
                   print("healthy")
             initialDelaySeconds: 60
             periodSeconds: 30
@@ -137,7 +133,6 @@ spec:
                   import os
                   sys.path.append(os.getcwd())
                   from core.db import get_supabase_client
-                  # Check if we can connect to database
                   supabase = get_supabase_client()
                   if supabase:
                       print("ready")
@@ -153,5 +148,4 @@ spec:
         - name: chrome-user-data
           emptyDir: {}
       restartPolicy: Always
-      # Graceful shutdown to allow coordination cleanup
-      terminationGracePeriodSeconds: 120
+      terminationGracePeriodSeconds: 120 # Allow time for extraction cleanup

@@ -298,12 +298,12 @@ cluster-create: ## Step c: Create cluster (usage: make cluster-create CLUSTER_LA
 		echo "   Kubernetes version: $$K8S_VERSION" && \
 		echo "   Node pools:" && \
 		echo "     - slow-pool: s-1vcpu-2gb (1 node)" && \
-		echo "     - fast-pool: s-2vcpu-4gb (1 node)" && \
+		echo "     - fast-pool: s-2vcpu-4gb (2 nodes)" && \
 		echo "   Auto-upgrade: false" && \
 		echo "   HA Control Plane: false" && \
 		echo "🏗️  Creating cluster $$CLUSTER_NAME with dual node pools..." && \
 		echo "🚀 Starting cluster creation (this may take 5-10 minutes)..." && \
-		$(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster create $$CLUSTER_NAME --region $$REGION --version $$K8S_VERSION --node-pool 'name=slow-pool;size=s-1vcpu-2gb;count=1' --node-pool 'name=fast-pool;size=s-2vcpu-4gb;count=1' --auto-upgrade=false --ha=false --tag environment:$$CLUSTER_LABEL --tag project:diocesan-vitality" & \
+		$(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster create $$CLUSTER_NAME --region $$REGION --version $$K8S_VERSION --node-pool 'name=slow-pool;size=s-1vcpu-2gb;count=1' --node-pool 'name=fast-pool;size=s-2vcpu-4gb;count=2' --auto-upgrade=false --ha=false --tag environment:$$CLUSTER_LABEL --tag project:diocesan-vitality" & \
 		CREATE_PID=$$! && \
 		echo "🔍 Monitoring cluster creation progress..." && \
 		while kill -0 $$CREATE_PID 2>/dev/null; do \
