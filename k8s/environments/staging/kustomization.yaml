@@ -5,33 +5,12 @@ namespace: diocesan-vitality-staging
 
 resources:
   - ../../application/base
+  - namespace.yaml
 
-  - namespace
 patches:
   - path: staging-patches.yaml
 
 images:
-<<<<<<< HEAD
-- name: tomatl/diocesan-vitality:backend
-  newName: tomatl/diocesan-vitality
-  newTag: staging-backend-2025-10-04-23-38-11
-- name: tomatl/diocesan-vitality:frontend
-  newName: tomatl/diocesan-vitality
-  newTag: staging-frontend-2025-10-04-23-38-11
-- name: tomatl/diocesan-vitality:pipeline
-  newName: tomatl/diocesan-vitality
-  newTag: staging-pipeline-2025-10-04-23-38-11
-=======
-  - name: tomatl/diocesan-vitality:backend
-    newName: tomatl/diocesan-vitality
-    newTag: staging-backend-2025-10-04-23-33-17
-  - name: tomatl/diocesan-vitality:frontend
-    newName: tomatl/diocesan-vitality
-    newTag: staging-frontend-2025-10-04-23-33-17
-  - name: tomatl/diocesan-vitality:pipeline
-    newName: tomatl/diocesan-vitality
-    newTag: staging-pipeline-2025-10-04-23-33-17
->>>>>>> 2d6a9ca (🔧 Move HPA to base directory to fix kustomize security restriction)
   - name: tomatl/diocesan-vitality:backend
     newName: tomatl/diocesan-vitality
     newTag: staging-backend-2025-10-04-23-38-11
@@ -48,13 +27,8 @@ commonLabels:
 
 replicas:
   - count: 2
-
     name: backend-deployment
-
   - count: 2
-
     name: frontend-deployment
-
   - count: 1
-
     name: pipeline-deployment
