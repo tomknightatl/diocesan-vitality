@@ -101,9 +101,9 @@ spec:
                   from core.distributed_work_coordinator import DistributedWorkCoordinator
                   coordinator = DistributedWorkCoordinator()
                   print("healthy")
-            initialDelaySeconds: 60
-            periodSeconds: 30
-            timeoutSeconds: 10
+            initialDelaySeconds: 90
+            periodSeconds: 60
+            timeoutSeconds: 20
             failureThreshold: 3
           readinessProbe:
             exec:
@@ -122,8 +122,8 @@ spec:
                       exit(1)
             initialDelaySeconds: 30
             periodSeconds: 15
-            timeoutSeconds: 5
-            failureThreshold: 2
+            timeoutSeconds: 15
+            failureThreshold: 3
       volumes:
         - name: tmp
           emptyDir: {}
