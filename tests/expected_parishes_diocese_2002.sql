@@ -88,12 +88,12 @@ INSERT INTO expected_parishes_2002 (diocese_id, parish_name, city) VALUES
 CREATE INDEX IF NOT EXISTS idx_expected_parishes_2002_diocese_id ON expected_parishes_2002(diocese_id);
 
 -- Show summary
-SELECT 
+SELECT
     diocese_id,
     COUNT(*) as total_expected_parishes,
     COUNT(DISTINCT city) as unique_cities
-FROM expected_parishes_2002 
-WHERE diocese_id = 2002 
+FROM expected_parishes_2002
+WHERE diocese_id = 2002
 GROUP BY diocese_id;
 
 -- Show all expected parishes for verification

@@ -304,7 +304,7 @@ source venv/bin/activate && nohup python3 run_pipeline.py \
 
 ### Recommended System Requirements
 - **CPU:** 4+ cores
-- **RAM:** 8GB available  
+- **RAM:** 8GB available
 - **Network:** High-speed broadband
 - **Storage:** 2GB free space
 
@@ -334,7 +334,7 @@ For a typical large archdiocese with 100 parishes:
 
 ### Concurrent Processing (Default)
 - **Time:** ~18 minutes (60% faster)
-- **Memory:** ~1.2GB peak  
+- **Memory:** ~1.2GB peak
 - **Success rate:** 88-93%
 - **Parishes per minute:** 25-30
 
