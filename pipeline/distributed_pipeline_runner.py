@@ -232,8 +232,6 @@ class DistributedPipelineRunner:
             except asyncio.CancelledError:
                 pass
 
-
-
     async def _run_coordinated_extraction(self):
         """
         Run the main extraction pipeline with coordination.
@@ -325,8 +323,6 @@ class DistributedPipelineRunner:
                     message=f"Failed to process diocese {diocese['name']}: {str(e)}",
                     diocese=diocese["name"],
                 )
-
-
 
     async def _heartbeat_loop(self):
         """Send periodic heartbeats to maintain worker registration"""
