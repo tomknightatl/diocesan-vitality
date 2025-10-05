@@ -4,35 +4,35 @@ kind: Kustomization
 namespace: diocesan-vitality-staging
 
 resources:
-  - ../../application/base
-  - namespace.yaml
+- ../../application/base
+- namespace.yaml
 
 patches:
-  - path: staging-patches.yaml
+- path: staging-patches.yaml
 
 images:
-  - name: tomatl/diocesan-vitality:backend
-    newName: tomatl/diocesan-vitality
-    newTag: staging-backend-2025-10-05-19-20-43
-  - name: tomatl/diocesan-vitality:frontend
-    newName: tomatl/diocesan-vitality
-    newTag: staging-frontend-2025-10-05-19-20-43
-  - name: tomatl/diocesan-vitality:pipeline
-    newName: tomatl/diocesan-vitality
-    newTag: staging-pipeline-2025-10-05-19-20-43
+- name: tomatl/diocesan-vitality:backend
+  newName: tomatl/diocesan-vitality
+  newTag: staging-backend-2025-10-05-19-52-07
+- name: tomatl/diocesan-vitality:frontend
+  newName: tomatl/diocesan-vitality
+  newTag: staging-frontend-2025-10-05-19-52-07
+- name: tomatl/diocesan-vitality:pipeline
+  newName: tomatl/diocesan-vitality
+  newTag: staging-pipeline-2025-10-05-19-52-07
 
 commonLabels:
   cluster: do-nyc2-dv-stg
   environment: staging
 
 replicas:
-  - count: 2
-    name: backend-deployment
-  - count: 2
-    name: frontend-deployment
-  - count: 1
-    name: pipeline-discovery-deployment
-  - count: 2
-    name: pipeline-extraction-deployment
-  - count: 1
-    name: pipeline-schedule-deployment
+- count: 2
+  name: backend-deployment
+- count: 2
+  name: frontend-deployment
+- count: 1
+  name: pipeline-discovery-deployment
+- count: 2
+  name: pipeline-extraction-deployment
+- count: 1
+  name: pipeline-schedule-deployment
