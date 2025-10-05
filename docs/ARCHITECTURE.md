@@ -41,18 +41,16 @@ The United States Conference of Catholic Bishops (Diocesan Vitality) Data Projec
 ┌──────────────────────────────────────────────────────────────────┐
 │              Kubernetes Application Layer                         │
 │  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐         │
-│  │  Frontend   │◄───┤   Backend   │◄───┤  Pipeline   │         │
+│  │  Frontend   │◄───┤   Backend   │    │  Pipeline   │         │
 │  │   (React)   │    │  (FastAPI)  │    │   Workers   │         │
 │  │             │    │             │    │   (1-5)     │         │
-│  └─────────────┘    └──────┬──────┘    └──────┬──────┘         │
-│                            │                   │                 │
-│                            └───────┬───────────┘                 │
-│                                    │                             │
-│                          ┌─────────▼─────────┐                  │
-│                          │  Shared Volume    │                  │
-│                          │   /app/charts     │                  │
-│                          │  (Chart Images)   │                  │
-│                          └───────────────────┘                  │
+│  │ Fetches     │    │ Generates & │    │ Runs Steps  │         │
+│  │ charts via  │    │ caches      │    │ 1-4 only    │         │
+│  │ /api/charts │    │ charts in   │    │             │         │
+│  │             │    │ /tmp/charts │    │             │         │
+│  └─────────────┘    └─────────────┘    └─────────────┘         │
+│                                                                   │
+│  Chart Generation: Backend on-demand with 1-hour cache TTL       │
 └──────────────────────────────────────────────────────────────────┘
                           │
                           ▼
