@@ -14,13 +14,13 @@ patches:
 images:
 - name: tomatl/diocesan-vitality:backend
   newName: tomatl/diocesan-vitality
-  newTag: production-backend-2025-10-05-20-04-42
+  newTag: production-backend-2025-10-05-20-24-00
 - name: tomatl/diocesan-vitality:frontend
   newName: tomatl/diocesan-vitality
-  newTag: production-frontend-2025-10-05-20-04-42
+  newTag: production-frontend-2025-10-05-20-24-00
 - name: tomatl/diocesan-vitality:pipeline
   newName: tomatl/diocesan-vitality
-  newTag: production-pipeline-2025-10-05-20-04-42
+  newTag: production-pipeline-2025-10-05-20-24-00
 
 commonLabels:
   cluster: do-nyc2-dv-prd
