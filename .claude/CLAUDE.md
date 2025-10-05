@@ -4,6 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 includeClaudeAttribution: false
 
+## Git Branch Policy
+
+**🚨 CRITICAL: Never Push Directly to Main**
+
+- **NEVER push commits directly to the main branch**
+- **ALWAYS push exclusively to the develop branch**
+- **All code changes must go through: develop → CI/CD → staging validation → merge to main**
+- **Main branch is protected and only updated via controlled merges from develop**
+
 ## kubectl Command Policy
 
 **🚨 CRITICAL: kubectl Command Approval Required**
