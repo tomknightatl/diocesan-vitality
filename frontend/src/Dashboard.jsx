@@ -351,7 +351,11 @@ const Dashboard = () => {
 
   const filterLogsByWorkerType = (logs, filterType) => {
     if (filterType === "all") return logs;
-    return logs.filter((log) => log.worker_type === filterType);
+    return logs.filter((log) => {
+      // Handle both worker_type field and module field (legacy support)
+      const logType = log.worker_type || log.module;
+      return logType && logType.toLowerCase() === filterType.toLowerCase();
+    });
   };
 
   const filterLogsByWorkerId = (logs, workerId) => {
@@ -763,7 +767,7 @@ const Dashboard = () => {
           <Card className="h-100">
             <Card.Body>
               <Card.Title className="text-center">
-                <i className="fas fa-heartbeat text-danger"></i> System Health
+                <i className="fas fa-heartbeat text-danger"></i> Worker Health
               </Card.Title>
               {systemHealth ? (
                 <div className="text-center">
@@ -805,7 +809,7 @@ const Dashboard = () => {
           <Card className="h-100">
             <Card.Body>
               <Card.Title className="text-center">
-                <i className="fas fa-tasks text-info"></i> Extraction Status
+                <i className="fas fa-tasks text-info"></i> Status
               </Card.Title>
               <div className="text-center">
                 <div className="display-6 mb-2">
@@ -1100,7 +1104,7 @@ const Dashboard = () => {
         <Col>
           <Card>
             <Card.Body>
-              <Card.Title>📝 Recent Extraction History</Card.Title>
+              <Card.Title>📝 Recent History</Card.Title>
               {extractionHistory.length > 0 ? (
                 <Table striped bordered hover responsive>
                   <thead>
@@ -1139,9 +1143,9 @@ const Dashboard = () => {
                           } else if (workerType === "schedule") {
                             return (
                               <>
+                                <th>Diocese</th>
                                 <th>Parish</th>
                                 <th>Parish URL</th>
-                                <th>Worker ID</th>
                                 <th>Schedules Found</th>
                                 <th>Mass Times</th>
                                 <th>Duration</th>
@@ -1241,20 +1245,14 @@ const Dashboard = () => {
                               )}
                               {workerType === "schedule" && (
                                 <>
-                                  <td>
-                                    {extraction.parish_name ||
-                                      extraction.diocese_name}
-                                  </td>
+                                  <td>{extraction.diocese_name || "N/A"}</td>
+                                  <td>{extraction.parish_name || "N/A"}</td>
                                   <td>
                                     <small className="text-muted">
                                       {extraction.parish_url ||
+                                        extraction.url ||
                                         extraction.source_url ||
                                         "N/A"}
-                                    </small>
-                                  </td>
-                                  <td>
-                                    <small className="text-muted">
-                                      {extraction.worker_id || selectedWorker}
                                     </small>
                                   </td>
                                   <td>{extraction.schedules_found || 0}</td>
