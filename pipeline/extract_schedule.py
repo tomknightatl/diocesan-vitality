@@ -1141,41 +1141,60 @@ def get_parish_metadata(supabase: Client, parish_ids: list) -> dict:
         return {}
 
     try:
-        # Fetch parish data with diocese join
+        # Fetch parish data (without join - works in all environments)
+        # Note: Column names have spaces in the actual schema
         parish_response = (
             supabase.table("Parishes")
-            .select("id, Name, Web, Address, StreetAddress, City, State, Zip, diocese_id, Dioceses(Name)")
+            .select('id, Name, Web, "Street Address", City, State, "Zip Code", full_address, diocese_id')
             .in_("id", parish_ids)
             .execute()
         )
 
+        # Collect unique diocese IDs and fetch their names
+        diocese_ids = list(set(p.get("diocese_id") for p in parish_response.data if p.get("diocese_id")))
+        diocese_names = {}
+
+        if diocese_ids:
+            try:
+                diocese_response = (
+                    supabase.table("Dioceses")
+                    .select("id, Name")
+                    .in_("id", diocese_ids)
+                    .execute()
+                )
+                diocese_names = {d["id"]: d.get("Name", "Unknown Diocese") for d in diocese_response.data}
+            except Exception as e:
+                logger.warning(f"Could not fetch diocese names: {e}")
+
         parish_metadata = {}
         for p in parish_response.data:
-            # Construct full address from components
-            address_parts = []
-            if p.get("StreetAddress"):
-                address_parts.append(p["StreetAddress"])
-            if p.get("City"):
-                city_state = p["City"]
-                if p.get("State"):
-                    city_state += f", {p['State']}"
-                if p.get("Zip"):
-                    city_state += f" {p['Zip']}"
-                address_parts.append(city_state)
+            # Use full_address if available, otherwise construct from components
+            full_address = p.get("full_address", "")
 
-            full_address = ", ".join(address_parts) if address_parts else p.get("Address", "")
+            if not full_address:
+                # Construct full address from components (with space-separated column names)
+                address_parts = []
+                if p.get("Street Address"):
+                    address_parts.append(p["Street Address"])
+                if p.get("City"):
+                    city_state = p["City"]
+                    if p.get("State"):
+                        city_state += f", {p['State']}"
+                    if p.get("Zip Code"):
+                        city_state += f" {p['Zip Code']}"
+                    address_parts.append(city_state)
+                full_address = ", ".join(address_parts) if address_parts else ""
 
-            # Extract diocese name from joined data
-            diocese_name = "Unknown Diocese"
-            if p.get("Dioceses") and isinstance(p["Dioceses"], dict):
-                diocese_name = p["Dioceses"].get("Name", "Unknown Diocese")
+            # Get diocese name from lookup
+            diocese_id = p.get("diocese_id")
+            diocese_name = diocese_names.get(diocese_id, "Unknown Diocese") if diocese_id else "Unknown Diocese"
 
             parish_metadata[p["id"]] = {
                 "name": p.get("Name", "Unknown Parish"),
                 "website": p.get("Web", ""),
                 "address": full_address,
                 "diocese_name": diocese_name,
-                "diocese_id": p.get("diocese_id"),
+                "diocese_id": diocese_id,
             }
 
         logger.info(f"Fetched metadata for {len(parish_metadata)} parishes")
