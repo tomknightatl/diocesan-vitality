@@ -19,7 +19,6 @@ import argparse
 import asyncio
 import os
 import signal
-import sys
 import time
 from enum import Enum
 from typing import Optional
@@ -102,7 +101,8 @@ class DistributedPipelineRunner:
                 return
 
             self.monitoring_client.send_log(
-                f"Pipeline │ Starting distributed pipeline (Worker: {self.coordinator.worker_id}, Type: {self.worker_type.value})",
+                f"Pipeline │ Starting distributed pipeline (Worker: {self.coordinator.worker_id}, "
+                f"Type: {self.worker_type.value})",
                 "INFO",
                 worker_type=self.worker_type.value,
             )
@@ -162,14 +162,22 @@ class DistributedPipelineRunner:
         try:
             while not self.shutdown_requested:
                 # Step 1: Extract Dioceses
-                self.monitoring_client.send_log("Step 1 │ Extract Dioceses: Discovering new dioceses", "INFO", worker_type="discovery")
+                self.monitoring_client.send_log(
+                    "Step 1 │ Extract Dioceses: Discovering new dioceses", "INFO", worker_type="discovery"
+                )
                 extract_dioceses_main(max_dioceses=0)  # No limit for discovery
-                self.monitoring_client.send_log("Step 1 │ ✅ Diocese extraction completed", "INFO", worker_type="discovery")
+                self.monitoring_client.send_log(
+                    "Step 1 │ ✅ Diocese extraction completed", "INFO", worker_type="discovery"
+                )
 
                 # Step 2: Find Parish Directories
-                self.monitoring_client.send_log("Step 2 │ Find Parish Directories: AI-powered directory discovery", "INFO", worker_type="discovery")
+                self.monitoring_client.send_log(
+                    "Step 2 │ Find Parish Directories: AI-powered directory discovery", "INFO", worker_type="discovery"
+                )
                 find_parish_directories(diocese_id=None, max_dioceses_to_process=0)  # Process all
-                self.monitoring_client.send_log("Step 2 │ ✅ Parish directory discovery completed", "INFO", worker_type="discovery")
+                self.monitoring_client.send_log(
+                    "Step 2 │ ✅ Parish directory discovery completed", "INFO", worker_type="discovery"
+                )
 
                 # Discovery workers can sleep longer between cycles
                 logger.info("⏸️ Discovery worker completed - sleeping for next cycle (5 minutes)")
@@ -219,10 +227,15 @@ class DistributedPipelineRunner:
                 )
 
                 extract_schedule_main(
-                    num_parishes=len(available_work), parish_id=None, max_pages_per_parish=10, diocese_id=None
+                    num_parishes=len(available_work),
+                    parish_id=None,
+                    max_pages_to_scan=10,
+                    monitoring_client=self.monitoring_client,
                 )
 
-                self.monitoring_client.send_log("Step 4 │ ✅ Schedule extraction batch completed", "INFO", worker_type="schedule")
+                self.monitoring_client.send_log(
+                    "Step 4 │ ✅ Schedule extraction batch completed", "INFO", worker_type="schedule"
+                )
 
                 # Respectful delay between batches
                 await asyncio.sleep(30)
