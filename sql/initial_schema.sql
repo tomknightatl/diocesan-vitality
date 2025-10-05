@@ -1352,4 +1352,3 @@ ALTER TABLE public.parishfactssuppressionurls ENABLE ROW LEVEL SECURITY;
 --
 
 \unrestrict Q55Rl6hEiX9grGaoJKsUt9do2dcX3aaEevBXpWClesxSwNgcn1UHmV99XbSfAFr
-
