@@ -26,10 +26,10 @@ spec:
           imagePullPolicy: Always
           resources:
             requests:
-              memory: "250Mi" # Increased - 240Mi still causes OOMKilled
+              memory: "512Mi" # Chrome WebDriver requires substantial memory for diocese discovery
               cpu: "100m"
             limits:
-              memory: "500Mi"
+              memory: "1Gi"
               cpu: "300m"
           env:
             # Database configuration
