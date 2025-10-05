@@ -26,11 +26,11 @@ spec:
           imagePullPolicy: Always
           resources:
             requests:
-              memory: "512Mi" # Lightweight - just API calls
-              cpu: "200m"
+              memory: "256Mi" # Reduced to fit slow-pool capacity
+              cpu: "100m"
             limits:
-              memory: "1Gi"
-              cpu: "500m"
+              memory: "512Mi"
+              cpu: "300m"
           env:
             # Database configuration
             - name: SUPABASE_URL
