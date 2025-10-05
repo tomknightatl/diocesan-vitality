@@ -1107,69 +1107,212 @@ const Dashboard = () => {
                     <tr>
                       {/* Source Information (Left) */}
                       <th>Timestamp</th>
-                      <th>Diocese</th>
-                      {!aggregateMode && selectedWorker !== "aggregate" && (
-                        <>
-                          <th>Source URL</th>
-                          <th>Worker ID</th>
-                        </>
-                      )}
-                      {/* Extracted Information (Right) */}
-                      <th>Parishes</th>
-                      <th>Success Rate</th>
-                      <th>Duration</th>
-                      <th>Status</th>
+                      {(() => {
+                        const selectedWorkerData = workers.find(
+                          (w) => w.worker_id === selectedWorker,
+                        );
+                        const workerType = selectedWorkerData?.worker_type;
+
+                        if (!aggregateMode && selectedWorker !== "aggregate") {
+                          // Worker-type specific columns
+                          if (workerType === "discovery") {
+                            return (
+                              <>
+                                <th>Diocese</th>
+                                <th>Search Query</th>
+                                <th>Dioceses Found</th>
+                                <th>Status</th>
+                              </>
+                            );
+                          } else if (workerType === "extraction") {
+                            return (
+                              <>
+                                <th>Diocese</th>
+                                <th>Source URL</th>
+                                <th>Worker ID</th>
+                                <th>Parishes</th>
+                                <th>Success Rate</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                              </>
+                            );
+                          } else if (workerType === "schedule") {
+                            return (
+                              <>
+                                <th>Parish</th>
+                                <th>Parish URL</th>
+                                <th>Worker ID</th>
+                                <th>Schedules Found</th>
+                                <th>Mass Times</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                              </>
+                            );
+                          }
+                        }
+                        // Aggregate view (default)
+                        return (
+                          <>
+                            <th>Diocese</th>
+                            <th>Parishes</th>
+                            <th>Success Rate</th>
+                            <th>Duration</th>
+                            <th>Status</th>
+                          </>
+                        );
+                      })()}
                     </tr>
                   </thead>
                   <tbody>
-                    {extractionHistory.slice(0, 10).map((extraction, index) => (
-                      <tr key={index}>
-                        {/* Source Information (Left) */}
-                        <td>{formatTimestamp(extraction.timestamp)}</td>
-                        <td>{extraction.diocese_name}</td>
-                        {!aggregateMode && selectedWorker !== "aggregate" && (
-                          <>
-                            <td>
-                              <small className="text-muted">
-                                {extraction.source_url || "N/A"}
-                              </small>
-                            </td>
-                            <td>
-                              <small className="text-muted">
-                                {extraction.worker_id || selectedWorker}
-                              </small>
-                            </td>
-                          </>
-                        )}
-                        {/* Extracted Information (Right) */}
-                        <td>{extraction.parishes_extracted}</td>
-                        <td>
-                          <Badge
-                            bg={
-                              extraction.success_rate >= 90
-                                ? "success"
-                                : extraction.success_rate >= 70
-                                  ? "warning"
-                                  : "danger"
-                            }
-                          >
-                            {formatDecimal(extraction.success_rate)}%
-                          </Badge>
-                        </td>
-                        <td>{formatDuration(extraction.duration)}</td>
-                        <td>
-                          <Badge
-                            bg={
-                              extraction.status === "completed"
-                                ? "success"
-                                : "danger"
-                            }
-                          >
-                            {extraction.status}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
+                    {extractionHistory.slice(0, 10).map((extraction, index) => {
+                      const selectedWorkerData = workers.find(
+                        (w) => w.worker_id === selectedWorker,
+                      );
+                      const workerType = selectedWorkerData?.worker_type;
+
+                      return (
+                        <tr key={index}>
+                          {/* Source Information (Left) */}
+                          <td>{formatTimestamp(extraction.timestamp)}</td>
+                          {!aggregateMode && selectedWorker !== "aggregate" ? (
+                            <>
+                              {workerType === "discovery" && (
+                                <>
+                                  <td>{extraction.diocese_name}</td>
+                                  <td>
+                                    <small className="text-muted">
+                                      {extraction.search_query || "N/A"}
+                                    </small>
+                                  </td>
+                                  <td>{extraction.dioceses_found || 0}</td>
+                                  <td>
+                                    <Badge
+                                      bg={
+                                        extraction.status === "completed"
+                                          ? "success"
+                                          : "danger"
+                                      }
+                                    >
+                                      {extraction.status}
+                                    </Badge>
+                                  </td>
+                                </>
+                              )}
+                              {workerType === "extraction" && (
+                                <>
+                                  <td>{extraction.diocese_name}</td>
+                                  <td>
+                                    <small className="text-muted">
+                                      {extraction.source_url || "N/A"}
+                                    </small>
+                                  </td>
+                                  <td>
+                                    <small className="text-muted">
+                                      {extraction.worker_id || selectedWorker}
+                                    </small>
+                                  </td>
+                                  <td>{extraction.parishes_extracted}</td>
+                                  <td>
+                                    <Badge
+                                      bg={
+                                        extraction.success_rate >= 90
+                                          ? "success"
+                                          : extraction.success_rate >= 70
+                                            ? "warning"
+                                            : "danger"
+                                      }
+                                    >
+                                      {formatDecimal(extraction.success_rate)}%
+                                    </Badge>
+                                  </td>
+                                  <td>{formatDuration(extraction.duration)}</td>
+                                  <td>
+                                    <Badge
+                                      bg={
+                                        extraction.status === "completed"
+                                          ? "success"
+                                          : "danger"
+                                      }
+                                    >
+                                      {extraction.status}
+                                    </Badge>
+                                  </td>
+                                </>
+                              )}
+                              {workerType === "schedule" && (
+                                <>
+                                  <td>
+                                    {extraction.parish_name ||
+                                      extraction.diocese_name}
+                                  </td>
+                                  <td>
+                                    <small className="text-muted">
+                                      {extraction.parish_url ||
+                                        extraction.source_url ||
+                                        "N/A"}
+                                    </small>
+                                  </td>
+                                  <td>
+                                    <small className="text-muted">
+                                      {extraction.worker_id || selectedWorker}
+                                    </small>
+                                  </td>
+                                  <td>{extraction.schedules_found || 0}</td>
+                                  <td>
+                                    <small className="text-muted">
+                                      {extraction.mass_times || "N/A"}
+                                    </small>
+                                  </td>
+                                  <td>{formatDuration(extraction.duration)}</td>
+                                  <td>
+                                    <Badge
+                                      bg={
+                                        extraction.status === "completed"
+                                          ? "success"
+                                          : "danger"
+                                      }
+                                    >
+                                      {extraction.status}
+                                    </Badge>
+                                  </td>
+                                </>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              {/* Aggregate view (default) */}
+                              <td>{extraction.diocese_name}</td>
+                              <td>{extraction.parishes_extracted}</td>
+                              <td>
+                                <Badge
+                                  bg={
+                                    extraction.success_rate >= 90
+                                      ? "success"
+                                      : extraction.success_rate >= 70
+                                        ? "warning"
+                                        : "danger"
+                                  }
+                                >
+                                  {formatDecimal(extraction.success_rate)}%
+                                </Badge>
+                              </td>
+                              <td>{formatDuration(extraction.duration)}</td>
+                              <td>
+                                <Badge
+                                  bg={
+                                    extraction.status === "completed"
+                                      ? "success"
+                                      : "danger"
+                                  }
+                                >
+                                  {extraction.status}
+                                </Badge>
+                              </td>
+                            </>
+                          )}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </Table>
               ) : (
