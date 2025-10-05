@@ -27,9 +27,22 @@ commonLabels:
   environment: production
 
 replicas:
+<<<<<<< Updated upstream
 - count: 1
   name: backend-deployment
 - count: 2
   name: frontend-deployment
 - count: 1
   name: pipeline-deployment
+=======
+  - count: 1
+    name: backend-deployment
+  - count: 2
+    name: frontend-deployment
+  - count: 1
+    name: pipeline-discovery-deployment
+  - count: 2
+    name: pipeline-extraction-deployment
+  - count: 1
+    name: pipeline-schedule-deployment
+>>>>>>> Stashed changes
