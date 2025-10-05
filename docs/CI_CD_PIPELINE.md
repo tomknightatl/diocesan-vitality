@@ -37,7 +37,7 @@ The CI/CD pipeline supports three environments with dedicated Kubernetes cluster
 
 ### Stage 1: Code Quality & Static Analysis
 - **Python Code Formatting** (Black)
-- **Import Sorting** (isort)  
+- **Import Sorting** (isort)
 - **Linting** (Flake8)
 - **Frontend Linting** (ESLint)
 - **Type Checking** (MyPy - warnings allowed)
@@ -100,7 +100,7 @@ gh workflow run multi-cluster-ci-cd.yml -f target_cluster=production -f force_de
 
 ### Production Deployment Requirements
 - ✅ All quality checks must pass
-- ✅ All unit tests must pass  
+- ✅ All unit tests must pass
 - ✅ All integration tests must pass
 - ✅ Staging deployment must succeed
 - ✅ Smoke tests must pass
@@ -130,7 +130,7 @@ git merge feature/new-feature
 git push origin develop  # Deploys to staging
 
 # Merge to main for production
-git checkout main  
+git checkout main
 git merge develop
 git push origin main  # Deploys to production (with approval)
 ```
@@ -193,7 +193,7 @@ STAGING_GENAI_API_KEY: Staging Google AI key
 
 ### GitHub Environment Configuration
 1. Create "development" environment in GitHub
-2. Create "staging" environment in GitHub  
+2. Create "staging" environment in GitHub
 3. Create "production" environment in GitHub
 4. Configure protection rules (see Environment Setup below)
 
@@ -235,7 +235,7 @@ cd frontend && npm test
 - **No protection rules needed** (auto-deploy)
 
 **3. Create Production Environment**
-- Click **New environment**  
+- Click **New environment**
 - Name: `production`
 - **Protection rules:**
   - ✅ **Required reviewers**: Add yourself and team members
@@ -261,7 +261,7 @@ Add environment-specific variables:
 # Watch current workflow
 gh run watch
 
-# List recent runs  
+# List recent runs
 gh run list
 
 # View specific run

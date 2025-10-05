@@ -32,7 +32,6 @@ const Dashboard = () => {
   const [aggregateMode, setAggregateMode] = useState(true);
 
   // Log filtering and tabs
-  const [logFilter, setLogFilter] = useState("all");
   const [activeLogTab, setActiveLogTab] = useState("all");
 
   // Collapse state for worker sections

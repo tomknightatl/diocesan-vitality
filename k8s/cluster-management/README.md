@@ -49,7 +49,7 @@ cd k8s/cluster-management
 # Create everything in one go
 ./create-dev-stg-clusters.sh
 # Follow prompts to create:
-# - dv-dev and dv-stg clusters  
+# - dv-dev and dv-stg clusters
 # - ArgoCD with ApplicationSets
 # - Cloudflare tunnels with DNS
 ```
@@ -62,7 +62,7 @@ cd k8s/cluster-management
   - 0x fast-pool nodes (s-2vcpu-4gb, scaled to 0)
   - Namespace: `diocesan-vitality-dev`
 
-- **dv-stg**: Staging cluster  
+- **dv-stg**: Staging cluster
   - 1x slow-pool node (s-1vcpu-2gb)
   - 0x fast-pool nodes (s-2vcpu-4gb, scaled to 0)
   - Namespace: `diocesan-vitality-staging`
@@ -81,7 +81,7 @@ cd k8s/cluster-management
   - Automatic DNS record creation
 
 ### DNS & Access
-- **Development**: 
+- **Development**:
   - UI: `https://dev.ui.diocesanvitality.org`
   - API: `https://dev.api.diocesanvitality.org`
   - ArgoCD: `https://dev.argocd.diocesanvitality.org`
@@ -237,7 +237,7 @@ git commit -m "feat: new feature"
 git push origin develop
 # ArgoCD automatically deploys to dv-dev
 
-# Deploy to staging  
+# Deploy to staging
 git checkout main
 git merge develop
 git push origin main
