@@ -316,16 +316,6 @@ const Dashboard = () => {
     return icons[workerStatus] || "⚪";
   };
 
-  const formatTimeAgo = (seconds) => {
-    if (seconds < 60) return `${seconds}s ago`;
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 48) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    return `${days}d ago`;
-  };
-
   const getWorkerTypeDisplay = (workerType) => {
     const types = {
       discovery: "Discovery",
@@ -486,20 +476,56 @@ const Dashboard = () => {
                                 Status
                               </small>
                             </Col>
-                            <Col md={2} className="text-center">
+                            <Col md={1} className="text-center">
                               <div className="fw-bold">
-                                {formatTimeAgo(worker.time_since_update)}
+                                {worker.cpu_percent
+                                  ? `${formatDecimal(worker.cpu_percent)}%`
+                                  : "N/A"}
+                              </div>
+                              <small className="text-muted d-block">CPU%</small>
+                            </Col>
+                            <Col md={1} className="text-center">
+                              <div className="fw-bold">
+                                {worker.memory_percent
+                                  ? `${formatDecimal(worker.memory_percent)}%`
+                                  : "N/A"}
                               </div>
                               <small className="text-muted d-block">
-                                Last Seen
+                                Memory%
+                              </small>
+                            </Col>
+                            <Col md={1} className="text-center">
+                              <div className="fw-bold">
+                                {worker.uptime
+                                  ? formatDuration(worker.uptime)
+                                  : "N/A"}
+                              </div>
+                              <small className="text-muted d-block">
+                                Uptime
+                              </small>
+                            </Col>
+                            <Col md={1} className="text-center">
+                              <div
+                                className={`fw-bold ${worker.recent_errors > 0 ? "text-danger" : "text-success"}`}
+                              >
+                                {worker.recent_errors || 0}
+                              </div>
+                              <small className="text-muted d-block">
+                                Errors
                               </small>
                             </Col>
                             <Col md={2} className="text-center">
                               <div className="fw-bold">
-                                {worker.parishes_processed || 0}
+                                {worker.worker_type === "discovery" ||
+                                worker.worker_type === "extraction"
+                                  ? worker.current_diocese || "N/A"
+                                  : worker.current_parish || "N/A"}
                               </div>
                               <small className="text-muted d-block">
-                                Parishes
+                                {worker.worker_type === "discovery" ||
+                                worker.worker_type === "extraction"
+                                  ? "Diocese"
+                                  : "Parish"}
                               </small>
                             </Col>
                             <Col md={1} className="text-center">
@@ -618,20 +644,58 @@ const Dashboard = () => {
                                   Status
                                 </small>
                               </Col>
-                              <Col md={2} className="text-center">
+                              <Col md={1} className="text-center">
                                 <div className="fw-bold text-muted">
-                                  {formatTimeAgo(worker.time_since_update)}
+                                  {worker.cpu_percent
+                                    ? `${formatDecimal(worker.cpu_percent)}%`
+                                    : "N/A"}
                                 </div>
                                 <small className="text-muted d-block">
-                                  Last Seen
+                                  CPU%
+                                </small>
+                              </Col>
+                              <Col md={1} className="text-center">
+                                <div className="fw-bold text-muted">
+                                  {worker.memory_percent
+                                    ? `${formatDecimal(worker.memory_percent)}%`
+                                    : "N/A"}
+                                </div>
+                                <small className="text-muted d-block">
+                                  Memory%
+                                </small>
+                              </Col>
+                              <Col md={1} className="text-center">
+                                <div className="fw-bold text-muted">
+                                  {worker.uptime
+                                    ? formatDuration(worker.uptime)
+                                    : "N/A"}
+                                </div>
+                                <small className="text-muted d-block">
+                                  Uptime
+                                </small>
+                              </Col>
+                              <Col md={1} className="text-center">
+                                <div
+                                  className={`fw-bold text-muted ${worker.recent_errors > 0 ? "text-danger" : ""}`}
+                                >
+                                  {worker.recent_errors || 0}
+                                </div>
+                                <small className="text-muted d-block">
+                                  Errors
                                 </small>
                               </Col>
                               <Col md={2} className="text-center">
                                 <div className="fw-bold text-muted">
-                                  {worker.parishes_processed || 0}
+                                  {worker.worker_type === "discovery" ||
+                                  worker.worker_type === "extraction"
+                                    ? worker.current_diocese || "N/A"
+                                    : worker.current_parish || "N/A"}
                                 </div>
                                 <small className="text-muted d-block">
-                                  Parishes
+                                  {worker.worker_type === "discovery" ||
+                                  worker.worker_type === "extraction"
+                                    ? "Diocese"
+                                    : "Parish"}
                                 </small>
                               </Col>
                               <Col md={1} className="text-center">
@@ -1010,24 +1074,22 @@ const Dashboard = () => {
                           } else if (workerType === "extraction") {
                             return (
                               <>
+                                <th>Duration</th>
                                 <th>Diocese</th>
                                 <th>Source URL</th>
-                                <th>Worker ID</th>
-                                <th>Parishes</th>
-                                <th>Success Rate</th>
-                                <th>Duration</th>
+                                <th>Parishes Extracted</th>
                                 <th>Status</th>
                               </>
                             );
                           } else if (workerType === "schedule") {
                             return (
                               <>
+                                <th>Duration</th>
                                 <th>Diocese</th>
                                 <th>Parish</th>
                                 <th>Parish URL</th>
                                 <th>Schedules Found</th>
                                 <th>Mass Times</th>
-                                <th>Duration</th>
                                 <th>Status</th>
                               </>
                             );
@@ -1084,32 +1146,14 @@ const Dashboard = () => {
                               )}
                               {workerType === "extraction" && (
                                 <>
+                                  <td>{formatDuration(extraction.duration)}</td>
                                   <td>{extraction.diocese_name}</td>
                                   <td>
                                     <small className="text-muted">
                                       {extraction.source_url || "N/A"}
                                     </small>
                                   </td>
-                                  <td>
-                                    <small className="text-muted">
-                                      {extraction.worker_id || selectedWorker}
-                                    </small>
-                                  </td>
                                   <td>{extraction.parishes_extracted}</td>
-                                  <td>
-                                    <Badge
-                                      bg={
-                                        extraction.success_rate >= 90
-                                          ? "success"
-                                          : extraction.success_rate >= 70
-                                            ? "warning"
-                                            : "danger"
-                                      }
-                                    >
-                                      {formatDecimal(extraction.success_rate)}%
-                                    </Badge>
-                                  </td>
-                                  <td>{formatDuration(extraction.duration)}</td>
                                   <td>
                                     <Badge
                                       bg={
@@ -1125,6 +1169,7 @@ const Dashboard = () => {
                               )}
                               {workerType === "schedule" && (
                                 <>
+                                  <td>{formatDuration(extraction.duration)}</td>
                                   <td>{extraction.diocese_name || "N/A"}</td>
                                   <td>{extraction.parish_name || "N/A"}</td>
                                   <td>
@@ -1141,7 +1186,6 @@ const Dashboard = () => {
                                       {extraction.mass_times || "N/A"}
                                     </small>
                                   </td>
-                                  <td>{formatDuration(extraction.duration)}</td>
                                   <td>
                                     <Badge
                                       bg={
@@ -1206,12 +1250,7 @@ const Dashboard = () => {
         <Col>
           <Card>
             <Card.Body>
-              <Card.Title className="d-flex justify-content-between align-items-center">
-                <span>📋 Live Logs</span>
-                {selectedWorker !== "aggregate" && (
-                  <Badge bg="primary">Worker: {selectedWorker}</Badge>
-                )}
-              </Card.Title>
+              <Card.Title>📋 Live Logs</Card.Title>
 
               <div
                 className="live-log bg-dark text-light p-3 rounded text-start"
