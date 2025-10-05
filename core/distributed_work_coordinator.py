@@ -418,10 +418,10 @@ class DistributedWorkCoordinator:
         """
         try:
             # Get parishes that have basic info but no schedule data
-            # This is a simplified implementation - you might want more sophisticated logic
+            # Note: Fetching without foreign key join to avoid PostgREST relationship errors
             parishes_response = (
                 self.supabase.table("Parishes")
-                .select("id, Name, Web, diocese_id, Dioceses(Name)")
+                .select("id, Name, Web, diocese_id")
                 .is_("mass_schedule_found", None)
                 .limit(max_parishes)
                 .execute()
