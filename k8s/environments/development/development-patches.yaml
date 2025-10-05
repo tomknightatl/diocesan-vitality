@@ -49,7 +49,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: pipeline-deployment
+  name: pipeline-discovery-deployment
 spec:
   template:
     spec:
@@ -62,12 +62,45 @@ spec:
               value: "true"
             - name: LOG_LEVEL
               value: "DEBUG"
-            - name: WORKER_TYPE
-              value: "schedule"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pipeline-extraction-deployment
+spec:
+  replicas: 1 # Dev: reduce to 1 replica
+  template:
+    spec:
+      containers:
+        - name: pipeline
+          env:
+            - name: ENVIRONMENT
+              value: "development"
+            - name: DEBUG
+              value: "true"
+            - name: LOG_LEVEL
+              value: "DEBUG"
           resources:
             requests:
-              memory: "1536Mi"
+              memory: "1.5Gi" # Dev: slightly reduced
               cpu: "600m"
             limits:
-              memory: "2048Mi"
-              cpu: "1000m"
+              memory: "3Gi"
+              cpu: "1200m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pipeline-schedule-deployment
+spec:
+  template:
+    spec:
+      containers:
+        - name: pipeline
+          env:
+            - name: ENVIRONMENT
+              value: "development"
+            - name: DEBUG
+              value: "true"
+            - name: LOG_LEVEL
+              value: "DEBUG"

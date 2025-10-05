@@ -4,7 +4,9 @@ kind: Kustomization
 resources:
   - backend-deployment.yaml
   - frontend-deployment.yaml
-  - pipeline-deployment.yaml
+  - pipeline-discovery-deployment.yaml
+  - pipeline-extraction-deployment.yaml
+  - pipeline-schedule-deployment.yaml
   - backend-service.yaml
   - frontend-service.yaml
   - pipeline-hpa.yaml
