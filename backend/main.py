@@ -10,7 +10,7 @@ from typing import Dict, List, Set
 
 import psutil
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import BackgroundTasks, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.websockets import WebSocketState
@@ -27,6 +27,17 @@ supabase_key = os.getenv("SUPABASE_KEY")
 if not supabase_url or not supabase_key:
     raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in environment variables")
 supabase: Client = create_client(supabase_url, supabase_key)
+
+
+# Chart cache directory
+CHART_CACHE_DIR = Path("/tmp/charts")
+CHART_CACHE_DIR.mkdir(exist_ok=True)
+
+# Chart generation lock to prevent concurrent generation
+import threading
+
+chart_generation_lock = threading.Lock()
+chart_generation_in_progress = False
 
 
 # Global monitoring state
@@ -493,6 +504,15 @@ async def lifespan(app: FastAPI):
     print("🖥️ Real-time monitoring dashboard backend started")
     print(f"📊 WebSocket monitoring available at: /ws/monitoring")
     print(f"🔧 API monitoring endpoints available at: /api/monitoring/*")
+
+    # Generate charts on startup in background thread
+    import threading
+
+    def startup_chart_generation():
+        print("📊 Starting initial chart generation on startup...")
+        generate_all_charts_background()
+
+    threading.Thread(target=startup_chart_generation, daemon=True).start()
 
     yield
 
@@ -1216,89 +1236,142 @@ async def set_monitoring_mode(mode: str):
         return {"error": str(e)}
 
 
+def generate_all_charts_background():
+    """Background task to generate all charts and cache them to disk"""
+    global chart_generation_in_progress
+
+    # Check if generation is already in progress
+    if chart_generation_in_progress:
+        print("📊 Chart generation already in progress, skipping")
+        return
+
+    with chart_generation_lock:
+        chart_generation_in_progress = True
+        try:
+            import time
+
+            import matplotlib
+            import matplotlib.dates as mdates
+            import matplotlib.pyplot as plt
+            import pandas as pd
+
+            matplotlib.use("Agg")
+
+            table_map = {
+                "dioceses_records_over_time.png": "Dioceses",
+                "diocesesparishdirectory_records_over_time.png": "DiocesesParishDirectory",
+                "parishes_records_over_time.png": "Parishes",
+                "parishdata_records_over_time.png": "ParishData",
+            }
+
+            print(f"📊 Generating {len(table_map)} charts...")
+            start_time = time.time()
+
+            for chart_name, table_name in table_map.items():
+                try:
+                    # Fetch data with pagination
+                    all_data = []
+                    batch_size = 1000
+                    offset = 0
+
+                    while True:
+                        response = supabase.table(table_name).select("*").range(offset, offset + batch_size - 1).execute()
+                        batch_data = response.data
+                        if not batch_data:
+                            break
+                        all_data.extend(batch_data)
+                        if len(batch_data) < batch_size:
+                            break
+                        offset += batch_size
+
+                    if not all_data:
+                        print(f"⚠️ No data for {table_name}, skipping chart")
+                        continue
+
+                    df = pd.DataFrame(all_data)
+
+                    # Convert date columns
+                    date_cols = []
+                    if "created_at" in df.columns:
+                        df["created_at"] = pd.to_datetime(df["created_at"], utc=True, errors="coerce")
+                        date_cols.append("created_at")
+                    if "extracted_at" in df.columns:
+                        df["extracted_at"] = pd.to_datetime(df["extracted_at"], utc=True, errors="coerce")
+                        date_cols.append("extracted_at")
+
+                    # Exclude created_at for specific tables
+                    if table_name in ["Dioceses", "Parishes"] and "created_at" in date_cols:
+                        date_cols.remove("created_at")
+
+                    if not date_cols:
+                        print(f"⚠️ No date columns for {table_name}, skipping chart")
+                        continue
+
+                    # Generate chart
+                    fig, ax = plt.subplots(figsize=(10, 6))
+                    for col in date_cols:
+                        df_col = df.dropna(subset=[col])
+                        counts = df_col.set_index(col).resample("D").size().cumsum()
+                        ax.plot(counts.index, counts.values, marker="o", linewidth=2, markersize=4)
+
+                    ax.set_title(f"{table_name} Records Over Time", fontsize=16, fontweight="bold")
+                    ax.grid(True, alpha=0.3)
+                    ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
+                    plt.xticks(rotation=45)
+
+                    # Save to cache
+                    chart_path = CHART_CACHE_DIR / chart_name
+                    plt.savefig(chart_path, format="png", dpi=150, bbox_inches="tight")
+                    plt.close(fig)
+
+                    print(f"✅ Generated and cached: {chart_name} ({len(all_data)} records)")
+
+                except Exception as e:
+                    print(f"❌ Error generating {chart_name}: {e}")
+
+            elapsed = time.time() - start_time
+            print(f"📊 Chart generation completed in {elapsed:.1f}s")
+
+        finally:
+            chart_generation_in_progress = False
+
+
 @app.get("/api/charts/{chart_name}")
-async def get_chart(chart_name: str):
-    """Generate and serve chart images on-demand"""
-    from io import BytesIO
-
-    import matplotlib
-    import matplotlib.dates as mdates
-    import matplotlib.pyplot as plt
-    import pandas as pd
-
-    matplotlib.use("Agg")  # Use non-GUI backend
+async def get_chart(chart_name: str, background_tasks: BackgroundTasks):
+    """Serve cached chart images, generating on-demand if needed"""
+    import time
 
     # Validate chart name
-    table_map = {
-        "dioceses_records_over_time.png": "Dioceses",
-        "diocesesparishdirectory_records_over_time.png": "DiocesesParishDirectory",
-        "parishes_records_over_time.png": "Parishes",
-        "parishdata_records_over_time.png": "ParishData",
-    }
+    allowed_charts = [
+        "dioceses_records_over_time.png",
+        "diocesesparishdirectory_records_over_time.png",
+        "parishes_records_over_time.png",
+        "parishdata_records_over_time.png",
+    ]
 
-    if chart_name not in table_map:
+    if chart_name not in allowed_charts:
         raise HTTPException(status_code=404, detail="Chart not found")
 
-    table_name = table_map[chart_name]
+    chart_path = CHART_CACHE_DIR / chart_name
 
-    try:
-        # Fetch data from database with pagination
-        all_data = []
-        batch_size = 1000
-        offset = 0
+    # Check if cached chart exists and is fresh (< 1 hour old)
+    cache_valid = False
+    if chart_path.exists():
+        cache_age = time.time() - chart_path.stat().st_mtime
+        cache_valid = cache_age < 3600  # 1 hour
 
-        while True:
-            response = supabase.table(table_name).select("*").range(offset, offset + batch_size - 1).execute()
-            batch_data = response.data
-            if not batch_data:
-                break
-            all_data.extend(batch_data)
-            if len(batch_data) < batch_size:
-                break
-            offset += batch_size
+    # If cache is stale or missing, generate in background and serve what we have
+    if not cache_valid:
+        # Trigger background generation for all charts
+        background_tasks.add_task(generate_all_charts_background)
 
-        if not all_data:
-            raise HTTPException(status_code=404, detail=f"No data found for {table_name}")
+        # If no cached file exists at all, generate synchronously
+        if not chart_path.exists():
+            print(f"📊 No cached chart for {chart_name}, generating synchronously...")
+            generate_all_charts_background()
 
-        df = pd.DataFrame(all_data)
-
-        # Convert date columns
-        date_cols = []
-        if "created_at" in df.columns:
-            df["created_at"] = pd.to_datetime(df["created_at"], utc=True, errors="coerce")
-            date_cols.append("created_at")
-        if "extracted_at" in df.columns:
-            df["extracted_at"] = pd.to_datetime(df["extracted_at"], utc=True, errors="coerce")
-            date_cols.append("extracted_at")
-
-        # Exclude created_at for specific tables
-        if table_name in ["Dioceses", "Parishes"] and "created_at" in date_cols:
-            date_cols.remove("created_at")
-
-        if not date_cols:
-            raise HTTPException(status_code=500, detail="No date columns found")
-
-        # Generate chart
-        fig, ax = plt.subplots(figsize=(10, 6))
-        for col in date_cols:
-            df_col = df.dropna(subset=[col])
-            counts = df_col.set_index(col).resample("D").size().cumsum()
-            ax.plot(counts.index, counts.values, marker="o", linewidth=2, markersize=4)
-
-        ax.set_title(f"{table_name} Records Over Time", fontsize=16, fontweight="bold")
-        ax.grid(True, alpha=0.3)
-        ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
-        plt.xticks(rotation=45)
-
-        # Save to BytesIO
-        buf = BytesIO()
-        plt.savefig(buf, format="png", dpi=150, bbox_inches="tight")
-        buf.seek(0)
-        plt.close(fig)
-
-        from fastapi.responses import StreamingResponse
-
-        return StreamingResponse(buf, media_type="image/png")
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Chart generation failed: {str(e)}")
+    # Serve from cache
+    if chart_path.exists():
+        return FileResponse(chart_path, media_type="image/png")
+    else:
+        raise HTTPException(status_code=500, detail="Chart generation failed")
