@@ -34,7 +34,6 @@ from core.monitoring_client import ExtractionMonitoring, get_monitoring_client
 from pipeline.extract_dioceses import main as extract_dioceses_main
 from pipeline.extract_schedule_respectful import main as extract_schedule_main
 from pipeline.find_parishes import find_parish_directories
-from pipeline.report_statistics import main as report_statistics_main
 
 logger = get_logger(__name__)
 
@@ -45,8 +44,7 @@ class WorkerType(Enum):
     DISCOVERY = "discovery"  # Steps 1-2: Diocese + Parish directory discovery
     EXTRACTION = "extraction"  # Step 3: Parish detail extraction
     SCHEDULE = "schedule"  # Step 4: Schedule extraction
-    REPORTING = "reporting"  # Step 5: Report generation
-    ALL = "all"  # Backwards compatible - runs all steps
+    ALL = "all"  # Backwards compatible - runs all steps (1-4)
 
 
 class DistributedPipelineRunner:
@@ -120,10 +118,6 @@ class DistributedPipelineRunner:
             # Run specialized worker logic based on worker type
             await self._run_specialized_worker()
 
-            # Generate reports if this worker type handles reporting
-            if self.worker_type in [WorkerType.REPORTING, WorkerType.ALL]:
-                await self._run_reporting_if_needed()
-
             total_time = time.time() - start_time
             self.monitoring_client.send_log(
                 f"Pipeline │ 🎉 Distributed pipeline completed in {total_time:.1f} seconds", "INFO"
@@ -149,10 +143,8 @@ class DistributedPipelineRunner:
             await self._run_extraction_worker()
         elif self.worker_type == WorkerType.SCHEDULE:
             await self._run_schedule_worker()
-        elif self.worker_type == WorkerType.REPORTING:
-            await self._run_reporting_worker()
         elif self.worker_type == WorkerType.ALL:
-            # Backwards compatible - run coordinated extraction
+            # Backwards compatible - run coordinated extraction (Steps 1-4)
             await self._run_coordinated_extraction()
         else:
             logger.error(f"❌ Unknown worker type: {self.worker_type}")
@@ -240,32 +232,7 @@ class DistributedPipelineRunner:
             except asyncio.CancelledError:
                 pass
 
-    async def _run_reporting_worker(self):
-        """
-        Run reporting and analytics (Step 5).
-        Lightweight worker for data analysis and report generation.
-        """
-        logger.info("📊 Running reporting worker (Step 5)")
 
-        try:
-            while not self.shutdown_requested:
-                # Check if reports need to be generated
-                if await self.coordinator.should_generate_reports():
-                    self.monitoring_client.send_log("Step 5 │ Generating reports and analytics", "INFO")
-
-                    report_statistics_main()
-
-                    self.monitoring_client.send_log("Step 5 │ ✅ Report generation completed", "INFO")
-                    await self.coordinator.mark_reports_generated()
-
-                # Reports don't need to run frequently
-                await asyncio.sleep(600)  # 10 minute sleep for reporting
-
-        except Exception as e:
-            logger.error(f"❌ Error in reporting worker: {e}")
-            self.monitoring_client.report_error(
-                error_type="ReportingWorkerError", message=f"Reporting worker failed: {str(e)}"
-            )
 
     async def _run_coordinated_extraction(self):
         """
@@ -359,33 +326,7 @@ class DistributedPipelineRunner:
                     diocese=diocese["name"],
                 )
 
-    async def _run_reporting_if_needed(self):
-        """Run reporting step if no other worker is doing it"""
-        try:
-            # Simple coordination: only run reports if we're the "lead" worker
-            # (could be enhanced with more sophisticated coordination)
-            cluster_status = await self.coordinator.get_cluster_status()
 
-            # If we're the only worker or the first worker alphabetically, run reports
-            if not cluster_status["workers"] or self.coordinator.worker_id == min(
-                w["worker_id"] for w in cluster_status["workers"]
-            ):
-
-                logger.info("📊 Running report generation as lead worker")
-
-                self.monitoring_client.send_log("Reports │ Generating statistical reports", "INFO")
-
-                try:
-                    report_statistics_main()
-                    self.monitoring_client.send_log("Reports │ ✅ Report generation completed", "INFO")
-                except Exception as e:
-                    logger.error(f"❌ Report generation failed: {e}")
-                    self.monitoring_client.report_error(
-                        error_type="ReportingError", message=f"Report generation failed: {str(e)}"
-                    )
-
-        except Exception as e:
-            logger.error(f"❌ Error in reporting step: {e}")
 
     async def _heartbeat_loop(self):
         """Send periodic heartbeats to maintain worker registration"""
@@ -409,7 +350,7 @@ async def main_async():
         type=str,
         choices=[wt.value for wt in WorkerType],
         default=None,
-        help="Worker type specialization (discovery, extraction, schedule, reporting, all)",
+        help="Worker type specialization (discovery, extraction, schedule, all)",
     )
     parser.add_argument("--max_parishes_per_diocese", type=int, default=50, help="Max parishes to extract per diocese.")
     parser.add_argument(
