@@ -7,7 +7,7 @@ WORKDIR /app
 # Install dependencies with cache mount for faster builds
 COPY requirements.txt .
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt matplotlib pandas
 
 # Copy the rest of the application code
 COPY . .
