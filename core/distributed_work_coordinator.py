@@ -14,7 +14,7 @@ import time
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from core.db import get_supabase_client
 from core.logger import get_logger
@@ -59,7 +59,7 @@ class DistributedWorkCoordinator:
         self.pod_name = os.environ.get("HOSTNAME", socket.gethostname())
         self.supabase = get_supabase_client()
 
-        logger.info(f"🤝 Distributed Work Coordinator initialized")
+        logger.info("🤝 Distributed Work Coordinator initialized")
         logger.info(f"   • Worker ID: {self.worker_id}")
         logger.info(f"   • Worker Type: {self.worker_type}")
         logger.info(f"   • Pod Name: {self.pod_name}")
@@ -239,7 +239,7 @@ class DistributedWorkCoordinator:
                 )
 
             # Log selection summary
-            logger.info(f"📋 Diocese selection summary:")
+            logger.info("📋 Diocese selection summary:")
             logger.info(f"   • Total dioceses checked: {len(dioceses_response.data)}")
             logger.info(f"   • Skipped (no directory): {skipped_no_directory}")
             logger.info(f"   • Skipped (assigned/cooldown): {skipped_assigned}")
@@ -417,19 +417,38 @@ class DistributedWorkCoordinator:
             List of parish information for schedule extraction
         """
         try:
-            # Get parishes that have basic info but no schedule data
-            # This is a simplified implementation - you might want more sophisticated logic
+            # Get parishes that don't have schedule data in ParishScheduleSummary
+            # First, get parish IDs that already have schedule data
+            existing_schedules = (
+                self.supabase.table("ParishScheduleSummary")
+                .select("parish_id")
+                .execute()
+            )
+
+            existing_parish_ids = {row["parish_id"] for row in existing_schedules.data} if existing_schedules.data else set()
+
+            # Get parishes with websites that haven't been processed for schedules
             parishes_response = (
                 self.supabase.table("Parishes")
-                .select("id, Name, Website, Dioceses!inner(Name)")
-                .is_("mass_schedule_found", None)
-                .limit(max_parishes)
+                .select("id, Name, Web, diocese_id")
+                .not_.is_("Web", None)
+                .neq("Web", "")
+                .limit(max_parishes * 3)  # Get more than needed to filter
                 .execute()
             )
 
             if parishes_response.data:
-                logger.info(f"📋 Found {len(parishes_response.data)} parishes needing schedule extraction")
-                return parishes_response.data
+                # Filter out parishes that already have schedule data
+                unprocessed_parishes = [
+                    p for p in parishes_response.data
+                    if p["id"] not in existing_parish_ids
+                ][:max_parishes]
+
+                logger.info(
+                    f"📋 Found {len(unprocessed_parishes)} parishes needing schedule extraction "
+                    f"({len(existing_parish_ids)} already processed)"
+                )
+                return unprocessed_parishes
             else:
                 return []
 
@@ -445,7 +464,7 @@ class DistributedWorkCoordinator:
         try:
             # Check for recent report generation activity
             # This could be enhanced with a proper report tracking table
-            cutoff_time = datetime.utcnow() - timedelta(hours=1)
+            # cutoff_time = datetime.utcnow() - timedelta(hours=1)  # Not currently used
 
             # For now, always return True (reports can run)
             # In production, you'd track last report generation time

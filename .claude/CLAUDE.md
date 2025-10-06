@@ -103,6 +103,113 @@ includeClaudeAttribution: false
 - **NEVER claim a command "timed out" unless it actually reached the specified timeout duration**
 - **When commands fail quickly, analyze the actual error message rather than assuming timeout**
 
+## Local Development Workflow
+
+**🚀 CRITICAL: Test Locally First Before Using CI/CD Pipeline**
+
+- **ALWAYS test changes locally before pushing to CI/CD pipeline**
+- **Local testing is 10x faster than waiting for CI/CD pipeline (2-3 minutes vs seconds)**
+- **Complete local development instructions:** See [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md)
+
+### Quick Local Development Setup
+
+```bash
+# 1. Activate virtual environment
+cd /home/tomk/Repos/diocesan-vitality
+source .venv/bin/activate  # or: . .venv/bin/activate
+
+# 2. Start backend (in separate terminal)
+cd backend
+uvicorn main:app --reload --port 8000
+
+# 3. Start frontend (in separate terminal)
+cd frontend
+npm run dev  # Usually runs on http://localhost:5173
+
+# 4. Run pipeline scripts locally with monitoring
+export MONITORING_URL=http://localhost:8000
+python -m pipeline.extract_schedule --num_parishes 5
+python -m pipeline.async_extract_parishes --diocese_id 123 --pool_size 4
+
+# 5. View dashboard at http://localhost:5173/dashboard
+```
+
+### Local Testing Workflow
+
+**Before pushing ANY code changes:**
+
+1. **Test the specific script locally:**
+
+   ```bash
+   source .venv/bin/activate
+   python -m pipeline.extract_schedule --num_parishes 1
+   ```
+
+2. **Verify monitoring messages (if applicable):**
+
+   ```bash
+   # Start backend first
+   cd backend && uvicorn main:app --reload --port 8000
+
+   # Run script with monitoring
+   export MONITORING_URL=http://localhost:8000
+   python -m pipeline.extract_schedule --num_parishes 1
+
+   # Check backend logs for "POST /api/monitoring/log" (200 OK)
+   ```
+
+3. **Check for errors:**
+   - Database connection errors
+   - Import/module errors
+   - Function signature mismatches
+   - Column name errors
+
+4. **Only after local testing succeeds, commit and push to trigger CI/CD**
+
+### Common Local Testing Commands
+
+```bash
+# Quick environment check
+make env-check
+
+# Database connectivity test
+make db-check
+
+# Test monitoring integration
+python test_monitoring_live.py
+
+# Run specific pipeline step
+python -m pipeline.extract_dioceses --max_dioceses 5
+python -m pipeline.find_parishes --diocese_id 123
+python -m pipeline.async_extract_parishes --diocese_id 123 --pool_size 4
+python -m pipeline.extract_schedule --num_parishes 10
+
+# Check for Python errors without running full extraction
+python -c "from pipeline import extract_schedule; print('Import successful')"
+```
+
+### Why Local Testing is Critical
+
+- ✅ **Instant feedback** - See errors immediately, not after 3-minute pipeline
+- ✅ **Database schema validation** - Catch column name errors instantly
+- ✅ **Function signature checks** - Verify parameters before deployment
+- ✅ **Monitoring verification** - Confirm messages send correctly
+- ✅ **Faster iteration** - Fix multiple issues in minutes, not hours
+- ✅ **CI/CD cost savings** - Reduce unnecessary pipeline runs
+
+### Local Development Reference
+
+**Full Documentation:** [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md)
+
+**Key Sections:**
+
+- Environment setup and virtual environment activation
+- Backend and frontend startup procedures
+- Running pipeline scripts with monitoring
+- Database connection testing
+- WebDriver and Chrome setup
+- Common troubleshooting scenarios
+
 ## CI/CD Pipeline and Branch Strategy
 
 **🚀 Automated Deployment Pipeline**

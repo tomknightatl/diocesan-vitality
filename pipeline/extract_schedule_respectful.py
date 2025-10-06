@@ -7,112 +7,24 @@ including robots.txt compliance, rate limiting, and blocking detection.
 """
 
 import argparse
-import json
 import time
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 
-import requests
 from bs4 import BeautifulSoup
 
-from pipeline import config
 from core.db import get_supabase_client
 from core.logger import get_logger
+from core.monitoring_client import MonitoringClient
 from core.schedule_ai_extractor import ScheduleAIExtractor, save_ai_schedule_results
 from core.schedule_keywords import load_keywords_from_database
+from pipeline.respectful_automation import RespectfulAutomation
+
+# Import helper functions from extract_schedule temporarily
+# TODO: Move these functions to a shared utility module
 from pipeline.extract_schedule import choose_best_url, get_parishes_to_process, get_sitemap_urls, get_suppression_urls
-from pipeline.respectful_automation import RespectfulAutomation, create_blocking_report
 
 logger = get_logger(__name__)
-
-
-class MonitoringClient:
-    """Client for sending updates to the monitoring API."""
-
-    def __init__(self, base_url: str = "http://127.0.0.1:8000"):
-        self.base_url = base_url
-        self.session = requests.Session()
-        self.session.timeout = 5  # Quick timeout for monitoring calls
-
-    def send_log(self, message: str, level: str = "INFO", parish_id: int = None):
-        """Send a log entry to the monitoring API."""
-        try:
-            data = {
-                "message": message,
-                "level": level,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "parish_id": parish_id,
-            }
-            self.session.post(f"{self.base_url}/api/monitoring/log", json=data)
-        except Exception as e:
-            # Silently fail - don't let monitoring break the main process
-            pass
-
-    def update_extraction_status(
-        self,
-        status: str,
-        current_diocese: str = None,
-        parishes_processed: int = 0,
-        total_parishes: int = 0,
-        success_rate: float = 0.0,
-        progress_percentage: float = 0.0,
-    ):
-        """Update extraction status in the monitoring API."""
-        try:
-            data = {
-                "status": status,
-                "current_diocese": current_diocese,
-                "parishes_processed": parishes_processed,
-                "total_parishes": total_parishes,
-                "success_rate": success_rate,
-                "progress_percentage": progress_percentage,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            }
-            if status == "running" and not hasattr(self, "_start_time"):
-                self._start_time = datetime.now(timezone.utc).isoformat()
-                data["started_at"] = self._start_time
-            elif hasattr(self, "_start_time"):
-                data["started_at"] = self._start_time
-
-            self.session.post(f"{self.base_url}/api/monitoring/extraction_status", json=data)
-        except Exception as e:
-            # Silently fail - don't let monitoring break the main process
-            pass
-
-    def update_performance_metrics(
-        self, parishes_per_minute: float = 0.0, queue_size: int = 0, total_requests: int = 0, successful_requests: int = 0
-    ):
-        """Update performance metrics in the monitoring API."""
-        try:
-            data = {
-                "parishes_per_minute": parishes_per_minute,
-                "queue_size": queue_size,
-                "pool_utilization": 0.0,  # Not applicable for this script
-                "total_requests": total_requests,
-                "successful_requests": successful_requests,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            }
-            self.session.post(f"{self.base_url}/api/monitoring/performance_metrics", json=data)
-        except Exception as e:
-            # Silently fail - don't let monitoring break the main process
-            pass
-
-    def report_error(
-        self, error_message: str, error_type: str = "extraction_error", diocese: str = None, parish_id: int = None
-    ):
-        """Report an error to the monitoring API."""
-        try:
-            data = {
-                "message": error_message,
-                "type": error_type,
-                "diocese": diocese,
-                "parish_id": parish_id,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            }
-            self.session.post(f"{self.base_url}/api/monitoring/report_error", json=data)
-        except Exception as e:
-            # Silently fail - don't let monitoring break the main process
-            pass
 
 
 def update_parish_blocking_data(supabase, parish_id: int, blocking_info: dict, robots_info: dict):
@@ -360,7 +272,13 @@ def process_parish_with_blocking_detection(
         }
 
 
-def main(num_parishes: int = None, parish_id: int = None, max_pages_per_parish: int = 10, diocese_id: int = None):
+def main(
+    num_parishes: int = None,
+    parish_id: int = None,
+    max_pages_per_parish: int = 10,
+    diocese_id: int = None,
+    monitoring_client=None,
+):
     """Main function for respectful parish processing with blocking detection."""
 
     logger.info("🚀 Starting respectful parish website analysis with blocking detection")
@@ -392,15 +310,79 @@ def main(num_parishes: int = None, parish_id: int = None, max_pages_per_parish: 
     blocked_count = 0
     accessible_count = 0
     schedule_found_count = 0
+    start_time = time.time()
 
     for parish_url, p_id in parishes_to_process:
         processed_count += 1
         logger.info(f"🔄 [{processed_count}/{total_parishes}] Processing parish {p_id}: {parish_url}")
 
+        # Fetch parish info for monitoring
+        parish_info = None
         try:
+            # Note: Column names have spaces in the schema
+            response = (
+                supabase.table("Parishes")
+                .select('id, Name, "Street Address", City, State, "Zip Code", full_address, diocese_id')
+                .eq("id", p_id)
+                .execute()
+            )
+            if response.data:
+                parish_data = response.data[0]
+
+                # Construct full address
+                full_address = parish_data.get("full_address", "")
+                if not full_address:
+                    address_parts = []
+                    if parish_data.get("Street Address"):
+                        address_parts.append(parish_data["Street Address"])
+                    if parish_data.get("City"):
+                        city_state = parish_data["City"]
+                        if parish_data.get("State"):
+                            city_state += f", {parish_data['State']}"
+                        if parish_data.get("Zip Code"):
+                            city_state += f" {parish_data['Zip Code']}"
+                        address_parts.append(city_state)
+                    full_address = ", ".join(address_parts) if address_parts else "Unknown Address"
+
+                # Fetch diocese name separately
+                diocese_name = "Unknown Diocese"
+                diocese_id = parish_data.get("diocese_id")
+                if diocese_id:
+                    try:
+                        diocese_response = supabase.table("Dioceses").select("Name").eq("id", diocese_id).execute()
+                        if diocese_response.data:
+                            diocese_name = diocese_response.data[0].get("Name", "Unknown Diocese")
+                    except Exception:
+                        pass
+
+                parish_info = {
+                    "name": parish_data.get("Name", "Unknown Parish"),
+                    "address": full_address,
+                    "diocese_name": diocese_name,
+                }
+        except Exception as e:
+            logger.warning(f"Could not fetch parish info for {p_id}: {e}")
+            parish_info = {
+                "name": "Unknown Parish",
+                "address": "Unknown Address",
+                "diocese_name": "Unknown Diocese",
+            }
+
+        # Send "Visiting" message to monitoring
+        if monitoring_client and parish_info:
+            monitoring_client.send_log(
+                f"Step 4 │ 🔍 [{processed_count}/{total_parishes}] Visiting {parish_info['name']} "
+                f"→ <a href='{parish_url}' target='_blank'>{parish_url}</a>",
+                "INFO",
+                worker_type="schedule",
+            )
+
+        try:
+            extraction_start = time.time()
             result = process_parish_with_blocking_detection(
                 parish_url, p_id, supabase, automation, suppression_urls, max_pages_per_parish
             )
+            extraction_duration = time.time() - extraction_start
 
             # Update statistics
             if result["blocking_info"].get("is_blocked"):
@@ -408,14 +390,62 @@ def main(num_parishes: int = None, parish_id: int = None, max_pages_per_parish: 
             else:
                 accessible_count += 1
 
-            if result.get("schedules_found", 0) > 0:
+            schedules_found = result.get("schedules_found", 0)
+            if schedules_found > 0:
                 schedule_found_count += 1
 
             logger.info(f"✅ [{processed_count}/{total_parishes}] Completed parish {p_id}")
 
+            # Send "Completed" message to monitoring
+            if monitoring_client and parish_info:
+                status_emoji = "✅" if schedules_found > 0 else "⚠️"
+                monitoring_client.send_log(
+                    f"Step 4 │ {status_emoji} [{processed_count}/{total_parishes}] Completed {parish_info['name']} "
+                    f"({parish_info['address']}) - {schedules_found} schedule(s) found in {extraction_duration:.1f}s",
+                    "INFO" if schedules_found > 0 else "WARNING",
+                    worker_type="schedule",
+                )
+
+            # Send extraction_complete for Recent History
+            if monitoring_client and hasattr(monitoring_client, "report_extraction_complete") and parish_info:
+                # Construct mass_times from extraction results
+                mass_times_parts = []
+                extraction_results = result.get("extraction_results", {})
+                if "reconciliation" in extraction_results:
+                    recon_data = extraction_results["reconciliation"].get("extracted_data", {})
+                    if recon_data.get("schedule_text"):
+                        mass_times_parts.append(f"Reconciliation: {recon_data['schedule_text'][:50]}")
+                if "adoration" in extraction_results:
+                    ador_data = extraction_results["adoration"].get("extracted_data", {})
+                    if ador_data.get("schedule_text"):
+                        mass_times_parts.append(f"Adoration: {ador_data['schedule_text'][:50]}")
+
+                mass_times = " | ".join(mass_times_parts) if mass_times_parts else "No schedules found"
+
+                monitoring_client.report_extraction_complete(
+                    diocese_name=parish_info["diocese_name"],
+                    parish_name=parish_info["name"],
+                    parish_url=parish_url,
+                    parish_address=parish_info["address"],
+                    schedules_found=schedules_found,
+                    mass_times=mass_times,
+                    duration=extraction_duration,
+                    status="completed",
+                )
+
         except Exception as e:
             logger.error(f"❌ [{processed_count}/{total_parishes}] Error processing parish {p_id}: {e}")
             continue
+
+    # Send final summary to monitoring
+    total_time = time.time() - start_time
+    if monitoring_client:
+        monitoring_client.send_log(
+            f"Step 4 │ 🎉 Batch complete: {processed_count} parishes processed, "
+            f"{schedule_found_count} with schedules in {total_time:.1f}s",
+            "INFO",
+            worker_type="schedule",
+        )
 
     # Print final summary
     logger.info("🎉 Respectful parish analysis completed!")
@@ -435,9 +465,19 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    # Initialize monitoring client if MONITORING_URL is set
+    import os
+
+    monitoring_client = None
+    monitoring_url = os.getenv("MONITORING_URL")
+    if monitoring_url:
+        monitoring_client = MonitoringClient(monitoring_url, worker_id="schedule-local")
+        logger.info(f"Monitoring enabled: {monitoring_url}")
+
     main(
         num_parishes=args.num_parishes,
         parish_id=args.parish_id,
         max_pages_per_parish=args.max_pages_per_parish,
         diocese_id=args.diocese_id,
+        monitoring_client=monitoring_client,
     )

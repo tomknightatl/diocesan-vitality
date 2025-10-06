@@ -3,7 +3,6 @@
 
 import argparse
 import heapq
-import os
 import random
 import re
 import time
@@ -23,12 +22,13 @@ from core.db import get_supabase_client  # Import the get_supabase_client functi
 from core.enhanced_url_manager import get_enhanced_url_manager
 from core.intelligent_parish_prioritizer import get_intelligent_parish_prioritizer
 from core.logger import get_logger
+from core.monitoring_client import MonitoringClient
 from core.schedule_ai_extractor import ScheduleAIExtractor, save_ai_schedule_results
 from core.schedule_keywords import get_all_keywords_for_priority_calculation, load_keywords_from_database
 from core.stealth_browser import get_stealth_browser
 from core.url_visit_tracker import VisitTracker, get_url_visit_tracker
 from core.utils import normalize_url  # Import normalize_url
-from supabase import Client, create_client
+from supabase import Client
 
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
@@ -425,8 +425,6 @@ def get_sitemap_urls(url: str) -> list[str]:
     if normalized_url in _sitemap_cache:
         logger.debug(f"Returning sitemap from cache for {url}")
         return _sitemap_cache[normalized_url]
-
-    sitemap_urls = []
 
     # Try multiple sitemap locations and formats
     sitemap_locations = [
@@ -1129,6 +1127,85 @@ def _get_parishes_simple_fallback(
         return []
 
 
+def get_parish_metadata(supabase: Client, parish_ids: list) -> dict:
+    """
+    Fetch complete parish metadata including name, address, and diocese information.
+
+    Args:
+        supabase: Supabase client
+        parish_ids: List of parish IDs to fetch
+
+    Returns:
+        Dictionary mapping parish_id to metadata dict with keys: name, website, address, diocese_name, diocese_id
+    """
+    if not parish_ids:
+        return {}
+
+    try:
+        # Fetch parish data (without join - works in all environments)
+        # Note: Column names have spaces in the actual schema
+        parish_response = (
+            supabase.table("Parishes")
+            .select('id, Name, Web, "Street Address", City, State, "Zip Code", full_address, diocese_id')
+            .in_("id", parish_ids)
+            .execute()
+        )
+
+        # Collect unique diocese IDs and fetch their names
+        diocese_ids = list(set(p.get("diocese_id") for p in parish_response.data if p.get("diocese_id")))
+        diocese_names = {}
+
+        if diocese_ids:
+            try:
+                diocese_response = (
+                    supabase.table("Dioceses")
+                    .select("id, Name")
+                    .in_("id", diocese_ids)
+                    .execute()
+                )
+                diocese_names = {d["id"]: d.get("Name", "Unknown Diocese") for d in diocese_response.data}
+            except Exception as e:
+                logger.warning(f"Could not fetch diocese names: {e}")
+
+        parish_metadata = {}
+        for p in parish_response.data:
+            # Use full_address if available, otherwise construct from components
+            full_address = p.get("full_address", "")
+
+            if not full_address:
+                # Construct full address from components (with space-separated column names)
+                address_parts = []
+                if p.get("Street Address"):
+                    address_parts.append(p["Street Address"])
+                if p.get("City"):
+                    city_state = p["City"]
+                    if p.get("State"):
+                        city_state += f", {p['State']}"
+                    if p.get("Zip Code"):
+                        city_state += f" {p['Zip Code']}"
+                    address_parts.append(city_state)
+                full_address = ", ".join(address_parts) if address_parts else ""
+
+            # Get diocese name from lookup
+            diocese_id = p.get("diocese_id")
+            diocese_name = diocese_names.get(diocese_id, "Unknown Diocese") if diocese_id else "Unknown Diocese"
+
+            parish_metadata[p["id"]] = {
+                "name": p.get("Name", "Unknown Parish"),
+                "website": p.get("Web", ""),
+                "address": full_address,
+                "diocese_name": diocese_name,
+                "diocese_id": diocese_id,
+            }
+
+        logger.info(f"Fetched metadata for {len(parish_metadata)} parishes")
+        return parish_metadata
+
+    except Exception as e:
+        logger.error(f"Error fetching parish metadata: {e}")
+        return {}
+
+
 def save_facts_to_supabase(supabase: Client, results: list, monitoring_client=None):
     """Saves the scraping results to the new ParishData table."""
     if not results:
@@ -1144,10 +1221,12 @@ def save_facts_to_supabase(supabase: Client, results: list, monitoring_client=No
             continue
 
         logger.info(
-            f"Parish {parish_id}: Reconciliation offers={result.get('offers_reconciliation')}, info='{result.get('reconciliation_info')}'"
+            f"Parish {parish_id}: Reconciliation offers={result.get('offers_reconciliation')}, "
+            f"info='{result.get('reconciliation_info')}'"
         )
         logger.info(
-            f"Parish {parish_id}: Adoration offers={result.get('offers_adoration')}, info='{result.get('adoration_info')}'"
+            f"Parish {parish_id}: Adoration offers={result.get('offers_adoration')}, "
+            f"info='{result.get('adoration_info')}'"
         )
 
         if result.get("offers_reconciliation") and result.get("reconciliation_info") != "Information not found":
@@ -1182,41 +1261,40 @@ def save_facts_to_supabase(supabase: Client, results: list, monitoring_client=No
         return
 
     try:
-        # Get parish names for monitoring if monitoring client is available
-        parish_names = {}
+        # Get complete parish metadata for monitoring
+        parish_metadata = {}
         if monitoring_client and facts_to_save:
             parish_ids = list(set(fact["parish_id"] for fact in facts_to_save))
-            try:
-                parish_response = supabase.table("Parishes").select("id, Name, Web").in_("id", parish_ids).execute()
-                parish_names = {
-                    p["id"]: {"name": p.get("Name", "Unknown Parish"), "website": p.get("Web", "")}
-                    for p in parish_response.data
-                }
-            except Exception as e:
-                logger.warning(f"Could not fetch parish names for monitoring: {e}")
+            parish_metadata = get_parish_metadata(supabase, parish_ids)
 
         supabase.table("ParishData").upsert(facts_to_save, on_conflict="parish_id,fact_type").execute()
         logger.info(f"Successfully saved {len(facts_to_save)} facts to Supabase table 'ParishData'.")
 
-        # Send monitoring logs for ParishData insertions
+        # Send monitoring logs for ParishData insertions with complete parish data
         if monitoring_client:
             for fact in facts_to_save:
                 parish_id = fact["parish_id"]
-                parish_info = parish_names.get(parish_id, {"name": "Unknown Parish", "website": ""})
-                parish_name = parish_info["name"]
-                parish_website = parish_info["website"]
+                parish_info = parish_metadata.get(
+                    parish_id, {"name": "Unknown Parish", "website": "", "address": "", "diocese_name": "Unknown Diocese"}
+                )
 
                 fact_type = fact["fact_type"].replace("Schedule", "")  # Remove 'Schedule' from type
                 fact_value = fact["fact_value"]
                 source_url = fact.get("fact_source_url", "")
 
-                # Create website links
-                parish_link = f" → <a href='{parish_website}' target='_blank'>{parish_website}</a>" if parish_website else ""
+                # Create descriptive message with links
+                parish_link = (
+                    f" → <a href='{parish_info['website']}' target='_blank'>{parish_info['website']}</a>"
+                    if parish_info["website"]
+                    else ""
+                )
                 source_link = f" | <a href='{source_url}' target='_blank'>Source</a>" if source_url else ""
 
                 monitoring_client.send_log(
-                    f"Step 4 │ ✅ {fact_type} data saved for {parish_name}: {fact_value[:100]}{'...' if len(fact_value) > 100 else ''}{parish_link}{source_link}",
+                    f"Step 4 │ ✅ {fact_type} saved: {parish_info['name']} ({parish_info['address']}): "
+                    f"{fact_value[:80]}{'...' if len(fact_value) > 80 else ''}{parish_link}{source_link}",
                     "INFO",
+                    worker_type="schedule",
                 )
 
     except Exception as e:
@@ -1245,35 +1323,112 @@ def main(
 
     logger.info(f"Processing {len(parishes_to_process)} parishes.")
 
+    # Get parish metadata for all parishes upfront for better logging
+    parish_ids = [p_id for url, p_id in parishes_to_process]
+    parish_metadata = get_parish_metadata(supabase, parish_ids)
+
     results = []
-    for url, p_id in parishes_to_process:
-        logger.info(f"Scraping {url} for parish {p_id}...")
+    start_time = time.time()
+
+    for idx, (url, p_id) in enumerate(parishes_to_process, 1):
+        parish_info = parish_metadata.get(
+            p_id, {"name": "Unknown Parish", "website": url, "address": "", "diocese_name": "Unknown Diocese"}
+        )
+
+        logger.info(f"[{idx}/{len(parishes_to_process)}] Scraping {parish_info['name']} (ID: {p_id})...")
+
+        # Send start message to monitoring
+        if monitoring_client:
+            monitoring_client.send_log(
+                f"Step 4 │ 🔍 [{idx}/{len(parishes_to_process)}] Visiting {parish_info['name']} "
+                f"→ <a href='{url}' target='_blank'>{url}</a>",
+                "INFO",
+                worker_type="schedule",
+            )
+
+        extraction_start = time.time()
         result = scrape_parish_data(url, p_id, supabase, suppression_urls, max_pages_to_scan=max_pages_to_scan)
+        extraction_duration = time.time() - extraction_start
+
         result["parish_id"] = p_id
-        try:
-            parish_name = urlparse(url).netloc.replace("www.", "")
-        except IndexError:
-            parish_name = url
-        result["parish_name"] = parish_name
+        result["parish_name"] = parish_info["name"]
+        result["parish_address"] = parish_info["address"]
+        result["diocese_name"] = parish_info["diocese_name"]
+        result["duration"] = extraction_duration
         results.append(result)
-        logger.info(f"Completed scraping {url}")
+
+        logger.info(f"[{idx}/{len(parishes_to_process)}] Completed {parish_info['name']} in {extraction_duration:.1f}s")
+
+        # Send completion message to monitoring
+        if monitoring_client:
+            schedules_found = 0
+            if result.get("offers_reconciliation"):
+                schedules_found += 1
+            if result.get("offers_adoration"):
+                schedules_found += 1
+
+            status_emoji = "✅" if schedules_found > 0 else "⚠️"
+            monitoring_client.send_log(
+                f"Step 4 │ {status_emoji} [{idx}/{len(parishes_to_process)}] Completed {parish_info['name']} "
+                f"({parish_info['address']}) - {schedules_found} schedule(s) found in {extraction_duration:.1f}s",
+                "INFO" if schedules_found > 0 else "WARNING",
+                worker_type="schedule",
+            )
 
         # Save results after each parish to avoid data loss if script is interrupted
         logger.info(f"Saving results for parish {p_id} immediately...")
         save_facts_to_supabase(supabase, [result], monitoring_client)
 
+        # Send extraction_complete message for dashboard Recent History
+        if monitoring_client and hasattr(monitoring_client, "report_extraction_complete"):
+            # Construct mass_times from schedule data
+            mass_times_parts = []
+            if result.get("offers_reconciliation") and result.get("reconciliation_info"):
+                mass_times_parts.append(f"Reconciliation: {result['reconciliation_info'][:50]}")
+            if result.get("offers_adoration") and result.get("adoration_info"):
+                mass_times_parts.append(f"Adoration: {result['adoration_info'][:50]}")
+
+            mass_times = " | ".join(mass_times_parts) if mass_times_parts else "No schedules found"
+
+            monitoring_client.report_extraction_complete(
+                diocese_name=parish_info["diocese_name"],
+                parish_name=parish_info["name"],
+                parish_url=url,
+                parish_address=parish_info["address"],
+                schedules_found=schedules_found,
+                mass_times=mass_times,
+                duration=extraction_duration,
+                status="completed",
+            )
+
     # Also save all results at the end (in case any individual saves failed)
     logger.info("Final batch save of all results...")
     save_facts_to_supabase(supabase, results, monitoring_client)
 
+    # Send final summary to monitoring
+    total_time = time.time() - start_time
+    if monitoring_client:
+        total_schedules = sum(
+            1 for r in results if (r.get("offers_reconciliation") or r.get("offers_adoration"))
+        )
+        monitoring_client.send_log(
+            f"Step 4 │ 🎉 Batch complete: {len(results)} parishes processed, "
+            f"{total_schedules} with schedules in {total_time:.1f}s",
+            "INFO",
+            worker_type="schedule",
+        )
+
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Extract adoration and reconciliation schedules from parish websites.")
+    parser = argparse.ArgumentParser(
+        description="Extract adoration and reconciliation schedules from parish websites."
+    )
     parser.add_argument(
         "--num_parishes",
         type=int,
         default=config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE,
-        help=f"Maximum number of parishes to extract from. Set to 0 for no limit. Defaults to {config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE}.",
+        help=f"Maximum number of parishes to extract from. Set to 0 for no limit. "
+        f"Defaults to {config.DEFAULT_NUM_PARISHES_FOR_SCHEDULE}.",
     )
     parser.add_argument(
         "--parish_id", type=int, default=None, help="ID of a specific parish to process. Overrides --num_parishes."
@@ -1285,4 +1440,13 @@ if __name__ == "__main__":
         help=f"Maximum number of pages to scan per parish. Defaults to {config.DEFAULT_MAX_PAGES_TO_SCAN}.",
     )
     args = parser.parse_args()
-    main(args.num_parishes, args.parish_id, args.max_pages_to_scan)
+
+    # Initialize monitoring client if MONITORING_URL is set
+    import os
+    monitoring_client = None
+    monitoring_url = os.getenv("MONITORING_URL")
+    if monitoring_url:
+        monitoring_client = MonitoringClient(monitoring_url, worker_id="schedule-local")
+        logger.info(f"Monitoring enabled: {monitoring_url}")
+
+    main(args.num_parishes, args.parish_id, args.max_pages_to_scan, monitoring_client)
