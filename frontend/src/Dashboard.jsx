@@ -59,27 +59,10 @@ const Dashboard = () => {
       if (data.workers && data.workers.length > 0) {
         setWorkers(data.workers);
 
-        // Preselect the most recently seen worker (lowest time_since_update)
-        const mostRecentWorker = data.workers.reduce((prev, current) => {
-          return prev.time_since_update < current.time_since_update
-            ? prev
-            : current;
-        });
-
-        if (mostRecentWorker) {
-          setSelectedWorker(mostRecentWorker.worker_id);
-          setAggregateMode(false);
-
-          // Fetch the selected worker's data
-          const workerResponse = await fetch(
-            `/api/monitoring/worker/${mostRecentWorker.worker_id}`,
-          );
-          const workerData = await workerResponse.json();
-          if (!workerData.error) {
-            setExtractionStatus(workerData.extraction_status);
-            setCircuitBreakers(workerData.circuit_breakers);
-          }
-        }
+        // Stay in aggregate mode by default to show all messages
+        // Users can manually select a specific worker if needed
+        setSelectedWorker("aggregate");
+        setAggregateMode(true);
       }
     } catch (error) {
       console.error("Error fetching workers:", error);
