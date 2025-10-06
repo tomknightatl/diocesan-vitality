@@ -31,7 +31,7 @@ from core.monitoring_client import ExtractionMonitoring, get_monitoring_client
 
 # Import the existing pipeline components
 from pipeline.extract_dioceses import main as extract_dioceses_main
-from pipeline.extract_schedule import main as extract_schedule_main
+from pipeline.extract_schedule_respectful import main as extract_schedule_main
 from pipeline.find_parishes import find_parish_directories
 
 logger = get_logger(__name__)
@@ -229,7 +229,7 @@ class DistributedPipelineRunner:
                 extract_schedule_main(
                     num_parishes=len(available_work),
                     parish_id=None,
-                    max_pages_to_scan=10,
+                    max_pages_per_parish=10,
                     monitoring_client=self.monitoring_client,
                 )
 
