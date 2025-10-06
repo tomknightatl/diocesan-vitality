@@ -319,20 +319,46 @@ def main(
         # Fetch parish info for monitoring
         parish_info = None
         try:
+            # Note: Column names have spaces in the schema
             response = (
                 supabase.table("Parishes")
-                .select("id, name, address, Dioceses(name)")
+                .select('id, Name, "Street Address", City, State, "Zip Code", full_address, diocese_id')
                 .eq("id", p_id)
                 .execute()
             )
             if response.data:
                 parish_data = response.data[0]
+
+                # Construct full address
+                full_address = parish_data.get("full_address", "")
+                if not full_address:
+                    address_parts = []
+                    if parish_data.get("Street Address"):
+                        address_parts.append(parish_data["Street Address"])
+                    if parish_data.get("City"):
+                        city_state = parish_data["City"]
+                        if parish_data.get("State"):
+                            city_state += f", {parish_data['State']}"
+                        if parish_data.get("Zip Code"):
+                            city_state += f" {parish_data['Zip Code']}"
+                        address_parts.append(city_state)
+                    full_address = ", ".join(address_parts) if address_parts else "Unknown Address"
+
+                # Fetch diocese name separately
+                diocese_name = "Unknown Diocese"
+                diocese_id = parish_data.get("diocese_id")
+                if diocese_id:
+                    try:
+                        diocese_response = supabase.table("Dioceses").select("Name").eq("id", diocese_id).execute()
+                        if diocese_response.data:
+                            diocese_name = diocese_response.data[0].get("Name", "Unknown Diocese")
+                    except Exception:
+                        pass
+
                 parish_info = {
-                    "name": parish_data.get("name", "Unknown Parish"),
-                    "address": parish_data.get("address", "Unknown Address"),
-                    "diocese_name": parish_data.get("Dioceses", {}).get("name", "Unknown Diocese")
-                    if parish_data.get("Dioceses")
-                    else "Unknown Diocese",
+                    "name": parish_data.get("Name", "Unknown Parish"),
+                    "address": full_address,
+                    "diocese_name": diocese_name,
                 }
         except Exception as e:
             logger.warning(f"Could not fetch parish info for {p_id}: {e}")
