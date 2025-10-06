@@ -935,12 +935,36 @@ const Dashboard = () => {
         <Col>
           <Card>
             <Card.Body>
-              <Card.Title>📝 Recent History</Card.Title>
+              <Card.Title>
+                📝 Recent History
+                {(() => {
+                  const selectedWorkerData = workers.find(
+                    (w) => w.worker_id === selectedWorker,
+                  );
+                  const workerType = selectedWorkerData?.worker_type;
+
+                  if (aggregateMode || selectedWorker === "aggregate") {
+                    return <span className="text-muted"> - Aggregate</span>;
+                  } else if (workerType === "discovery") {
+                    return (
+                      <span className="text-muted"> - Discovery Worker</span>
+                    );
+                  } else if (workerType === "extraction") {
+                    return (
+                      <span className="text-muted"> - Extraction Worker</span>
+                    );
+                  } else if (workerType === "schedule") {
+                    return (
+                      <span className="text-muted"> - Schedule Worker</span>
+                    );
+                  }
+                  return null;
+                })()}
+              </Card.Title>
               {extractionHistory.length > 0 ? (
                 <Table striped bordered hover responsive>
                   <thead>
                     <tr>
-                      {/* Source Information (Left) */}
                       <th>Timestamp</th>
                       {(() => {
                         const selectedWorkerData = workers.find(
@@ -948,46 +972,58 @@ const Dashboard = () => {
                         );
                         const workerType = selectedWorkerData?.worker_type;
 
-                        if (!aggregateMode && selectedWorker !== "aggregate") {
-                          // Worker-type specific columns
-                          if (workerType === "discovery") {
-                            return (
-                              <>
-                                <th>Diocese</th>
-                                <th>Directory of Parishes URL</th>
-                                <th>Status</th>
-                              </>
-                            );
-                          } else if (workerType === "extraction") {
-                            return (
-                              <>
-                                <th>Duration</th>
-                                <th>Diocese</th>
-                                <th>Source URL</th>
-                                <th>Parishes Extracted</th>
-                                <th>Status</th>
-                              </>
-                            );
-                          } else if (workerType === "schedule") {
-                            return (
-                              <>
-                                <th>Duration</th>
-                                <th>Parish</th>
-                                <th>Parish Address</th>
-                                <th>Parish URL</th>
-                                <th>Schedules Found</th>
-                                <th>Mass Times</th>
-                                <th>Status</th>
-                              </>
-                            );
-                          }
+                        // Define explicit view types
+                        if (aggregateMode || selectedWorker === "aggregate") {
+                          // View 1: Aggregate - Shows all worker types mixed
+                          return (
+                            <>
+                              <th>Type</th>
+                              <th>Diocese</th>
+                              <th>Details</th>
+                              <th>Duration</th>
+                              <th>Status</th>
+                            </>
+                          );
+                        } else if (workerType === "discovery") {
+                          // View 2: Discovery Worker
+                          return (
+                            <>
+                              <th>Diocese</th>
+                              <th>Directory of Parishes URL</th>
+                              <th>Status</th>
+                            </>
+                          );
+                        } else if (workerType === "extraction") {
+                          // View 3: Extraction Worker
+                          return (
+                            <>
+                              <th>Duration</th>
+                              <th>Diocese</th>
+                              <th>Source URL</th>
+                              <th>Parishes Extracted</th>
+                              <th>Status</th>
+                            </>
+                          );
+                        } else if (workerType === "schedule") {
+                          // View 4: Schedule Worker
+                          return (
+                            <>
+                              <th>Duration</th>
+                              <th>Parish</th>
+                              <th>Parish Address</th>
+                              <th>Parish URL</th>
+                              <th>Schedules Found</th>
+                              <th>Mass Times</th>
+                              <th>Status</th>
+                            </>
+                          );
                         }
-                        // Aggregate view (default)
+                        // Fallback
                         return (
                           <>
+                            <th>Type</th>
                             <th>Diocese</th>
-                            <th>Parishes</th>
-                            <th>Success Rate</th>
+                            <th>Details</th>
                             <th>Duration</th>
                             <th>Status</th>
                           </>
@@ -1004,11 +1040,140 @@ const Dashboard = () => {
 
                       return (
                         <tr key={index}>
-                          {/* Source Information (Left) */}
                           <td>{formatTimestamp(extraction.timestamp)}</td>
-                          {!aggregateMode && selectedWorker !== "aggregate" ? (
-                            <>
-                              {workerType === "discovery" && (
+                          {(() => {
+                            // View 1: Aggregate - Shows all worker types mixed
+                            if (aggregateMode || selectedWorker === "aggregate") {
+                              // Detect type from data and display accordingly
+                              if (extraction.parish_name) {
+                                // Schedule worker data (parish-level)
+                                return (
+                                  <>
+                                    <td>
+                                      <Badge bg="info">Schedule</Badge>
+                                    </td>
+                                    <td>{extraction.diocese_name}</td>
+                                    <td>
+                                      <strong>{extraction.parish_name}</strong>
+                                      <br />
+                                      <small className="text-muted">
+                                        {extraction.schedules_found || 0}{" "}
+                                        schedule(s) found
+                                      </small>
+                                      {extraction.mass_times &&
+                                        extraction.mass_times !== "N/A" && (
+                                          <>
+                                            <br />
+                                            <small className="text-muted">
+                                              {extraction.mass_times}
+                                            </small>
+                                          </>
+                                        )}
+                                    </td>
+                                    <td>
+                                      {formatDuration(extraction.duration)}
+                                    </td>
+                                    <td>
+                                      <Badge
+                                        bg={
+                                          extraction.status === "completed"
+                                            ? "success"
+                                            : "danger"
+                                        }
+                                      >
+                                        {extraction.status}
+                                      </Badge>
+                                    </td>
+                                  </>
+                                );
+                              } else if (
+                                extraction.parishes_extracted !== undefined
+                              ) {
+                                // Extraction worker data (diocese-level)
+                                return (
+                                  <>
+                                    <td>
+                                      <Badge bg="primary">Extraction</Badge>
+                                    </td>
+                                    <td>{extraction.diocese_name}</td>
+                                    <td>
+                                      {extraction.parishes_extracted} parishes
+                                      {extraction.success_rate !==
+                                        undefined && (
+                                        <>
+                                          <br />
+                                          <Badge
+                                            bg={
+                                              extraction.success_rate >= 90
+                                                ? "success"
+                                                : extraction.success_rate >= 70
+                                                  ? "warning"
+                                                  : "danger"
+                                            }
+                                          >
+                                            {formatDecimal(
+                                              extraction.success_rate,
+                                            )}
+                                            % success
+                                          </Badge>
+                                        </>
+                                      )}
+                                    </td>
+                                    <td>
+                                      {formatDuration(extraction.duration)}
+                                    </td>
+                                    <td>
+                                      <Badge
+                                        bg={
+                                          extraction.status === "completed"
+                                            ? "success"
+                                            : "danger"
+                                        }
+                                      >
+                                        {extraction.status}
+                                      </Badge>
+                                    </td>
+                                  </>
+                                );
+                              } else {
+                                // Discovery or other worker type
+                                return (
+                                  <>
+                                    <td>
+                                      <Badge bg="secondary">Discovery</Badge>
+                                    </td>
+                                    <td>{extraction.diocese_name || "N/A"}</td>
+                                    <td>
+                                      <small className="text-muted">
+                                        {extraction.directory_url ||
+                                          extraction.source_url ||
+                                          "N/A"}
+                                      </small>
+                                    </td>
+                                    <td>
+                                      {extraction.duration
+                                        ? formatDuration(extraction.duration)
+                                        : "N/A"}
+                                    </td>
+                                    <td>
+                                      <Badge
+                                        bg={
+                                          extraction.status === "completed"
+                                            ? "success"
+                                            : "danger"
+                                        }
+                                      >
+                                        {extraction.status}
+                                      </Badge>
+                                    </td>
+                                  </>
+                                );
+                              }
+                            }
+
+                            // View 2: Discovery Worker
+                            if (workerType === "discovery") {
+                              return (
                                 <>
                                   <td>{extraction.diocese_name}</td>
                                   <td>
@@ -1031,8 +1196,12 @@ const Dashboard = () => {
                                     </Badge>
                                   </td>
                                 </>
-                              )}
-                              {workerType === "extraction" && (
+                              );
+                            }
+
+                            // View 3: Extraction Worker
+                            if (workerType === "extraction") {
+                              return (
                                 <>
                                   <td>{formatDuration(extraction.duration)}</td>
                                   <td>{extraction.diocese_name}</td>
@@ -1063,8 +1232,12 @@ const Dashboard = () => {
                                     </Badge>
                                   </td>
                                 </>
-                              )}
-                              {workerType === "schedule" && (
+                              );
+                            }
+
+                            // View 4: Schedule Worker
+                            if (workerType === "schedule") {
+                              return (
                                 <>
                                   <td>{formatDuration(extraction.duration)}</td>
                                   <td>
@@ -1105,82 +1278,75 @@ const Dashboard = () => {
                                     </Badge>
                                   </td>
                                 </>
-                              )}
-                            </>
-                          ) : (
-                            <>
-                              {/* Aggregate view (default) */}
-                              <td>{extraction.diocese_name}</td>
-                              <td>{extraction.parishes_extracted}</td>
-                              <td>
-                                <Badge
-                                  bg={
-                                    extraction.success_rate >= 90
-                                      ? "success"
-                                      : extraction.success_rate >= 70
-                                        ? "warning"
-                                        : "danger"
-                                  }
-                                >
-                                  {formatDecimal(extraction.success_rate)}%
-                                </Badge>
-                              </td>
-                              <td>{formatDuration(extraction.duration)}</td>
-                              <td>
-                                <Badge
-                                  bg={
-                                    extraction.status === "completed"
-                                      ? "success"
-                                      : "danger"
-                                  }
-                                >
-                                  {extraction.status}
-                                </Badge>
-                              </td>
-                            </>
-                          )}
+                              );
+                            }
+
+                            // Fallback - shouldn't reach here
+                            return (
+                              <>
+                                <td>
+                                  <Badge bg="secondary">Unknown</Badge>
+                                </td>
+                                <td>{extraction.diocese_name || "N/A"}</td>
+                                <td>N/A</td>
+                                <td>N/A</td>
+                                <td>
+                                  <Badge bg="secondary">N/A</Badge>
+                                </td>
+                              </>
+                            );
+                          })()}
                         </tr>
                       );
                     })}
                   </tbody>
                 </Table>
               ) : (
-                <p className="text-muted">No extraction history available</p>
+                <Alert variant="info">
+                  No extraction history available yet
+                </Alert>
               )}
             </Card.Body>
           </Card>
         </Col>
       </Row>
 
-      {/* Live Log with Tabs and Filtering */}
-      <Row>
+      {/* Live Logs */}
+      <Row className="mb-4">
         <Col>
           <Card>
             <Card.Body>
-              <Card.Title>📋 Live Logs</Card.Title>
-
+              <Card.Title>
+                📋 Live Logs
+                {(() => {
+                  if (aggregateMode || selectedWorker === "aggregate") {
+                    return <span className="text-muted"> - All Workers</span>;
+                  }
+                  const selectedWorkerData = workers.find(
+                    (w) => w.worker_id === selectedWorker,
+                  );
+                  if (selectedWorkerData) {
+                    return (
+                      <span className="text-muted">
+                        {" "}
+                        - {selectedWorkerData.worker_id}
+                      </span>
+                    );
+                  }
+                  return null;
+                })()}
+              </Card.Title>
               <div
-                className="live-log bg-dark text-light p-3 rounded text-start"
+                className="log-container p-3 rounded"
                 style={{
-                  height: "400px",
-                  overflowY: "auto",
+                  backgroundColor: "#1e1e1e",
+                  color: "#d4d4d4",
                   fontFamily: "monospace",
                   fontSize: "0.875rem",
-                  textAlign: "left",
+                  maxHeight: "500px",
+                  overflowY: "auto",
                 }}
               >
-                <style>
-                  {`
-                    .live-log a {
-                      color: #60a5fa !important;
-                      text-decoration: underline;
-                    }
-                    .live-log a:hover {
-                      color: #93c5fd !important;
-                      text-decoration: none;
-                    }
-                  `}
-                </style>
                 {getFilteredLogs().length > 0 ? (
                   getFilteredLogs().map((log, index) => (
                     <div
@@ -1230,8 +1396,8 @@ const Dashboard = () => {
                         />
                         {log.worker_id && aggregateMode && (
                           <small
-                            className="text-muted d-block mt-1"
-                            style={{ fontSize: "0.7rem" }}
+                            className="d-block mt-1"
+                            style={{ fontSize: "0.7rem", color: "#6c757d" }}
                           >
                             Worker: {log.worker_id}
                           </small>
@@ -1240,7 +1406,7 @@ const Dashboard = () => {
                     </div>
                   ))
                 ) : (
-                  <div className="text-light text-start">
+                  <div className="text-muted text-center">
                     No log entries available for this worker
                   </div>
                 )}
