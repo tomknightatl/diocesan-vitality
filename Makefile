@@ -273,7 +273,7 @@ cluster-check: ## Step b: Check if cluster exists (usage: make cluster-check CLU
 	echo "✅ Step b Complete: Cluster $$CLUSTER_NAME exists and is accessible"
 
 _doctl-exec: ## Internal helper to execute doctl commands with authentication
-	@DIGITALOCEAN_TOKEN=$$(sed -n 's/^DIGITALOCEAN_TOKEN=//p' .env | tr -d '\r\n"'"'"'"'') && \
+	@DIGITALOCEAN_TOKEN=$$(sed -n 's/^DIGITALOCEAN_TOKEN=//p' .env | tr -d '\r\n"'\''') && \
 	DIGITALOCEAN_ACCESS_TOKEN="$$DIGITALOCEAN_TOKEN" timeout 900 doctl $(DOCTL_CMD)
 
 cluster-create: ## Step c: Create cluster (usage: make cluster-create CLUSTER_LABEL=dev)
@@ -1709,3 +1709,96 @@ infra-test: ## Step 6: Integration testing and cleanup (usage: make infra-test C
 	echo "📊 Final infrastructure status:" && \
 	$(MAKE) infra-status CLUSTER_LABEL=$$CLUSTER_LABEL
 	@echo "✅ Step 6 Complete: Integration tests passed and cleanup completed"
+
+# Cluster Scaling Commands
+# ========================
+
+cluster-scale-dev-0: ## Scale development cluster to zero nodes (usage: make cluster-scale-dev-0)
+	@echo "⏸️  Scaling development cluster to zero nodes..." && \
+	echo "   Cluster: dv-dev" && \
+	echo "   slow-pool: 1 → 0 nodes" && \
+	echo "   fast-pool: 2 → 0 nodes" && \
+	$(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster node-pool update dv-dev slow-pool --count 0" && \
+	$(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster node-pool update dv-dev fast-pool --count 0" && \
+	echo "✅ Development cluster scaled to 0 nodes" && \
+	echo "💡 This saves costs when cluster is not in use" && \
+	echo "💡 To restore: make cluster-scale-dev-normal"
+
+cluster-scale-stg-0: ## Scale staging cluster to zero nodes (usage: make cluster-scale-stg-0)
+	@echo "⏸️  Scaling staging cluster to zero nodes..." && \
+	echo "   Cluster: dv-stg" && \
+	echo "   slow-pool: 1 → 0 nodes" && \
+	echo "   fast-pool: 2 → 0 nodes" && \
+	$(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster node-pool update dv-stg slow-pool --count 0" && \
+	$(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster node-pool update dv-stg fast-pool --count 0" && \
+	echo "✅ Staging cluster scaled to 0 nodes" && \
+	echo "💡 This saves costs when cluster is not in use" && \
+	echo "💡 To restore: make cluster-scale-stg-normal"
+
+cluster-scale-prd-0: ## Scale production cluster to zero nodes (usage: make cluster-scale-prd-0)
+	@echo "🚨 WARNING: Scaling PRODUCTION cluster to zero nodes!" && \
+	echo "   This will make production services unavailable" && \
+	read -p "Type 'yes' to continue: " CONFIRM </dev/tty && \
+	if [ "$$CONFIRM" != "yes" ]; then \
+		echo "❌ Operation cancelled"; \
+		exit 1; \
+	fi && \
+	echo "⏸️  Scaling production cluster to zero nodes..." && \
+	echo "   Cluster: dv-prd" && \
+	echo "   slow-pool: 1 → 0 nodes" && \
+	echo "   fast-pool: 2 → 0 nodes" && \
+	$(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster node-pool update dv-prd slow-pool --count 0" && \
+	$(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster node-pool update dv-prd fast-pool --count 0" && \
+	echo "✅ Production cluster scaled to 0 nodes" && \
+	echo "💡 To restore: make cluster-scale-prd-normal"
+
+cluster-scale-all-0: ## Scale all clusters to zero nodes (usage: make cluster-scale-all-0)
+	@echo "🚨 WARNING: Scaling ALL clusters to zero nodes!" && \
+	echo "   This will make all environments unavailable" && \
+	read -p "Type 'yes' to continue: " CONFIRM </dev/tty && \
+	if [ "$$CONFIRM" != "yes" ]; then \
+		echo "❌ Operation cancelled"; \
+		exit 1; \
+	fi && \
+	echo "⏸️  Scaling all clusters to zero nodes..." && \
+	$(MAKE) cluster-scale-dev-0 && \
+	$(MAKE) cluster-scale-stg-0 && \
+	$(MAKE) cluster-scale-prd-0 && \
+	echo "✅ All clusters scaled to 0 nodes"
+
+cluster-scale-dev-normal: ## Restore development cluster to normal size (usage: make cluster-scale-dev-normal)
+	@echo "▶️  Restoring development cluster to normal size..." && \
+	echo "   Cluster: dv-dev" && \
+	echo "   slow-pool: 0 → 1 node" && \
+	echo "   fast-pool: 0 → 2 nodes" && \
+	$(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster node-pool update dv-dev slow-pool --count 1" && \
+	$(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster node-pool update dv-dev fast-pool --count 2" && \
+	echo "✅ Development cluster restored to normal size (1 slow + 2 fast nodes)" && \
+	echo "⏳ Nodes will take 2-3 minutes to provision and become ready"
+
+cluster-scale-stg-normal: ## Restore staging cluster to normal size (usage: make cluster-scale-stg-normal)
+	@echo "▶️  Restoring staging cluster to normal size..." && \
+	echo "   Cluster: dv-stg" && \
+	echo "   slow-pool: 0 → 1 node" && \
+	echo "   fast-pool: 0 → 2 nodes" && \
+	$(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster node-pool update dv-stg slow-pool --count 1" && \
+	$(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster node-pool update dv-stg fast-pool --count 2" && \
+	echo "✅ Staging cluster restored to normal size (1 slow + 2 fast nodes)" && \
+	echo "⏳ Nodes will take 2-3 minutes to provision and become ready"
+
+cluster-scale-prd-normal: ## Restore production cluster to normal size (usage: make cluster-scale-prd-normal)
+	@echo "▶️  Restoring production cluster to normal size..." && \
+	echo "   Cluster: dv-prd" && \
+	echo "   slow-pool: 0 → 1 node" && \
+	echo "   fast-pool: 0 → 2 nodes" && \
+	$(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster node-pool update dv-prd slow-pool --count 1" && \
+	$(MAKE) _doctl-exec DOCTL_CMD="kubernetes cluster node-pool update dv-prd fast-pool --count 2" && \
+	echo "✅ Production cluster restored to normal size (1 slow + 2 fast nodes)" && \
+	echo "⏳ Nodes will take 2-3 minutes to provision and become ready"
+
+cluster-scale-all-normal: ## Restore all clusters to normal size (usage: make cluster-scale-all-normal)
+	@echo "▶️  Restoring all clusters to normal size..." && \
+	$(MAKE) cluster-scale-dev-normal && \
+	$(MAKE) cluster-scale-stg-normal && \
+	$(MAKE) cluster-scale-prd-normal && \
+	echo "✅ All clusters restored to normal size"
