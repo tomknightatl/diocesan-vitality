@@ -282,8 +282,6 @@ def main(
     """Main function for respectful parish processing with blocking detection."""
 
     logger.info("🚀 Starting respectful parish website analysis with blocking detection")
-    logger.info(f"🐛 DEBUG: monitoring_client = {monitoring_client}")
-    logger.info(f"🐛 DEBUG: monitoring_client type = {type(monitoring_client)}")
     if diocese_id:
         logger.info(f"📍 Filtering to diocese ID: {diocese_id}")
 
@@ -371,18 +369,13 @@ def main(
             }
 
         # Send "Visiting" message to monitoring
-        logger.info(f"🐛 DEBUG: parish_info = {parish_info}")
-        logger.info(f"🐛 DEBUG: monitoring_client is not None = {monitoring_client is not None}")
-        logger.info(f"🐛 DEBUG: parish_info is not None = {parish_info is not None}")
         if monitoring_client and parish_info:
-            logger.info("🐛 DEBUG: About to send monitoring message")
             monitoring_client.send_log(
                 f"Step 4 │ 🔍 [{processed_count}/{total_parishes}] Visiting {parish_info['name']} "
                 f"→ <a href='{parish_url}' target='_blank'>{parish_url}</a>",
                 "INFO",
                 worker_type="schedule",
             )
-            logger.info("🐛 DEBUG: Monitoring message sent")
 
         try:
             extraction_start = time.time()
