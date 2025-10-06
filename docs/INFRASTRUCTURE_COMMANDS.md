@@ -138,6 +138,41 @@ If tunnel pods show `CrashLoopBackOff` or authentication errors:
    - Removed config file dependencies (uses token-only approach)
    - Applied proper security context with NET_ADMIN capability
 
+## Cluster Scaling Commands
+
+Scale node pools to zero to save costs when clusters are not in use, or restore them to normal size.
+
+### Scale to Zero (Cost Savings)
+
+```bash
+# Scale individual clusters to zero nodes
+make cluster-scale-dev-0     # Development: 3 nodes → 0 nodes
+make cluster-scale-stg-0     # Staging: 3 nodes → 0 nodes
+make cluster-scale-prd-0     # Production: 3 nodes → 0 nodes (requires confirmation)
+
+# Scale all clusters to zero
+make cluster-scale-all-0     # All environments → 0 nodes (requires confirmation)
+```
+
+### Restore to Normal Size
+
+```bash
+# Restore individual clusters to normal size (1 slow-pool + 2 fast-pool)
+make cluster-scale-dev-normal     # Development: 0 → 3 nodes (1 slow + 2 fast)
+make cluster-scale-stg-normal     # Staging: 0 → 3 nodes (1 slow + 2 fast)
+make cluster-scale-prd-normal     # Production: 0 → 3 nodes (1 slow + 2 fast)
+
+# Restore all clusters to normal size
+make cluster-scale-all-normal     # All environments → 3 nodes each
+```
+
+**Notes:**
+
+- Scaling to zero saves ~$36/month per cluster (DigitalOcean charges for nodes, not control plane)
+- Node provisioning takes 2-3 minutes when restoring from zero
+- Production scaling requires manual confirmation for safety
+- Pods will automatically reschedule when nodes become available
+
 ## Cleanup
 
 ```bash
