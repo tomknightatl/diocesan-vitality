@@ -619,20 +619,35 @@ const Dashboard = () => {
                       : selectedWorker}
                   </Badge>
                 </small>
+                {!aggregateMode && selectedWorker !== "aggregate" && (
+                  <div className="mt-3">
+                    <Button
+                      variant="outline-secondary"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedWorker("aggregate");
+                        setAggregateMode(true);
+                      }}
+                    >
+                      ← Back to Aggregate View
+                    </Button>
+                  </div>
+                )}
               </div>
             </Card.Body>
           </Card>
         </Col>
       </Row>
 
-      {/* System Health Overview */}
-      <Row className="mb-4">
-        <Col md={4}>
-          <Card className="h-100">
-            <Card.Body>
-              <Card.Title className="text-center">
-                <i className="fas fa-heartbeat text-danger"></i> Worker Health
-              </Card.Title>
+      {/* System Health Overview - Only show for specific worker view */}
+      {!aggregateMode && selectedWorker !== "aggregate" && (
+        <Row className="mb-4">
+          <Col md={4}>
+            <Card className="h-100">
+              <Card.Body>
+                <Card.Title className="text-center">
+                  <i className="fas fa-heartbeat text-danger"></i> Worker Health
+                </Card.Title>
               {systemHealth ? (
                 <div className="text-center">
                   <div className="display-6 mb-2">
@@ -763,6 +778,7 @@ const Dashboard = () => {
           </Card>
         </Col>
       </Row>
+      )}
 
       {/* Circuit Breaker Status */}
       <Row className="mb-4">
