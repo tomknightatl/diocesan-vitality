@@ -282,6 +282,8 @@ def main(
     """Main function for respectful parish processing with blocking detection."""
 
     logger.info("🚀 Starting respectful parish website analysis with blocking detection")
+    logger.info(f"🐛 DEBUG: monitoring_client = {monitoring_client}")
+    logger.info(f"🐛 DEBUG: monitoring_client type = {type(monitoring_client)}")
     if diocese_id:
         logger.info(f"📍 Filtering to diocese ID: {diocese_id}")
 
