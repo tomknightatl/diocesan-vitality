@@ -247,7 +247,8 @@ git push origin main
 ### Manual Operations
 ```bash
 # Scale cluster nodes
-doctl kubernetes cluster node-pool resize dv-dev slow-pool --count 2
+doctl kubernetes cluster node-pool update dv-dev slow-pool --count 2
+doctl kubernetes cluster node-pool update dv-dev slow-pool --count 0
 
 # Restart ArgoCD sync
 argocd app sync dv-dev-diocesan-vitality
