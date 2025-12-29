@@ -95,12 +95,14 @@ def create_workflow():
         # Import after installation to verify it works
         try:
             from langgraph.graph import StateGraph, END
+
             logger.info("✅ LangGraph imported successfully after installation")
             # Create workflow after successful import
             workflow = StateGraph(ScheduleExtractionState)
             from core.agents.discovery_agent import DiscoveryAgent
             from core.agents.extraction_agent import ExtractionAgent
             from core.agents.validation_agent import ValidationAgent
+
             workflow.add_node("discover", DiscoveryAgent().discover_sources)
             workflow.add_node("extract", ExtractionAgent().extract_schedule)
             workflow.add_node("validate", ValidationAgent().validate_schedule)
@@ -119,17 +121,108 @@ def create_workflow():
 def scrape_parish_data_agentic(
     url: str, parish_id: int, supabase=None, max_iterations: int = 15
 ) -> dict:
+    """
+    Agentic replacement for existing scrape_parish_data function
+
+    Args:
+        url: Parish website URL
+        parish_id: Parish database ID
+        supabase: Supabase client (optional for Phase 1)
+        max_iterations: Maximum workflow iterations
+
+    Returns:
+        Dictionary with schedule extraction results
+    """
+    import logging
+
+    logger = logging.getLogger(__name__)
+    logger.info(f"🤖 Starting agentic extraction for parish {parish_id}: {url}")
+
+    # Initialize workflow
+    workflow = create_workflow()
+
+    if workflow is None:
+        logger.error(f"❌ Workflow creation failed for parish {parish_id}")
+        return {
+            "url": url,
+            "offers_reconciliation": False,
+            "reconciliation_info": "Workflow creation failed",
+            "reconciliation_page": "",
+            "reconciliation_method": "agentic_error",
+            "reconciliation_confidence": 0,
+            "reconciliation_fact_string": None,
+        }
+
+    # Set initial state
+    initial_state = {
+        "parish_id": parish_id,
+        "parish_url": url,
+        "schedule_type": "reconciliation",  # Phase 1 focus
+        "knowledge_graph": {},
+        "budget_remaining": max_iterations,
+        "current_iteration": 0,
+        "schedule_found": False,
+        "final_schedule": None,
+        "sources_checked": [],
+        "strategies_tried": [],
+        "extraction_attempts": [],
+    }
+
+    # Execute workflow
+    try:
+        final_state = workflow.invoke(initial_state)
+
+        logger.info(f"🤖 Completed agentic extraction for parish {parish_id}")
+        logger.info(f"🤖 Success: {final_state['schedule_found']}")
+
+        # Format result for existing database
+        if final_state["schedule_found"]:
+            schedule = final_state["final_schedule"]
+            return {
+                "url": url,
+                "offers_reconciliation": True,
+                "reconciliation_info": schedule.get(
+                    "schedule_details", "Schedule found"
+                ),
+                "reconciliation_page": schedule.get("source_url", url),
+                "reconciliation_method": schedule.get("method", "agentic_ai"),
+                "reconciliation_confidence": schedule.get("confidence", 80),
+                "reconciliation_fact_string": schedule.get("schedule_details"),
+            }
+        else:
+            return {
+                "url": url,
+                "offers_reconciliation": False,
+                "reconciliation_info": "No schedule found",
+                "reconciliation_page": "",
+                "reconciliation_method": "agentic_no_result",
+                "reconciliation_confidence": 0,
+                "reconciliation_fact_string": None,
+            }
+
+    except Exception as e:
+        logger.error(f"🤖 Agentic extraction failed for {url}: {e}")
+        return {
+            "url": url,
+            "offers_reconciliation": False,
+            "reconciliation_info": f"Extraction error: {str(e)}",
+            "reconciliation_page": "",
+            "reconciliation_method": "agentic_error",
+            "reconciliation_confidence": 0,
+            "reconciliation_fact_string": None,
+        }
+
 
 def extract_schedule_agentic_main(
     num_parishes: int = 100,
     parish_id: Optional[int] = None,
     max_pages_per_parish: int = 10,
     monitoring_client=None,
-    max_iterations: int = 15
+    max_iterations: int = 15,
 ):
     """
     Main function for agentic schedule extraction (replaces extract_schedule_main)
-    
+
     Args:
         num_parishes: Number of parishes to process
         parish_id: Specific parish ID (optional)
@@ -140,51 +233,57 @@ def extract_schedule_agentic_main(
     import logging
     from core.db import get_supabase_client
     from core.intelligent_parish_prioritizer import IntelligentParishPrioritizer
-    
+
     logger = logging.getLogger(__name__)
     supabase = get_supabase_client()
-    
+
     # Use intelligent prioritization to select parishes
     prioritizer = IntelligentParishPrioritizer()
     parishes = prioritizer.prioritize_parishes(
-        limit=num_parishes,
-        specific_parish_id=parish_id,
-        schedule_extraction=True
+        limit=num_parishes, specific_parish_id=parish_id, schedule_extraction=True
     )
-    
+
     logger.info(f"🤖 Starting agentic schedule extraction for {len(parishes)} parishes")
-    
+
     for i, parish in enumerate(parishes, 1):
         try:
-            logger.info(f"🤖 [{i}/{len(parishes)}] Processing parish {parish['parish_id']}: {parish['parish_website']}")
-            
+            logger.info(
+                f"🤖 [{i}/{len(parishes)}] Processing parish {parish['parish_id']}: {parish['parish_website']}"
+            )
+
             # Call agentic extraction
             result = scrape_parish_data_agentic(
-                url=parish['parish_website'],
-                parish_id=parish['parish_id'],
+                url=parish["parish_website"],
+                parish_id=parish["parish_id"],
                 supabase=supabase,
-                max_iterations=max_iterations
+                max_iterations=max_iterations,
             )
-            
-            logger.info(f"🤖 [{i}/{len(parishes)}] Completed parish {parish['parish_id']}: {result['reconciliation_info']}")
-            
+
+            logger.info(
+                f"🤖 [{i}/{len(parishes)}] Completed parish {parish['parish_id']}: {result['reconciliation_info']}"
+            )
+
             # Log to monitoring if available
             if monitoring_client:
                 monitoring_client.send_log(
                     f"Agentic extraction for parish {parish['parish_id']}: {result['reconciliation_info']}",
                     "INFO",
-                    worker_type="schedule"
+                    worker_type="schedule",
                 )
-                
+
         except Exception as e:
-            logger.error(f"🤖 [{i}/{len(parishes)}] Failed parish {parish['parish_id']}: {e}")
+            logger.error(
+                f"🤖 [{i}/{len(parishes)}] Failed parish {parish['parish_id']}: {e}"
+            )
             if monitoring_client:
                 monitoring_client.report_error(
                     error_type="AgenticExtractionError",
-                    message=f"Agentic extraction failed for parish {parish['parish_id']}: {str(e)}"
+                    message=f"Agentic extraction failed for parish {parish['parish_id']}: {str(e)}",
                 )
-    
-    logger.info(f"✅ Completed agentic schedule extraction for {len(parishes)} parishes")
+
+    logger.info(
+        f"✅ Completed agentic schedule extraction for {len(parishes)} parishes"
+    )
     """
     Agentic replacement for existing scrape_parish_data function
 
@@ -267,11 +366,11 @@ def extract_schedule_agentic_main(
     parish_id: Optional[int] = None,
     max_pages_per_parish: int = 10,
     monitoring_client=None,
-    max_iterations: int = 15
+    max_iterations: int = 15,
 ):
     """
     Main function for agentic schedule extraction (replaces extract_schedule_main)
-    
+
     Args:
         num_parishes: Number of parishes to process
         parish_id: Specific parish ID (optional)
@@ -283,48 +382,54 @@ def extract_schedule_agentic_main(
     from typing import Optional
     from core.db import get_supabase_client
     from core.intelligent_parish_prioritizer import IntelligentParishPrioritizer
-    
+
     logger = logging.getLogger(__name__)
     supabase = get_supabase_client()
-    
+
     # Use intelligent prioritization to select parishes
     prioritizer = IntelligentParishPrioritizer()
     parishes = prioritizer.prioritize_parishes(
-        limit=num_parishes,
-        specific_parish_id=parish_id,
-        schedule_extraction=True
+        limit=num_parishes, specific_parish_id=parish_id, schedule_extraction=True
     )
-    
+
     logger.info(f"🤖 Starting agentic schedule extraction for {len(parishes)} parishes")
-    
+
     for i, parish in enumerate(parishes, 1):
         try:
-            logger.info(f"🤖 [{i}/{len(parishes)}] Processing parish {parish['parish_id']}: {parish['parish_website']}")
-            
+            logger.info(
+                f"🤖 [{i}/{len(parishes)}] Processing parish {parish['parish_id']}: {parish['parish_website']}"
+            )
+
             # Call agentic extraction
             result = scrape_parish_data_agentic(
-                url=parish['parish_website'],
-                parish_id=parish['parish_id'],
+                url=parish["parish_website"],
+                parish_id=parish["parish_id"],
                 supabase=supabase,
-                max_iterations=max_iterations
+                max_iterations=max_iterations,
             )
-            
-            logger.info(f"🤖 [{i}/{len(parishes)}] Completed parish {parish['parish_id']}: {result['reconciliation_info']}")
-            
+
+            logger.info(
+                f"🤖 [{i}/{len(parishes)}] Completed parish {parish['parish_id']}: {result['reconciliation_info']}"
+            )
+
             # Log to monitoring if available
             if monitoring_client:
                 monitoring_client.send_log(
                     f"Agentic extraction for parish {parish['parish_id']}: {result['reconciliation_info']}",
                     "INFO",
-                    worker_type="schedule"
+                    worker_type="schedule",
                 )
-                
+
         except Exception as e:
-            logger.error(f"🤖 [{i}/{len(parishes)}] Failed parish {parish['parish_id']}: {e}")
+            logger.error(
+                f"🤖 [{i}/{len(parishes)}] Failed parish {parish['parish_id']}: {e}"
+            )
             if monitoring_client:
                 monitoring_client.report_error(
                     error_type="AgenticExtractionError",
-                    message=f"Agentic extraction failed for parish {parish['parish_id']}: {str(e)}"
+                    message=f"Agentic extraction failed for parish {parish['parish_id']}: {str(e)}",
                 )
-    
-    logger.info(f"✅ Completed agentic schedule extraction for {len(parishes)} parishes")
+
+    logger.info(
+        f"✅ Completed agentic schedule extraction for {len(parishes)} parishes"
+    )
