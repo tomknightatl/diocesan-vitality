@@ -252,7 +252,7 @@ class DistributedPipelineRunner:
                     worker_type="schedule",
                 )
 
-                    # Use agentic workflow instead of the old one
+                # Use agentic workflow instead of the old one
                 extract_schedule_agentic_main(
                     num_parishes=len(available_work),
                     parish_id=None,
