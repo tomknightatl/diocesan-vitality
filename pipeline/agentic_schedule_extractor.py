@@ -91,7 +91,26 @@ def create_workflow():
         import subprocess
 
         subprocess.run(["pip", "install", "langgraph"], check=True)
-        return create_workflow()
+        logger.info("LangGraph installed, attempting to import again...")
+        # Import after installation to verify it works
+        try:
+            from langgraph.graph import StateGraph, END
+            logger.info("✅ LangGraph imported successfully after installation")
+            # Create workflow after successful import
+            workflow = StateGraph(ScheduleExtractionState)
+            from core.agents.discovery_agent import DiscoveryAgent
+            from core.agents.extraction_agent import ExtractionAgent
+            from core.agents.validation_agent import ValidationAgent
+            workflow.add_node("discover", DiscoveryAgent().discover_sources)
+            workflow.add_node("extract", ExtractionAgent().extract_schedule)
+            workflow.add_node("validate", ValidationAgent().validate_schedule)
+            workflow.set_entry_point("discover")
+            return workflow.compile()
+        except ImportError as e2:
+            logger.error(f"LangGraph import failed even after installation: {e2}")
+            logger.error("This suggests a Python path or environment issue")
+            # Don't recurse infinitely - return None to indicate failure
+            return None
     except Exception as e:
         logger.error(f"Failed to create workflow: {e}")
         raise
@@ -100,6 +119,72 @@ def create_workflow():
 def scrape_parish_data_agentic(
     url: str, parish_id: int, supabase=None, max_iterations: int = 15
 ) -> dict:
+
+def extract_schedule_agentic_main(
+    num_parishes: int = 100,
+    parish_id: Optional[int] = None,
+    max_pages_per_parish: int = 10,
+    monitoring_client=None,
+    max_iterations: int = 15
+):
+    """
+    Main function for agentic schedule extraction (replaces extract_schedule_main)
+    
+    Args:
+        num_parishes: Number of parishes to process
+        parish_id: Specific parish ID (optional)
+        max_pages_per_parish: Maximum pages to check per parish
+        monitoring_client: Monitoring client for logging
+        max_iterations: Maximum workflow iterations per parish
+    """
+    import logging
+    from core.db import get_supabase_client
+    from core.intelligent_parish_prioritizer import IntelligentParishPrioritizer
+    
+    logger = logging.getLogger(__name__)
+    supabase = get_supabase_client()
+    
+    # Use intelligent prioritization to select parishes
+    prioritizer = IntelligentParishPrioritizer()
+    parishes = prioritizer.prioritize_parishes(
+        limit=num_parishes,
+        specific_parish_id=parish_id,
+        schedule_extraction=True
+    )
+    
+    logger.info(f"🤖 Starting agentic schedule extraction for {len(parishes)} parishes")
+    
+    for i, parish in enumerate(parishes, 1):
+        try:
+            logger.info(f"🤖 [{i}/{len(parishes)}] Processing parish {parish['parish_id']}: {parish['parish_website']}")
+            
+            # Call agentic extraction
+            result = scrape_parish_data_agentic(
+                url=parish['parish_website'],
+                parish_id=parish['parish_id'],
+                supabase=supabase,
+                max_iterations=max_iterations
+            )
+            
+            logger.info(f"🤖 [{i}/{len(parishes)}] Completed parish {parish['parish_id']}: {result['reconciliation_info']}")
+            
+            # Log to monitoring if available
+            if monitoring_client:
+                monitoring_client.send_log(
+                    f"Agentic extraction for parish {parish['parish_id']}: {result['reconciliation_info']}",
+                    "INFO",
+                    worker_type="schedule"
+                )
+                
+        except Exception as e:
+            logger.error(f"🤖 [{i}/{len(parishes)}] Failed parish {parish['parish_id']}: {e}")
+            if monitoring_client:
+                monitoring_client.report_error(
+                    error_type="AgenticExtractionError",
+                    message=f"Agentic extraction failed for parish {parish['parish_id']}: {str(e)}"
+                )
+    
+    logger.info(f"✅ Completed agentic schedule extraction for {len(parishes)} parishes")
     """
     Agentic replacement for existing scrape_parish_data function
 
@@ -175,3 +260,71 @@ def scrape_parish_data_agentic(
             "reconciliation_confidence": 0,
             "reconciliation_fact_string": None,
         }
+
+
+def extract_schedule_agentic_main(
+    num_parishes: int = 100,
+    parish_id: Optional[int] = None,
+    max_pages_per_parish: int = 10,
+    monitoring_client=None,
+    max_iterations: int = 15
+):
+    """
+    Main function for agentic schedule extraction (replaces extract_schedule_main)
+    
+    Args:
+        num_parishes: Number of parishes to process
+        parish_id: Specific parish ID (optional)
+        max_pages_per_parish: Maximum pages to check per parish
+        monitoring_client: Monitoring client for logging
+        max_iterations: Maximum workflow iterations per parish
+    """
+    import logging
+    from typing import Optional
+    from core.db import get_supabase_client
+    from core.intelligent_parish_prioritizer import IntelligentParishPrioritizer
+    
+    logger = logging.getLogger(__name__)
+    supabase = get_supabase_client()
+    
+    # Use intelligent prioritization to select parishes
+    prioritizer = IntelligentParishPrioritizer()
+    parishes = prioritizer.prioritize_parishes(
+        limit=num_parishes,
+        specific_parish_id=parish_id,
+        schedule_extraction=True
+    )
+    
+    logger.info(f"🤖 Starting agentic schedule extraction for {len(parishes)} parishes")
+    
+    for i, parish in enumerate(parishes, 1):
+        try:
+            logger.info(f"🤖 [{i}/{len(parishes)}] Processing parish {parish['parish_id']}: {parish['parish_website']}")
+            
+            # Call agentic extraction
+            result = scrape_parish_data_agentic(
+                url=parish['parish_website'],
+                parish_id=parish['parish_id'],
+                supabase=supabase,
+                max_iterations=max_iterations
+            )
+            
+            logger.info(f"🤖 [{i}/{len(parishes)}] Completed parish {parish['parish_id']}: {result['reconciliation_info']}")
+            
+            # Log to monitoring if available
+            if monitoring_client:
+                monitoring_client.send_log(
+                    f"Agentic extraction for parish {parish['parish_id']}: {result['reconciliation_info']}",
+                    "INFO",
+                    worker_type="schedule"
+                )
+                
+        except Exception as e:
+            logger.error(f"🤖 [{i}/{len(parishes)}] Failed parish {parish['parish_id']}: {e}")
+            if monitoring_client:
+                monitoring_client.report_error(
+                    error_type="AgenticExtractionError",
+                    message=f"Agentic extraction failed for parish {parish['parish_id']}: {str(e)}"
+                )
+    
+    logger.info(f"✅ Completed agentic schedule extraction for {len(parishes)} parishes")
