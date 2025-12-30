@@ -15,13 +15,13 @@ patches:
 images:
 - name: tomatl/diocesan-vitality:backend
   newName: tomatl/diocesan-vitality
-  newTag: development-backend-2025-12-30-02-27-04
+  newTag: development-backend-2025-12-30-02-44-30
 - name: tomatl/diocesan-vitality:frontend
   newName: tomatl/diocesan-vitality
-  newTag: development-frontend-2025-12-30-02-27-04
+  newTag: development-frontend-2025-12-30-02-44-30
 - name: tomatl/diocesan-vitality:pipeline
   newName: tomatl/diocesan-vitality
-  newTag: development-pipeline-2025-12-30-02-27-04
+  newTag: development-pipeline-2025-12-30-02-44-30
 
 commonLabels:
   cluster: do-nyc2-dv-dev
