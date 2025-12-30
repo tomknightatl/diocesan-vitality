@@ -41,6 +41,7 @@ def create_workflow():
     Returns:
         Compiled LangGraph workflow ready for execution
     """
+    # Try direct import first (avoid subprocess if possible)
     try:
         from langgraph.graph import StateGraph, END
 
@@ -87,16 +88,24 @@ def create_workflow():
 
     except ImportError as e:
         logger.error(f"LangGraph not installed: {e}")
-        logger.info("Installing LangGraph...")
-        import subprocess
+        logger.info("Attempting installation...")
 
-        subprocess.run(["pip", "install", "langgraph"], check=True)
-        logger.info("LangGraph installed, attempting to import again...")
-        # Import after installation to verify it works
+        # Try subprocess installation with proper environment
+        import subprocess
+        import os
+
         try:
+            env = os.environ.copy()
+            env["PYTHONPATH"] = "/tmp/.local/lib/python3.11/site-packages:" + env.get(
+                "PYTHONPATH", ""
+            )
+            subprocess.run(["pip", "install", "langgraph"], check=True, env=env)
+
+            # Try import again after installation
             from langgraph.graph import StateGraph, END
 
-            logger.info("✅ LangGraph imported successfully after installation")
+            logger.info("✅ LangGraph installed and accessible")
+
             # Create workflow after successful import
             workflow = StateGraph(ScheduleExtractionState)
             from core.agents.discovery_agent import DiscoveryAgent
@@ -108,10 +117,11 @@ def create_workflow():
             workflow.add_node("validate", ValidationAgent().validate_schedule)
             workflow.set_entry_point("discover")
             return workflow.compile()
-        except ImportError as e2:
-            logger.error(f"LangGraph import failed even after installation: {e2}")
-            logger.error("This suggests a Python path or environment issue")
-            # Don't recurse infinitely - return None to indicate failure
+
+        except Exception as e2:
+            logger.error(f"LangGraph installation failed: {e2}")
+            logger.error("This suggests a persistent environment issue")
+            # Don't recurse infinitely
             return None
     except Exception as e:
         logger.error(f"Failed to create workflow: {e}")
