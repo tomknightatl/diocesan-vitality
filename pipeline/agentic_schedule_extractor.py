@@ -88,12 +88,37 @@ def create_workflow():
 
     except ImportError as e:
         logger.error(f"LangGraph not installed: {e}")
-        logger.info("Attempting installation...")
+        logger.info(
+            "LangGraph is required for agentic workflow - checking installation..."
+        )
 
-        # Try subprocess installation with proper environment
+        # First, try to check if LangGraph is accessible with path adjustment
+        import sys
         import subprocess
         import os
 
+        # Try adding to sys.path directly
+        try:
+            sys.path.insert(0, "/tmp/.local/lib/python3.11/site-packages")
+            from langgraph.graph import StateGraph, END
+
+            logger.info("✅ LangGraph imported successfully after path adjustment")
+
+            # Create workflow after successful import
+            workflow = StateGraph(ScheduleExtractionState)
+            from core.agents.discovery_agent import DiscoveryAgent
+            from core.agents.extraction_agent import ExtractionAgent
+            from core.agents.validation_agent import ValidationAgent
+
+            workflow.add_node("discover", DiscoveryAgent().discover_sources)
+            workflow.add_node("extract", ExtractionAgent().extract_schedule)
+            workflow.add_node("validate", ValidationAgent().validate_schedule)
+            workflow.set_entry_point("discover")
+            return workflow.compile()
+        except ImportError:
+            pass
+
+        # If direct path adjustment didn't work, try subprocess installation
         try:
             env = os.environ.copy()
             env["PYTHONPATH"] = "/tmp/.local/lib/python3.11/site-packages:" + env.get(
@@ -102,6 +127,7 @@ def create_workflow():
             subprocess.run(["pip", "install", "langgraph"], check=True, env=env)
 
             # Try import again after installation
+            sys.path.insert(0, "/tmp/.local/lib/python3.11/site-packages")
             from langgraph.graph import StateGraph, END
 
             logger.info("✅ LangGraph installed and accessible")
@@ -120,8 +146,8 @@ def create_workflow():
 
         except Exception as e2:
             logger.error(f"LangGraph installation failed: {e2}")
-            logger.error("This suggests a persistent environment issue")
-            # Don't recurse infinitely
+            logger.error("Agentic workflow cannot proceed without LangGraph")
+            # Return None to allow batch processor to continue with next parish
             return None
     except Exception as e:
         logger.error(f"Failed to create workflow: {e}")
