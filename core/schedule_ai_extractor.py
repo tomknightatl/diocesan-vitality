@@ -56,13 +56,29 @@ class ScheduleAIExtractor:
         # Dedicated schedule pages should have lower thresholds
         if any(
             keyword in url_lower
-            for keyword in ["schedule", "hours", "mass-times", "adoration", "confession", "reconciliation"]
+            for keyword in [
+                "schedule",
+                "hours",
+                "mass-times",
+                "adoration",
+                "confession",
+                "reconciliation",
+            ]
         ):
             adjustments -= 7  # Increased from 5 to be more permissive
             logger.debug(f"Dedicated schedule page detected, lowering threshold by 7")
 
         # Parish life/ministry pages often contain schedule info
-        if any(keyword in url_lower for keyword in ["parish-life", "ministry", "ministries", "worship", "sacrament"]):
+        if any(
+            keyword in url_lower
+            for keyword in [
+                "parish-life",
+                "ministry",
+                "ministries",
+                "worship",
+                "sacrament",
+            ]
+        ):
             adjustments -= 5
             logger.debug(f"Parish life/ministry page detected, lowering threshold by 5")
 
@@ -72,10 +88,14 @@ class ScheduleAIExtractor:
         # Large pages with lots of content should be more permissive
         if content_length > 2000:
             adjustments -= 5
-            logger.debug(f"Large page ({content_length} words), lowering threshold by 5")
+            logger.debug(
+                f"Large page ({content_length} words), lowering threshold by 5"
+            )
         elif content_length < 100:  # Only very small pages get penalty
             adjustments += 3  # Reduced from 5
-            logger.debug(f"Very small page ({content_length} words), raising threshold by 3")
+            logger.debug(
+                f"Very small page ({content_length} words), raising threshold by 3"
+            )
 
         # Sitemap pages should have higher thresholds but not too high
         if "sitemap" in url_lower:
@@ -83,11 +103,17 @@ class ScheduleAIExtractor:
             logger.debug(f"Sitemap page detected, raising threshold by 10")
 
         # Generic 'about' pages might contain schedules
-        if any(keyword in url_lower for keyword in ["about", "contact", "home", "welcome"]):
+        if any(
+            keyword in url_lower for keyword in ["about", "contact", "home", "welcome"]
+        ):
             adjustments -= 2
-            logger.debug(f"Generic page that might contain schedule info, lowering threshold by 2")
+            logger.debug(
+                f"Generic page that might contain schedule info, lowering threshold by 2"
+            )
 
-        final_threshold = max(3, base_threshold + adjustments)  # Minimum threshold lowered to 3
+        final_threshold = max(
+            3, base_threshold + adjustments
+        )  # Minimum threshold lowered to 3
 
         if final_threshold != base_threshold:
             logger.info(
@@ -96,7 +122,9 @@ class ScheduleAIExtractor:
 
         return final_threshold
 
-    def extract_schedule_from_content(self, content: str, url: str, schedule_type: str) -> Dict:
+    def extract_schedule_from_content(
+        self, content: str, url: str, schedule_type: str
+    ) -> Dict:
         """
         Extract structured schedule information from webpage content using AI.
 
@@ -124,7 +152,9 @@ class ScheduleAIExtractor:
             else:
                 timeout_seconds = 60  # 1 minute for normal content
 
-            logger.info(f"Processing {content_size} chars with {timeout_seconds}s timeout for {schedule_type}")
+            logger.info(
+                f"Processing {content_size} chars with {timeout_seconds}s timeout for {schedule_type}"
+            )
 
             # Get AI response with timeout handling using concurrent.futures
             import concurrent.futures
@@ -137,15 +167,21 @@ class ScheduleAIExtractor:
                 try:
                     response = future.result(timeout=timeout_seconds)
                 except concurrent.futures.TimeoutError:
-                    logger.warning(f"AI processing timeout ({timeout_seconds}s) for {schedule_type} at {url}")
-                    return self._get_empty_result(f"AI processing timeout after {timeout_seconds}s")
+                    logger.warning(
+                        f"AI processing timeout ({timeout_seconds}s) for {schedule_type} at {url}"
+                    )
+                    return self._get_empty_result(
+                        f"AI processing timeout after {timeout_seconds}s"
+                    )
 
             # Parse AI response into structured data
             result = self._parse_ai_response(response.text, url, schedule_type)
 
             # Add URL and content for adaptive threshold calculation
             result["url"] = url
-            result["content"] = content[:1000]  # Store first 1000 chars for threshold calculation
+            result["content"] = content[
+                :1000
+            ]  # Store first 1000 chars for threshold calculation
 
             logger.info(f"AI extraction completed for {schedule_type} at {url}")
             return result
@@ -199,7 +235,7 @@ Look for:
 - Confession times and schedules
 - Reconciliation service schedules
 - Sacrament of Penance availability
-- Weekly recurring schedules (e.g., "Saturdays 3:30-4:30 PM")
+- Weekly recurring schedules (e.g., "Saturdays 3:30-4:30 PM", "Every Saturday", "Each Saturday", "Weekly on Saturdays")
 - "By appointment" availability
 - Before/after Mass schedules
 
@@ -304,7 +340,9 @@ If no Mass schedule is found, return has_weekly_schedule: false and schedule_fou
 
             for word in words:
                 word_lower = word.lower()
-                is_relevant = any(keyword in word_lower for keyword in schedule_keywords)
+                is_relevant = any(
+                    keyword in word_lower for keyword in schedule_keywords
+                )
 
                 # If we find relevant content, prioritize it
                 if is_relevant and current_size < max_chars:
@@ -320,11 +358,15 @@ If no Mass schedule is found, return has_weekly_schedule: false and schedule_fou
             if len(content) > max_chars:
                 content = content[:max_chars] + "..."
 
-            logger.info(f"Large content processed: {len(content)} chars from original {len(' '.join(words))} chars")
+            logger.info(
+                f"Large content processed: {len(content)} chars from original {len(' '.join(words))} chars"
+            )
 
         return content.strip()
 
-    def _parse_ai_response(self, ai_response: str, url: str, schedule_type: str) -> Dict:
+    def _parse_ai_response(
+        self, ai_response: str, url: str, schedule_type: str
+    ) -> Dict:
         """Parse AI response into structured format."""
         try:
             # Try to extract JSON from AI response
@@ -371,7 +413,9 @@ If no Mass schedule is found, return has_weekly_schedule: false and schedule_fou
             "extracted_at": datetime.now(timezone.utc).isoformat(),
         }
 
-    def batch_extract_schedules(self, parish_urls: List[Tuple[str, int, str]], schedule_type: str) -> List[Dict]:
+    def batch_extract_schedules(
+        self, parish_urls: List[Tuple[str, int, str]], schedule_type: str
+    ) -> List[Dict]:
         """
         Extract schedules for multiple parish URLs.
 
@@ -385,7 +429,9 @@ If no Mass schedule is found, return has_weekly_schedule: false and schedule_fou
         results = []
 
         for url, parish_id, content in parish_urls:
-            logger.info(f"Processing {schedule_type} extraction for parish {parish_id}: {url}")
+            logger.info(
+                f"Processing {schedule_type} extraction for parish {parish_id}: {url}"
+            )
 
             result = self.extract_schedule_from_content(content, url, schedule_type)
             result["parish_id"] = parish_id
@@ -420,13 +466,14 @@ def save_ai_schedule_results(supabase, results: List[Dict]):
 
         # Create temporary extractor instance if we need to calculate adaptive threshold
         temp_extractor = ScheduleAIExtractor()
-        adaptive_threshold = temp_extractor.get_adaptive_confidence_threshold(url, content)
+        adaptive_threshold = temp_extractor.get_adaptive_confidence_threshold(
+            url, content
+        )
 
         confidence_score = result.get("confidence_score", 0)
 
         # Only save if schedule was found with adaptive confidence threshold
         if result.get("schedule_found") and confidence_score >= adaptive_threshold:
-
             # Create structured fact value
             fact_value = {
                 "has_weekly_schedule": result.get("has_weekly_schedule", False),
@@ -451,8 +498,12 @@ def save_ai_schedule_results(supabase, results: List[Dict]):
 
     if facts_to_save:
         try:
-            supabase.table("ParishData").upsert(facts_to_save, on_conflict="parish_id,fact_type").execute()
-            logger.info(f"Successfully saved {len(facts_to_save)} AI schedule facts to database")
+            supabase.table("ParishData").upsert(
+                facts_to_save, on_conflict="parish_id,fact_type"
+            ).execute()
+            logger.info(
+                f"Successfully saved {len(facts_to_save)} AI schedule facts to database"
+            )
         except Exception as e:
             logger.error(f"Error saving AI schedule facts: {e}")
     else:
@@ -478,7 +529,9 @@ def test_ai_extraction():
     <p>Reconciliation: Saturdays 3:30 PM - 4:30 PM, or by appointment</p>
     """
 
-    result = extractor.extract_schedule_from_content(sample_content, "https://example.com", "mass")
+    result = extractor.extract_schedule_from_content(
+        sample_content, "https://example.com", "mass"
+    )
 
     print("AI Extraction Result:")
     print(json.dumps(result, indent=2))
