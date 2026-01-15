@@ -13,13 +13,13 @@ patches:
 images:
 - name: tomatl/diocesan-vitality:backend
   newName: tomatl/diocesan-vitality
-  newTag: staging-backend-2025-12-13-15-55-09
+  newTag: staging-backend-2026-01-15-20-54-20
 - name: tomatl/diocesan-vitality:frontend
   newName: tomatl/diocesan-vitality
-  newTag: staging-frontend-2025-12-13-15-55-09
+  newTag: staging-frontend-2026-01-15-20-54-20
 - name: tomatl/diocesan-vitality:pipeline
   newName: tomatl/diocesan-vitality
-  newTag: staging-pipeline-2025-12-13-15-55-09
+  newTag: staging-pipeline-2026-01-15-20-54-20
 
 commonLabels:
   cluster: do-nyc2-dv-stg
