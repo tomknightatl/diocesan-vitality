@@ -123,3 +123,7 @@ terraform/**/k8s-secrets/
 # Frontend documentation artifacts
 docs/frontend/node_modules/
 docs/frontend/package-lock.json
+
+# Database backups (contains sensitive data)
+backup/*.sql.gz
+backup/*.sql
