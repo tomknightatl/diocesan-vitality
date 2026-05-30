@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: diocesan_vitality_db
+    restart: always
+    environment:
+      POSTGRES_DB: local_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - local_db_data:/var/lib/postgresql/data
+      - ./sql/initial_schema.sql:/docker-entrypoint-initdb.d/initial_schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d local_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: diocesan_vitality_backend
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - ENVIRONMENT=local
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/local_db
+      - SUPABASE_URL=${DEV_SUPABASE_URL}
+      - SUPABASE_KEY=${DEV_SUPABASE_KEY}
+      - GENAI_API_KEY=${DEV_GENAI_API_KEY}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: diocesan_vitality_frontend
+    restart: always
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+      - REACT_APP_ENVIRONMENT=local
+    volumes:
+      - ./frontend/src:/app/src
+
+  pipeline:
+    build:
+      context: ./pipeline
+      dockerfile: Dockerfile
+    container_name: diocesan_vitality_pipeline
+    profiles:
+      - pipeline
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/local_db
+      - SUPABASE_URL=${DEV_SUPABASE_URL}
+      - SUPABASE_KEY=${DEV_SUPABASE_KEY}
+      - GENAI_API_KEY=${DEV_GENAI_API_KEY}
+
+volumes:
+  local_db_data:
+    name: diocesan-vitality_local_db_data
