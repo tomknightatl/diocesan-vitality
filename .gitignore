@@ -127,3 +127,6 @@ docs/frontend/package-lock.json
 # Database backups (contains sensitive data)
 backup/*.sql.gz
 backup/*.sql
+
+# OpenCode configuration and workspace
+.opencode/
