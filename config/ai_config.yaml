@@ -1,0 +1,113 @@
+# AI Configuration for Diocesan Vitality Project
+# This file configures Google Gemini AI models and authentication strategies
+
+# Authentication settings
+authentication:
+  # Authentication method: api_key, oauth, service_account, auto_detect
+  # - api_key: Uses GENAI_API_KEY environment variable (simple, good for dev)
+  # - oauth: Uses Google Cloud OAuth credentials (production)
+  # - service_account: Uses service account JSON file (server-to-server)
+  # - auto_detect: Automatically detects available authentication (recommended)
+  method: auto_detect
+
+  # Enable web-based OAuth flow (for interactive authentication)
+  enable_web_auth: false
+
+  # Force a specific model for all components (overrides component-specific models)
+  # Set to null or remove to use component-specific models
+  force_model: null
+
+# Model configuration
+models:
+  # Default model to use when no component-specific model is defined
+  default: "gemini-1.5-flash"
+
+  # Component-specific model assignments
+  components:
+    # Content analyzer for failed parish extractions
+    content_analyzer: "gemini-2.5-pro"
+
+    # Schedule extractor for parish schedule parsing
+    schedule_extractor: "gemini-3.1-flash-preview"
+
+    # Fallback extractor for failed extractions
+    fallback_extractor: "gemini-2.5-pro"
+
+    # URL filter for intelligent URL filtering
+    url_filter: "gemini-2.5-flash-lite"
+
+    # Parish prioritizer for intelligent parish prioritization
+    parish_prioritizer: "gemini-3.1-flash-preview"
+
+# Component-specific model parameters (overrides global parameters)
+component_parameters:
+  content_analyzer:
+    temperature: 0.7
+    max_tokens: 8192
+    thinking_enabled: true
+    thinking_budget: 8192
+
+  schedule_extractor:
+    temperature: 0.3
+    max_tokens: 4096
+
+  fallback_extractor:
+    temperature: 0.7
+    max_tokens: 8192
+    thinking_enabled: true
+    thinking_budget: 16384
+
+  url_filter:
+    temperature: 0.1
+    max_tokens: 2048
+
+  parish_prioritizer:
+    temperature: 0.5
+    max_tokens: 4096
+
+# Model parameters (applied to all models unless overridden)
+model_parameters:
+  # Temperature: Controls randomness (0.0 = deterministic, 2.0 = very random)
+  temperature: 0.7
+
+  # Maximum tokens in the response
+  max_tokens: 4096
+
+  # Top-p: Nucleus sampling parameter (0.0 = conservative, 1.0 = liberal)
+  top_p: 0.9
+
+  # Top-k: Top-k sampling parameter (1 = conservative, 40 = default)
+  top_k: 40
+
+# Performance settings
+performance:
+  # Enable model caching to improve performance
+  enable_caching: true
+
+  # Cache time-to-live in seconds (3600 = 1 hour)
+  cache_ttl: 3600
+
+  # Maximum number of retries for failed API calls
+  max_retries: 3
+
+  # Timeout in seconds for API calls
+  timeout: 30
+
+# Logging settings
+logging:
+  # Logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: "INFO"
+
+  # Log API requests (useful for debugging)
+  log_requests: false
+
+  # Log API responses (can be verbose, use with caution)
+  log_responses: false
+
+# Cost optimization settings
+cost_optimization:
+  enabled: true
+  budget_limit_usd: 100.0
+  daily_quota_tokens: 1000000
+  prefer_cheaper_models: true
+  enable_smart_routing: true

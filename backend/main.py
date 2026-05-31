@@ -1236,6 +1236,202 @@ async def set_monitoring_mode(mode: str):
         return {"error": str(e)}
 
 
+# AI Generation endpoints
+from ai.model_router import get_router, GenerationRequest, TaskType
+from ai.models import (
+    AIRequest,
+    AIResponse,
+    ModelCapabilityResponse,
+    ModelsListResponse,
+    AIConfigResponse,
+    CostSummaryResponse,
+    RecentGenerationsResponse,
+    ErrorResponse,
+)
+
+
+@app.post("/api/ai/generate", response_model=AIResponse)
+async def generate_ai_content(request: AIRequest):
+    """
+    Generate AI content with automatic model routing based on task complexity.
+
+    The system automatically selects the optimal model:
+    - High complexity (>0.7) → gemini-2.5-pro (best quality)
+    - Medium complexity (0.4-0.7) → gemini-2.5-flash (balanced)
+    - Low complexity (<0.4) → gemini-2.5-flash-lite (lowest cost)
+    """
+    try:
+        router = get_router()
+
+        # Convert Pydantic request to internal request format
+        generation_request = GenerationRequest(
+            prompt=request.prompt,
+            task_type=TaskType(request.task_type.value),
+            max_tokens=request.max_tokens,
+            temperature=request.temperature,
+            top_p=request.top_p,
+            system_prompt=request.system_prompt,
+            complexity_score=request.complexity_score,
+            metadata=request.metadata,
+        )
+
+        # Generate content
+        response = await router.generate(generation_request)
+
+        return AIResponse(
+            content=response.content,
+            model_used=response.model_used,
+            tokens_used=response.tokens_used,
+            cost=response.cost,
+            generation_time=response.generation_time,
+            complexity_score=response.complexity_score,
+            timestamp=response.timestamp,
+        )
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
+
+
+@app.get("/api/ai/models", response_model=ModelsListResponse)
+async def get_ai_models():
+    """
+    Get list of available AI models with their capabilities and pricing.
+    """
+    try:
+        router = get_router()
+        models = router.get_available_models()
+
+        model_responses = [
+            ModelCapabilityResponse(
+                model_id=model.model_id,
+                name=model.name,
+                description=model.description,
+                max_tokens=model.max_tokens,
+                context_window=model.context_window,
+                supports_function_calling=model.supports_function_calling,
+                supports_vision=model.supports_vision,
+                input_cost_per_1k_tokens=model.input_cost_per_1k_tokens,
+                output_cost_per_1k_tokens=model.output_cost_per_1k_tokens,
+                complexity_threshold=model.complexity_threshold,
+                quality_score=model.quality_score,
+                speed_score=model.speed_score,
+                recommended_for=[task.value for task in model.recommended_for],
+            )
+            for model in models
+        ]
+
+        return ModelsListResponse(
+            models=model_responses,
+            total_count=len(model_responses),
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get models: {str(e)}")
+
+
+@app.get("/api/ai/config", response_model=AIConfigResponse)
+async def get_ai_config():
+    """
+    Get current AI configuration.
+    """
+    try:
+        router = get_router()
+        config = router.config
+
+        return AIConfigResponse(
+            default_model=config.get("default_model", "gemini-2.5-flash"),
+            max_retries=config.get("max_retries", 3),
+            timeout=config.get("timeout", 60),
+            enable_cost_tracking=config.get("enable_cost_tracking", True),
+            complexity_calculation=config.get("complexity_calculation", {}),
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get config: {str(e)}")
+
+
+@app.post("/api/ai/config/reload")
+async def reload_ai_config():
+    """
+    Reload AI configuration from file.
+    """
+    try:
+        router = get_router()
+        router.reload_config()
+
+        return {
+            "status": "success",
+            "message": "AI configuration reloaded successfully",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to reload config: {str(e)}")
+
+
+@app.get("/api/ai/costs/summary", response_model=CostSummaryResponse)
+async def get_cost_summary():
+    """
+    Get cost summary for AI generations.
+    """
+    try:
+        router = get_router()
+        summary = router.get_cost_summary()
+
+        return CostSummaryResponse(
+            total_cost=summary["total_cost"],
+            total_tokens=summary["total_tokens"],
+            total_requests=summary["total_requests"],
+            average_cost_per_request=summary["average_cost_per_request"],
+            average_tokens_per_request=summary["average_tokens_per_request"],
+            cost_by_model=summary["cost_by_model"],
+            cost_by_task_type=summary["cost_by_task_type"],
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get cost summary: {str(e)}")
+
+
+@app.get("/api/ai/costs/recent", response_model=RecentGenerationsResponse)
+async def get_recent_generations(limit: int = 50):
+    """
+    Get recent AI generations with cost information.
+
+    Args:
+        limit: Maximum number of recent generations to return (default: 50, max: 200)
+    """
+    try:
+        if limit > 200:
+            raise HTTPException(status_code=400, detail="Limit cannot exceed 200")
+
+        router = get_router()
+        generations = router.get_recent_generations(limit)
+
+        generation_entries = [
+            GenerationEntry(
+                timestamp=gen["timestamp"],
+                model_id=gen["model_id"],
+                task_type=gen["task_type"],
+                tokens=gen["tokens"],
+                cost=gen["cost"],
+                generation_time=gen["generation_time"],
+            )
+            for gen in generations
+        ]
+
+        return RecentGenerationsResponse(
+            generations=generation_entries,
+            total_count=len(generation_entries),
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get recent generations: {str(e)}")
+
+
 def generate_all_charts_background():
     """Background task to generate all charts and cache them to disk"""
     global chart_generation_in_progress

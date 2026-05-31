@@ -1,0 +1,202 @@
+/* AI Model Configuration Styles */
+.ai-model-config .model-card {
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.ai-model-config .model-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.ai-model-config .model-card.border-primary {
+  border-color: #0d6efd !important;
+}
+
+.ai-model-config .model-specs {
+  font-size: 0.9em;
+}
+
+.ai-model-config .min-width-60 {
+  min-width: 60px;
+  text-align: center;
+}
+
+.ai-model-config .cursor-pointer {
+  cursor: pointer;
+}
+
+/* AI Quality Dashboard Styles */
+.ai-quality-dashboard .quality-card {
+  transition: all 0.2s ease;
+}
+
+.ai-quality-dashboard .quality-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.ai-quality-dashboard .insight-card {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ai-quality-dashboard .metric-badge {
+  font-size: 0.9em;
+  padding: 0.25rem 0.5rem;
+}
+
+.ai-quality-dashboard .progress {
+  height: 0.5rem;
+}
+
+/* AI Configuration Page Styles */
+.ai-configuration .nav-tabs .nav-link {
+  font-size: 1.1rem;
+  padding: 0.75rem 1.5rem;
+}
+
+.ai-configuration .nav-tabs .nav-link.active {
+  font-weight: 600;
+}
+
+.ai-configuration .card {
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.ai-configuration .card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  border-radius: 8px 8px 0 0 !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .ai-model-config .model-card {
+    margin-bottom: 1rem;
+  }
+
+  .ai-quality-dashboard .quality-card {
+    margin-bottom: 1rem;
+  }
+
+  .ai-configuration .nav-tabs .nav-link {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+  }
+}
+
+/* Loading and error states */
+.ai-model-config .loading-spinner,
+.ai-quality-dashboard .loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+/* Table styles */
+.ai-quality-dashboard table {
+  font-size: 0.9em;
+}
+
+.ai-quality-dashboard table th {
+  font-weight: 600;
+  background-color: #f8f9fa;
+}
+
+/* Badge styles */
+.ai-quality-dashboard .badge {
+  font-size: 0.85em;
+  padding: 0.35em 0.65em;
+}
+
+/* Progress bar animations */
+.ai-quality-dashboard .progress-bar {
+  transition: width 0.5s ease;
+}
+
+/* Connection status indicator */
+.ai-quality-dashboard .connection-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ai-quality-dashboard .connection-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Tooltip improvements */
+.ai-model-config .tooltip-inner {
+  max-width: 300px;
+  text-align: left;
+}
+
+/* Form range slider styling */
+.ai-model-config .form-range::-webkit-slider-thumb {
+  background: #0d6efd;
+}
+
+.ai-model-config .form-range::-moz-range-thumb {
+  background: #0d6efd;
+}
+
+/* Card hover effects */
+.ai-configuration .quick-stat-card {
+  transition: all 0.2s ease;
+}
+
+.ai-configuration .quick-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Scrollbar styling for tables */
+.ai-quality-dashboard .table-container::-webkit-scrollbar,
+.ai-quality-dashboard .insights-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.ai-quality-dashboard .table-container::-webkit-scrollbar-track,
+.ai-quality-dashboard .insights-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.ai-quality-dashboard .table-container::-webkit-scrollbar-thumb,
+.ai-quality-dashboard .insights-container::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.ai-quality-dashboard .table-container::-webkit-scrollbar-thumb:hover,
+.ai-quality-dashboard .insights-container::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

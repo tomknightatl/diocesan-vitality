@@ -23,3 +23,9 @@ pdfplumber
 pydantic
 scikit-learn
 psycopg2-binary
+
+# AI Authentication and Configuration dependencies
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+pyyaml

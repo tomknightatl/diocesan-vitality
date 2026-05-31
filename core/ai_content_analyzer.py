@@ -11,6 +11,7 @@ When standard extraction methods fail, this system uses GenAI to:
 
 import json
 import re
+import warnings
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
 
@@ -21,6 +22,9 @@ from selenium.webdriver.remote.webdriver import WebDriver
 
 from core.circuit_breaker import circuit_breaker
 from core.logger import get_logger
+from core.ai_auth_manager import get_ai_auth_manager, AIAuthManager
+from core.ai_model_factory import get_ai_model_factory, AIModelFactory
+from core.ai_config import get_ai_config, AIConfig
 
 logger = get_logger(__name__)
 
@@ -28,11 +32,116 @@ logger = get_logger(__name__)
 class AIContentAnalyzer:
     """AI-powered content analyzer for failed parish extractions."""
 
-    def __init__(self, genai_api_key: str):
-        """Initialize the AI content analyzer."""
+    def __init__(
+        self,
+        genai_api_key: Optional[str] = None,
+        auth_config: Optional[Dict[str, Any]] = None,
+        ai_config: Optional[AIConfig] = None,
+        auth_manager: Optional[AIAuthManager] = None,
+        model_factory: Optional[AIModelFactory] = None,
+    ):
+        """
+        Initialize the AI content analyzer.
+
+        Args:
+            genai_api_key: Legacy API key parameter for backward compatibility.
+                          If provided, will use API key authentication with deprecation warning.
+            auth_config: Optional authentication configuration dictionary.
+                        Can include 'auth_method', 'enable_web_auth', 'api_key', etc.
+            ai_config: Optional AIConfig instance. If None, uses global config.
+            auth_manager: Optional AIAuthManager instance. If None, uses global auth manager.
+            model_factory: Optional AIModelFactory instance. If None, uses global model factory.
+        """
+        # Handle backward compatibility with legacy genai_api_key parameter
+        if genai_api_key is not None:
+            warnings.warn(
+                "Passing genai_api_key directly is deprecated. Use auth_config parameter instead.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+            # Use legacy API key authentication
+            self._use_legacy_auth(genai_api_key)
+            return
+
+        # Use new authentication system
+        self._use_new_auth_system(auth_config, ai_config, auth_manager, model_factory)
+
+    def _use_legacy_auth(self, genai_api_key: str) -> None:
+        """
+        Use legacy API key authentication for backward compatibility.
+
+        Args:
+            genai_api_key: The GenAI API key
+        """
+        logger.info("🤖 AI Content Analyzer using legacy API key authentication (deprecated)")
         self.genai_api_key = genai_api_key
         genai.configure(api_key=genai_api_key)
         self.model = genai.GenerativeModel("gemini-2.5-flash")
+        self._auth_method = "api_key_legacy"
+        self._model_factory = None
+
+    def _use_new_auth_system(
+        self,
+        auth_config: Optional[Dict[str, Any]],
+        ai_config: Optional[AIConfig],
+        auth_manager: Optional[AIAuthManager],
+        model_factory: Optional[AIModelFactory],
+    ) -> None:
+        """
+        Use the new authentication system.
+
+        Args:
+            auth_config: Authentication configuration dictionary
+            ai_config: AIConfig instance
+            auth_manager: AIAuthManager instance
+            model_factory: AIModelFactory instance
+        """
+        # Initialize authentication manager
+        if auth_manager:
+            self._auth_manager = auth_manager
+        else:
+            # Create auth manager with optional config
+            auth_method = "auto_detect"
+            enable_web_auth = False
+            api_key = None
+            credentials_path = None
+            scopes = None
+
+            if auth_config:
+                auth_method = auth_config.get("auth_method", "auto_detect")
+                enable_web_auth = auth_config.get("enable_web_auth", False)
+                api_key = auth_config.get("api_key")
+                credentials_path = auth_config.get("credentials_path")
+                scopes = auth_config.get("scopes")
+
+            self._auth_manager = get_ai_auth_manager(
+                auth_method=auth_method,
+                enable_web_auth=enable_web_auth,
+                api_key=api_key,
+                credentials_path=credentials_path,
+                scopes=scopes,
+            )
+
+        # Initialize model factory
+        if model_factory:
+            self._model_factory = model_factory
+        else:
+            self._model_factory = get_ai_model_factory(
+                config=ai_config,
+                auth_manager=self._auth_manager,
+            )
+
+        # Get model for content analyzer component
+        try:
+            self.model = self._model_factory.get_model(
+                component_name="content_analyzer",
+                model_name="gemini-2.5-flash",
+            )
+            self._auth_method = self._auth_manager.active_strategy_name or "unknown"
+            logger.info(f"🤖 AI Content Analyzer initialized with {self._auth_method} authentication")
+        except Exception as e:
+            logger.error(f"🤖 Failed to initialize AI Content Analyzer: {e}")
+            raise
 
         # Common parish indicators for validation
         self.parish_indicators = [
@@ -545,6 +654,30 @@ and CONTENT SNIPPETS provided above.
         return has_parish_indicator and not has_exclusion
 
 
-def get_ai_content_analyzer(genai_api_key: str) -> AIContentAnalyzer:
-    """Factory function to create AI content analyzer."""
-    return AIContentAnalyzer(genai_api_key)
+def get_ai_content_analyzer(
+    genai_api_key: Optional[str] = None,
+    auth_config: Optional[Dict[str, Any]] = None,
+    ai_config: Optional[AIConfig] = None,
+    auth_manager: Optional[AIAuthManager] = None,
+    model_factory: Optional[AIModelFactory] = None,
+) -> AIContentAnalyzer:
+    """
+    Factory function to create AI content analyzer.
+
+    Args:
+        genai_api_key: Legacy API key parameter for backward compatibility.
+        auth_config: Optional authentication configuration dictionary.
+        ai_config: Optional AIConfig instance.
+        auth_manager: Optional AIAuthManager instance.
+        model_factory: Optional AIModelFactory instance.
+
+    Returns:
+        AIContentAnalyzer instance
+    """
+    return AIContentAnalyzer(
+        genai_api_key=genai_api_key,
+        auth_config=auth_config,
+        ai_config=ai_config,
+        auth_manager=auth_manager,
+        model_factory=model_factory,
+    )

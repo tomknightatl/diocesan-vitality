@@ -1,0 +1,15 @@
+{
+  "api_key": "",
+  "default_model": "gemini-2.5-flash",
+  "max_retries": 3,
+  "timeout": 60,
+  "enable_cost_tracking": true,
+  "complexity_calculation": {
+    "enabled": true,
+    "factors": {
+      "prompt_length": 0.2,
+      "task_complexity": 0.5,
+      "domain_specificity": 0.3
+    }
+  }
+}

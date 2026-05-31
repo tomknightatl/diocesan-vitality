@@ -11,6 +11,7 @@ import Reports from './Reports.jsx';
 import Layout from './Layout.jsx';
 import Parish from './Parish.jsx';
 import ParishList from './ParishList.jsx';
+import AIConfiguration from './AIConfiguration.jsx';
 
 const router = createBrowserRouter([
   {
@@ -39,6 +40,10 @@ const router = createBrowserRouter([
       {
         path: "/dashboard",
         element: <Dashboard />,
+      },
+      {
+        path: "/ai-config",
+        element: <AIConfiguration />,
       },
     ],
   },

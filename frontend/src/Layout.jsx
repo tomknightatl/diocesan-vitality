@@ -65,6 +65,20 @@ function Layout() {
             >
               Health
             </Nav.Link>
+            <Nav.Link
+              as={Link}
+              to="/ai-config"
+              style={{
+                color: location.pathname === '/ai-config' ? 'white' : '',
+                fontSize: '1.4rem',
+                border: '1px solid #495057',
+                borderRadius: '4px',
+                marginRight: '8px',
+                padding: '8px 16px'
+              }}
+            >
+              AI Config
+            </Nav.Link>
           </Nav>
           <Navbar.Brand href="/" style={{ fontSize: '1.6rem' }}>Diocesan Vitality</Navbar.Brand>
         </Container>

@@ -6,14 +6,18 @@ Uses Google Gemini AI to extract structured schedule information.
 
 import json
 import re
+import warnings
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import google.generativeai as genai
 
 from pipeline import config
 from core.db import get_supabase_client
 from core.logger import get_logger
+from core.ai_auth_manager import get_ai_auth_manager, AIAuthManager
+from core.ai_model_factory import get_ai_model_factory, AIModelFactory
+from core.ai_config import get_ai_config, AIConfig
 
 logger = get_logger(__name__)
 
@@ -21,15 +25,119 @@ logger = get_logger(__name__)
 class ScheduleAIExtractor:
     """AI-powered extractor for parish schedules using Google Gemini."""
 
-    def __init__(self):
-        """Initialize the AI extractor with Gemini API."""
+    def __init__(
+        self,
+        genai_api_key: Optional[str] = None,
+        auth_config: Optional[Dict[str, Any]] = None,
+        ai_config: Optional[AIConfig] = None,
+        auth_manager: Optional[AIAuthManager] = None,
+        model_factory: Optional[AIModelFactory] = None,
+    ):
+        """
+        Initialize the AI extractor with Gemini API.
+
+        Args:
+            genai_api_key: Legacy API key parameter for backward compatibility.
+                          If provided, will use API key authentication with deprecation warning.
+            auth_config: Optional authentication configuration dictionary.
+                        Can include 'auth_method', 'enable_web_auth', 'api_key', etc.
+            ai_config: Optional AIConfig instance. If None, uses global config.
+            auth_manager: Optional AIAuthManager instance. If None, uses global auth manager.
+            model_factory: Optional AIModelFactory instance. If None, uses global model factory.
+        """
         try:
-            genai.configure(api_key=config.GENAI_API_KEY)
-            self.model = genai.GenerativeModel("gemini-1.5-flash")
+            # Check if legacy API key is provided or if we should use config.GENAI_API_KEY
+            legacy_api_key = genai_api_key or getattr(config, 'GENAI_API_KEY', None)
+
+            if legacy_api_key:
+                # Use legacy authentication for backward compatibility
+                warnings.warn(
+                    "Using legacy API key authentication. Consider migrating to new auth system.",
+                    DeprecationWarning,
+                    stacklevel=2
+                )
+                self._use_legacy_auth(legacy_api_key)
+            else:
+                # Use new authentication system
+                self._use_new_auth_system(auth_config, ai_config, auth_manager, model_factory)
+
             logger.info("AI Schedule Extractor initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize AI Schedule Extractor: {e}")
             self.model = None
+            self._auth_method = "failed"
+
+    def _use_legacy_auth(self, genai_api_key: str) -> None:
+        """
+        Use legacy API key authentication for backward compatibility.
+
+        Args:
+            genai_api_key: The GenAI API key
+        """
+        logger.info("AI Schedule Extractor using legacy API key authentication (deprecated)")
+        genai.configure(api_key=genai_api_key)
+        self.model = genai.GenerativeModel("gemini-1.5-flash")
+        self._auth_method = "api_key_legacy"
+        self._model_factory = None
+
+    def _use_new_auth_system(
+        self,
+        auth_config: Optional[Dict[str, Any]],
+        ai_config: Optional[AIConfig],
+        auth_manager: Optional[AIAuthManager],
+        model_factory: Optional[AIModelFactory],
+    ) -> None:
+        """
+        Use the new authentication system.
+
+        Args:
+            auth_config: Authentication configuration dictionary
+            ai_config: AIConfig instance
+            auth_manager: AIAuthManager instance
+            model_factory: AIModelFactory instance
+        """
+        # Initialize authentication manager
+        if auth_manager:
+            self._auth_manager = auth_manager
+        else:
+            # Create auth manager with optional config
+            auth_method = "auto_detect"
+            enable_web_auth = False
+            api_key = None
+            credentials_path = None
+            scopes = None
+
+            if auth_config:
+                auth_method = auth_config.get("auth_method", "auto_detect")
+                enable_web_auth = auth_config.get("enable_web_auth", False)
+                api_key = auth_config.get("api_key")
+                credentials_path = auth_config.get("credentials_path")
+                scopes = auth_config.get("scopes")
+
+            self._auth_manager = get_ai_auth_manager(
+                auth_method=auth_method,
+                enable_web_auth=enable_web_auth,
+                api_key=api_key,
+                credentials_path=credentials_path,
+                scopes=scopes,
+            )
+
+        # Initialize model factory
+        if model_factory:
+            self._model_factory = model_factory
+        else:
+            self._model_factory = get_ai_model_factory(
+                config=ai_config,
+                auth_manager=self._auth_manager,
+            )
+
+        # Get model for schedule extractor component
+        self.model = self._model_factory.get_model(
+            component_name="schedule_extractor",
+            model_name="gemini-1.5-flash",
+        )
+        self._auth_method = self._auth_manager.active_strategy_name or "unknown"
+        logger.info(f"AI Schedule Extractor initialized with {self._auth_method} authentication")
 
     def get_adaptive_confidence_threshold(self, url: str, content: str) -> int:
         """
@@ -419,7 +527,9 @@ def save_ai_schedule_results(supabase, results: List[Dict]):
         content = result.get("content", "")
 
         # Create temporary extractor instance if we need to calculate adaptive threshold
-        temp_extractor = ScheduleAIExtractor()
+        # Note: We don't need to reinitialize the model for threshold calculation
+        temp_extractor = ScheduleAIExtractor.__new__(ScheduleAIExtractor)
+        temp_extractor.model = None  # Not needed for threshold calculation
         adaptive_threshold = temp_extractor.get_adaptive_confidence_threshold(url, content)
 
         confidence_score = result.get("confidence_score", 0)

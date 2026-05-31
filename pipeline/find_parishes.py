@@ -6,8 +6,10 @@ import asyncio
 import random
 import re
 import time
+import warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
+from typing import Optional
 from urllib.parse import urlparse
 
 import google.generativeai as genai
@@ -34,6 +36,9 @@ from core.driver import close_driver, ensure_driver_available, recover_driver, s
 from core.logger import get_logger
 from core.utils import normalize_url_join
 from pipeline.respectful_automation import RespectfulAutomation, create_blocking_report
+from core.ai_auth_manager import get_ai_auth_manager, AIAuthManager
+from core.ai_model_factory import get_ai_model_factory, AIModelFactory
+from core.ai_config import get_ai_config, AIConfig
 
 logger = get_logger(__name__)
 
@@ -42,6 +47,11 @@ _batch_manager = None
 
 # Global respectful automation instance
 _respectful_automation = None
+
+# Global AI authentication and model factory instances
+_ai_auth_manager: Optional[AIAuthManager] = None
+_ai_model_factory: Optional[AIModelFactory] = None
+_use_legacy_auth = False
 
 
 def get_current_batch_manager():
