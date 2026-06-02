@@ -6,6 +6,7 @@ This document outlines how to set up and run the application locally using Docke
 
 - [Prerequisites](#prerequisites)
 - [Setup](#setup)
+- [Obtaining and Generating Credentials](#obtaining-and-generating-credentials)
 - [Running the Local Environment with Docker Compose](#running-the-local-environment-with-docker-compose)
 - [Accessing the Application](#accessing-the-application)
 - [Service Details](#service-details)
@@ -22,13 +23,12 @@ This document outlines how to set up and run the application locally using Docke
 ## Prerequisites
 
 - Docker and Docker Compose
-- Access to the development Supabase instance credentials (`DEV_SUPABASE_URL`, `DEV_SUPABASE_KEY`)
-- A Google Generative AI API key (`DEV_GENAI_API_KEY`)
+- Access to Supabase and Google Generative AI credentials for both development and production environments. See "Obtaining and Generating Credentials" below.
 
 ## Setup
 
 1.  **Create a `.env` file:**
-    Copy the `.env.example` file to a new file named `.env`:
+    Copy the `.env.example` file from the project root to a new file named `.env`:
     ```bash
     cp .env.example .env
     ```
@@ -37,10 +37,74 @@ This document outlines how to set up and run the application locally using Docke
     Open the `.env` file and replace the placeholder values with your actual credentials.
 
     ```
-    DEV_SUPABASE_URL="your_dev_supabase_url"
-    DEV_SUPABASE_KEY="your_dev_supabase_key"
-    DEV_GENAI_API_KEY="your_genai_api_key"
+    SUPABASE_URL_DEV="your_supabase_dev_url"
+    SUPABASE_KEY_DEV="your_supabase_dev_key"
+    SUPABASE_DB_HOST_DEV="your_supabase_dev_db_host"
+    SUPABASE_DB_PORT_DEV="your_supabase_dev_db_port"
+    SUPABASE_DB_PASSWORD_DEV="your_supabase_dev_db_password"
+    GENAI_API_KEY_DEV="your_genai_dev_api_key"
+    SUPABASE_URL_PRD="your_supabase_prod_url"
+    SUPABASE_KEY_PRD="your_supabase_prod_key"
+    SUPABASE_DB_HOST_PRD="your_supabase_prod_db_host"
+    SUPABASE_DB_PORT_PRD="your_supabase_prod_db_port"
+    SUPABASE_DB_PASSWORD_PRD="your_supabase_prod_db_password"
+    GENAI_API_KEY_PRD="your_genai_prod_api_key"
     ```
+
+## Obtaining and Generating Credentials
+
+This section provides instructions on how to acquire the necessary API keys and credentials for both local development and production administrative tasks.
+
+### Supabase Development Credentials
+
+These credentials are for your local Supabase instance, which you start using `supabase start`.
+
+*   **`SUPABASE_URL_DEV` & `SUPABASE_KEY_DEV` (Application API):**
+    1.  Run `supabase start` in your project's `supabase` directory.
+    2.  In the output, locate "Project URL" (for `SUPABASE_URL_DEV`) and "Secret" (for `SUPABASE_KEY_DEV`). The "Secret" key is the service role key and should be used for backend operations.
+*   **`SUPABASE_DB_HOST_DEV` & `SUPABASE_DB_PORT_DEV` & `SUPABASE_DB_PASSWORD_DEV` (Direct Database Access):**
+    1.  These are for direct connections to your local PostgreSQL database.
+    2.  Default values are: Host `127.0.0.1`, Port `54322`, Password `postgres`.
+
+### Supabase Production Credentials
+
+These credentials are for your live production Supabase project. Handle them with extreme care.
+
+*   **`SUPABASE_URL_PRD` & `SUPABASE_KEY_PRD` (Application API):**
+    1.  Go to your Supabase Dashboard ([app.supabase.com](https://app.supabase.com/)).
+    2.  Select your production project.
+    3.  Navigate to "Project Settings" -> "API Keys -> Legacy anon, service_role API keys".
+    4.  `SUPABASE_KEY_PRD` is the "Service Role (secret)" key. **WARNING: This key has elevated privileges; do not expose it client-side.**
+    5.  `SUPABASE_URL_PRD` is the "Project URL".
+*   **`SUPABASE_DB_HOST_PRD`, `SUPABASE_DB_PORT_PRD`, & `SUPABASE_DB_PASSWORD_PRD` (Direct Database Access):**
+    The database password for production is not directly viewable in the Supabase UI for security reasons. If you do not have it, you will need to reset it.
+
+    **To Obtain Database Credentials:**
+    1.  **Log in to your Supabase Dashboard:** Go to [https://app.supabase.com/](https://app.supabase.com/) and log in to your account.
+    2.  **Select your Project:** From the list of projects, select the project for which you need the production credentials.
+    3.  **Navigate to Database Connection Settings:**
+        *   On the top bar, click on the **"Connect"** icon (it looks like a plug, usually near "SQL Editor" and "AI Assistant").
+        *   Alternatively, you might find connection details under **"Project Settings"** -> **"Database"**.
+    4.  **Locate Connection String:**
+        *   Within the "Connect" section, look for "Connection String" or "Connection Info".
+        *   You will typically find options for "Direct Connection" and "Connection Pooling". The "Session Pooler connection string" is often recommended for applications.
+        *   Copy the connection string. It will look something like: `postgres://postgres.[YOUR_PROJECT_REF]:[YOUR_PASSWORD]@[YOUR_HOST]:5432/postgres`
+    5.  **Extract Host and Port:**
+        *   From the connection string, identify the host (e.g., `[YOUR_HOST]`) for `SUPABASE_DB_HOST_PRD` and the port (e.g., `5432`) for `SUPABASE_DB_PORT_PRD`.
+    6.  **Retrieve/Reset Database Password:**
+        *   If you do not have your database password saved, navigate to **"Project Settings"** -> **"Database"**.
+        *   Under the "Database Password" section, you will find an option to reset your password. Reset it and save the new password securely. This will be your `SUPABASE_DB_PASSWORD_PRD`.
+
+### Google Generative AI API Key
+
+*   **`GENAI_API_KEY_DEV` & `GENAI_API_KEY_PRD`:**
+    1.  Go to Google AI Studio ([aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)) or Google Cloud Console.
+    2.  Create a new API key.
+    3.  It is recommended to create separate keys for development and production environments, and restrict their usage (e.g., by IP address or API restrictions) as much as possible.
+
+## Connecting to Production Services for Admin Tasks
+
+For certain administrative or maintenance tasks, you may need to connect your local environment to remote production services. This should be done with extreme caution. The credentials for this are managed in the `.env` file created in the Setup section, which is ignored by Git. Ensure you have replaced the placeholder values for `SUPABASE_URL_PRD`, `SUPABASE_KEY_PRD`, `SUPABASE_DB_HOST_PRD`, `SUPABASE_DB_PORT_PRD`, `SUPABASE_DB_PASSWORD_PRD`, and `GENAI_API_KEY_PRD` with your actual production credentials.
 
 ## Running the Local Environment with Docker Compose
 

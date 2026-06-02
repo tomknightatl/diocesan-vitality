@@ -181,9 +181,9 @@ PRODUCTION_KUBECONFIG: Base64 encoded kubeconfig for production cluster
 
 # Environment-specific variables
 DEV_DATABASE_URL: Development database connection string
-DEV_SUPABASE_URL: Development Supabase URL
-DEV_SUPABASE_KEY: Development Supabase key
-DEV_GENAI_API_KEY: Development Google AI key
+SUPABASE_URL_DEV: Development Supabase URL
+SUPABASE_KEY_DEV: Development Supabase key
+GENAI_API_KEY_DEV: Development Google AI key
 
 STAGING_DATABASE_URL: Staging database connection string
 STAGING_SUPABASE_URL: Staging Supabase URL
