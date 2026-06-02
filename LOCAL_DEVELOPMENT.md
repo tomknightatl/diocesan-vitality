@@ -73,16 +73,27 @@ These credentials are for your live production Supabase project. Handle them wit
 *   **`SUPABASE_URL_PRD` & `SUPABASE_KEY_PRD` (Application API):**
     1.  Go to your Supabase Dashboard ([app.supabase.com](https://app.supabase.com/)).
     2.  Select your production project.
-    3.  Navigate to "Project Settings" -> "API".
-    4.  `SUPABASE_URL_PRD` is the "Project URL".
-    5.  `SUPABASE_KEY_PRD` is the "Service Role (secret)" key. **WARNING: This key has elevated privileges; do not expose it client-side.**
-*   **`SUPABASE_DB_HOST_PRD` & `SUPABASE_DB_PORT_PRD` & `SUPABASE_DB_PASSWORD_PRD` (Direct Database Access):**
-    1.  Go to your Supabase Dashboard.
-    2.  Select your production project.
-    3.  Navigate to "Database" -> "Connection String".
-    4.  Select the "URI" tab.
-    5.  The connection string will be in the format `postgresql://postgres:[PASSWORD]@[HOST]:[PORT]/[DBNAME]`.
-    6.  Extract the `[HOST]` for `SUPABASE_DB_HOST_PRD`, `[PORT]` for `SUPABASE_DB_PORT_PRD`, and `[PASSWORD]` for `SUPABASE_DB_PASSWORD_PRD`.
+    3.  Navigate to "Project Settings" -> "API Keys -> Legacy anon, service_role API keys".
+    4.  `SUPABASE_KEY_PRD` is the "Service Role (secret)" key. **WARNING: This key has elevated privileges; do not expose it client-side.**
+    5.  `SUPABASE_URL_PRD` is the "Project URL".
+*   **`SUPABASE_DB_HOST_PRD`, `SUPABASE_DB_PORT_PRD`, & `SUPABASE_DB_PASSWORD_PRD` (Direct Database Access):**
+    The database password for production is not directly viewable in the Supabase UI for security reasons. If you do not have it, you will need to reset it.
+
+    **To Obtain Database Credentials:**
+    1.  **Log in to your Supabase Dashboard:** Go to [https://app.supabase.com/](https://app.supabase.com/) and log in to your account.
+    2.  **Select your Project:** From the list of projects, select the project for which you need the production credentials.
+    3.  **Navigate to Database Connection Settings:**
+        *   On the left sidebar, click on the **"Connect"** icon (it looks like a plug, usually near "SQL Editor" and "AI Assistant").
+        *   Alternatively, you might find connection details under **"Project Settings"** -> **"Database"**.
+    4.  **Locate Connection String:**
+        *   Within the "Connect" section, look for "Connection String" or "Connection Info".
+        *   You will typically find options for "Direct Connection" and "Connection Pooling". The "Session Pooler connection string" is often recommended for applications.
+        *   Copy the connection string. It will look something like: `postgres://postgres.[YOUR_PROJECT_REF]:[YOUR_PASSWORD]@[YOUR_HOST]:5432/postgres`
+    5.  **Extract Host and Port:**
+        *   From the connection string, identify the host (e.g., `[YOUR_HOST]`) for `SUPABASE_DB_HOST_PRD` and the port (e.g., `5432`) for `SUPABASE_DB_PORT_PRD`.
+    6.  **Retrieve/Reset Database Password:**
+        *   If you do not have your database password saved, navigate to **"Project Settings"** -> **"Database"**.
+        *   Under the "Database Password" section, you will find an option to reset your password. Reset it and save the new password securely. This will be your `SUPABASE_DB_PASSWORD_PRD`.
 
 ### Google Generative AI API Key
 
