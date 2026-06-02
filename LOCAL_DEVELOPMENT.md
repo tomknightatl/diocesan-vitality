@@ -83,7 +83,7 @@ These credentials are for your live production Supabase project. Handle them wit
     1.  **Log in to your Supabase Dashboard:** Go to [https://app.supabase.com/](https://app.supabase.com/) and log in to your account.
     2.  **Select your Project:** From the list of projects, select the project for which you need the production credentials.
     3.  **Navigate to Database Connection Settings:**
-        *   On the left sidebar, click on the **"Connect"** icon (it looks like a plug, usually near "SQL Editor" and "AI Assistant").
+        *   On the top bar, click on the **"Connect"** icon (it looks like a plug, usually near "SQL Editor" and "AI Assistant").
         *   Alternatively, you might find connection details under **"Project Settings"** -> **"Database"**.
     4.  **Locate Connection String:**
         *   Within the "Connect" section, look for "Connection String" or "Connection Info".
