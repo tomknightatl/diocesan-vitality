@@ -130,3 +130,13 @@ backup/*.sql
 
 # OpenCode configuration and workspace
 .opencode/
+
+# Test reports
+*_test_report_*.md
+PRD_DATABASE_CONNECTION_TEST_RESULTS.md
+
+# Test version backups
+test_*_v[0-9].py
+
+# Supabase temp files
+supabase/.temp/
