@@ -1,0 +1,219 @@
+{
+  "metadata": {
+    "generated_at": "2026-06-21T10:10:22.259917",
+    "environment": "dev",
+    "dry_run": true,
+    "project_root": "/home/tomk/Repos/diocesan-vitality"
+  },
+  "summary": {
+    "total_tests": 12,
+    "passed": 9,
+    "failed": 0,
+    "warnings": 1,
+    "skipped": 2
+  },
+  "test_results": [
+    {
+      "test_name": "SQL Syntax Validation",
+      "category": "syntax",
+      "status": "PASS",
+      "message": "All 12 SQL statements are syntactically valid",
+      "details": {
+        "total_statements": 12,
+        "success_rate": "100.0%"
+      },
+      "execution_time_ms": 0.127,
+      "timestamp": "2026-06-21T10:10:22.258743"
+    },
+    {
+      "test_name": "Transaction Handling",
+      "category": "syntax",
+      "status": "PASS",
+      "message": "Migration contains proper transaction handling (BEGIN/COMMIT)",
+      "details": {
+        "has_begin": true,
+        "has_commit": true,
+        "has_rollback": false
+      },
+      "execution_time_ms": 0.003,
+      "timestamp": "2026-06-21T10:10:22.258762"
+    },
+    {
+      "test_name": "Dangerous Operations Detection",
+      "category": "syntax",
+      "status": "PASS",
+      "message": "No dangerous operations detected",
+      "details": {
+        "dangerous_operations": []
+      },
+      "execution_time_ms": 0.17,
+      "timestamp": "2026-06-21T10:10:22.258943"
+    },
+    {
+      "test_name": "Foreign Key Constraints",
+      "category": "integrity",
+      "status": "SKIP",
+      "message": "No foreign key constraints defined in migration",
+      "details": {
+        "foreign_keys_count": 0
+      },
+      "execution_time_ms": 0.059,
+      "timestamp": "2026-06-21T10:10:22.259020"
+    },
+    {
+      "test_name": "Data Type Definitions",
+      "category": "integrity",
+      "status": "WARN",
+      "message": "Found 5 column(s) with potentially problematic data types",
+      "details": {
+        "total_columns": 103,
+        "issues": [
+          {
+            "column": "username",
+            "data_type": "VARCHAR",
+            "issue": "Without length specification, defaults to unlimited"
+          },
+          {
+            "column": "email",
+            "data_type": "VARCHAR",
+            "issue": "Without length specification, defaults to unlimited"
+          },
+          {
+            "column": "full_name",
+            "data_type": "VARCHAR",
+            "issue": "Without length specification, defaults to unlimited"
+          },
+          {
+            "column": "status",
+            "data_type": "VARCHAR",
+            "issue": "Without length specification, defaults to unlimited"
+          },
+          {
+            "column": "product_name",
+            "data_type": "VARCHAR",
+            "issue": "Without length specification, defaults to unlimited"
+          }
+        ]
+      },
+      "execution_time_ms": 0.186,
+      "timestamp": "2026-06-21T10:10:22.259218"
+    },
+    {
+      "test_name": "Index Definitions",
+      "category": "integrity",
+      "status": "PASS",
+      "message": "Found 4 index(es) for 3 table(s)",
+      "details": {
+        "tables_count": 3,
+        "indexes_count": 4,
+        "tables_with_indexes": 3,
+        "tables_without_indexes": [],
+        "indexes": [
+          {
+            "name": "idx_users_email",
+            "unique": false,
+            "table": "users",
+            "columns": "email"
+          },
+          {
+            "name": "idx_orders_user_id",
+            "unique": false,
+            "table": "orders",
+            "columns": "user_id"
+          },
+          {
+            "name": "idx_orders_date",
+            "unique": false,
+            "table": "orders",
+            "columns": "order_date"
+          },
+          {
+            "name": "idx_order_items_order_id",
+            "unique": false,
+            "table": "order_items",
+            "columns": "order_id"
+          }
+        ],
+        "recommendations": []
+      },
+      "execution_time_ms": 0.127,
+      "timestamp": "2026-06-21T10:10:22.259362"
+    },
+    {
+      "test_name": "Query Complexity Analysis",
+      "category": "performance",
+      "status": "PASS",
+      "message": "No significant performance issues detected (12 statements analyzed)",
+      "details": {
+        "total_statements": 12
+      },
+      "execution_time_ms": 0.034,
+      "timestamp": "2026-06-21T10:10:22.259412"
+    },
+    {
+      "test_name": "Execution Time Estimation",
+      "category": "performance",
+      "status": "SKIP",
+      "message": "Skipped in dry-run mode",
+      "details": {},
+      "execution_time_ms": 0.0,
+      "timestamp": "2026-06-21T10:10:22.259423"
+    },
+    {
+      "test_name": "Rollback SQL Presence",
+      "category": "rollback",
+      "status": "PASS",
+      "message": "Rollback SQL file found",
+      "details": {
+        "rollback_file": "supabase/migrations/20260621110000_complex_example.rollback.sql",
+        "rollback_comments": []
+      },
+      "execution_time_ms": 0.041999999999999996,
+      "timestamp": "2026-06-21T10:10:22.259480"
+    },
+    {
+      "test_name": "Rollback SQL Validity",
+      "category": "rollback",
+      "status": "PASS",
+      "message": "Rollback SQL syntax is valid",
+      "details": {
+        "rollback_file": "supabase/migrations/20260621110000_complex_example.rollback.sql",
+        "syntax_check": "passed"
+      },
+      "execution_time_ms": 0.063,
+      "timestamp": "2026-06-21T10:10:22.259552"
+    },
+    {
+      "test_name": "Migration Dependencies",
+      "category": "integration",
+      "status": "PASS",
+      "message": "Migration has no external dependencies",
+      "details": {
+        "migration_timestamp": "20260621110000",
+        "created_tables": [
+          "order_items",
+          "orders",
+          "users"
+        ],
+        "referenced_tables": [
+          "orders",
+          "users"
+        ]
+      },
+      "execution_time_ms": 0.147,
+      "timestamp": "2026-06-21T10:10:22.259715"
+    },
+    {
+      "test_name": "Breaking Changes Detection",
+      "category": "integration",
+      "status": "PASS",
+      "message": "No breaking changes detected",
+      "details": {
+        "breaking_changes": []
+      },
+      "execution_time_ms": 0.127,
+      "timestamp": "2026-06-21T10:10:22.259852"
+    }
+  ],
+  "recommendations": []
+}

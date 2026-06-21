@@ -1,0 +1,47 @@
+================================================================================
+SCHEMA COMPARISON REPORT
+DDL vs PRD Database
+================================================================================
+
+⚠️  OVERALL STATUS: 3 DISCREPANCIES FOUND
+
+📊 COMMON TABLES - COLUMN COMPARISON:
+
+✅ All common tables have matching columns
+
+👁️  COMMON VIEWS - COLUMN COMPARISON:
+
+View: parishes_with_diocese_name
+  Columns only in PRD: City, Deanery, Name, Phone Number, State, Status, Street Address, Web, Zip Code, blocking_evidence, blocking_type, clergy_info, confidence_score, created_at, detail_extraction_error, detail_extraction_success, diocese_id, diocese_name, diocese_url, extracted_at, extraction_method, full_address, id, is_blocked, latitude, longitude, parish_detail_url, parish_directory_url, respectful_automation_used, robots_txt_check, service_times, status_code, status_description
+
+View: ParishScheduleSummary
+  Columns only in PRD: adoration_confidence, adoration_frequency, ai_extractions, diocese_id, has_weekly_adoration, has_weekly_reconciliation, keyword_extractions, last_updated, parish_id, parish_name, parish_website, reconciliation_confidence, reconciliation_frequency
+
+View: HighQualitySchedules
+  Columns only in PRD: ai_structured_data, confidence_score, created_at, extraction_method, fact_source_url, fact_type, fact_value, id, parish_id, parish_name, parish_website
+
+🔧 TYPES DEFINED IN DDL:
+  - fact_type_enum
+
+⚙️  FUNCTIONS DEFINED IN DDL:
+  - update_pipeline_workers_updated_at
+  - update_updated_at_column
+
+================================================================================
+SUMMARY
+================================================================================
+Tables only in DDL: 0
+Tables only in PRD: 0
+Views only in DDL: 0
+Views only in PRD: 0
+Common tables: 11
+Common views: 4
+Tables with column differences: 0
+Views with column differences: 3
+
+⚠️  ASSESSMENT: DDL NEEDS UPDATING TO MATCH PRD DATABASE
+
+RECOMMENDATIONS:
+  - Update view definitions in DDL or PRD to match
+
+================================================================================

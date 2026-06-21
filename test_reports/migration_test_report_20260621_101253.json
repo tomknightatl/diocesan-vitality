@@ -1,0 +1,171 @@
+{
+  "metadata": {
+    "generated_at": "2026-06-21T10:12:53.210872",
+    "environment": "dev",
+    "dry_run": true,
+    "project_root": "/home/tomk/Repos/diocesan-vitality"
+  },
+  "summary": {
+    "total_tests": 12,
+    "passed": 6,
+    "failed": 0,
+    "warnings": 3,
+    "skipped": 3
+  },
+  "test_results": [
+    {
+      "test_name": "SQL Syntax Validation",
+      "category": "syntax",
+      "status": "PASS",
+      "message": "All 4 SQL statements are syntactically valid",
+      "details": {
+        "total_statements": 4,
+        "success_rate": "100.0%"
+      },
+      "execution_time_ms": 0.073,
+      "timestamp": "2026-06-21T10:12:53.209951"
+    },
+    {
+      "test_name": "Transaction Handling",
+      "category": "syntax",
+      "status": "PASS",
+      "message": "Migration contains proper transaction handling (BEGIN/COMMIT)",
+      "details": {
+        "has_begin": true,
+        "has_commit": true,
+        "has_rollback": false
+      },
+      "execution_time_ms": 0.001,
+      "timestamp": "2026-06-21T10:12:53.209968"
+    },
+    {
+      "test_name": "Dangerous Operations Detection",
+      "category": "syntax",
+      "status": "PASS",
+      "message": "No dangerous operations detected",
+      "details": {
+        "dangerous_operations": []
+      },
+      "execution_time_ms": 0.12300000000000001,
+      "timestamp": "2026-06-21T10:12:53.210102"
+    },
+    {
+      "test_name": "Foreign Key Constraints",
+      "category": "integrity",
+      "status": "SKIP",
+      "message": "No foreign key constraints defined in migration",
+      "details": {
+        "foreign_keys_count": 0
+      },
+      "execution_time_ms": 0.052,
+      "timestamp": "2026-06-21T10:12:53.210172"
+    },
+    {
+      "test_name": "Data Type Definitions",
+      "category": "integrity",
+      "status": "WARN",
+      "message": "Found 1 column(s) with potentially problematic data types",
+      "details": {
+        "total_columns": 26,
+        "issues": [
+          {
+            "column": "test_name",
+            "data_type": "VARCHAR",
+            "issue": "Without length specification, defaults to unlimited"
+          }
+        ]
+      },
+      "execution_time_ms": 0.153,
+      "timestamp": "2026-06-21T10:12:53.210336"
+    },
+    {
+      "test_name": "Index Definitions",
+      "category": "integrity",
+      "status": "WARN",
+      "message": "Found 0 index(es) for 1 table(s)",
+      "details": {
+        "tables_count": 1,
+        "indexes_count": 0,
+        "tables_with_indexes": 0,
+        "tables_without_indexes": [
+          "deployment_test"
+        ],
+        "indexes": [],
+        "recommendations": [
+          "Consider adding indexes for tables: deployment_test"
+        ]
+      },
+      "execution_time_ms": 0.114,
+      "timestamp": "2026-06-21T10:12:53.210464"
+    },
+    {
+      "test_name": "Query Complexity Analysis",
+      "category": "performance",
+      "status": "PASS",
+      "message": "No significant performance issues detected (4 statements analyzed)",
+      "details": {
+        "total_statements": 4
+      },
+      "execution_time_ms": 0.018000000000000002,
+      "timestamp": "2026-06-21T10:12:53.210499"
+    },
+    {
+      "test_name": "Execution Time Estimation",
+      "category": "performance",
+      "status": "SKIP",
+      "message": "Skipped in dry-run mode",
+      "details": {},
+      "execution_time_ms": 0.0,
+      "timestamp": "2026-06-21T10:12:53.210508"
+    },
+    {
+      "test_name": "Rollback SQL Presence",
+      "category": "rollback",
+      "status": "WARN",
+      "message": "No rollback SQL found",
+      "details": {
+        "recommendation": "Create .rollback.sql file for safe rollback capability"
+      },
+      "execution_time_ms": 0.041,
+      "timestamp": "2026-06-21T10:12:53.210564"
+    },
+    {
+      "test_name": "Rollback SQL Validity",
+      "category": "rollback",
+      "status": "SKIP",
+      "message": "No rollback SQL file to validate",
+      "details": {},
+      "execution_time_ms": 0.009000000000000001,
+      "timestamp": "2026-06-21T10:12:53.210582"
+    },
+    {
+      "test_name": "Migration Dependencies",
+      "category": "integration",
+      "status": "PASS",
+      "message": "Migration has no external dependencies",
+      "details": {
+        "migration_timestamp": "20260621100000",
+        "created_tables": [
+          "deployment_test"
+        ],
+        "referenced_tables": []
+      },
+      "execution_time_ms": 0.102,
+      "timestamp": "2026-06-21T10:12:53.210700"
+    },
+    {
+      "test_name": "Breaking Changes Detection",
+      "category": "integration",
+      "status": "PASS",
+      "message": "No breaking changes detected",
+      "details": {
+        "breaking_changes": []
+      },
+      "execution_time_ms": 0.093,
+      "timestamp": "2026-06-21T10:12:53.210803"
+    }
+  ],
+  "recommendations": [
+    "Create .rollback.sql file for safe rollback capability"
+  ]
+}

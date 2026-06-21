@@ -671,6 +671,1111 @@ pkill -f chromedriver
 python run_pipeline.py --diocese_id 123 --max_parishes_per_diocese 5
 ```
 
+## 🗄️ Database Management
+
+### Overview
+
+The database management system provides tools for resetting, backing up, and maintaining your local development database. The primary tool is the `reset_local_database.py` script, which automates the complete workflow of wiping your local database and restoring it from production.
+
+### When to Use Database Reset
+
+Use the database reset workflow when:
+
+- **Schema Changes**: After major database schema updates that require a clean slate
+- **Data Corruption**: When local data becomes corrupted or inconsistent
+- **Testing Scenarios**: When you need a fresh production-like dataset for testing
+- **Development Reset**: When switching between different development branches with conflicting data
+- **Performance Issues**: When database performance degrades due to accumulated test data
+- **Sync Issues**: When local and production databases become out of sync
+
+### ⚠️ Safety Warnings
+
+**CRITICAL: Database reset is a destructive operation that cannot be undone!**
+
+- **All local data will be permanently lost**
+- **Any uncommitted changes will be wiped**
+- **Local test data and development entries will be replaced with production data**
+- **The operation requires explicit confirmation by default**
+- **Always backup important local data before proceeding**
+
+### Step-by-Step Reset Instructions
+
+#### Prerequisites
+
+Before running the database reset, ensure you have:
+
+1. **Supabase CLI installed and configured**
+   ```bash
+   # Install Supabase CLI
+   npm install -g supabase
+   # Or: brew install supabase/tap/supabase
+
+   # Verify installation
+   supabase --version
+   ```
+
+2. **Required environment variables in `.env`**
+   ```bash
+   # Production database credentials
+   SUPABASE_URL_PRD="https://your-production-project.supabase.co"
+   SUPABASE_KEY_PRD="your_production_service_role_key"
+
+   # Development database credentials
+   SUPABASE_URL_DEV="http://localhost:54321"
+   SUPABASE_KEY_DEV="your_dev_service_role_key"
+   SUPABASE_DB_PASSWORD_DEV="your_dev_db_password"
+   ```
+
+3. **Local Supabase instance accessible**
+   ```bash
+   # Check if Supabase is running
+   supabase status
+
+   # Start if not running
+   supabase start
+   ```
+
+4. **Required Python dependencies**
+   ```bash
+   pip install supabase python-dotenv psycopg2-binary
+   ```
+
+#### Reset Workflow
+
+The reset process performs the following operations automatically:
+
+1. **Stops local Supabase services** - Ensures clean database state
+2. **Drops all tables** - Removes all existing data and schema
+3. **Restores schema** - Applies clean schema from `sql/initial_schema.sql`
+4. **Copies production data** - Transfers all data from production database
+5. **Restarts Supabase services** - Brings local instance back online
+6. **Verifies database integrity** - Confirms successful reset
+
+#### Running the Reset
+
+**Standard Reset (Recommended):**
+```bash
+# Run with confirmation prompt
+python scripts/reset_local_database.py
+```
+
+**Automated Reset (Use with Caution):**
+```bash
+# Skip confirmation prompt (for CI/CD or automated workflows)
+python scripts/reset_local_database.py --skip-confirmation
+```
+
+### Usage Examples
+
+#### Example 1: Standard Development Reset
+```bash
+# Activate virtual environment
+source .venv/bin/activate
+
+# Run reset with confirmation
+python scripts/reset_local_database.py
+
+# Expected output:
+# ======================================================================
+# 🔄 LOCAL DATABASE RESET WORKFLOW
+# ======================================================================
+# Started at: 2024-01-15 14:30:00
+#
+# ⚠️  WARNING: DESTRUCTIVE OPERATION
+# ======================================================================
+# This will COMPLETELY WIPE your local development database...
+# [Confirmation prompt appears]
+# Do you want to proceed? (type 'yes' to confirm): yes
+#
+# Step 1/6: Stopping Supabase services
+# ✅ Supabase services stopped
+#
+# Step 2/6: Dropping all tables
+# ✅ Dropped 8 tables
+#
+# Step 3/6: Restoring schema
+# ✅ Schema restored successfully (45 statements executed)
+#
+# Step 4/6: Copying production data
+# 📦 Copying table: Dioceses
+# 📦 Copying table: Parishes
+# ...
+# ✅ Production data copied successfully
+#
+# Step 5/6: Restarting Supabase services
+# ✅ Supabase services started successfully
+#
+# Step 6/6: Verifying database
+#    Verification results:
+#       Dioceses: ✅ 195 rows
+#       Parishes: ✅ 1247 rows
+#       ParishData: ✅ 892 rows
+# ...
+# ✅ Database verification passed
+#
+# ======================================================================
+# ✅ DATABASE RESET COMPLETED SUCCESSFULLY!
+# ======================================================================
+# Duration: 45.32 seconds
+```
+
+#### Example 2: Automated Reset for CI/CD
+```bash
+# In CI/CD pipeline or automated scripts
+python scripts/reset_local_database.py --skip-confirmation
+
+# No confirmation prompt, runs immediately
+# Useful for automated testing environments
+```
+
+#### Example 3: Reset After Schema Changes
+```bash
+# After pulling schema changes from main branch
+git pull origin main
+
+# Reset database to apply new schema
+python scripts/reset_local_database.py
+
+# Verify new schema structure
+python -c "
+from core.db import get_supabase_client
+client = get_supabase_client()
+print('Schema updated successfully')
+"
+```
+
+### Troubleshooting Tips
+
+#### Issue: Supabase CLI Not Found
+**Symptoms:** `Command not found: supabase`
+
+**Solution:**
+```bash
+# Install Supabase CLI
+npm install -g supabase
+
+# Or using Homebrew (macOS)
+brew install supabase/tap/supabase
+
+# Verify installation
+supabase --version
+```
+
+#### Issue: Database Connection Failed
+**Symptoms:** `Failed to connect to local database`, `OperationalError`
+
+**Solution:**
+```bash
+# Check Supabase status
+supabase status
+
+# Start Supabase if not running
+supabase start
+
+# Verify environment variables
+cat .env | grep SUPABASE
+
+# Check database password
+echo $SUPABASE_DB_PASSWORD_DEV
+```
+
+#### Issue: Permission Denied
+**Symptoms:** `Permission denied`, `Access denied`
+
+**Solution:**
+```bash
+# Fix script permissions
+chmod +x scripts/reset_local_database.py
+
+# Fix .env file permissions
+chmod 600 .env
+
+# Re-run with proper permissions
+python scripts/reset_local_database.py
+```
+
+#### Issue: Timeout During Data Copy
+**Symptoms:** `Data copy timed out after 5 minutes`
+
+**Solution:**
+```bash
+# Check network connectivity
+ping supabase.co
+
+# Verify production database is accessible
+python -c "
+import os
+from supabase import create_client
+client = create_client(os.getenv('SUPABASE_URL_PRD'), os.getenv('SUPABASE_KEY_PRD'))
+print('Production database accessible')
+"
+
+# Try running reset again (may be temporary network issue)
+python scripts/reset_local_database.py
+```
+
+#### Issue: Schema File Not Found
+**Symptoms:** `Schema file not found: sql/initial_schema.sql`
+
+**Solution:**
+```bash
+# Check if schema file exists
+ls -la sql/initial_schema.sql
+
+# If missing, restore from git
+git checkout sql/initial_schema.sql
+
+# Or create from production backup
+python scripts/backup_production_database.py
+```
+
+#### Issue: Verification Failed
+**Symptoms:** `Verification failed for tables: Dioceses, Parishes`
+
+**Solution:**
+```bash
+# Check database connection
+python -c "
+import psycopg2
+conn = psycopg2.connect(
+    host='localhost',
+    port='54322',
+    database='postgres',
+    user='postgres',
+    password='your_password'
+)
+print('Database connection successful')
+conn.close()
+"
+
+# Manually check tables
+python -c "
+from core.db import get_supabase_client
+client = get_supabase_client()
+result = client.table('Dioceses').select('*').limit(1).execute()
+print(f'Dioceses table: {len(result.data)} rows')
+"
+
+# Re-run reset if verification fails
+python scripts/reset_local_database.py
+```
+
+### Expected Output and Success Indicators
+
+#### Successful Reset Output
+
+A successful reset will display:
+
+1. **Workflow Header**
+   ```
+   ======================================================================
+   🔄 LOCAL DATABASE RESET WORKFLOW
+   ======================================================================
+   Started at: 2024-01-15 14:30:00
+   ```
+
+2. **Confirmation Prompt** (unless `--skip-confirmation` used)
+   ```
+   ⚠️  WARNING: DESTRUCTIVE OPERATION
+   ======================================================================
+   This will COMPLETELY WIPE your local development database...
+   Do you want to proceed? (type 'yes' to confirm):
+   ```
+
+3. **Step-by-Step Progress**
+   ```
+   Step 1/6: Stopping Supabase services
+   ✅ Supabase services stopped
+
+   Step 2/6: Dropping all tables
+   ✅ Dropped 8 tables
+
+   Step 3/6: Restoring schema
+   ✅ Schema restored successfully (45 statements executed)
+
+   Step 4/6: Copying production data
+   📦 Copying table: Dioceses
+   📦 Copying table: Parishes
+   ...
+   ✅ Production data copied successfully
+
+   Step 5/6: Restarting Supabase services
+   ✅ Supabase services started successfully
+
+   Step 6/6: Verifying database
+   ✅ Database verification passed
+   ```
+
+4. **Success Summary**
+   ```
+   ======================================================================
+   ✅ DATABASE RESET COMPLETED SUCCESSFULLY!
+   ======================================================================
+   Started at:  2024-01-15 14:30:00
+   Completed at: 2024-01-15 14:30:45
+   Duration:    45.32 seconds
+
+   Your local database has been reset and is ready for use.
+   ```
+
+#### Success Indicators
+
+✅ **All steps completed without errors**
+✅ **Verification shows all key tables with data**
+✅ **Supabase services are running**
+✅ **Duration is reasonable (typically 30-90 seconds)**
+✅ **No error messages in output**
+
+#### Failure Indicators
+
+❌ **Error messages with traceback**
+❌ **Verification failed for one or more tables**
+❌ **Supabase services failed to start**
+❌ **Timeout errors during data copy**
+❌ **Connection errors to production database**
+
+### Related Database Scripts
+
+The reset script integrates with several other database management tools:
+
+#### `scripts/copy_database.py`
+- **Purpose**: Copy data from production to development database
+- **Used by**: Reset script (Step 4)
+- **Tables copied**: Dioceses, Parishes, ParishData, ScheduleKeywords, etc.
+- **Usage**: `python scripts/copy_database.py`
+
+#### `scripts/backup_production_database.py`
+- **Purpose**: Create full backup of production database
+- **Output**: Compressed SQL file in `backup/` directory
+- **Usage**: `python scripts/backup_production_database.py`
+- **Recommended**: Run before major production changes
+
+#### `scripts/init_dev_database.py`
+- **Purpose**: Initialize development database schema
+- **Used by**: Reset script (Step 3 - alternative method)
+- **Usage**: `python scripts/init_dev_database.py`
+- **Note**: Manual SQL execution may be required via Supabase dashboard
+
+### Best Practices
+
+1. **Always backup before reset**
+   ```bash
+   # Backup current local state
+   python scripts/backup_production_database.py
+   ```
+
+2. **Test in development environment first**
+   - Never run reset on production database
+   - Always verify in local development environment
+   - Use `--skip-confirmation` only in automated CI/CD
+
+3. **Monitor reset duration**
+   - Normal duration: 30-90 seconds
+   - Longer durations may indicate network issues
+   - Timeouts after 5 minutes for data copy step
+
+4. **Verify after reset**
+   ```bash
+   # Quick verification
+   python -c "
+   from core.db import get_supabase_client
+   client = get_supabase_client()
+   print('✅ Database ready')
+   "
+
+   # Check key tables
+   python -c "
+   from core.db import get_supabase_client
+   client = get_supabase_client()
+   dioceses = client.table('Dioceses').select('*').execute()
+   print(f'✅ Dioceses: {len(dioceses.data)} rows')
+   "
+   ```
+
+5. **Document reset reasons**
+   - Keep track of why resets were performed
+   - Note any schema changes applied
+   - Record any issues encountered
+
+### Integration with Development Workflow
+
+The database reset fits naturally into your development workflow:
+
+```bash
+# Typical development cycle
+git pull origin main                    # Pull latest changes
+python scripts/reset_local_database.py  # Reset database
+make start                              # Start development environment
+make pipeline                           # Test with fresh data
+```
+
+```bash
+# Before major feature testing
+git checkout feature-branch
+python scripts/reset_local_database.py  # Clean slate
+# Test feature with production-like data
+```
+
+```bash
+# After schema migrations
+git pull origin main
+python scripts/reset_local_database.py  # Apply new schema
+# Verify migration worked correctly
+```
+
+### Additional Resources
+
+- **[Database Schema Documentation](DATABASE.md)** - Complete schema reference
+- **[Commands Guide](COMMANDS.md)** - Additional database commands
+- **[Deployment Guide](DEPLOYMENT_GUIDE.md)** - Production database management
+- **[Supabase Documentation](https://supabase.com/docs)** - Official Supabase docs
+
+## 🔄 Schema Development Workflow
+
+### Overview
+
+The schema development workflow provides a systematic approach to making, testing, and deploying database schema changes locally. This workflow integrates with the existing local development setup and uses the `scripts/apply_schema_change.py` tool to automate migration generation, application, and validation.
+
+**Key Benefits:**
+- **Automated migration generation** from local schema changes
+- **Safe testing environment** with rollback capability
+- **Comprehensive validation** to catch errors early
+- **Integration with existing development workflow**
+- **Version-controlled migrations** for team collaboration
+
+### Prerequisites
+
+Before starting schema development, ensure you have:
+
+1. **Supabase CLI installed and configured**
+   ```bash
+   # Install Supabase CLI
+   npm install -g supabase
+   # Or: brew install supabase/tap/supabase
+
+   # Verify installation
+   supabase --version
+   ```
+
+2. **Local Supabase stack running**
+   ```bash
+   # Check if Supabase is running
+   supabase status
+
+   # Start if not running
+   supabase start
+   ```
+
+3. **Python 3.8+ with required dependencies**
+   ```bash
+   # Ensure virtual environment is active
+   source .venv/bin/activate
+
+   # Install dependencies if needed
+   pip install -r requirements.txt
+   ```
+
+4. **Schema change management script**
+   ```bash
+   # Make script executable
+   chmod +x scripts/apply_schema_change.py
+
+   # Verify script works
+   python scripts/apply_schema_change.py --help
+   ```
+
+### Workflow Steps
+
+#### Step 1: Make Local Schema Changes
+
+Make your schema changes using any of these methods:
+
+**Option A: Using Supabase Studio (GUI)**
+```bash
+# Open Supabase Studio
+supabase studio
+
+# Navigate to Table Editor
+# Make your changes (add tables, modify columns, etc.)
+```
+
+**Option B: Using SQL via Supabase CLI**
+```bash
+# Execute SQL directly
+supabase db query --local "
+  CREATE TABLE user_preferences (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL,
+    preferences JSONB NOT NULL DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+"
+```
+
+**Option C: Editing migration files manually**
+```bash
+# Create new migration file
+supabase migration new add_user_preferences
+
+# Edit the generated file
+vim supabase/migrations/20260621150000_add_user_preferences.sql
+```
+
+#### Step 2: Generate Migration from Changes
+
+Use the schema change management script to generate a migration:
+
+```bash
+# Generate migration with descriptive name
+python scripts/apply_schema_change.py --generate --name "add_user_preferences_table"
+
+# Or use automatic workflow (recommended)
+python scripts/apply_schema_change.py --auto --name "add_user_preferences_table"
+```
+
+**What happens:**
+1. Script detects schema differences between migrations and actual database
+2. Generates SQL migration file with timestamp prefix
+3. Displays migration content for review
+4. Creates file in `supabase/migrations/` directory
+
+**Example output:**
+```
+2026-06-21 10:07:20 - INFO - Generating migration diff: add_user_preferences_table
+2026-06-21 10:07:21 - INFO - Migration diff generated successfully: supabase/migrations/20260621100721_add_user_preferences_table.sql
+2026-06-21 10:07:21 - INFO - Migration file size: 1234 bytes
+2026-06-21 10:07:21 - INFO - Migration content:
+--------------------------------------------------------------------------------
+-- Alter table
+ALTER TABLE "public"."users" ADD COLUMN "preferences" jsonb DEFAULT '{}'::jsonb;
+
+-- Create index
+CREATE INDEX "idx_users_preferences" ON "public"."users" USING gin ("preferences");
+--------------------------------------------------------------------------------
+```
+
+#### Step 3: Review and Validate Migration
+
+**Review the generated migration:**
+```bash
+# View the migration file
+cat supabase/migrations/20260621100721_add_user_preferences_table.sql
+
+# Or use the script's review feature
+python scripts/apply_schema_change.py --generate --name "test_change"
+# Script will prompt for review: yes/no/edit
+```
+
+**Validate the current schema:**
+```bash
+# Check for schema errors
+python scripts/apply_schema_change.py --validate
+
+# Validate specific schema
+python scripts/apply_schema_change.py --validate --schema public
+```
+
+#### Step 4: Test Migration Locally
+
+**Apply migration to local database:**
+```bash
+# Apply specific migration
+python scripts/apply_schema_change.py --apply --file "20260621100721_add_user_preferences_table.sql"
+
+# Or apply all pending migrations
+python scripts/apply_schema_change.py --apply
+
+# Or use automatic workflow (includes validation)
+python scripts/apply_schema_change.py --auto --name "add_user_preferences_table"
+```
+
+**Test the changes:**
+```bash
+# Verify schema changes
+supabase db query --local "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'users';"
+
+# Test with application code
+python -c "
+from core.db import get_supabase_client
+client = get_supabase_client()
+result = client.table('users').select('*').limit(1).execute()
+print('Schema test passed')
+"
+```
+
+#### Step 5: Verify and Validate
+
+**Check migration status:**
+```bash
+# View applied migrations
+python scripts/apply_schema_change.py --status
+
+# Or use Supabase CLI directly
+supabase migration list --local
+```
+
+**Validate schema integrity:**
+```bash
+# Run schema validation
+python scripts/apply_schema_change.py --validate
+
+# Check for specific issues
+supabase db lint --local --schema public
+```
+
+**Test with application:**
+```bash
+# Start development environment
+make start
+
+# Run pipeline tests
+make pipeline
+
+# Test API endpoints
+curl http://localhost:8000/api/dioceses
+```
+
+#### Step 6: Rollback if Needed (Optional)
+
+If issues arise, rollback the migration:
+
+```bash
+# Rollback last migration
+python scripts/apply_schema_change.py --rollback
+
+# Rollback multiple migrations
+python scripts/apply_schema_change.py --rollback --rollback-count 2
+
+# Rollback with confirmation skip (use with caution)
+python scripts/apply_schema_change.py --rollback --yes
+```
+
+**Reset database completely (if needed):**
+```bash
+# Reset to clean state
+supabase db reset --local
+
+# Or use the database reset script
+python scripts/reset_local_database.py
+```
+
+### Common Scenarios
+
+#### Scenario 1: Adding a New Table
+
+**Workflow:**
+```bash
+# 1. Create table using Supabase Studio or SQL
+supabase db query --local "
+  CREATE TABLE audit_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID,
+    action TEXT NOT NULL,
+    table_name TEXT NOT NULL,
+    old_values JSONB,
+    new_values JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+"
+
+# 2. Generate migration
+python scripts/apply_schema_change.py --auto --name "add_audit_logs_table"
+
+# 3. Review and approve migration when prompted
+# 4. Migration is automatically applied and validated
+
+# 5. Test the new table
+supabase db query --local "SELECT COUNT(*) FROM audit_logs;"
+```
+
+#### Scenario 2: Modifying Existing Table
+
+**Workflow:**
+```bash
+# 1. Add column to existing table
+supabase db query --local "ALTER TABLE users ADD COLUMN last_login TIMESTAMPTZ;"
+
+# 2. Generate migration
+python scripts/apply_schema_change.py --generate --name "add_users_last_login"
+
+# 3. Review migration content
+cat supabase/migrations/20260621100721_add_users_last_login.sql
+
+# 4. Apply migration
+python scripts/apply_schema_change.py --apply
+
+# 5. Validate schema
+python scripts/apply_schema_change.py --validate
+
+# 6. Test with application
+python -c "from core.db import get_supabase_client; print('Test passed')"
+```
+
+#### Scenario 3: Adding Indexes
+
+**Workflow:**
+```bash
+# 1. Create index
+supabase db query --local "
+  CREATE INDEX idx_users_email ON users(email);
+  CREATE INDEX idx_users_created_at ON users(created_at DESC);
+"
+
+# 2. Generate migration
+python scripts/apply_schema_change.py --auto --name "add_user_indexes"
+
+# 3. Review and approve
+# 4. Test index performance
+supabase db query --local "
+  EXPLAIN ANALYZE SELECT * FROM users WHERE email = 'test@example.com';
+"
+```
+
+#### Scenario 4: Data Migration
+
+**Workflow:**
+```bash
+# 1. Create migration file for data changes
+supabase migration new migrate_user_status
+
+# 2. Edit migration file with data migration logic
+vim supabase/migrations/20260621100721_migrate_user_status.sql
+
+# 3. Add data migration SQL
+# -- Add new column
+# ALTER TABLE users ADD COLUMN status TEXT;
+#
+# -- Migrate existing data
+# UPDATE users SET status = 'active' WHERE is_active = true;
+# UPDATE users SET status = 'inactive' WHERE is_active = false;
+#
+# -- Add constraint
+# ALTER TABLE users ADD CONSTRAINT check_status CHECK (status IN ('active', 'inactive'));
+
+# 4. Apply migration
+python scripts/apply_schema_change.py --apply
+
+# 5. Verify data migration
+supabase db query --local "SELECT status, COUNT(*) FROM users GROUP BY status;"
+```
+
+#### Scenario 5: Testing Before Deployment
+
+**Workflow:**
+```bash
+# 1. Test workflow without making changes
+python scripts/apply_schema_change.py --auto --name "test_deployment" --dry-run
+
+# 2. Create backup before applying
+python scripts/apply_schema_change.py --auto --name "important_change" --backup
+
+# 3. Apply and validate
+python scripts/apply_schema_change.py --auto --name "important_change"
+
+# 4. Test thoroughly with application
+make pipeline
+
+# 5. If issues occur, rollback
+python scripts/apply_schema_change.py --rollback
+```
+
+### Best Practices
+
+#### 1. Use Descriptive Migration Names
+
+Always use clear, descriptive names:
+- ✅ Good: `add_user_preferences_table`, `add_index_on_users_email`, `migrate_user_status`
+- ❌ Bad: `change1`, `fix`, `update`
+
+#### 2. Test with Dry-Run First
+
+Always test workflows before applying:
+```bash
+python scripts/apply_schema_change.py --auto --name "test" --dry-run
+```
+
+#### 3. Create Backups for Important Changes
+
+For critical schema changes:
+```bash
+python scripts/apply_schema_change.py --auto --name "critical" --backup
+```
+
+#### 4. Review Generated Migrations
+
+Always review auto-generated migrations:
+```bash
+python scripts/apply_schema_change.py --generate --name "change"
+# Review the generated file
+python scripts/apply_schema_change.py --apply
+```
+
+#### 5. Validate After Changes
+
+Always validate the schema:
+```bash
+python scripts/apply_schema_change.py --validate
+```
+
+#### 6. Use Automatic Workflow
+
+For most cases, use the automatic workflow:
+```bash
+python scripts/apply_schema_change.py --auto --name "descriptive_name"
+```
+
+#### 7. Keep Migration History
+
+Track migration history:
+```bash
+python scripts/apply_schema_change.py --status
+```
+
+#### 8. Test with Application
+
+Always test schema changes with the application:
+```bash
+make start
+make pipeline
+curl http://localhost:8000/api/dioceses
+```
+
+#### 9. Commit Migration Files
+
+Always commit migration files to version control:
+```bash
+git add supabase/migrations/
+git commit -m "Add user preferences table
+
+- Add user_preferences table with RLS
+- Add indexes for performance
+- Include migration documentation"
+```
+
+#### 10. Document Complex Changes
+
+For complex schema changes, document the rationale:
+```sql
+-- Migration: add_user_preferences.sql
+-- Description: Add user preferences to support personalized settings
+-- Reason: Users need to store theme, notification, and display preferences
+-- Impact: Non-breaking change, adds new functionality
+-- Rollback: DROP TABLE IF EXISTS user_preferences CASCADE;
+```
+
+### Troubleshooting
+
+#### Issue: "Supabase CLI not found"
+
+**Solution:**
+```bash
+# Install Supabase CLI
+npm install -g supabase
+
+# Verify installation
+supabase --version
+```
+
+#### Issue: "Local Supabase stack is not running"
+
+**Solution:**
+```bash
+# Start local stack
+supabase start
+
+# Check status
+supabase status
+```
+
+#### Issue: "Migration file was not created"
+
+**Solution:**
+```bash
+# Check for schema changes
+supabase db diff --local --schema public
+
+# If no changes, no migration will be generated
+# Make actual schema changes first
+```
+
+#### Issue: "Schema validation failed"
+
+**Solution:**
+```bash
+# Review validation errors
+python scripts/apply_schema_change.py --validate
+
+# Check for specific issues
+supabase db lint --local --schema public
+
+# Consider rolling back
+python scripts/apply_schema_change.py --rollback
+```
+
+#### Issue: "Cannot rollback N migration(s)"
+
+**Solution:**
+```bash
+# Check migration status
+python scripts/apply_schema_change.py --status
+
+# You're trying to rollback more than applied
+# Adjust rollback count
+python scripts/apply_schema_change.py --rollback --rollback-count 1
+```
+
+#### Issue: Generated migration is empty
+
+**Solution:**
+```bash
+# No schema changes detected
+# Make actual changes first
+supabase db query --local "CREATE TABLE test_table (id INT);"
+
+# Then generate migration
+python scripts/apply_schema_change.py --generate --name "add_test_table"
+```
+
+#### Issue: Migration application fails
+
+**Solution:**
+```bash
+# Check migration file syntax
+cat supabase/migrations/20260621150000_migration.sql
+
+# Test SQL manually
+supabase db query --local "$(cat supabase/migrations/20260621150000_migration.sql)"
+
+# Check logs
+tail -f logs/schema_change_*.log
+
+# Reset and try again
+supabase db reset --local
+```
+
+### Integration with Development Workflow
+
+The schema development workflow integrates seamlessly with the existing development process:
+
+#### Typical Development Cycle
+
+```bash
+# 1. Pull latest changes
+git pull origin main
+
+# 2. Start development environment
+make start
+
+# 3. Make schema changes
+supabase studio  # or use SQL
+
+# 4. Generate and apply migration
+python scripts/apply_schema_change.py --auto --name "add_new_feature"
+
+# 5. Test with application
+make pipeline
+
+# 6. Validate schema
+python scripts/apply_schema_change.py --validate
+
+# 7. Commit changes
+git add supabase/migrations/
+git commit -m "Add new feature schema changes"
+```
+
+#### Before Major Feature Testing
+
+```bash
+# 1. Reset database for clean state
+python scripts/reset_local_database.py
+
+# 2. Apply schema migrations
+python scripts/apply_schema_change.py --apply
+
+# 3. Test feature with clean schema
+make pipeline
+```
+
+#### After Schema Migrations
+
+```bash
+# 1. Pull schema changes
+git pull origin main
+
+# 2. Apply new migrations
+python scripts/apply_schema_change.py --apply
+
+# 3. Verify migration worked
+python scripts/apply_schema_change.py --validate
+
+# 4. Test application compatibility
+make start
+make pipeline
+```
+
+### Additional Resources
+
+- **[Schema Change Management Script](SCHEMA_CHANGE_MANAGEMENT.md)** - Complete script documentation
+- **[Supabase Migration Reference](supabase-migration-reference.md)** - Detailed command reference
+- **[Database Schema Documentation](DATABASE.md)** - Complete schema reference
+- **[Commands Guide](COMMANDS.md)** - Additional database commands
+- **[Supabase CLI Documentation](https://supabase.com/docs/guides/cli)** - Official Supabase docs
+
+### Quick Reference
+
+#### Essential Commands
+
+```bash
+# Automatic workflow (recommended)
+python scripts/apply_schema_change.py --auto --name "descriptive_name"
+
+# Generate migration only
+python scripts/apply_schema_change.py --generate --name "change"
+
+# Apply migration
+python scripts/apply_schema_change.py --apply
+
+# Check status
+python scripts/apply_schema_change.py --status
+
+# Validate schema
+python scripts/apply_schema_change.py --validate
+
+# Rollback
+python scripts/apply_schema_change.py --rollback
+
+# Dry-run test
+python scripts/apply_schema_change.py --auto --name "test" --dry-run
+```
+
+#### Common Flags
+
+```bash
+--backup          # Create database backup before changes
+--dry-run         # Test without making changes
+--schema SCHEMA   # Specify schema (default: public)
+--skip-validation # Skip validation (use with caution)
+--yes             # Skip confirmations (use with caution)
+```
+
+#### File Locations
+
+```
+supabase/
+├── migrations/              # Migration files
+│   └── 20260621150000_name.sql
+├── config.toml             # Configuration
+└── seed.sql                # Seed data
+
+scripts/
+└── apply_schema_change.py  # Schema management script
+
+logs/
+└── schema_change_*.log     # Operation logs
+```
+
+---
+
 ## 🏗️ Architecture Overview
 
 ### Local Development Stack

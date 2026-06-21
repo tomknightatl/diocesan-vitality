@@ -1,7 +1,10 @@
 # USCCB Development Makefile
 # Quick commands for local development
 
-.PHONY: help dev test quick clean install start stop
+.PHONY: help dev test quick clean install start stop \
+	db-reset db-migrate db-deploy db-backup db-test \
+	db-status db-validate db-rollback db-dev \
+	reset migrate deploy backup test-db status validate rollback dev-db
 
 help: ## Show this help message
 	@echo "USCCB Development Commands"
@@ -986,6 +989,190 @@ _cleanup-sealed-secrets: ## Delete sealed secrets from repository after cluster 
 
 # Database Management
 # ===================
+
+# Phase 4.1 Database Commands
+# ============================
+
+db-reset: ## Reset local database from production
+	@echo "🔄 Resetting local database from production..."
+	@echo "⚠️  WARNING: This will DELETE ALL DATA in your local database!"
+	@echo ""
+	@if [ ! -f ".env" ]; then \
+		echo "❌ .env file not found"; \
+		exit 1; \
+	fi
+	@read -p "Continue? Type 'yes' to proceed: " CONFIRM </dev/tty && \
+	if [ "$$CONFIRM" != "yes" ]; then \
+		echo "❌ Operation cancelled"; \
+		exit 1; \
+	fi
+	@echo "🔧 Running database reset script..."
+	@python scripts/reset_local_database.py
+	@echo "✅ Local database reset complete"
+
+db-migrate: ## Apply local schema changes
+	@echo "🔄 Applying local schema changes..."
+	@echo "📋 This will apply pending schema migrations to your local database"
+	@echo ""
+	@if [ ! -f ".env" ]; then \
+		echo "❌ .env file not found"; \
+		exit 1; \
+	fi
+	@echo "🔧 Running schema migration script..."
+	@python scripts/apply_schema_change.py --auto
+	@echo "✅ Schema changes applied successfully"
+
+db-deploy: ## Deploy to production (requires confirmation)
+	@echo "🚀 Deploying to production..."
+	@echo "⚠️  WARNING: This will apply schema changes to PRODUCTION!"
+	@echo ""
+	@if [ ! -f ".env" ]; then \
+		echo "❌ .env file not found"; \
+		exit 1; \
+	fi
+	@echo "📋 Pre-deployment checks:"
+	@echo "   - Testing migrations locally first..."
+	@python scripts/test_migration.py --all-pending || { \
+		echo "❌ Migration tests failed! Aborting deployment."; \
+		exit 1; \
+	}
+	@echo "✅ Migration tests passed"
+	@echo ""
+	@read -p "Deploy to PRODUCTION? Type 'yes' to proceed: " CONFIRM </dev/tty && \
+	if [ "$$CONFIRM" != "yes" ]; then \
+		echo "❌ Operation cancelled"; \
+		exit 1; \
+	fi
+	@echo "🔧 Running production deployment script..."
+	@python scripts/deploy_to_production.py --auto
+	@echo "✅ Production deployment complete"
+
+db-backup: ## Create production database backup
+	@echo "💾 Creating production database backup..."
+	@echo "📋 This will create a timestamped backup of the production database"
+	@echo ""
+	@if [ ! -f ".env" ]; then \
+		echo "❌ .env file not found"; \
+		exit 1; \
+	fi
+	@echo "🔧 Running backup script..."
+	@python scripts/backup_production_database.py
+	@echo "✅ Production database backup complete"
+
+db-test: ## Test migrations
+	@echo "🧪 Testing migrations..."
+	@echo "📋 This will test all pending migrations without applying them"
+	@echo ""
+	@if [ ! -f ".env" ]; then \
+		echo "❌ .env file not found"; \
+		exit 1; \
+	fi
+	@echo "🔧 Running migration test script..."
+	@python scripts/test_migration.py --all-pending
+	@echo "✅ Migration tests complete"
+
+db-status: ## Check database status and pending migrations
+	@echo "🔍 Checking database status..."
+	@echo ""
+	@if [ ! -f ".env" ]; then \
+		echo "❌ .env file not found"; \
+		exit 1; \
+	fi
+	@echo "📊 Database Connection Status:"
+	@python scripts/dev_test.py --db
+	@echo ""
+	@echo "📋 Pending Migrations:"
+	@python scripts/test_migration.py --list-pending || echo "  No pending migrations or unable to list"
+	@echo ""
+	@echo "✅ Database status check complete"
+
+db-validate: ## Validate migrations before deployment
+	@echo "✅ Validating migrations before deployment..."
+	@echo ""
+	@if [ ! -f ".env" ]; then \
+		echo "❌ .env file not found"; \
+		exit 1; \
+	fi
+	@echo "🔧 Running comprehensive validation..."
+	@echo "   Step 1/3: Checking database connection..."
+	@python scripts/dev_test.py --db || { \
+		echo "❌ Database connection failed!"; \
+		exit 1; \
+	}
+	@echo "   ✅ Database connection OK"
+	@echo "   Step 2/3: Testing migration scripts..."
+	@python scripts/test_migration.py --all-pending || { \
+		echo "❌ Migration tests failed!"; \
+		exit 1; \
+	}
+	@echo "   ✅ Migration tests passed"
+	@echo "   Step 3/3: Validating schema syntax..."
+	@python scripts/apply_schema_change.py --validate-only || { \
+		echo "❌ Schema validation failed!"; \
+		exit 1; \
+	}
+	@echo "   ✅ Schema validation passed"
+	@echo ""
+	@echo "✅ All validations passed - ready for deployment"
+
+db-rollback: ## Emergency rollback of last migration
+	@echo "🚨 EMERGENCY ROLLBACK - Reverting last migration..."
+	@echo "⚠️  WARNING: This is a destructive operation!"
+	@echo ""
+	@if [ ! -f ".env" ]; then \
+		echo "❌ .env file not found"; \
+		exit 1; \
+	fi
+	@read -p "Rollback last migration? Type 'yes' to proceed: " CONFIRM </dev/tty && \
+	if [ "$$CONFIRM" != "yes" ]; then \
+		echo "❌ Operation cancelled"; \
+		exit 1; \
+	fi
+	@echo "🔧 Running rollback script..."
+	@python scripts/apply_schema_change.py --rollback
+	@echo "✅ Rollback complete"
+
+db-dev: ## Quick local development database setup
+	@echo "🚀 Setting up local development database..."
+	@echo ""
+	@if [ ! -f ".env" ]; then \
+		echo "❌ .env file not found"; \
+		exit 1; \
+	fi
+	@echo "📋 Development setup steps:"
+	@echo "   Step 1/3: Checking environment..."
+	@python scripts/dev_test.py --env || { \
+		echo "❌ Environment check failed!"; \
+		exit 1; \
+	}
+	@echo "   ✅ Environment OK"
+	@echo "   Step 2/3: Testing database connection..."
+	@python scripts/dev_test.py --db || { \
+		echo "❌ Database connection failed!"; \
+		exit 1; \
+	}
+	@echo "   ✅ Database connection OK"
+	@echo "   Step 3/3: Checking for pending migrations..."
+	@python scripts/test_migration.py --list-pending || echo "   ℹ️  No pending migrations"
+	@echo ""
+	@echo "✅ Local development database ready!"
+	@echo "💡 Use 'make db-migrate' to apply pending migrations"
+
+# Database Aliases and Shortcuts
+# ===============================
+
+reset: db-reset ## Alias for db-reset
+migrate: db-migrate ## Alias for db-migrate
+deploy: db-deploy ## Alias for db-deploy
+backup: db-backup ## Alias for db-backup
+test-db: db-test ## Alias for db-test
+status: db-status ## Alias for db-status
+validate: db-validate ## Alias for db-validate
+rollback: db-rollback ## Alias for db-rollback
+dev-db: db-dev ## Alias for db-dev
+
+# Legacy Database Commands
+# ========================
 
 database-create: ## Copy production database to environment-specific database (usage: make database-create CLUSTER_LABEL=dev)
 	@CLUSTER_LABEL=$${CLUSTER_LABEL:-dev} && \

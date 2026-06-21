@@ -324,6 +324,78 @@ python -m pipeline.async_extract_parishes --diocese_id 2024 --pool_size 6 --batc
 
 **→ See [Commands Guide](docs/COMMANDS.md) for complete command reference and examples.**
 
+## 🗄️ Database Management
+
+The project includes comprehensive database management tools for local development, schema changes, and production deployments.
+
+### Quick Start Commands
+
+```bash
+# Check database status
+make db-check
+
+# Reset local database (use with caution!)
+python scripts/reset_local_database.py
+
+# Apply schema changes
+python scripts/apply_schema_change.py --auto --name "your_migration_name"
+
+# Test migration
+python scripts/test_migration.py
+
+# Deploy to production
+python scripts/deploy_to_production.py --auto --migration-file "migration.sql"
+
+# Create backup
+python scripts/backup_production_database.py
+```
+
+### Database Management Features
+
+- **🔄 Database Reset**: Complete local database reset with production data synchronization
+- **📝 Schema Changes**: Automated migration generation and application with validation
+- **🧪 Migration Testing**: Comprehensive testing framework for migration validation
+- **🚀 Production Deployment**: Safe production deployment with rollback capability
+- **💾 Backup & Restore**: Automated database backup and restore procedures
+- **✅ Schema Validation**: Integrity checks and error detection for database schema
+
+### Key Scripts
+
+- **`scripts/reset_local_database.py`**: Database reset workflow with production data sync
+- **`scripts/apply_schema_change.py`**: Schema change management with automatic migration generation
+- **`scripts/test_migration.py`**: Migration testing and validation framework
+- **`scripts/deploy_to_production.py`**: Production deployment with safety checks
+- **`scripts/backup_production_database.py`**: Database backup and restore utilities
+
+### Database Operations
+
+The system uses **Supabase** as the database provider with comprehensive migration management:
+
+- **Local Development**: Local Supabase instance for development and testing
+- **Production Database**: Managed Supabase PostgreSQL instance in production
+- **Migration System**: Automated migration generation and application
+- **Schema Validation**: Comprehensive integrity checks and error detection
+- **Rollback Capability**: Safe rollback procedures for failed migrations
+
+### Documentation
+
+For detailed database management documentation:
+
+- **[📚 Database Quick Reference](docs/DATABASE_QUICK_REFERENCE.md)**: Complete command reference and workflows
+- **[🔧 Schema Change Management](docs/SCHEMA_CHANGE_MANAGEMENT.md)**: Schema change workflows and best practices
+- **[🚀 Production Migration Guide](docs/PRODUCTION_MIGRATION_GUIDE.md)**: Production deployment procedures
+- **[🧪 Testing Report](docs/END_TO_END_TEST_REPORT.md)**: Comprehensive testing results and validation
+
+### Safety Features
+
+- **Confirmation Prompts**: All destructive operations require explicit confirmation
+- **Backup Creation**: Automatic backups before production deployments
+- **Validation Checks**: Comprehensive validation before applying changes
+- **Rollback Support**: Safe rollback procedures for failed operations
+- **Dry-Run Mode**: Test deployments without making actual changes
+
+---
+
 ## Reporting and Analytics
 
 ### `report_statistics.py`
@@ -455,7 +527,21 @@ The web application uses **Docker Hub** for container image storage. Docker Hub 
 
 ### 🗄️ Database & Migrations
 
+- **[docs/DATABASE_QUICK_REFERENCE.md](docs/DATABASE_QUICK_REFERENCE.md)**: Complete quick reference for database operations, migrations, and management
+- **[docs/SCHEMA_CHANGE_MANAGEMENT.md](docs/SCHEMA_CHANGE_MANAGEMENT.md)**: Comprehensive guide for managing database schema changes
+- **[docs/SCHEMA_CHANGE_QUICK_REFERENCE.md](docs/SCHEMA_CHANGE_QUICK_REFERENCE.md)**: Quick reference for schema change workflows
+- **[docs/PRODUCTION_MIGRATION_GUIDE.md](docs/PRODUCTION_MIGRATION_GUIDE.md)**: Production deployment guide for database migrations
+- **[docs/supabase-migration-reference.md](docs/supabase-migration-reference.md)**: Comprehensive Supabase CLI reference for database operations
+- **[docs/supabase-migration-quick-reference.md](docs/supabase-migration-quick-reference.md)**: Supabase CLI cheat sheet for common database operations
 - **[sql/migrations/README.md](sql/migrations/README.md)**: Database migration procedures
+
+### 🧪 Testing & Quality Assurance
+
+- **[docs/END_TO_END_TEST_REPORT.md](docs/END_TO_END_TEST_REPORT.md)**: Comprehensive end-to-end testing report for database operations
+- **[docs/E2E_TESTING_SUMMARY.md](docs/E2E_TESTING_SUMMARY.md)**: Testing summary and results overview
+- **[docs/ACTIONABLE_RECOMMENDATIONS.md](docs/ACTIONABLE_RECOMMENDATIONS.md)**: Implementation recommendations based on testing results
+- **[docs/TESTING_COMPLETION_SUMMARY.md](docs/TESTING_COMPLETION_SUMMARY.md)**: Testing completion summary and final status
+- **[tests/TESTING.md](tests/TESTING.md)**: Testing framework and test procedures
 
 ### 📊 Advanced Features
 
